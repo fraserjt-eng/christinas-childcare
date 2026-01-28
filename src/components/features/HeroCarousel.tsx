@@ -293,6 +293,120 @@ function Character({ stage, color }: { stage: number; color: string }) {
   const irisColor = stage === 1 ? '#3B2314' : stage === 2 ? '#5B8C3E' : '#2C1608';
   const lipColor = stage === 4 ? '#8B3A3A' : stage === 2 ? '#D4837A' : '#B5555A';
 
+  /* Baby / Infant - completely different crawling pose */
+  if (stage === 0) {
+    return (
+      <g transform={`scale(${scale})`}>
+        <defs>
+          <radialGradient id={skinId} cx="40%" cy="35%" r="60%">
+            <stop offset="0%" stopColor={s.skinLight} />
+            <stop offset="70%" stopColor={s.skin} />
+            <stop offset="100%" stopColor={s.skinDark} />
+          </radialGradient>
+        </defs>
+
+        {/* Ground shadow */}
+        <ellipse cx="5" cy="38" rx="28" ry="5" fill="#000" opacity="0.1" />
+
+        {/* Back leg (left, further away) */}
+        <ellipse cx="-12" cy="28" rx="7" ry="9" fill={s.skin} transform="rotate(-20, -12, 28)" />
+        <ellipse cx="-12" cy="28" rx="4" ry="6" fill={s.skinLight} opacity="0.3" transform="rotate(-20, -12, 28)" />
+        {/* Back foot */}
+        <ellipse cx="-16" cy="35" rx="5" ry="3.5" fill={s.skin} />
+        <ellipse cx="-17" cy="34" rx="2" ry="1.5" fill={s.skinLight} opacity="0.3" />
+
+        {/* Diaper / onesie body */}
+        <ellipse cx="2" cy="15" rx="18" ry="14" fill={color} />
+        {/* Onesie highlight */}
+        <ellipse cx="-2" cy="10" rx="8" ry="8" fill="#FFF" opacity="0.1" />
+        {/* Onesie snap buttons */}
+        <circle cx="-3" cy="25" r="1.2" fill="#FFF" opacity="0.5" />
+        <circle cx="2" cy="26" r="1.2" fill="#FFF" opacity="0.5" />
+        <circle cx="7" cy="25" r="1.2" fill="#FFF" opacity="0.5" />
+        {/* Diaper peek */}
+        <ellipse cx="0" cy="24" rx="10" ry="6" fill="#FFF" opacity="0.3" />
+
+        {/* Front leg (right, closer) */}
+        <ellipse cx="14" cy="26" rx="7" ry="9" fill={s.skin} transform="rotate(15, 14, 26)" />
+        <ellipse cx="14" cy="26" rx="4" ry="6" fill={s.skinLight} opacity="0.3" transform="rotate(15, 14, 26)" />
+        {/* Front foot - chubby baby foot */}
+        <ellipse cx="18" cy="34" rx="5" ry="3.5" fill={s.skin} />
+        <ellipse cx="19" cy="33" rx="2" ry="1.5" fill={s.skinLight} opacity="0.3" />
+        {/* Tiny toes */}
+        <circle cx="22" cy="32" r="1.2" fill={s.skin} />
+        <circle cx="23" cy="33.5" r="1" fill={s.skin} />
+
+        {/* Back arm */}
+        <ellipse cx="-14" cy="14" rx="5" ry="8" fill={s.skin} transform="rotate(30, -14, 14)" />
+        {/* Back hand on ground */}
+        <circle cx="-18" cy="22" r="4.5" fill={`url(#${skinId})`} />
+
+        {/* Front arm */}
+        <ellipse cx="16" cy="10" rx="5" ry="8" fill={s.skin} transform="rotate(-25, 16, 10)" />
+        <ellipse cx="16" cy="10" rx="3" ry="5" fill={s.skinLight} opacity="0.25" transform="rotate(-25, 16, 10)" />
+        {/* Front hand reaching forward */}
+        <circle cx="22" cy="16" r="4.5" fill={`url(#${skinId})`} />
+        {/* Baby fingers */}
+        <circle cx="25" cy="14" r="1.5" fill={s.skin} />
+        <circle cx="26" cy="16" r="1.3" fill={s.skin} />
+
+        {/* Neck */}
+        <rect x="-8" y="-4" width="10" height="8" rx="4" fill={s.skin} />
+
+        {/* Head - proportionally larger for baby */}
+        <circle cx="-4" cy="-16" r="20" fill={`url(#${skinId})`} />
+        {/* Baby fat cheeks */}
+        <ellipse cx="-14" cy="-10" rx="5" ry="4" fill={s.skin} />
+        <ellipse cx="6" cy="-10" rx="5" ry="4" fill={s.skin} />
+
+        {/* Ear */}
+        <ellipse cx="-22" cy="-14" rx="4" ry="5" fill={s.skin} />
+        <ellipse cx="-22" cy="-14" rx="2.5" ry="3.5" fill={s.skinDark} opacity="0.3" />
+        <ellipse cx="14" cy="-14" rx="4" ry="5" fill={s.skin} />
+        <ellipse cx="14" cy="-14" rx="2.5" ry="3.5" fill={s.skinDark} opacity="0.3" />
+
+        {/* Baby hair - soft wispy tufts */}
+        <ellipse cx="-4" cy="-32" rx="10" ry="6" fill={s.hair} />
+        <circle cx="-10" cy="-30" r="4" fill={s.hair} />
+        <circle cx="2" cy="-30" r="4" fill={s.hair} />
+        <circle cx="-4" cy="-34" r="3.5" fill={s.hair} />
+        <circle cx="-7" cy="-33" r="2.5" fill="#2A2A2A" opacity="0.4" />
+        <circle cx="0" cy="-33" r="2.5" fill="#2A2A2A" opacity="0.4" />
+
+        {/* Eyes - big baby eyes */}
+        <ellipse cx="-9" cy="-18" rx="5" ry="4.5" fill="#FFFEF7" />
+        <circle cx="-8" cy="-17" r="3.2" fill="#2C1608" />
+        <circle cx="-8" cy="-17" r="1.8" fill="#111" />
+        <circle cx="-7" cy="-18.5" r="1.2" fill="#FFF" />
+        <circle cx="-9.5" cy="-16.5" r="0.5" fill="#FFF" opacity="0.6" />
+        <ellipse cx="3" cy="-18" rx="5" ry="4.5" fill="#FFFEF7" />
+        <circle cx="4" cy="-17" r="3.2" fill="#2C1608" />
+        <circle cx="4" cy="-17" r="1.8" fill="#111" />
+        <circle cx="5" cy="-18.5" r="1.2" fill="#FFF" />
+        <circle cx="2.5" cy="-16.5" r="0.5" fill="#FFF" opacity="0.6" />
+
+        {/* Tiny eyebrows */}
+        <path d="M-13,-23 Q-9,-25 -5,-23" fill="none" stroke={s.hair} strokeWidth="1" strokeLinecap="round" />
+        <path d="M-1,-23 Q3,-25 7,-23" fill="none" stroke={s.hair} strokeWidth="1" strokeLinecap="round" />
+
+        {/* Button nose */}
+        <ellipse cx="-3" cy="-11" rx="2.5" ry="2" fill={s.skinDark} opacity="0.25" />
+        <ellipse cx="-3" cy="-12" rx="1.5" ry="1" fill={s.skinLight} opacity="0.3" />
+
+        {/* Baby mouth - open smile */}
+        <ellipse cx="-3" cy="-6" rx="4" ry="3" fill="#CC6666" opacity="0.6" />
+        <ellipse cx="-3" cy="-7" rx="3" ry="1.5" fill="#FFF" opacity="0.4" />
+
+        {/* Rosy cheeks */}
+        <ellipse cx="-14" cy="-10" rx="4" ry="2.5" fill="#E88B8B" opacity="0.35" />
+        <ellipse cx="8" cy="-10" rx="4" ry="2.5" fill="#E88B8B" opacity="0.35" />
+
+        {/* Face highlight */}
+        <ellipse cx="-6" cy="-24" rx="6" ry="3" fill="#FFF" opacity="0.08" />
+      </g>
+    );
+  }
+
   return (
     <g transform={`scale(${scale})`}>
       <defs>
@@ -436,17 +550,6 @@ function Character({ stage, color }: { stage: number; color: string }) {
       <ellipse cx="16" cy="-20" rx="2.5" ry="3.5" fill={s.skinDark} opacity="0.3" />
 
       {/* Hair by stage and ethnicity */}
-      {/* Stage 0: Brown baby - soft curly tufts */}
-      {stage === 0 && (
-        <>
-          <ellipse cx="0" cy="-35" rx="12" ry="7" fill={s.hair} />
-          <circle cx="-7" cy="-34" r="4" fill={s.hair} />
-          <circle cx="7" cy="-34" r="4" fill={s.hair} />
-          <circle cx="0" cy="-37" r="3.5" fill={s.hair} />
-          <circle cx="-4" cy="-36" r="3" fill="#2A2A2A" opacity="0.5" />
-          <circle cx="4" cy="-36" r="3" fill="#2A2A2A" opacity="0.5" />
-        </>
-      )}
       {/* Stage 1: Asian toddler - straight black hair with bangs */}
       {stage === 1 && (
         <>
@@ -581,13 +684,6 @@ function Character({ stage, color }: { stage: number; color: string }) {
       <ellipse cx="-3" cy="-26" rx="5" ry="3" fill="#FFF" opacity="0.08" />
 
       {/* Stage-specific accessories */}
-      {/* Infant: bib */}
-      {stage === 0 && (
-        <>
-          <path d="M-8,-4 Q0,6 8,-4" fill="#FFF" stroke="#DDD" strokeWidth="0.5" />
-          <circle cx="0" cy="1" r="2" fill="#FFD54F" />
-        </>
-      )}
       {/* Preschooler: backpack strap + lunchbox */}
       {stage === 2 && (
         <>
