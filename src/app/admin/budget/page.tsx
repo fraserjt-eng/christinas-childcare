@@ -33,8 +33,7 @@ import * as XLSX from 'xlsx';
 // Site definitions
 const sites = [
   { id: 'crystal', name: 'Crystal Location' },
-  { id: 'plymouth', name: 'Plymouth Location' },
-  { id: 'maple-grove', name: 'Maple Grove Location' },
+  { id: 'brooklyn-park', name: 'Brooklyn Park Location' },
 ];
 
 // Budget categories with icons
@@ -80,7 +79,7 @@ interface BudgetRow {
 
 // Generate realistic sample data for a site
 function generateSiteData(siteId: string): BudgetRow[] {
-  const baseMultiplier = siteId === 'crystal' ? 1.0 : siteId === 'plymouth' ? 0.85 : 1.15;
+  const baseMultiplier = siteId === 'crystal' ? 1.0 : 0.9;
 
   const categoryBudgets: Record<string, number> = {
     payroll: 25000,
@@ -131,8 +130,7 @@ function generateSiteData(siteId: string): BudgetRow[] {
 function generateInitialData(): Record<string, BudgetRow[]> {
   return {
     crystal: generateSiteData('crystal'),
-    plymouth: generateSiteData('plymouth'),
-    'maple-grove': generateSiteData('maple-grove'),
+    'brooklyn-park': generateSiteData('brooklyn-park'),
   };
 }
 
