@@ -16,7 +16,7 @@ export default function StrategicPage() {
   const [saved, setSaved] = useState(true);
 
   const swot = {
-    strengths: ['Experienced, dedicated staff', 'Strong community reputation', 'Play-based curriculum', 'High parent satisfaction', 'MN DHS excellent rating'],
+    strengths: ['Experienced, dedicated staff', 'Strong community reputation', 'Play-based curriculum', 'High parent satisfaction', 'MN DCYF excellent rating'],
     weaknesses: ['Limited outdoor space', 'Aging facility infrastructure', 'Staff retention challenges', 'Manual administrative processes', 'Waitlist management'],
     opportunities: ['Second location expansion', 'CACFP program enrollment', 'Digital parent engagement', 'Partnership with local schools', 'Grant funding availability'],
     threats: ['Rising operational costs', 'Competition from franchise centers', 'Regulatory changes', 'Staff recruitment market', 'Economic uncertainty'],

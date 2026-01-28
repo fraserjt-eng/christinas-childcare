@@ -272,7 +272,7 @@ export function HeroCarousel() {
 
       {/* Location */}
       <p className="relative z-10 mt-4 text-sm text-gray-500">
-        Crystal, MN &bull; Licensed by Minnesota DHS
+        Crystal, MN &bull; Licensed by Minnesota DCYF
       </p>
 
       {/* CSS Animations */}

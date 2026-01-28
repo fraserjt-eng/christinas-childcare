@@ -57,7 +57,7 @@ const programs = [
 const features = [
   {
     icon: Shield,
-    title: 'Licensed by Minnesota DHS',
+    title: 'Licensed by Minnesota DCYF',
     description: 'Fully licensed and regularly inspected to meet the highest safety standards.',
   },
   {
@@ -73,12 +73,12 @@ const features = [
   {
     icon: Clock,
     title: 'Flexible Scheduling',
-    description: "Full-time and part-time options to fit your family's needs.",
+    description: "Full-time enrollment with extended hours to fit your family's needs.",
   },
   {
     icon: Users,
     title: 'Low Child-to-Staff Ratios',
-    description: 'Small group sizes ensure personalized attention for every child.',
+    description: 'Dedicated caregivers ensure personalized attention for every child.',
   },
   {
     icon: Star,
@@ -332,7 +332,7 @@ export default function HomePage() {
             </Link>
           </div>
           <p className="text-white/70 text-sm mt-6 flex items-center justify-center gap-2">
-            <MapPin className="w-4 h-4" /> Crystal, MN &bull; Licensed by Minnesota DHS
+            <MapPin className="w-4 h-4" /> Crystal, MN &bull; Licensed by Minnesota DCYF
           </p>
         </div>
       </section>

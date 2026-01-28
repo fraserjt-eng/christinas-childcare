@@ -72,7 +72,7 @@ export default function ComplianceDashboardPage() {
           <div className="grid gap-2 sm:grid-cols-3">
             <div>
               <p className="text-sm text-muted-foreground">License Number</p>
-              <p className="font-semibold">MN DHS #CF-12345</p>
+              <p className="font-semibold">MN DCYF #CF-12345</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Type</p>

@@ -26,7 +26,7 @@ export default function AboutPage() {
               Christina&apos;s Child Care Center was born from a simple belief: every child deserves a safe, loving place to learn and grow. Founded by Ophelia Zeogar, our center has grown from a small home-based program into Crystal, MN&apos;s trusted child care partner.
             </p>
             <p>
-              Today, we serve families across multiple classrooms, providing high-quality care from infancy through school age. Our play-based approach, experienced staff, and commitment to family engagement set us apart. We are proudly licensed by Minnesota DHS.
+              Today, we serve families across multiple classrooms, providing high-quality care from infancy through school age. Our play-based approach, experienced staff, and commitment to family engagement set us apart. We are proudly licensed by Minnesota DCYF.
             </p>
           </div>
         </div>
