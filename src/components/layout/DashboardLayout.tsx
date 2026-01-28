@@ -7,7 +7,7 @@ import {
   Home, Users, BookOpen, Calendar, FileText, Camera,
   ClipboardList, UtensilsCrossed, Clock, BarChart3,
   LogOut, Menu, GraduationCap, Target, Building2,
-  DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban
+  DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban, Wallet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -36,6 +36,7 @@ const adminNav = [
   { href: '/admin/lessons', label: 'Lesson Builder', icon: BookOpen },
   { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
   { href: '/admin/financial', label: 'Financial Planning', icon: DollarSign },
+  { href: '/admin/budget', label: 'Budget', icon: Wallet },
   { href: '/admin/staff', label: 'Staff Directory', icon: UserCheck },
   { href: '/admin/compliance', label: 'Compliance', icon: ShieldCheck },
   { href: '/admin/reports', label: 'Daily Reports', icon: BookOpen },
