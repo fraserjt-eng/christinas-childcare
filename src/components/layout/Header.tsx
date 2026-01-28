@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const navLinks = [
   { href: '/', label: 'Home' },
+  { href: '/admin-login', label: 'Admin' },
   { href: '/programs', label: 'Programs' },
   { href: '/about', label: 'About' },
   { href: '/enroll', label: 'Enroll' },
@@ -31,9 +32,11 @@ export function Header() {
         <Link href="/" className="flex items-center gap-2">
           <svg width="40" height="40" viewBox="0 0 40 40" className="flex-shrink-0">
             <circle cx="20" cy="20" r="20" fill="#C62828" />
-            <path d="M12 14 C12 14 20 8 28 14" stroke="#FFD54F" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-            <line x1="20" y1="10" x2="20" y2="28" stroke="#FFD54F" strokeWidth="2" strokeLinecap="round" />
-            <text x="20" y="34" textAnchor="middle" fill="white" fontSize="10" fontFamily="Fredoka One, cursive" fontWeight="bold">C</text>
+            {/* Formal Z */}
+            <path
+              d="M11,11 L29,11 L29,14 L16,27 L29,27 L29,30 L11,30 L11,27 L24,14 L11,14 Z"
+              fill="#FFD54F"
+            />
           </svg>
           <div>
             <span className="font-heading font-bold text-lg text-foreground leading-tight block">Christina&apos;s</span>

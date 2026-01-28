@@ -29,12 +29,25 @@ export default function StrategicPage() {
     { title: 'Facility Improvements', description: 'Upgrade outdoor play area and update infant room', timeline: 'Q3-Q4 2026', status: 'planned' },
   ];
 
-  const phases = [
-    { name: 'Foundation', desc: 'Mission, Vision, Values alignment' },
-    { name: 'Analysis', desc: 'SWOT, market research, data review' },
-    { name: 'Strategy', desc: 'Goal setting, priority identification' },
-    { name: 'Action', desc: 'Implementation plans, timelines' },
-    { name: 'Review', desc: 'Measure, adjust, iterate' },
+  const pathways = [
+    {
+      name: 'Assess',
+      desc: 'Diagnostics that reveal hidden patterns',
+      details: 'SWOT analysis, organizational readiness audit, data review to see what you cannot yet see',
+      icon: Eye,
+    },
+    {
+      name: 'Learn',
+      desc: 'Courses, certification, and intensive workshops',
+      details: 'Mission/Vision/Values alignment, goal setting, strategy development through structured learning',
+      icon: Lightbulb,
+    },
+    {
+      name: 'Transform',
+      desc: 'Coaching and consulting for leaders ready to do the work',
+      details: 'Implementation plans, action timelines, 1:1 coaching, and continuous iteration',
+      icon: TrendingUp,
+    },
   ];
 
   const statusColors: Record<string, string> = { in_progress: 'bg-christina-blue text-white', planned: 'bg-muted text-muted-foreground', completed: 'bg-christina-red text-white' };
@@ -44,7 +57,7 @@ export default function StrategicPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">Strategic Planning Workbook</h1>
-          <p className="text-muted-foreground">Dr. Fraser&apos;s 5-Phase Framework</p>
+          <p className="text-muted-foreground">Interior Architecture Framework — Assess, Learn, Transform</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="gap-2"><FileDown className="h-4 w-4" /> Export PDF</Button>
@@ -59,11 +72,11 @@ export default function StrategicPage() {
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
-              <h2 className="font-bold text-lg mb-1">Work with Dr. Christina Fraser</h2>
-              <p className="text-muted-foreground text-sm">Build your center&apos;s strategic plan with expert guidance. Dr. Fraser brings years of early childhood education leadership and strategic planning experience.</p>
+              <h2 className="font-bold text-lg mb-1">Work with Dr. Josh Fraser (Ed.D.)</h2>
+              <p className="text-muted-foreground text-sm">A sitting practitioner and justice-centered leader with two decades of experience, Dr. Fraser created the Interior Architecture framework — a four-book series guiding organizations through Assess, Learn, and Transform pathways. Services include executive coaching, organizational consulting, and diagnostic tools.</p>
             </div>
             <a
-              href="https://www.chriskids2.com/"
+              href="https://interior-architecture-six.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-christina-red text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-christina-red/90 transition-colors whitespace-nowrap"
@@ -74,24 +87,30 @@ export default function StrategicPage() {
         </CardContent>
       </Card>
 
-      {/* 5-Phase Framework Visual Timeline */}
+      {/* Interior Architecture 3-Pathway Framework */}
       <Card>
         <CardContent className="p-6">
-          <h2 className="font-bold mb-4">Dr. Fraser&apos;s 5-Phase Strategic Framework</h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            {phases.map((phase, i) => (
-              <div key={phase.name} className="relative">
-                <div className={`p-4 rounded-lg text-center ${i < 3 ? 'bg-christina-red/10 border border-christina-red/20' : 'bg-muted border border-border'}`}>
-                  <div className={`w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center text-sm font-bold ${i < 3 ? 'bg-christina-red text-white' : 'bg-muted-foreground/20 text-muted-foreground'}`}>
-                    {i + 1}
+          <h2 className="font-bold mb-4">Interior Architecture Framework — Three Pathways</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {pathways.map((pathway, i) => {
+              const Icon = pathway.icon;
+              const colors = [
+                'bg-christina-blue/10 border-christina-blue/30 text-christina-blue',
+                'bg-christina-coral/10 border-christina-coral/30 text-christina-coral',
+                'bg-christina-red/10 border-christina-red/30 text-christina-red',
+              ];
+              const bgColors = ['bg-christina-blue', 'bg-christina-coral', 'bg-christina-red'];
+              return (
+                <div key={pathway.name} className={`p-5 rounded-lg border ${colors[i]}`}>
+                  <div className={`w-10 h-10 rounded-full ${bgColors[i]} flex items-center justify-center mb-3`}>
+                    <Icon className="h-5 w-5 text-white" />
                   </div>
-                  <p className={`text-sm font-semibold ${i < 3 ? 'text-christina-red' : 'text-muted-foreground'}`}>Phase {i + 1}</p>
-                  <p className={`text-xs font-medium ${i < 3 ? 'text-foreground' : 'text-muted-foreground'}`}>{phase.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{phase.desc}</p>
+                  <p className="text-lg font-bold mb-1">{pathway.name}</p>
+                  <p className="text-sm font-medium mb-2">{pathway.desc}</p>
+                  <p className="text-xs text-muted-foreground">{pathway.details}</p>
                 </div>
-                {i < 4 && <div className="hidden md:block absolute top-1/2 -right-2 w-4 h-0.5 bg-border" />}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>

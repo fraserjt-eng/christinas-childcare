@@ -33,6 +33,7 @@ const adminNav = [
   { href: '/admin/ratios', label: 'Ratio Monitor', icon: BarChart3 },
   { href: '/admin/curriculum', label: 'Curriculum', icon: GraduationCap },
   { href: '/admin/strategic', label: 'Strategic Plan', icon: Target },
+  { href: '/admin/lessons', label: 'Lesson Builder', icon: BookOpen },
   { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
   { href: '/admin/financial', label: 'Financial Planning', icon: DollarSign },
   { href: '/admin/staff', label: 'Staff Directory', icon: UserCheck },
@@ -86,12 +87,9 @@ function SidebarContent({ isAdmin }: { isAdmin: boolean }) {
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {isAdmin ? (
-          <>
-            <NavSection items={adminNav} label="Business Hub" />
-            <NavSection items={parentNav} label="Parent View" />
-          </>
+          <NavSection items={adminNav} label="Business Hub" />
         ) : (
-          <NavSection items={parentNav} label="Menu" />
+          <NavSection items={parentNav} label="Parent Portal" />
         )}
       </div>
       <div className="p-4 border-t">

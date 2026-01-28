@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { HeroCarousel } from '@/components/features/HeroCarousel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,6 @@ import {
   Star,
   Users,
   Clock,
-
   MapPin,
   Quote,
   GraduationCap,
@@ -26,6 +26,7 @@ const programs = [
     description:
       'Nurturing care with individualized schedules, sensory exploration, and developmental milestones tracking.',
     icon: Baby,
+    image: '/images/infants.png',
   },
   {
     title: 'Toddler Program',
@@ -33,6 +34,7 @@ const programs = [
     description:
       'Active exploration through play-based learning, early language development, and social skills building.',
     icon: Smile,
+    image: '/images/van.png',
   },
   {
     title: 'Preschool',
@@ -40,6 +42,7 @@ const programs = [
     description:
       'Kindergarten readiness with literacy, math concepts, creative arts, and collaborative projects.',
     icon: BookOpen,
+    image: null,
   },
   {
     title: 'School Age',
@@ -47,6 +50,7 @@ const programs = [
     description:
       'Before and after school care with homework help, enrichment activities, and summer programming.',
     icon: GraduationCap,
+    image: null,
   },
 ];
 
@@ -154,6 +158,29 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Free Transportation Banner */}
+      <section className="bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 py-8 relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-4 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjIwIiB2aWV3Qm94PSIwIDAgMTAwIDIwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Ik0wIDIwIFEgMjUgMCA1MCAyMCBUIDEwMCAyMCIgZmlsbD0iIzQyOTVGNSIvPjwvc3ZnPg==')] bg-repeat-x" />
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6 text-center md:text-left">
+            <div className="rounded-lg overflow-hidden shadow-lg flex-shrink-0">
+              <Image
+                src="/images/community.png"
+                alt="Christina's Child Care Center Van"
+                width={140}
+                height={100}
+                className="object-cover"
+              />
+            </div>
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold text-red-700">FREE</h2>
+              <p className="text-lg font-semibold text-green-700">PICK-UP and DROP-OFF AVAILABLE</p>
+              <p className="text-sm text-gray-700">Transportation for school-age children to and from local schools</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Programs Section */}
       <section className="bg-gray-50 py-16 md:py-24">
         <div className="container mx-auto px-4">
@@ -165,12 +192,31 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {programs.map((program) => (
-              <Card key={program.title} className="hover:shadow-lg transition-shadow border-t-4 border-t-christina-red">
-                <CardContent className="pt-6">
-                  <program.icon className="w-10 h-10 text-christina-red mb-4" />
+              <Card key={program.title} className="hover:shadow-lg transition-shadow overflow-hidden group">
+                <div className="relative h-40 bg-gray-200">
+                  {program.image ? (
+                    <Image
+                      src={program.image}
+                      alt={program.title}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center">
+                      <program.icon className="w-16 h-16 text-christina-red/30" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  <div className="absolute bottom-3 left-3">
+                    <div className="w-10 h-10 rounded-full bg-white shadow flex items-center justify-center">
+                      <program.icon className="w-5 h-5 text-christina-red" />
+                    </div>
+                  </div>
+                </div>
+                <CardContent className="pt-4">
                   <h3 className="text-xl font-semibold mb-1">{program.title}</h3>
-                  <p className="text-sm text-christina-red font-medium mb-3">{program.ages}</p>
-                  <p className="text-gray-600">{program.description}</p>
+                  <p className="text-sm text-christina-red font-medium mb-2">{program.ages}</p>
+                  <p className="text-gray-600 text-sm">{program.description}</p>
                 </CardContent>
               </Card>
             ))}
