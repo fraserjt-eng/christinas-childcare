@@ -10,11 +10,6 @@ const values = [
   { icon: Users, title: 'Community Connection', description: 'We build bridges between families, schools, and community resources.' },
 ];
 
-const team = [
-  { name: 'Ophelia Zeogar', role: 'Owner & Director', bio: 'With over 15 years in early childhood education, Ophelia founded the center with a vision of providing exceptional care rooted in love and learning.' },
-  { name: 'Stephen Zeogar', role: 'Owner', bio: 'Stephen brings strong leadership and operational expertise, ensuring the center runs smoothly and continues to grow as a trusted community resource.' },
-  { name: 'Christina Fraser', role: 'Assistant Director', bio: 'Christina brings years of administrative experience and a passion for early childhood development, ensuring smooth daily operations for families and staff alike.' },
-];
 
 export default function AboutPage() {
   return (
@@ -76,28 +71,6 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* Team */}
-        <div>
-          <h2 className="text-3xl font-bold text-center mb-8">Meet Our Team</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {team.map((member) => (
-              <Card key={member.name}>
-                <CardContent className="p-6 flex flex-col items-center text-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-christina-blue/10 flex items-center justify-center flex-shrink-0">
-                    <span className="font-heading font-bold text-christina-blue text-lg">
-                      {member.name.split(' ').map(n => n[0]).join('')}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold">{member.name}</h3>
-                    <p className="text-sm text-christina-red font-medium mb-2">{member.role}</p>
-                    <p className="text-sm text-muted-foreground">{member.bio}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

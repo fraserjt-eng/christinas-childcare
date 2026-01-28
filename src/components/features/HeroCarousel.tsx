@@ -53,23 +53,61 @@ export function HeroCarousel() {
         <div className="absolute w-72 h-72 rounded-full opacity-10 animate-float-fast" style={{ background: 'radial-gradient(circle, #5BA3E6 0%, transparent 70%)', left: '30%', bottom: '5%' }} />
       </div>
 
-      {/* Rainbow Tagline - ABOVE umbrella, larger */}
-      <h1
-        className="relative z-10 text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold font-heading text-center mb-2"
-        style={{
-          background: 'linear-gradient(90deg, #C62828, #E65100, #F9A825, #2E7D32, #1565C0, #6A1B9A)',
-          backgroundSize: '200% auto',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          animation: 'shimmer 3s linear infinite',
-        }}
-      >
-        Where Learning and Growth Become One
-      </h1>
+      {/* Curved Rainbow Tagline - arcs over subtitle like an umbrella */}
+      <div className="relative z-10 w-full max-w-3xl mx-auto mb-0">
+        <svg viewBox="0 0 800 160" className="w-full h-auto" role="heading" aria-level={1} aria-label="Where Learning and Growth Become One">
+          <defs>
+            {/* Animated rainbow gradient for text */}
+            <linearGradient id="rainbowTextAnimated" x1="0%" y1="0%" x2="200%" y2="0%">
+              <stop offset="0%" stopColor="#C62828" />
+              <stop offset="10%" stopColor="#E65100" />
+              <stop offset="20%" stopColor="#F9A825" />
+              <stop offset="30%" stopColor="#2E7D32" />
+              <stop offset="40%" stopColor="#1565C0" />
+              <stop offset="50%" stopColor="#6A1B9A" />
+              <stop offset="60%" stopColor="#C62828" />
+              <stop offset="70%" stopColor="#E65100" />
+              <stop offset="80%" stopColor="#F9A825" />
+              <stop offset="90%" stopColor="#2E7D32" />
+              <stop offset="100%" stopColor="#1565C0" />
+              <animate attributeName="x1" from="0%" to="-100%" dur="3s" repeatCount="indefinite" />
+              <animate attributeName="x2" from="200%" to="100%" dur="3s" repeatCount="indefinite" />
+            </linearGradient>
+            {/* Curved path for text - wider umbrella arc */}
+            <path
+              id="umbrellaArc"
+              d="M20,140 Q400,-20 780,140"
+              fill="none"
+            />
+          </defs>
+          {/* Shadow text for depth */}
+          <text
+            fontSize="42"
+            fontWeight="bold"
+            fontFamily="system-ui, -apple-system, sans-serif"
+            fill="#000"
+            opacity="0.08"
+          >
+            <textPath href="#umbrellaArc" startOffset="50%" textAnchor="middle">
+              Where Learning and Growth Become One
+            </textPath>
+          </text>
+          {/* Main curved text with animated rainbow gradient */}
+          <text
+            fontSize="42"
+            fontWeight="bold"
+            fontFamily="system-ui, -apple-system, sans-serif"
+            fill="url(#rainbowTextAnimated)"
+          >
+            <textPath href="#umbrellaArc" startOffset="50%" textAnchor="middle">
+              Where Learning and Growth Become One
+            </textPath>
+          </text>
+        </svg>
+      </div>
 
-      {/* Subtitle */}
-      <p className="relative z-10 text-xl sm:text-2xl md:text-3xl font-semibold text-gray-700 text-center mt-2">
+      {/* Subtitle - centered under the arc */}
+      <p className="relative z-10 text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-700 text-center -mt-4">
         Christina&apos;s Child Care Center
       </p>
 
