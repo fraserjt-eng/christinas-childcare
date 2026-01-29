@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { BookOpen, Clock, Brain, Check, Star, MessageSquare, FileText, Users } from 'lucide-react';
+import { TourButton } from '@/components/admin/TourButton';
 
 type Domain = 'cognitive' | 'creative' | 'language' | 'physical' | 'social_emotional';
 const domainColors: Record<Domain, string> = { cognitive: 'bg-christina-blue', creative: 'bg-christina-coral', language: 'bg-christina-red', physical: 'bg-christina-yellow', social_emotional: 'bg-purple-500' };
@@ -291,9 +292,12 @@ export default function CurriculumPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Curriculum System</h1>
-        <p className="text-muted-foreground">Room-based curriculum management with standards, activities, lessons, and assessments.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Curriculum System</h1>
+          <p className="text-muted-foreground">Room-based curriculum management with standards, activities, lessons, and assessments.</p>
+        </div>
+        <TourButton tourId="curriculum-library" />
       </div>
 
       {/* Room Tabs */}

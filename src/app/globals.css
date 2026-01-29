@@ -55,3 +55,52 @@
     @apply font-heading;
   }
 }
+
+/* Driver.js Tour Styles */
+.christina-tour-popover {
+  --driver-popover-max-width: 320px;
+  --driver-popover-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.christina-tour-popover .driver-popover-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.christina-tour-popover .driver-popover-description {
+  color: #6b6b6b;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.christina-tour-popover .driver-popover-progress-text {
+  color: #999;
+  font-size: 0.75rem;
+}
+
+.christina-tour-popover .driver-popover-prev-btn,
+.christina-tour-popover .driver-popover-next-btn {
+  background: #1a1a1a;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.christina-tour-popover .driver-popover-prev-btn:hover,
+.christina-tour-popover .driver-popover-next-btn:hover {
+  background: #333;
+}
+
+.christina-tour-popover .driver-popover-close-btn {
+  color: #999;
+}
+
+.christina-tour-popover .driver-popover-close-btn:hover {
+  color: #333;
+}

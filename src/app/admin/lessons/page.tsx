@@ -69,6 +69,7 @@ import { generateLessonPDF } from '@/lib/pdf/lesson-pdf';
 import { generateActivityCards } from '@/lib/pdf/activity-cards';
 import { generateParentLetter } from '@/lib/pdf/parent-letter';
 import { generateAssessmentChecklist } from '@/lib/pdf/assessment-checklist';
+import { TourButton } from '@/components/admin/TourButton';
 
 type ViewMode = 'list' | 'view' | 'edit';
 
@@ -355,12 +356,15 @@ export default function LessonBuilderPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Lesson Builder</h1>
-        <p className="text-muted-foreground">
-          Create, manage, and remix lesson plans for all age groups.
-        </p>
+    <div className="space-y-6" data-tour="lesson-form">
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Lesson Builder</h1>
+          <p className="text-muted-foreground">
+            Create, manage, and remix lesson plans for all age groups.
+          </p>
+        </div>
+        <TourButton tourId="lesson-builder" />
       </div>
 
       {error && (

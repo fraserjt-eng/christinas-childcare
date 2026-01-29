@@ -11,6 +11,7 @@ const navLinks = [
   { href: '/admin-login', label: 'Admin' },
   { href: '/programs', label: 'Programs' },
   { href: '/scope-sequence', label: 'Curriculum' },
+  { href: '/training', label: 'Training' },
   { href: '/about', label: 'About' },
   { href: '/enroll', label: 'Enroll' },
 ];
