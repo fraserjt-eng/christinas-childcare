@@ -10,6 +10,7 @@ const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/admin-login', label: 'Admin' },
   { href: '/programs', label: 'Programs' },
+  { href: '/scope-sequence', label: 'Curriculum' },
   { href: '/about', label: 'About' },
   { href: '/enroll', label: 'Enroll' },
 ];
