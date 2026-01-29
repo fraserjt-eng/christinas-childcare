@@ -110,7 +110,6 @@ export function HeroCarousel() {
     return () => clearInterval(interval);
   }, []);
 
-  const currentStage = stages[activeIndex];
   const currentPos = spiralPoints[activeIndex];
 
   /* Clean spiral path */
