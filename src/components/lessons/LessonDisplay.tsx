@@ -40,17 +40,14 @@ interface LessonDisplayProps {
   onDelete?: () => void;
   onToggleFavorite?: () => void;
   onDownloadPDF?: (type: 'lesson' | 'activity-cards' | 'parent-letter' | 'assessment') => void;
-  onClose?: () => void;
 }
 
 function SegmentCard({
   segment,
   index,
-  totalSegments,
 }: {
   segment: LessonSegmentItem;
   index: number;
-  totalSegments: number;
 }) {
   const [expanded, setExpanded] = useState(index === 0);
   const segmentColor = getSegmentColor(segment.segment);
@@ -153,7 +150,6 @@ export function LessonDisplay({
   onDelete,
   onToggleFavorite,
   onDownloadPDF,
-  onClose,
 }: LessonDisplayProps) {
   const ageLabel = AGE_GROUP_LABELS[lesson.ageGroup];
   const domainLabel = DOMAIN_LABELS[lesson.domain];
@@ -325,7 +321,6 @@ export function LessonDisplay({
               key={index}
               segment={segment}
               index={index}
-              totalSegments={lesson.segments.length}
             />
           ))}
         </TabsContent>

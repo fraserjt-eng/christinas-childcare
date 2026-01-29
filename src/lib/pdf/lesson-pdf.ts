@@ -6,7 +6,6 @@ import {
   Lesson,
   AGE_GROUP_LABELS,
   DOMAIN_LABELS,
-  SEGMENT_LABELS,
 } from '@/types/curriculum';
 
 const CHRISTINA_RED = '#C62828';

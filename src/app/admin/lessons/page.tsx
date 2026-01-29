@@ -273,7 +273,7 @@ export default function LessonBuilderPage() {
 
   const handleDuplicateLesson = async (lesson: Lesson) => {
     try {
-      const { id, createdAt, updatedAt, ...lessonData } = lesson;
+      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...lessonData } = lesson;
       await saveLesson({
         ...lessonData,
         title: `${lesson.title} (Copy)`,
@@ -348,7 +348,6 @@ export default function LessonBuilderPage() {
           onDelete={() => handleDeleteClick(selectedLesson)}
           onToggleFavorite={() => handleToggleFavorite(selectedLesson)}
           onDownloadPDF={handleDownloadPDF}
-          onClose={handleBackToList}
         />
       </div>
     );

@@ -10,7 +10,6 @@ import {
   SEGMENT_LABELS,
   AGE_GROUP_LABELS,
   DOMAIN_LABELS,
-  generateLessonId,
 } from '@/types/curriculum';
 
 // ============================================================================
@@ -33,10 +32,11 @@ export interface RemixRequest {
   adaptationNotes?: string;
 }
 
-interface ClaudeMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
+// ClaudeMessage type for future streaming support
+// interface ClaudeMessage {
+//   role: 'user' | 'assistant';
+//   content: string;
+// }
 
 // ============================================================================
 // Age-Appropriate Guidelines
