@@ -125,8 +125,8 @@ export function HeroCarousel() {
 
       {/* Subtle background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute w-96 h-96 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #C62828 0%, transparent 70%)', left: '10%', top: '20%' }} />
-        <div className="absolute w-80 h-80 rounded-full opacity-8" style={{ background: 'radial-gradient(circle, #43A047 0%, transparent 70%)', right: '15%', bottom: '20%' }} />
+        <div className="absolute w-96 h-96 rounded-full" style={{ background: 'radial-gradient(circle, #C62828 0%, transparent 70%)', left: '10%', top: '20%', opacity: 0.12 }} />
+        <div className="absolute w-80 h-80 rounded-full" style={{ background: 'radial-gradient(circle, #43A047 0%, transparent 70%)', right: '15%', bottom: '20%', opacity: 0.04 }} />
       </div>
 
       {/* Rainbow Tagline */}
@@ -200,6 +200,13 @@ export function HeroCarousel() {
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
+
+            {/* Flowing stream gradient - lighter for visible movement */}
+            <linearGradient id="spiralFlowGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stopColor="#FFB3B3" stopOpacity="0.6" />
+              <stop offset="50%" stopColor="#FF8A8A" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#FFD0D0" stopOpacity="0.5" />
+            </linearGradient>
           </defs>
 
           {/* Daycare Building */}
@@ -232,7 +239,7 @@ export function HeroCarousel() {
             <text x="0" y="-71" textAnchor="middle" fill="#FFF" fontSize="9" fontWeight="bold" fontFamily="system-ui">Christina&apos;s Child Care</text>
           </g>
 
-          {/* Clean Spiral - No dashed lines */}
+          {/* Animated Spiral with flowing stream effect */}
           {/* Shadow */}
           <path d={spiralPath} fill="none" stroke="#2A0808" strokeWidth="28" strokeLinecap="round" opacity="0.15" transform="translate(4, 6)" />
 
@@ -242,18 +249,49 @@ export function HeroCarousel() {
           {/* 3D highlight overlay */}
           <path d={spiralPath} fill="none" stroke="url(#spiralHighlight)" strokeWidth="24" strokeLinecap="round" />
 
-          {/* Stage markers */}
+          {/* Animated flowing stream - creates visible movement */}
+          <path
+            d={spiralPath}
+            fill="none"
+            stroke="url(#spiralFlowGrad)"
+            strokeWidth="14"
+            strokeLinecap="round"
+            strokeDasharray="30 60"
+            style={{
+              animation: 'spiralFlow 2s linear infinite',
+            }}
+          />
+          <style>{`
+            @keyframes spiralFlow {
+              0% { stroke-dashoffset: 0; }
+              100% { stroke-dashoffset: -90; }
+            }
+          `}</style>
+
+          {/* Stage markers - labels only appear for current character */}
           {spiralPoints.map((point, i) => {
-            if (i === 0) return null; // Skip infant marker (at daycare)
+            if (i === 0) {
+              // Infant label - only show when active
+              return activeIndex === 0 ? (
+                <g key={i}>
+                  <circle cx={point.x} cy={point.y - 60} r="20" fill={stages[i].color} opacity="0.15" />
+                  <text x={point.x} y={point.y - 30} textAnchor="middle" fill="#333" fontSize="13" fontWeight="700" fontFamily="system-ui">
+                    {stages[i].label}
+                  </text>
+                </g>
+              ) : null;
+            }
             const isReached = i <= activeIndex;
             const isCurrent = i === activeIndex;
             return (
               <g key={i}>
                 {isCurrent && <circle cx={point.x} cy={point.y} r="20" fill={stages[i].color} opacity="0.15" />}
                 <circle cx={point.x} cy={point.y} r={isCurrent ? 12 : 8} fill={isReached ? stages[i].color : '#CCC'} stroke="#FFF" strokeWidth="2.5" />
-                <text x={point.x} y={point.y + 26} textAnchor="middle" fill={isReached ? '#333' : '#999'} fontSize="13" fontWeight={isCurrent ? '700' : '500'} fontFamily="system-ui">
-                  {stages[i].label}
-                </text>
+                {isCurrent && (
+                  <text x={point.x} y={point.y + 26} textAnchor="middle" fill="#333" fontSize="13" fontWeight="700" fontFamily="system-ui">
+                    {stages[i].label}
+                  </text>
+                )}
               </g>
             );
           })}
@@ -288,7 +326,7 @@ export function HeroCarousel() {
    ============================================================ */
 function VRCharacter({ stage }: { stage: number }) {
   const s = stages[stage];
-  const scale = [0.8, 0.9, 1.0, 1.1, 1.2][stage];
+  const scale = [0.65, 0.75, 0.85, 0.95, 0.95][stage];
   const id = `vr-${stage}`;
 
   return (
