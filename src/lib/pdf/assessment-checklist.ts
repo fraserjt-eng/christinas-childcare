@@ -12,7 +12,8 @@ const CHRISTINA_RED = '#C62828';
 const CHRISTINA_BLUE = '#2196F3';
 const GRAY = '#6B7280';
 
-export function generateAssessmentChecklist(lesson: Lesson, _multipleChildren = false): void {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function generateAssessmentChecklist(lesson: Lesson, multipleChildren = false): void {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;

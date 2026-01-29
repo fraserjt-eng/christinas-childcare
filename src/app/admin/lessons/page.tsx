@@ -273,7 +273,8 @@ export default function LessonBuilderPage() {
 
   const handleDuplicateLesson = async (lesson: Lesson) => {
     try {
-      const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...lessonData } = lesson;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, createdAt, updatedAt, ...lessonData } = lesson;
       await saveLesson({
         ...lessonData,
         title: `${lesson.title} (Copy)`,
