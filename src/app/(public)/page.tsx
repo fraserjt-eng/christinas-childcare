@@ -110,12 +110,6 @@ const testimonials = [
 
 const staff = [
   {
-    name: 'Christina Fraser',
-    role: 'Founder & Director',
-    description:
-      'With over 20 years in early childhood education, Christina founded the center on the belief that every child deserves a safe, joyful place to learn and grow.',
-  },
-  {
     name: 'Ophelia Zeogar',
     role: 'Lead Teacher',
     description:
@@ -123,9 +117,15 @@ const staff = [
   },
   {
     name: 'Stephen Zeogar',
-    role: 'Operations Manager',
+    role: 'Owner & Operations Manager',
     description:
       'Stephen ensures smooth daily operations and maintains the safe, welcoming environment families count on.',
+  },
+  {
+    name: 'Christina Fraser',
+    role: 'Assistant Director',
+    description:
+      'With over 20 years in early childhood education, Christina brings expertise and heart to ensuring every child has a safe, joyful place to learn and grow.',
   },
 ];
 
@@ -326,7 +326,7 @@ export default function HomePage() {
               </Button>
             </Link>
             <Link href="/enroll">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg">
+              <Button size="lg" className="bg-white text-christina-red hover:bg-gray-100 px-8 py-6 text-lg font-semibold">
                 Start Enrollment
               </Button>
             </Link>
