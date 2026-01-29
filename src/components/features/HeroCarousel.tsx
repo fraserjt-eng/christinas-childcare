@@ -10,20 +10,21 @@ const stages = [
   { label: 'College', color: '#C62828', skin: '#4A2912', skinLight: '#5E3A1E', skinDark: '#3B1E0A', hair: '#0D0D0D', hairStyle: 'tight' },
 ];
 
-/* True spiral path points - loops around while ascending */
+/* Vertical spiral positions - bottom to top, alternating left/right */
 const spiralPoints = [
-  { x: 120, y: 320 },
-  { x: 280, y: 280 },
-  { x: 400, y: 200 },
-  { x: 520, y: 140 },
-  { x: 680, y: 80 },
+  { x: 280, y: 340 },  // Infant - bottom center-left
+  { x: 520, y: 280 },  // Toddler - right
+  { x: 280, y: 210 },  // Preschool - left
+  { x: 520, y: 140 },  // School Age - right
+  { x: 400, y: 60 },   // College - center top
 ];
 
 export function HeroCarousel() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
+  const [rotation, setRotation] = useState(0);
 
-  /* Simple, reliable animation cycle */
+  /* Animation cycle for stages */
   useEffect(() => {
     const cycleDuration = 3000;
     const fadeDuration = 600;
@@ -40,6 +41,14 @@ export function HeroCarousel() {
     return () => clearInterval(interval);
   }, []);
 
+  /* Continuous spiral rotation animation */
+  useEffect(() => {
+    const rotationInterval = setInterval(() => {
+      setRotation((prev) => (prev + 1) % 360);
+    }, 50);
+    return () => clearInterval(rotationInterval);
+  }, []);
+
   const currentStage = stages[activeIndex];
   const currentPos = spiralPoints[activeIndex];
 
@@ -53,11 +62,10 @@ export function HeroCarousel() {
         <div className="absolute w-72 h-72 rounded-full opacity-10 animate-float-fast" style={{ background: 'radial-gradient(circle, #5BA3E6 0%, transparent 70%)', left: '30%', bottom: '5%' }} />
       </div>
 
-      {/* Curved Rainbow Tagline - arcs over subtitle like an umbrella */}
+      {/* Curved Rainbow Tagline */}
       <div className="relative z-10 w-full max-w-3xl mx-auto mb-0">
         <svg viewBox="0 0 800 160" className="w-full h-auto" role="heading" aria-level={1} aria-label="Where Learning and Growth Become One">
           <defs>
-            {/* Animated rainbow gradient for text */}
             <linearGradient id="rainbowTextAnimated" x1="0%" y1="0%" x2="200%" y2="0%">
               <stop offset="0%" stopColor="#C62828" />
               <stop offset="10%" stopColor="#E65100" />
@@ -73,32 +81,14 @@ export function HeroCarousel() {
               <animate attributeName="x1" from="0%" to="-100%" dur="3s" repeatCount="indefinite" />
               <animate attributeName="x2" from="200%" to="100%" dur="3s" repeatCount="indefinite" />
             </linearGradient>
-            {/* Curved path for text - wider umbrella arc */}
-            <path
-              id="umbrellaArc"
-              d="M20,140 Q400,-20 780,140"
-              fill="none"
-            />
+            <path id="umbrellaArc" d="M20,140 Q400,-20 780,140" fill="none" />
           </defs>
-          {/* Shadow text for depth */}
-          <text
-            fontSize="42"
-            fontWeight="bold"
-            fontFamily="system-ui, -apple-system, sans-serif"
-            fill="#000"
-            opacity="0.08"
-          >
+          <text fontSize="42" fontWeight="bold" fontFamily="system-ui, -apple-system, sans-serif" fill="#000" opacity="0.08">
             <textPath href="#umbrellaArc" startOffset="50%" textAnchor="middle">
               Where Learning and Growth Become One
             </textPath>
           </text>
-          {/* Main curved text with animated rainbow gradient */}
-          <text
-            fontSize="42"
-            fontWeight="bold"
-            fontFamily="system-ui, -apple-system, sans-serif"
-            fill="url(#rainbowTextAnimated)"
-          >
+          <text fontSize="42" fontWeight="bold" fontFamily="system-ui, -apple-system, sans-serif" fill="url(#rainbowTextAnimated)">
             <textPath href="#umbrellaArc" startOffset="50%" textAnchor="middle">
               Where Learning and Growth Become One
             </textPath>
@@ -106,132 +96,208 @@ export function HeroCarousel() {
         </svg>
       </div>
 
-      {/* Subtitle - centered under the arc */}
+      {/* Subtitle */}
       <p className="relative z-10 text-2xl sm:text-3xl md:text-4xl font-semibold text-gray-700 text-center -mt-4">
         Christina&apos;s Child Care Center
       </p>
 
-      {/* Animation Canvas - True Spiral Journey */}
+      {/* Animation Canvas - Vertical Spiral Journey */}
       <div className="relative z-10 w-full max-w-3xl mt-4">
-        <svg viewBox="0 0 800 400" className="w-full h-auto" role="img" aria-label={`Child at ${currentStage.label} stage`}>
+        <svg viewBox="0 0 800 420" className="w-full h-auto" role="img" aria-label={`Child at ${currentStage.label} stage`}>
           <defs>
             <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+              <feGaussianBlur stdDeviation="4" result="coloredBlur" />
               <feMerge>
                 <feMergeNode in="coloredBlur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-            <linearGradient id="spiralGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#C62828" stopOpacity="0.6" />
-              <stop offset="50%" stopColor="#C62828" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#C62828" stopOpacity="1" />
+            <filter id="spiralGlow">
+              <feGaussianBlur stdDeviation="8" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            {/* Animated gradient for spiral */}
+            <linearGradient id="spiralGradientAnimated" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stopColor="#C62828" stopOpacity="0.4">
+                <animate attributeName="stopOpacity" values="0.4;0.8;0.4" dur="2s" repeatCount="indefinite" />
+              </stop>
+              <stop offset="50%" stopColor="#C62828" stopOpacity="0.8">
+                <animate attributeName="stopOpacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite" />
+              </stop>
+              <stop offset="100%" stopColor="#E53935" stopOpacity="1">
+                <animate attributeName="stopOpacity" values="1;0.9;1" dur="2s" repeatCount="indefinite" />
+              </stop>
             </linearGradient>
+            {/* Glow gradient */}
+            <radialGradient id="spiralCenterGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#FFCDD2" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#FFCDD2" stopOpacity="0" />
+            </radialGradient>
           </defs>
 
-          {/* True Spiral Path - loops around while going up and right */}
+          {/* Central glow effect */}
+          <ellipse cx="400" cy="200" rx="120" ry="180" fill="url(#spiralCenterGlow)" opacity="0.5" />
+
+          {/* TRUE VERTICAL SPIRAL - Bottom to Top */}
+          {/* Back spiral strand (appears behind) */}
+          <g opacity="0.3">
+            <path
+              d="M400,380
+                 C200,380 200,340 280,320
+                 C360,300 560,300 540,260
+                 C520,220 240,220 260,180
+                 C280,140 520,140 520,100
+                 C520,60 440,40 400,30"
+              fill="none"
+              stroke="#C62828"
+              strokeWidth="8"
+              strokeLinecap="round"
+            />
+          </g>
+
+          {/* Main spiral strand - front */}
           <path
-            d="M60,360
-               C80,340 100,350 140,320
-               C180,290 160,260 200,240
-               C240,220 280,250 320,220
-               C360,190 340,160 380,140
-               C420,120 460,150 500,120
-               C540,90 520,60 560,50
-               C600,40 640,70 680,40
-               C720,10 740,30 760,20"
+            d="M400,380
+               C600,380 600,340 520,320
+               C440,300 240,300 260,260
+               C280,220 560,220 540,180
+               C520,140 280,140 280,100
+               C280,60 360,40 400,30"
             fill="none"
-            stroke="url(#spiralGradient)"
-            strokeWidth="5"
+            stroke="url(#spiralGradientAnimated)"
+            strokeWidth="10"
             strokeLinecap="round"
-            strokeDasharray="12 8"
-            className="animate-dash"
+            filter="url(#spiralGlow)"
+            className="animate-spiral-pulse"
           />
 
-          {/* Spiral loops - additional curves for spiral effect */}
+          {/* Animated dashed overlay for movement effect */}
           <path
-            d="M100,340 C130,320 120,300 150,280"
-            fill="none"
-            stroke="#C62828"
-            strokeWidth="3"
-            strokeOpacity="0.4"
-            strokeLinecap="round"
-          />
-          <path
-            d="M240,260 C270,240 260,220 290,200"
-            fill="none"
-            stroke="#C62828"
-            strokeWidth="3"
-            strokeOpacity="0.4"
-            strokeLinecap="round"
-          />
-          <path
-            d="M380,180 C410,160 400,140 430,120"
-            fill="none"
-            stroke="#C62828"
-            strokeWidth="3"
-            strokeOpacity="0.4"
-            strokeLinecap="round"
-          />
-          <path
-            d="M520,100 C550,80 540,60 570,50"
-            fill="none"
-            stroke="#C62828"
-            strokeWidth="3"
-            strokeOpacity="0.4"
-            strokeLinecap="round"
-          />
-
-          {/* Glow trail */}
-          <path
-            d="M60,360
-               C80,340 100,350 140,320
-               C180,290 160,260 200,240
-               C240,220 280,250 320,220
-               C360,190 340,160 380,140
-               C420,120 460,150 500,120
-               C540,90 520,60 560,50
-               C600,40 640,70 680,40
-               C720,10 740,30 760,20"
+            d="M400,380
+               C600,380 600,340 520,320
+               C440,300 240,300 260,260
+               C280,220 560,220 540,180
+               C520,140 280,140 280,100
+               C280,60 360,40 400,30"
             fill="none"
             stroke="#FFCDD2"
-            strokeWidth="14"
+            strokeWidth="4"
             strokeLinecap="round"
-            opacity="0.3"
-            filter="url(#glow)"
+            strokeDasharray="20 30"
+            className="animate-dash-up"
           />
 
-          {/* Milestone markers */}
+          {/* Secondary animated dashes going opposite direction */}
+          <path
+            d="M400,380
+               C200,380 200,340 280,320
+               C360,300 560,300 540,260
+               C520,220 240,220 260,180
+               C280,140 520,140 520,100
+               C520,60 440,40 400,30"
+            fill="none"
+            stroke="#EF5350"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray="15 40"
+            opacity="0.5"
+            className="animate-dash-down"
+          />
+
+          {/* Spiral connector rings - gives 3D effect */}
+          {[360, 300, 240, 170, 100].map((y, i) => (
+            <ellipse
+              key={i}
+              cx="400"
+              cy={y}
+              rx={80 - i * 8}
+              ry={15 - i * 1.5}
+              fill="none"
+              stroke="#C62828"
+              strokeWidth="2"
+              opacity={0.15 + i * 0.05}
+              style={{
+                transform: `rotate(${rotation + i * 20}deg)`,
+                transformOrigin: '400px ' + y + 'px',
+              }}
+            />
+          ))}
+
+          {/* Floating particles along spiral */}
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+            const progress = ((rotation + i * 45) % 360) / 360;
+            const y = 380 - progress * 350;
+            const xOffset = Math.sin(progress * Math.PI * 4) * 100;
+            return (
+              <circle
+                key={i}
+                cx={400 + xOffset}
+                cy={y}
+                r={3}
+                fill="#C62828"
+                opacity={0.3 + progress * 0.5}
+              >
+                <animate
+                  attributeName="r"
+                  values="2;4;2"
+                  dur="1s"
+                  repeatCount="indefinite"
+                  begin={`${i * 0.125}s`}
+                />
+              </circle>
+            );
+          })}
+
+          {/* Milestone markers with labels */}
           {spiralPoints.map((point, i) => {
             const isReached = i <= activeIndex;
             const isCurrent = i === activeIndex;
             return (
               <g key={i}>
-                <circle
-                  cx={point.x}
-                  cy={point.y + 25}
-                  r={isCurrent ? 10 : 7}
-                  fill={isReached ? stages[i].color : '#DDD'}
-                  className={isCurrent ? 'animate-pulse-ring' : ''}
-                />
+                {/* Glow behind marker */}
                 {isCurrent && (
                   <circle
                     cx={point.x}
-                    cy={point.y + 25}
-                    r="10"
+                    cy={point.y}
+                    r="25"
+                    fill={stages[i].color}
+                    opacity="0.2"
+                    className="animate-pulse"
+                  />
+                )}
+                {/* Marker circle */}
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r={isCurrent ? 14 : 10}
+                  fill={isReached ? stages[i].color : '#DDD'}
+                  stroke="#FFF"
+                  strokeWidth="3"
+                  className={isCurrent ? 'animate-bounce-subtle' : ''}
+                />
+                {/* Ping effect for current */}
+                {isCurrent && (
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r="14"
                     fill="none"
                     stroke={stages[i].color}
                     strokeWidth="2"
                     className="animate-ping-slow"
                   />
                 )}
+                {/* Label */}
                 <text
                   x={point.x}
-                  y={point.y + 50}
+                  y={point.y + 28}
                   textAnchor="middle"
-                  fill={isReached ? '#444' : '#AAA'}
-                  fontSize="13"
-                  fontWeight={isCurrent ? '700' : '400'}
+                  fill={isReached ? '#333' : '#AAA'}
+                  fontSize="14"
+                  fontWeight={isCurrent ? '700' : '500'}
                   fontFamily="system-ui"
                 >
                   {stages[i].label}
@@ -243,7 +309,7 @@ export function HeroCarousel() {
           {/* Animated Character */}
           <g
             style={{
-              transform: `translate(${currentPos.x}px, ${currentPos.y}px)`,
+              transform: `translate(${currentPos.x}px, ${currentPos.y - 45}px)`,
               opacity: isVisible ? 1 : 0,
               transition: 'opacity 0.5s ease-in-out, transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
             }}
@@ -254,19 +320,36 @@ export function HeroCarousel() {
           {/* Sparkles around current position */}
           {isVisible && (
             <g className="animate-sparkle">
-              {[0, 60, 120, 180, 240, 300].map((angle, i) => (
-                <circle
-                  key={i}
-                  cx={currentPos.x + Math.cos(angle * Math.PI / 180) * 40}
-                  cy={currentPos.y + Math.sin(angle * Math.PI / 180) * 40}
-                  r="3"
-                  fill="#F9A825"
-                  opacity={0.7}
-                  style={{ animationDelay: `${i * 0.1}s` }}
-                />
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
+                <g key={i}>
+                  <circle
+                    cx={currentPos.x + Math.cos((angle + rotation) * Math.PI / 180) * 50}
+                    cy={currentPos.y - 45 + Math.sin((angle + rotation) * Math.PI / 180) * 30}
+                    r="3"
+                    fill="#F9A825"
+                    opacity={0.8}
+                  />
+                  <circle
+                    cx={currentPos.x + Math.cos((angle + rotation + 180) * Math.PI / 180) * 35}
+                    cy={currentPos.y - 45 + Math.sin((angle + rotation + 180) * Math.PI / 180) * 20}
+                    r="2"
+                    fill="#C62828"
+                    opacity={0.6}
+                  />
+                </g>
               ))}
             </g>
           )}
+
+          {/* Upward arrow at top indicating growth */}
+          <g transform="translate(400, 15)">
+            <path
+              d="M0,15 L-10,25 L-5,25 L-5,35 L5,35 L5,25 L10,25 Z"
+              fill="#C62828"
+              opacity="0.6"
+              className="animate-float-up"
+            />
+          </g>
         </svg>
       </div>
 
@@ -277,15 +360,24 @@ export function HeroCarousel() {
 
       {/* CSS Animations */}
       <style jsx>{`
-        @keyframes shimmer {
-          0% { background-position: 0% center; }
-          100% { background-position: 200% center; }
+        @keyframes dash-up {
+          to { stroke-dashoffset: -100; }
         }
-        @keyframes dash {
-          to { stroke-dashoffset: -40; }
+        @keyframes dash-down {
+          to { stroke-dashoffset: 100; }
         }
-        .animate-dash {
-          animation: dash 2s linear infinite;
+        .animate-dash-up {
+          animation: dash-up 2s linear infinite;
+        }
+        .animate-dash-down {
+          animation: dash-down 3s linear infinite;
+        }
+        .animate-spiral-pulse {
+          animation: spiralPulse 2s ease-in-out infinite;
+        }
+        @keyframes spiralPulse {
+          0%, 100% { stroke-width: 10; filter: url(#spiralGlow); }
+          50% { stroke-width: 12; }
         }
         .animate-float-slow {
           animation: float 8s ease-in-out infinite;
@@ -300,12 +392,26 @@ export function HeroCarousel() {
           0%, 100% { transform: translate(0, 0); }
           50% { transform: translate(20px, -20px); }
         }
+        .animate-float-up {
+          animation: floatUp 1.5s ease-in-out infinite;
+        }
+        @keyframes floatUp {
+          0%, 100% { transform: translateY(0); opacity: 0.6; }
+          50% { transform: translateY(-8px); opacity: 1; }
+        }
         .animate-ping-slow {
           animation: ping 1.5s ease-out infinite;
         }
         @keyframes ping {
           0% { transform: scale(1); opacity: 1; }
-          100% { transform: scale(2); opacity: 0; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+        .animate-bounce-subtle {
+          animation: bounceSubtle 1s ease-in-out infinite;
+        }
+        @keyframes bounceSubtle {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
         }
         .animate-sparkle {
           animation: sparkle 0.8s ease-out;
@@ -314,6 +420,13 @@ export function HeroCarousel() {
           0% { opacity: 0; transform: scale(0.5); }
           50% { opacity: 1; transform: scale(1.2); }
           100% { opacity: 0.7; transform: scale(1); }
+        }
+        .animate-pulse {
+          animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.2; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(1.2); }
         }
       `}</style>
     </div>
