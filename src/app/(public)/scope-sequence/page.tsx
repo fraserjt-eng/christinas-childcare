@@ -20,6 +20,11 @@ import {
   Check,
   Lightbulb,
   ArrowRight,
+  CircleDot,
+  HandHeart,
+  Users,
+  Sparkles,
+  Star,
 } from 'lucide-react';
 import { AGE_GROUP_DISPLAY } from '@/types/milestones';
 import { DOMAIN_OVERVIEWS, getMilestonesByDomain } from '@/lib/milestones-data';
@@ -72,6 +77,131 @@ export default function ScopeSequencePage() {
             that supports your child&apos;s growth across all developmental domains. Explore the milestones
             we focus on at each age.
           </p>
+        </div>
+      </section>
+
+      {/* Circle Time & Community Practices Section */}
+      <section className="bg-gradient-to-b from-amber-50 to-white py-16 md:py-20">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <Badge className="bg-christina-red text-white mb-4 px-4 py-1">
+              <Star className="h-3 w-3 mr-1" />
+              Signature Practice
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Daily Circle Time & Prayer
+            </h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Rooted in indigenous wisdom and African Ubuntu philosophy, our daily circle time creates a sacred space
+              where every child belongs, every voice matters, and we grow together as a community.
+            </p>
+          </div>
+
+          {/* Ubuntu Philosophy Highlight */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-10 mb-12 border-l-4 border-christina-red">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="flex-shrink-0">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-christina-red to-red-600 flex items-center justify-center">
+                  <Users className="h-12 w-12 text-white" />
+                </div>
+              </div>
+              <div className="text-center md:text-left">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  &ldquo;I Am Because We Are&rdquo;
+                </h3>
+                <p className="text-gray-600 mb-3">
+                  <span className="font-semibold text-christina-red">Ubuntu</span> &mdash; an African philosophy meaning
+                  &ldquo;I am because we are&rdquo; &mdash; guides our approach to building community. We teach children that
+                  their identity and worth come from being part of something greater than themselves.
+                </p>
+                <p className="text-sm text-gray-500 italic">
+                  This interconnected worldview helps children develop empathy, belonging, and the understanding that
+                  we are all responsible for one another.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Circle Time Elements Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            {/* Opening Prayer */}
+            <Card className="border-t-4 border-christina-red">
+              <CardContent className="pt-6">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                  <Sparkles className="h-6 w-6 text-christina-red" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Opening Prayer</h3>
+                <p className="text-sm text-gray-600">
+                  Each circle begins with a simple prayer of gratitude, blessing, and intention for our day together.
+                  This grounds us in thankfulness and sets a peaceful tone.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Talking Piece */}
+            <Card className="border-t-4 border-amber-500">
+              <CardContent className="pt-6">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+                  <CircleDot className="h-6 w-6 text-amber-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">The Talking Piece</h3>
+                <p className="text-sm text-gray-600">
+                  A special object passed around the circle gives each child the right to speak while others
+                  listen with respect. This teaches turn-taking, patience, and honoring every voice.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Community Building */}
+            <Card className="border-t-4 border-green-500">
+              <CardContent className="pt-6">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Community Circle</h3>
+                <p className="text-sm text-gray-600">
+                  Sitting in a circle where everyone can see each other creates equality and connection.
+                  We share feelings, celebrate successes, and support one another as family.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Healing & Restoration */}
+            <Card className="border-t-4 border-purple-500">
+              <CardContent className="pt-6">
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-4">
+                  <HandHeart className="h-6 w-6 text-purple-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Healing & Restoration</h3>
+                <p className="text-sm text-gray-600">
+                  When conflicts arise, we return to the circle to talk, listen, and restore relationships.
+                  We focus on understanding and making things right, not punishment.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* What Children Learn */}
+          <div className="bg-gray-900 rounded-2xl p-8 md:p-10 text-white">
+            <h3 className="text-xl font-bold mb-6 text-center">What Children Learn Through Circle Time</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { icon: Heart, text: 'Empathy and compassion for others' },
+                { icon: MessageCircle, text: 'Listening skills and respectful communication' },
+                { icon: Users, text: 'Sense of belonging to a community' },
+                { icon: HandHeart, text: 'Conflict resolution through dialogue' },
+                { icon: Sparkles, text: 'Gratitude and spiritual awareness' },
+                { icon: Star, text: 'Self-worth and confidence to share' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <item.icon className="h-4 w-4 text-christina-yellow" />
+                  </div>
+                  <span className="text-sm text-gray-200">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
