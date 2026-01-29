@@ -113,52 +113,63 @@ export function HeroCarousel() {
               </feMerge>
             </filter>
             <filter id="spiralGlow">
-              <feGaussianBlur stdDeviation="8" result="blur" />
+              <feGaussianBlur stdDeviation="6" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-            {/* Animated gradient for spiral */}
-            <linearGradient id="spiralGradientAnimated" x1="0%" y1="100%" x2="0%" y2="0%">
-              <stop offset="0%" stopColor="#C62828" stopOpacity="0.4">
-                <animate attributeName="stopOpacity" values="0.4;0.8;0.4" dur="2s" repeatCount="indefinite" />
+
+            {/* Animated flowing gradient - traveling bands of red shades */}
+            <linearGradient id="spiralFlowGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stopColor="#7B1818">
+                <animate attributeName="offset" values="0;0.15;0.3;0.15;0" dur="2.5s" repeatCount="indefinite" />
               </stop>
-              <stop offset="50%" stopColor="#C62828" stopOpacity="0.8">
-                <animate attributeName="stopOpacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite" />
+              <stop offset="15%" stopColor="#B71C1C">
+                <animate attributeName="offset" values="0.15;0.3;0.45;0.3;0.15" dur="2.5s" repeatCount="indefinite" />
               </stop>
-              <stop offset="100%" stopColor="#E53935" stopOpacity="1">
-                <animate attributeName="stopOpacity" values="1;0.9;1" dur="2s" repeatCount="indefinite" />
+              <stop offset="30%" stopColor="#E53935">
+                <animate attributeName="offset" values="0.3;0.45;0.6;0.45;0.3" dur="2.5s" repeatCount="indefinite" />
+              </stop>
+              <stop offset="45%" stopColor="#C62828">
+                <animate attributeName="offset" values="0.45;0.6;0.75;0.6;0.45" dur="2.5s" repeatCount="indefinite" />
+              </stop>
+              <stop offset="60%" stopColor="#8B0000">
+                <animate attributeName="offset" values="0.6;0.75;0.9;0.75;0.6" dur="2.5s" repeatCount="indefinite" />
+              </stop>
+              <stop offset="75%" stopColor="#D32F2F">
+                <animate attributeName="offset" values="0.75;0.9;1;0.9;0.75" dur="2.5s" repeatCount="indefinite" />
+              </stop>
+              <stop offset="100%" stopColor="#9A1515">
+                <animate attributeName="offset" values="1;0.85;0.7;0.85;1" dur="2.5s" repeatCount="indefinite" />
               </stop>
             </linearGradient>
-            {/* Glow gradient */}
-            <radialGradient id="spiralCenterGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#FFCDD2" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#FFCDD2" stopOpacity="0" />
+
+            {/* Secondary pulse gradient for depth */}
+            <linearGradient id="spiralPulseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#EF5350">
+                <animate attributeName="stopColor" values="#EF5350;#B71C1C;#EF5350" dur="1.8s" repeatCount="indefinite" />
+              </stop>
+              <stop offset="50%" stopColor="#C62828">
+                <animate attributeName="stopColor" values="#C62828;#E53935;#C62828" dur="1.8s" repeatCount="indefinite" />
+              </stop>
+              <stop offset="100%" stopColor="#8B0000">
+                <animate attributeName="stopColor" values="#8B0000;#D32F2F;#8B0000" dur="1.8s" repeatCount="indefinite" />
+              </stop>
+            </linearGradient>
+
+            {/* Soft red ambient glow */}
+            <radialGradient id="spiralAmbientGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#C62828" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#C62828" stopOpacity="0" />
             </radialGradient>
           </defs>
 
-          {/* Central glow effect */}
-          <ellipse cx="400" cy="200" rx="120" ry="180" fill="url(#spiralCenterGlow)" opacity="0.5" />
+          {/* Subtle ambient glow behind spiral */}
+          <ellipse cx="400" cy="200" rx="140" ry="200" fill="url(#spiralAmbientGlow)" opacity="0.6" />
 
-          {/* TRUE VERTICAL SPIRAL - Bottom to Top */}
-          {/* Back spiral strand (appears behind) */}
-          <g opacity="0.3">
-            <path
-              d="M400,380
-                 C200,380 200,340 280,320
-                 C360,300 560,300 540,260
-                 C520,220 240,220 260,180
-                 C280,140 520,140 520,100
-                 C520,60 440,40 400,30"
-              fill="none"
-              stroke="#C62828"
-              strokeWidth="8"
-              strokeLinecap="round"
-            />
-          </g>
-
-          {/* Main spiral strand - front */}
+          {/* SINGLE SPIRAL - with flowing red gradient movement */}
+          {/* Shadow layer for depth */}
           <path
             d="M400,380
                C600,380 600,340 520,320
@@ -167,14 +178,28 @@ export function HeroCarousel() {
                C520,140 280,140 280,100
                C280,60 360,40 400,30"
             fill="none"
-            stroke="url(#spiralGradientAnimated)"
-            strokeWidth="10"
+            stroke="#5D0F0F"
+            strokeWidth="18"
+            strokeLinecap="round"
+            opacity="0.3"
+          />
+
+          {/* Main spiral with animated flowing gradient */}
+          <path
+            d="M400,380
+               C600,380 600,340 520,320
+               C440,300 240,300 260,260
+               C280,220 560,220 540,180
+               C520,140 280,140 280,100
+               C280,60 360,40 400,30"
+            fill="none"
+            stroke="url(#spiralFlowGradient)"
+            strokeWidth="14"
             strokeLinecap="round"
             filter="url(#spiralGlow)"
-            className="animate-spiral-pulse"
           />
 
-          {/* Animated dashed overlay for movement effect */}
+          {/* Highlight edge - lighter red for 3D roundness */}
           <path
             d="M400,380
                C600,380 600,340 520,320
@@ -183,69 +208,67 @@ export function HeroCarousel() {
                C520,140 280,140 280,100
                C280,60 360,40 400,30"
             fill="none"
-            stroke="#FFCDD2"
-            strokeWidth="4"
+            stroke="url(#spiralPulseGradient)"
+            strokeWidth="6"
             strokeLinecap="round"
-            strokeDasharray="20 30"
-            className="animate-dash-up"
+            opacity="0.7"
           />
 
-          {/* Secondary animated dashes going opposite direction */}
+          {/* Animated flowing segments - darker red "pulses" traveling up */}
           <path
             d="M400,380
-               C200,380 200,340 280,320
-               C360,300 560,300 540,260
-               C520,220 240,220 260,180
-               C280,140 520,140 520,100
-               C520,60 440,40 400,30"
+               C600,380 600,340 520,320
+               C440,300 240,300 260,260
+               C280,220 560,220 540,180
+               C520,140 280,140 280,100
+               C280,60 360,40 400,30"
             fill="none"
-            stroke="#EF5350"
-            strokeWidth="3"
+            stroke="#8B0000"
+            strokeWidth="8"
             strokeLinecap="round"
-            strokeDasharray="15 40"
+            strokeDasharray="40 80"
             opacity="0.5"
-            className="animate-dash-down"
+            className="animate-flow-up"
           />
 
-          {/* Spiral connector rings - gives 3D effect */}
-          {[360, 300, 240, 170, 100].map((y, i) => (
-            <ellipse
-              key={i}
-              cx="400"
-              cy={y}
-              rx={80 - i * 8}
-              ry={15 - i * 1.5}
-              fill="none"
-              stroke="#C62828"
-              strokeWidth="2"
-              opacity={0.15 + i * 0.05}
-              style={{
-                transform: `rotate(${rotation + i * 20}deg)`,
-                transformOrigin: '400px ' + y + 'px',
-              }}
-            />
-          ))}
+          {/* Second wave - offset timing for continuous flow */}
+          <path
+            d="M400,380
+               C600,380 600,340 520,320
+               C440,300 240,300 260,260
+               C280,220 560,220 540,180
+               C520,140 280,140 280,100
+               C280,60 360,40 400,30"
+            fill="none"
+            stroke="#D32F2F"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray="25 95"
+            opacity="0.6"
+            className="animate-flow-up-fast"
+          />
 
-          {/* Floating particles along spiral */}
-          {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
-            const progress = ((rotation + i * 45) % 360) / 360;
+          {/* Floating particles along spiral - all red shades */}
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => {
+            const progress = ((rotation + i * 36) % 360) / 360;
             const y = 380 - progress * 350;
             const xOffset = Math.sin(progress * Math.PI * 4) * 100;
+            const redShades = ['#EF5350', '#E53935', '#D32F2F', '#C62828', '#B71C1C', '#9A1515', '#8B0000', '#7B1818', '#C62828', '#D32F2F'];
             return (
               <circle
                 key={i}
                 cx={400 + xOffset}
                 cy={y}
-                r={3}
-                fill="#C62828"
-                opacity={0.3 + progress * 0.5}
+                r={2.5 + progress * 2}
+                fill={redShades[i]}
+                opacity={0.4 + progress * 0.5}
               >
                 <animate
                   attributeName="r"
-                  values="2;4;2"
-                  dur="1s"
+                  values={`${2 + progress};${4 + progress};${2 + progress}`}
+                  dur="1.2s"
                   repeatCount="indefinite"
-                  begin={`${i * 0.125}s`}
+                  begin={`${i * 0.12}s`}
                 />
               </circle>
             );
@@ -317,27 +340,30 @@ export function HeroCarousel() {
             <Character stage={activeIndex} color={currentStage.color} />
           </g>
 
-          {/* Sparkles around current position */}
+          {/* Sparkles around current position - red tones */}
           {isVisible && (
             <g className="animate-sparkle">
-              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
-                <g key={i}>
-                  <circle
-                    cx={currentPos.x + Math.cos((angle + rotation) * Math.PI / 180) * 50}
-                    cy={currentPos.y - 45 + Math.sin((angle + rotation) * Math.PI / 180) * 30}
-                    r="3"
-                    fill="#F9A825"
-                    opacity={0.8}
-                  />
-                  <circle
-                    cx={currentPos.x + Math.cos((angle + rotation + 180) * Math.PI / 180) * 35}
-                    cy={currentPos.y - 45 + Math.sin((angle + rotation + 180) * Math.PI / 180) * 20}
-                    r="2"
-                    fill="#C62828"
-                    opacity={0.6}
-                  />
-                </g>
-              ))}
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
+                const sparkleReds = ['#EF5350', '#E53935', '#D32F2F', '#C62828', '#B71C1C', '#E53935', '#D32F2F', '#EF5350'];
+                return (
+                  <g key={i}>
+                    <circle
+                      cx={currentPos.x + Math.cos((angle + rotation) * Math.PI / 180) * 50}
+                      cy={currentPos.y - 45 + Math.sin((angle + rotation) * Math.PI / 180) * 30}
+                      r="3"
+                      fill={sparkleReds[i]}
+                      opacity={0.7}
+                    />
+                    <circle
+                      cx={currentPos.x + Math.cos((angle + rotation + 180) * Math.PI / 180) * 35}
+                      cy={currentPos.y - 45 + Math.sin((angle + rotation + 180) * Math.PI / 180) * 20}
+                      r="2"
+                      fill={sparkleReds[(i + 4) % 8]}
+                      opacity={0.5}
+                    />
+                  </g>
+                );
+              })}
             </g>
           )}
 
@@ -360,24 +386,19 @@ export function HeroCarousel() {
 
       {/* CSS Animations */}
       <style jsx>{`
-        @keyframes dash-up {
-          to { stroke-dashoffset: -100; }
+        @keyframes flow-up {
+          0% { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: -240; }
         }
-        @keyframes dash-down {
-          to { stroke-dashoffset: 100; }
+        @keyframes flow-up-fast {
+          0% { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: -240; }
         }
-        .animate-dash-up {
-          animation: dash-up 2s linear infinite;
+        .animate-flow-up {
+          animation: flow-up 3s linear infinite;
         }
-        .animate-dash-down {
-          animation: dash-down 3s linear infinite;
-        }
-        .animate-spiral-pulse {
-          animation: spiralPulse 2s ease-in-out infinite;
-        }
-        @keyframes spiralPulse {
-          0%, 100% { stroke-width: 10; filter: url(#spiralGlow); }
-          50% { stroke-width: 12; }
+        .animate-flow-up-fast {
+          animation: flow-up-fast 2s linear infinite;
         }
         .animate-float-slow {
           animation: float 8s ease-in-out infinite;
