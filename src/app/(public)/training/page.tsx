@@ -23,66 +23,45 @@ const videoSections = [
     title: 'Lesson Builder',
     description: 'Create AI-powered lesson plans in minutes',
     icon: Lightbulb,
-    duration: '12 min',
+    duration: '1:12',
     scriptId: 'lesson-builder',
-    videos: [
-      { title: 'Getting Started with Lesson Builder', duration: '3:45' },
-      { title: 'Using AI to Generate Activities', duration: '4:20' },
-      { title: 'Customizing and Saving Lessons', duration: '4:15' },
-    ],
+    videoPath: '/videos/lesson-builder.mp4',
   },
   {
     id: 'curriculum',
     title: 'Curriculum Library',
     description: 'Browse, filter, and remix curriculum content',
     icon: BookOpen,
-    duration: '15 min',
+    duration: '0:40',
     scriptId: 'curriculum',
-    videos: [
-      { title: 'Navigating the Curriculum Library', duration: '4:00' },
-      { title: 'Filtering by Age Group and Topic', duration: '3:30' },
-      { title: 'Remixing Lessons for Your Classroom', duration: '5:00' },
-      { title: 'Creating Custom Collections', duration: '2:45' },
-    ],
+    videoPath: '/videos/curriculum-library.mp4',
   },
   {
     id: 'staff',
     title: 'Staff Management',
     description: 'Manage staff profiles, schedules, and certifications',
     icon: Users,
-    duration: '10 min',
+    duration: '0:38',
     scriptId: 'staff',
-    videos: [
-      { title: 'Adding and Managing Staff Profiles', duration: '3:00' },
-      { title: 'Tracking Certifications and Training', duration: '4:00' },
-      { title: 'Staff Scheduling Basics', duration: '3:15' },
-    ],
+    videoPath: '/videos/staff-management.mp4',
   },
   {
     id: 'attendance',
     title: 'Attendance & Ratios',
     description: 'Track daily attendance and maintain compliance',
     icon: Calendar,
-    duration: '8 min',
+    duration: '0:46',
     scriptId: 'attendance',
-    videos: [
-      { title: 'Recording Daily Attendance', duration: '2:45' },
-      { title: 'Understanding Ratio Requirements', duration: '3:00' },
-      { title: 'Generating Attendance Reports', duration: '2:30' },
-    ],
+    videoPath: '/videos/attendance.mp4',
   },
   {
     id: 'reports',
     title: 'Reports & Analytics',
     description: 'Generate insights and compliance reports',
     icon: BarChart3,
-    duration: '10 min',
+    duration: '0:40',
     scriptId: 'reports',
-    videos: [
-      { title: 'Overview of Available Reports', duration: '3:00' },
-      { title: 'Exporting Data for DCYF Compliance', duration: '4:00' },
-      { title: 'Understanding Your Analytics Dashboard', duration: '3:15' },
-    ],
+    videoPath: '/videos/reports.mp4',
   },
 ];
 
@@ -192,54 +171,45 @@ export default function TrainingPage() {
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">Video Tutorials</h2>
             <p className="text-slate-600 max-w-2xl mx-auto">
-              Step-by-step video guides for every feature
+              Quick video guides for every feature - watch at your own pace
             </p>
           </div>
 
-          <div className="space-y-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
             {videoSections.map((section) => (
               <Card key={section.id} className="overflow-hidden">
-                <CardHeader className="bg-slate-50 border-b">
-                  <div className="flex items-start justify-between">
+                <div className="aspect-video bg-slate-900 relative">
+                  <video
+                    className="w-full h-full object-cover"
+                    controls
+                    preload="metadata"
+                    poster={`/videos/${section.id}-poster.jpg`}
+                  >
+                    <source src={section.videoPath} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                         <section.icon className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <CardTitle className="text-lg">{section.title}</CardTitle>
-                        <CardDescription>{section.description}</CardDescription>
+                        <h3 className="font-semibold text-slate-900">{section.title}</h3>
+                        <p className="text-sm text-slate-500">{section.description}</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {section.duration}
+                    <Badge variant="outline" className="shrink-0">
+                      <Clock className="w-3 h-3 mr-1" /> {section.duration}
                     </Badge>
                   </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {section.videos.map((video, index) => (
-                      <Link
-                        key={video.title}
-                        href={`/training/scripts#${section.scriptId}`}
-                        className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors cursor-pointer group"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-medium text-slate-500 group-hover:bg-primary group-hover:text-white transition-colors">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900 group-hover:text-primary transition-colors">
-                            {video.title}
-                          </p>
-                          <p className="text-xs text-slate-400">View recording script</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-slate-500">{video.duration}</span>
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors">
-                            <FileText className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
-                          </div>
-                        </div>
+                  <div className="mt-3 flex gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/training/scripts#${section.scriptId}`}>
+                        <FileText className="w-3 h-3 mr-1" /> View Script
                       </Link>
-                    ))}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
