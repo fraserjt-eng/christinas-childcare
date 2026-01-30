@@ -145,8 +145,8 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 max-w-5xl mx-auto">
             {features.map((feature) => (
               <div key={feature.title} className="text-center">
-                <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center">
-                  <feature.icon className="w-6 h-6 text-[#1a1a1a]" strokeWidth={1.5} />
+                <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center rounded-full bg-red-50">
+                  <feature.icon className="w-6 h-6 text-[#C62828]" strokeWidth={1.5} />
                 </div>
                 <h3 className="text-lg font-medium text-[#1a1a1a] mb-2">{feature.title}</h3>
                 <p className="text-[#6b6b6b] text-sm leading-relaxed">{feature.description}</p>

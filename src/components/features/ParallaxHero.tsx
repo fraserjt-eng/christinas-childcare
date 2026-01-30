@@ -57,7 +57,7 @@ export function ParallaxHero() {
       if (scrollPosition < 0) {
         setActiveStage(0);
       } else {
-        const sectionHeight = window.innerHeight * 0.8;
+        const sectionHeight = window.innerHeight * 0.65;
         const newStage = Math.min(
           Math.floor(scrollPosition / sectionHeight),
           stages.length - 1
@@ -111,7 +111,7 @@ export function ParallaxHero() {
         <div className="relative z-10 container mx-auto px-6 text-center">
           {/* Eyebrow text */}
           <p
-            className="text-xs uppercase tracking-[0.3em] text-[#6b6b6b] mb-6"
+            className="text-xs uppercase tracking-[0.3em] text-[#6b6b6b] mb-4"
             style={{
               opacity: Math.max(0, 1 - scrollY / 300),
               transform: `translateY(${scrollY * 0.3}px)`,
@@ -120,29 +120,53 @@ export function ParallaxHero() {
             Crystal & Brooklyn Park, Minnesota
           </p>
 
-          {/* Main headline */}
-          <h1
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light text-[#1a1a1a] tracking-tight leading-[1.1] mb-6"
-            style={{
-              opacity: Math.max(0, 1 - scrollY / 400),
-              transform: `translateY(${scrollY * 0.4}px)`,
-            }}
-          >
-            Christina&apos;s
-            <br />
-            <span className="font-normal">Child Care</span>
-          </h1>
-
-          {/* Tagline */}
-          <p
-            className="text-lg sm:text-xl md:text-2xl text-[#6b6b6b] font-light max-w-2xl mx-auto mb-12 leading-relaxed"
+          {/* Rainbow Arc Tagline */}
+          <div
+            className="relative w-full max-w-3xl mx-auto mb-2"
             style={{
               opacity: Math.max(0, 1 - scrollY / 350),
               transform: `translateY(${scrollY * 0.35}px)`,
             }}
           >
-            Where learning and growth become one.
-          </p>
+            <svg viewBox="0 0 800 120" className="w-full h-auto" role="img" aria-label="Where Learning and Growth Become One">
+              <defs>
+                <linearGradient id="rainbowText" x1="0%" y1="0%" x2="200%" y2="0%">
+                  <stop offset="0%" stopColor="#C62828" />
+                  <stop offset="14%" stopColor="#E65100" />
+                  <stop offset="28%" stopColor="#F9A825" />
+                  <stop offset="42%" stopColor="#2E7D32" />
+                  <stop offset="56%" stopColor="#1565C0" />
+                  <stop offset="70%" stopColor="#6A1B9A" />
+                  <stop offset="84%" stopColor="#C62828" />
+                  <stop offset="100%" stopColor="#E65100" />
+                  <animate attributeName="x1" from="0%" to="-100%" dur="4s" repeatCount="indefinite" />
+                  <animate attributeName="x2" from="200%" to="100%" dur="4s" repeatCount="indefinite" />
+                </linearGradient>
+                <path id="textArc" d="M50,110 Q400,0 750,110" fill="none" />
+              </defs>
+              {/* Shadow text for depth */}
+              <text fontSize="32" fontWeight="600" fontFamily="system-ui" fill="#000" opacity="0.04">
+                <textPath href="#textArc" startOffset="50%" textAnchor="middle">Where Learning and Growth Become One</textPath>
+              </text>
+              {/* Rainbow text */}
+              <text fontSize="32" fontWeight="600" fontFamily="system-ui" fill="url(#rainbowText)">
+                <textPath href="#textArc" startOffset="50%" textAnchor="middle">Where Learning and Growth Become One</textPath>
+              </text>
+            </svg>
+          </div>
+
+          {/* Main headline - Red */}
+          <h1
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light tracking-tight leading-[1.1] mb-10"
+            style={{
+              opacity: Math.max(0, 1 - scrollY / 400),
+              transform: `translateY(${scrollY * 0.4}px)`,
+            }}
+          >
+            <span className="text-[#C62828]">Christina&apos;s</span>
+            <br />
+            <span className="font-normal text-[#C62828]">Child Care Center</span>
+          </h1>
 
           {/* CTA buttons */}
           <div
@@ -154,7 +178,7 @@ export function ParallaxHero() {
           >
             <Button
               size="lg"
-              className="bg-[#1a1a1a] hover:bg-[#333] text-white px-8 py-6 text-base font-normal tracking-wide rounded-none"
+              className="bg-[#C62828] hover:bg-[#a12020] text-white px-8 py-6 text-base font-normal tracking-wide rounded-none"
               asChild
             >
               <Link href="/enroll">Schedule a Tour</Link>
@@ -162,7 +186,7 @@ export function ParallaxHero() {
             <Button
               size="lg"
               variant="outline"
-              className="border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white px-8 py-6 text-base font-normal tracking-wide rounded-none"
+              className="border-[#C62828] text-[#C62828] hover:bg-[#C62828] hover:text-white px-8 py-6 text-base font-normal tracking-wide rounded-none"
               asChild
             >
               <Link href="/programs">Our Programs</Link>
@@ -196,14 +220,14 @@ export function ParallaxHero() {
         </div>
       </section>
 
-      {/* Stage Sections with Parallax */}
+      {/* Stage Sections with Parallax - Slightly thinner */}
       {stages.map((stage, index) => (
         <section
           key={stage.id}
           ref={(el) => { sectionRefs.current[index] = el; }}
-          className={`relative min-h-[80vh] flex items-center bg-gradient-to-b ${stage.bgColor}`}
+          className={`relative min-h-[65vh] flex items-center bg-gradient-to-b ${stage.bgColor}`}
         >
-          <div className="container mx-auto px-6 py-24">
+          <div className="container mx-auto px-6 py-16">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center">
               {/* Text content */}
               <div className={index % 2 === 0 ? 'lg:order-1' : 'lg:order-2'}>
@@ -251,7 +275,7 @@ export function ParallaxHero() {
                     viewBox="0 0 400 400"
                     className="w-full h-full"
                     style={{
-                      transform: `translateY(${(scrollY - (index + 1) * 600) * 0.05}px)`,
+                      transform: `translateY(${(scrollY - (index + 1) * 500) * 0.05}px)`,
                     }}
                   >
                     <defs>
@@ -317,7 +341,7 @@ export function ParallaxHero() {
             onClick={() => {
               const heroHeight = heroRef.current?.offsetHeight || 0;
               window.scrollTo({
-                top: heroHeight + index * window.innerHeight * 0.8,
+                top: heroHeight + index * window.innerHeight * 0.65,
                 behavior: 'smooth',
               });
             }}

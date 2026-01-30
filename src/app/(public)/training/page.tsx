@@ -269,20 +269,68 @@ export default function TrainingPage() {
         </div>
       </section>
 
-      {/* Documentation Link */}
+      {/* Training Resources Grid */}
       <section className="py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h3 className="text-xl font-semibold text-slate-900 mb-3">
-            Prefer reading? Check out our documentation
-          </h3>
-          <p className="text-slate-600 mb-6">
-            Detailed written guides with screenshots for every feature
-          </p>
-          <Button variant="outline" asChild>
-            <Link href="/training/docs">
-              <BookOpen className="w-4 h-4 mr-2" /> Browse Documentation
-            </Link>
-          </Button>
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">Additional Resources</h2>
+            <p className="text-slate-600 max-w-2xl mx-auto">
+              Multiple ways to learn based on your preference
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <Card className="hover:shadow-lg transition-shadow group">
+              <CardContent className="pt-6 text-center">
+                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-6 h-6 text-blue-600" />
+                </div>
+                <h4 className="font-semibold text-slate-900 mb-2">Step-by-Step Guides</h4>
+                <p className="text-sm text-slate-600 mb-4">
+                  Detailed written instructions for every feature with tips and warnings
+                </p>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/training/guides">
+                    Read Guides <ChevronRight className="w-4 h-4 ml-1" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow group">
+              <CardContent className="pt-6 text-center">
+                <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mx-auto mb-4">
+                  <Play className="w-6 h-6 text-purple-600" />
+                </div>
+                <h4 className="font-semibold text-slate-900 mb-2">Video Scripts</h4>
+                <p className="text-sm text-slate-600 mb-4">
+                  Narration scripts for recording your own training videos
+                </p>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/training/scripts">
+                    View Scripts <ChevronRight className="w-4 h-4 ml-1" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow group">
+              <CardContent className="pt-6 text-center">
+                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-6 h-6 text-green-600" />
+                </div>
+                <h4 className="font-semibold text-slate-900 mb-2">Documentation</h4>
+                <p className="text-sm text-slate-600 mb-4">
+                  Searchable reference docs organized by feature category
+                </p>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/training/docs">
+                    Browse Docs <ChevronRight className="w-4 h-4 ml-1" />
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </section>
     </main>
