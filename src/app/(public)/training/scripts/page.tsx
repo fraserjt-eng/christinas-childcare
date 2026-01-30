@@ -540,7 +540,7 @@ export default function ScriptsPage() {
                   <li>• Move your mouse slowly and deliberately</li>
                   <li>• Pause briefly after each click</li>
                   <li>• Speak clearly at a moderate pace</li>
-                  <li>• It\'s okay to do multiple takes!</li>
+                  <li>• It&apos;s okay to do multiple takes!</li>
                 </ul>
               </CardContent>
             </Card>
