@@ -322,7 +322,7 @@ export default function ScopeSequencePage() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="text-white border-white hover:bg-white/10 px-8">
+            <Button asChild size="lg" variant="outline" className="text-white border-2 border-white bg-transparent hover:bg-white/10 px-8">
               <Link href="/programs">
                 View Our Programs
               </Link>

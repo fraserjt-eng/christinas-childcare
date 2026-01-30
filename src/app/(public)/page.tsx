@@ -243,7 +243,7 @@ export default function HomePage() {
             <Button
               size="lg"
               variant="outline"
-              className="border-white text-white hover:bg-white/10 px-8 py-6 text-base font-normal tracking-wide rounded-none"
+              className="border-2 border-white text-white bg-transparent hover:bg-white/10 px-8 py-6 text-base font-normal tracking-wide rounded-none"
               asChild
             >
               <Link href="/enroll">Start Enrollment</Link>

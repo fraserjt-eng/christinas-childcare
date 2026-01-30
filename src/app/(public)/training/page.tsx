@@ -24,10 +24,11 @@ const videoSections = [
     description: 'Create AI-powered lesson plans in minutes',
     icon: Lightbulb,
     duration: '12 min',
+    scriptId: 'lesson-builder',
     videos: [
-      { title: 'Getting Started with Lesson Builder', duration: '3:45', videoId: 'placeholder' },
-      { title: 'Using AI to Generate Activities', duration: '4:20', videoId: 'placeholder' },
-      { title: 'Customizing and Saving Lessons', duration: '4:15', videoId: 'placeholder' },
+      { title: 'Getting Started with Lesson Builder', duration: '3:45' },
+      { title: 'Using AI to Generate Activities', duration: '4:20' },
+      { title: 'Customizing and Saving Lessons', duration: '4:15' },
     ],
   },
   {
@@ -36,11 +37,12 @@ const videoSections = [
     description: 'Browse, filter, and remix curriculum content',
     icon: BookOpen,
     duration: '15 min',
+    scriptId: 'curriculum',
     videos: [
-      { title: 'Navigating the Curriculum Library', duration: '4:00', videoId: 'placeholder' },
-      { title: 'Filtering by Age Group and Topic', duration: '3:30', videoId: 'placeholder' },
-      { title: 'Remixing Lessons for Your Classroom', duration: '5:00', videoId: 'placeholder' },
-      { title: 'Creating Custom Collections', duration: '2:45', videoId: 'placeholder' },
+      { title: 'Navigating the Curriculum Library', duration: '4:00' },
+      { title: 'Filtering by Age Group and Topic', duration: '3:30' },
+      { title: 'Remixing Lessons for Your Classroom', duration: '5:00' },
+      { title: 'Creating Custom Collections', duration: '2:45' },
     ],
   },
   {
@@ -49,10 +51,11 @@ const videoSections = [
     description: 'Manage staff profiles, schedules, and certifications',
     icon: Users,
     duration: '10 min',
+    scriptId: 'staff',
     videos: [
-      { title: 'Adding and Managing Staff Profiles', duration: '3:00', videoId: 'placeholder' },
-      { title: 'Tracking Certifications and Training', duration: '4:00', videoId: 'placeholder' },
-      { title: 'Staff Scheduling Basics', duration: '3:15', videoId: 'placeholder' },
+      { title: 'Adding and Managing Staff Profiles', duration: '3:00' },
+      { title: 'Tracking Certifications and Training', duration: '4:00' },
+      { title: 'Staff Scheduling Basics', duration: '3:15' },
     ],
   },
   {
@@ -61,10 +64,11 @@ const videoSections = [
     description: 'Track daily attendance and maintain compliance',
     icon: Calendar,
     duration: '8 min',
+    scriptId: 'attendance',
     videos: [
-      { title: 'Recording Daily Attendance', duration: '2:45', videoId: 'placeholder' },
-      { title: 'Understanding Ratio Requirements', duration: '3:00', videoId: 'placeholder' },
-      { title: 'Generating Attendance Reports', duration: '2:30', videoId: 'placeholder' },
+      { title: 'Recording Daily Attendance', duration: '2:45' },
+      { title: 'Understanding Ratio Requirements', duration: '3:00' },
+      { title: 'Generating Attendance Reports', duration: '2:30' },
     ],
   },
   {
@@ -73,10 +77,11 @@ const videoSections = [
     description: 'Generate insights and compliance reports',
     icon: BarChart3,
     duration: '10 min',
+    scriptId: 'reports',
     videos: [
-      { title: 'Overview of Available Reports', duration: '3:00', videoId: 'placeholder' },
-      { title: 'Exporting Data for DCYF Compliance', duration: '4:00', videoId: 'placeholder' },
-      { title: 'Understanding Your Analytics Dashboard', duration: '3:15', videoId: 'placeholder' },
+      { title: 'Overview of Available Reports', duration: '3:00' },
+      { title: 'Exporting Data for DCYF Compliance', duration: '4:00' },
+      { title: 'Understanding Your Analytics Dashboard', duration: '3:15' },
     ],
   },
 ];
@@ -129,7 +134,7 @@ export default function TrainingPage() {
               <Button size="lg" className="bg-white text-slate-900 hover:bg-slate-100">
                 <Play className="w-4 h-4 mr-2" /> Watch Overview
               </Button>
-              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" asChild>
+              <Button size="lg" variant="outline" className="border-2 border-white text-white bg-transparent hover:bg-white/10" asChild>
                 <Link href="/training/docs">
                   <FileText className="w-4 h-4 mr-2" /> Browse Documentation
                 </Link>
@@ -213,8 +218,9 @@ export default function TrainingPage() {
                 <CardContent className="p-0">
                   <div className="divide-y">
                     {section.videos.map((video, index) => (
-                      <div
+                      <Link
                         key={video.title}
+                        href={`/training/scripts#${section.scriptId}`}
                         className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors cursor-pointer group"
                       >
                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-medium text-slate-500 group-hover:bg-primary group-hover:text-white transition-colors">
@@ -224,14 +230,15 @@ export default function TrainingPage() {
                           <p className="font-medium text-slate-900 group-hover:text-primary transition-colors">
                             {video.title}
                           </p>
+                          <p className="text-xs text-slate-400">View recording script</p>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-sm text-slate-500">{video.duration}</span>
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors">
-                            <Play className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
+                            <FileText className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </CardContent>
