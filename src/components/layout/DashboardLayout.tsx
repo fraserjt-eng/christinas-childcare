@@ -2,18 +2,21 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Home, Users, BookOpen, Calendar, FileText, Camera,
   ClipboardList, UtensilsCrossed, Clock, BarChart3,
   LogOut, Menu, GraduationCap, Target, Building2,
-  DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban, Wallet
+  DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban, Wallet,
+  CreditCard, CalendarDays, UserCog, Briefcase
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Employee, getEmployeeFullName } from '@/types/employee';
+import { getCurrentEmployee, logout as employeeLogout } from '@/lib/employee-storage';
 
 const parentNav = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -37,10 +40,20 @@ const adminNav = [
   { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
   { href: '/admin/financial', label: 'Financial Planning', icon: DollarSign },
   { href: '/admin/budget', label: 'Budget', icon: Wallet },
+  { href: '/admin/payroll', label: 'Payroll', icon: CreditCard },
   { href: '/admin/staff', label: 'Staff Directory', icon: UserCheck },
   { href: '/admin/compliance', label: 'Compliance', icon: ShieldCheck },
   { href: '/admin/reports', label: 'Daily Reports', icon: BookOpen },
   { href: '/admin/pipeline', label: 'Enrollment Pipeline', icon: SquareKanban },
+];
+
+const employeeNav = [
+  { href: '/employee', label: 'Clock In/Out', icon: Clock },
+  { href: '/employee/schedule', label: 'My Schedule', icon: CalendarDays },
+  { href: '/employee/pay-stubs', label: 'Pay Stubs', icon: CreditCard },
+  { href: '/employee/time-off', label: 'Time Off', icon: Calendar },
+  { href: '/employee/profile', label: 'My Profile', icon: UserCog },
+  { href: '/employee/training', label: 'Training', icon: Briefcase },
 ];
 
 function NavSection({ items, label }: { items: typeof parentNav; label: string }) {
@@ -72,7 +85,23 @@ function NavSection({ items, label }: { items: typeof parentNav; label: string }
   );
 }
 
-function SidebarContent({ isAdmin }: { isAdmin: boolean }) {
+function SidebarContent({
+  isAdmin,
+  isEmployee,
+  employee,
+  onLogout
+}: {
+  isAdmin: boolean;
+  isEmployee?: boolean;
+  employee?: Employee | null;
+  onLogout?: () => void;
+}) {
+  const displayName = employee ? getEmployeeFullName(employee) : 'Ophelia Zeogar';
+  const displayRole = employee?.job_title || 'Owner / Director';
+  const initials = employee
+    ? `${employee.first_name[0]}${employee.last_name[0]}`
+    : 'OZ';
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b">
@@ -87,7 +116,9 @@ function SidebarContent({ isAdmin }: { isAdmin: boolean }) {
         </Link>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {isAdmin ? (
+        {isEmployee ? (
+          <NavSection items={employeeNav} label="Employee Portal" />
+        ) : isAdmin ? (
           <NavSection items={adminNav} label="Business Hub" />
         ) : (
           <NavSection items={parentNav} label="Parent Portal" />
@@ -96,28 +127,61 @@ function SidebarContent({ isAdmin }: { isAdmin: boolean }) {
       <div className="p-4 border-t">
         <div className="flex items-center gap-3 mb-3">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-christina-red text-white text-xs">OZ</AvatarFallback>
+            <AvatarFallback className="bg-christina-red text-white text-xs">{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">Ophelia Zeogar</p>
-            <p className="text-xs text-muted-foreground">Owner / Director</p>
+            <p className="text-sm font-medium truncate">{displayName}</p>
+            <p className="text-xs text-muted-foreground">{displayRole}</p>
           </div>
         </div>
-        <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <LogOut className="h-4 w-4" /> Sign Out
-        </Link>
+        {onLogout ? (
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <LogOut className="h-4 w-4" /> Sign Out
+          </button>
+        ) : (
+          <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <LogOut className="h-4 w-4" /> Sign Out
+          </Link>
+        )}
       </div>
     </div>
   );
 }
 
-export function DashboardLayout({ children, isAdmin = false }: { children: React.ReactNode; isAdmin?: boolean }) {
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  isAdmin?: boolean;
+  isEmployee?: boolean;
+}
+
+export function DashboardLayout({ children, isAdmin = false, isEmployee = false }: DashboardLayoutProps) {
   const [open, setOpen] = useState(false);
+  const [employee, setEmployee] = useState<Employee | null>(null);
+
+  useEffect(() => {
+    if (isEmployee) {
+      const emp = getCurrentEmployee();
+      setEmployee(emp);
+    }
+  }, [isEmployee]);
+
+  const handleLogout = () => {
+    employeeLogout();
+    window.location.href = '/employee-login';
+  };
 
   return (
     <div className="flex h-screen bg-muted/30">
       <aside className="hidden lg:flex w-64 flex-col bg-white border-r">
-        <SidebarContent isAdmin={isAdmin} />
+        <SidebarContent
+          isAdmin={isAdmin}
+          isEmployee={isEmployee}
+          employee={employee}
+          onLogout={isEmployee ? handleLogout : undefined}
+        />
       </aside>
       <div className="flex-1 flex flex-col min-h-0">
         <header className="bg-white border-b px-4 py-3 flex items-center justify-between lg:justify-end">
@@ -126,7 +190,12 @@ export function DashboardLayout({ children, isAdmin = false }: { children: React
               <Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
-              <SidebarContent isAdmin={isAdmin} />
+              <SidebarContent
+                isAdmin={isAdmin}
+                isEmployee={isEmployee}
+                employee={employee}
+                onLogout={isEmployee ? handleLogout : undefined}
+              />
             </SheetContent>
           </Sheet>
           <div className="flex items-center gap-3">

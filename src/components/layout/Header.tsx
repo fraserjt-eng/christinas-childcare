@@ -27,7 +27,10 @@ export function Header() {
             <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> (763) 390-5870</span>
             <span className="hidden sm:flex items-center gap-1"><Mail className="h-3 w-3" /> info@christinaschildcare.com</span>
           </div>
-          <Link href="/login" className="hover:underline">Parent Portal</Link>
+          <div className="flex items-center gap-4">
+            <Link href="/employee-login" className="hover:underline">Staff Portal</Link>
+            <Link href="/login" className="hover:underline">Parent Portal</Link>
+          </div>
         </div>
       </div>
       <nav className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
