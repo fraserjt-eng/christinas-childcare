@@ -47,7 +47,6 @@ export function YouTubeEmbed({
   startTime,
 }: YouTubeEmbedProps) {
   const [isLoaded, setIsLoaded] = useState(!lazyLoad);
-  const [hasError, setHasError] = useState(false);
 
   // Validate video ID format
   const isValidId = /^[a-zA-Z0-9_-]{11}$/.test(videoId);
@@ -110,7 +109,6 @@ export function YouTubeEmbed({
             alt={title}
             className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105"
             loading="lazy"
-            onError={() => setHasError(true)}
           />
         </picture>
 

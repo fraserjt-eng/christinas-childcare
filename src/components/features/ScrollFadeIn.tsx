@@ -37,12 +37,15 @@ export function ScrollFadeIn({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-          if (once && ref.current) {
-            observer.unobserve(ref.current);
+          if (once) {
+            observer.unobserve(element);
           }
         } else if (!once) {
           setIsVisible(false);
@@ -54,14 +57,10 @@ export function ScrollFadeIn({
       }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
+    observer.observe(element);
 
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
-      }
+      observer.unobserve(element);
     };
   }, [threshold, once]);
 
@@ -126,12 +125,15 @@ export function useScrollFadeIn(options?: {
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-          if (options?.once !== false && ref.current) {
-            observer.unobserve(ref.current);
+          if (options?.once !== false) {
+            observer.unobserve(element);
           }
         } else if (options?.once === false) {
           setIsVisible(false);
@@ -143,14 +145,10 @@ export function useScrollFadeIn(options?: {
       }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
+    observer.observe(element);
 
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
-      }
+      observer.unobserve(element);
     };
   }, [options?.threshold, options?.rootMargin, options?.once]);
 
@@ -181,13 +179,14 @@ export function ScrollFadeInStagger({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-          if (ref.current) {
-            observer.unobserve(ref.current);
-          }
+          observer.unobserve(element);
         }
       },
       {
@@ -196,14 +195,10 @@ export function ScrollFadeInStagger({
       }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
+    observer.observe(element);
 
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
-      }
+      observer.unobserve(element);
     };
   }, []);
 
