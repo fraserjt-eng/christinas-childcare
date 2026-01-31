@@ -29,7 +29,7 @@ export function ScrollFadeIn({
   duration = 600,
   direction = 'up',
   distance = 40,
-  threshold = 0.1,
+  threshold = 0.05,
   className = '',
   once = true,
 }: ScrollFadeInProps) {
@@ -39,6 +39,14 @@ export function ScrollFadeIn({
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
+
+    // Check if element is already in viewport on mount
+    const rect = element.getBoundingClientRect();
+    const isAlreadyVisible = rect.top < window.innerHeight && rect.bottom > 0;
+    if (isAlreadyVisible) {
+      setIsVisible(true);
+      if (once) return; // Don't set up observer if once=true and already visible
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -53,7 +61,7 @@ export function ScrollFadeIn({
       },
       {
         threshold,
-        rootMargin: '0px 0px -50px 0px',
+        rootMargin: '50px 0px -20px 0px',
       }
     );
 
@@ -128,6 +136,14 @@ export function useScrollFadeIn(options?: {
     const element = ref.current;
     if (!element) return;
 
+    // Check if element is already in viewport on mount
+    const rect = element.getBoundingClientRect();
+    const isAlreadyVisible = rect.top < window.innerHeight && rect.bottom > 0;
+    if (isAlreadyVisible) {
+      setIsVisible(true);
+      if (options?.once !== false) return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -140,8 +156,8 @@ export function useScrollFadeIn(options?: {
         }
       },
       {
-        threshold: options?.threshold ?? 0.1,
-        rootMargin: options?.rootMargin ?? '0px 0px -50px 0px',
+        threshold: options?.threshold ?? 0.05,
+        rootMargin: options?.rootMargin ?? '50px 0px -20px 0px',
       }
     );
 
@@ -182,6 +198,14 @@ export function ScrollFadeInStagger({
     const element = ref.current;
     if (!element) return;
 
+    // Check if element is already in viewport on mount
+    const rect = element.getBoundingClientRect();
+    const isAlreadyVisible = rect.top < window.innerHeight && rect.bottom > 0;
+    if (isAlreadyVisible) {
+      setIsVisible(true);
+      return; // Don't set up observer if already visible
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -190,8 +214,8 @@ export function ScrollFadeInStagger({
         }
       },
       {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px',
+        threshold: 0.05,
+        rootMargin: '50px 0px -20px 0px',
       }
     );
 
