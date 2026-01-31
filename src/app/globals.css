@@ -56,51 +56,201 @@
   }
 }
 
-/* Driver.js Tour Styles */
+/* ============================================
+   Driver.js Tour Styles
+   Enhanced styling for professional training tours
+   ============================================ */
+
 .christina-tour-popover {
-  --driver-popover-max-width: 320px;
-  --driver-popover-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  --driver-popover-max-width: 380px;
+  --driver-popover-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+  --driver-popover-border-radius: 12px;
+  font-family: var(--font-body), system-ui, sans-serif;
 }
 
+/* Popover container */
+.christina-tour-popover .driver-popover {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  animation: tour-popover-enter 0.25s ease-out;
+}
+
+@keyframes tour-popover-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Title styling */
 .christina-tour-popover .driver-popover-title {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.125rem;
+  font-weight: 700;
   color: #1a1a1a;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
 }
 
+/* Description styling */
 .christina-tour-popover .driver-popover-description {
-  color: #6b6b6b;
-  font-size: 0.875rem;
-  line-height: 1.5;
+  color: #525252;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
 }
 
+/* Progress indicator - enhanced visibility */
 .christina-tour-popover .driver-popover-progress-text {
-  color: #999;
-  font-size: 0.75rem;
+  color: #c44536;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: rgba(196, 69, 54, 0.08);
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  display: inline-block;
+  margin-bottom: 0.75rem;
 }
 
+/* Button container */
+.christina-tour-popover .driver-popover-footer {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Navigation buttons */
 .christina-tour-popover .driver-popover-prev-btn,
 .christina-tour-popover .driver-popover-next-btn {
   background: #1a1a1a;
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
 }
 
-.christina-tour-popover .driver-popover-prev-btn:hover,
+.christina-tour-popover .driver-popover-prev-btn {
+  background: transparent;
+  color: #525252;
+  border: 1px solid #e5e5e5;
+}
+
+.christina-tour-popover .driver-popover-prev-btn:hover {
+  background: #f5f5f5;
+  color: #1a1a1a;
+  border-color: #d4d4d4;
+}
+
+.christina-tour-popover .driver-popover-next-btn {
+  background: #c44536;
+}
+
 .christina-tour-popover .driver-popover-next-btn:hover {
-  background: #333;
+  background: #a33527;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(196, 69, 54, 0.3);
 }
 
+/* Done button (last step) */
+.christina-tour-popover .driver-popover-next-btn[data-last="true"],
+.christina-tour-popover .driver-popover-done-btn {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+}
+
+.christina-tour-popover .driver-popover-next-btn[data-last="true"]:hover,
+.christina-tour-popover .driver-popover-done-btn:hover {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+/* Close button */
 .christina-tour-popover .driver-popover-close-btn {
-  color: #999;
+  color: #a3a3a3;
+  transition: color 0.2s;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
 }
 
 .christina-tour-popover .driver-popover-close-btn:hover {
-  color: #333;
+  color: #525252;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Highlight overlay - subtle pulse animation */
+.driver-active-element {
+  animation: tour-highlight-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tour-highlight-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(196, 69, 54, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(196, 69, 54, 0.1);
+  }
+}
+
+/* Stage (highlighted area) styling */
+.driver-highlighted-element {
+  outline: 3px solid #c44536 !important;
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  .christina-tour-popover {
+    --driver-popover-max-width: calc(100vw - 32px);
+  }
+
+  .christina-tour-popover .driver-popover-title {
+    font-size: 1rem;
+  }
+
+  .christina-tour-popover .driver-popover-description {
+    font-size: 0.875rem;
+  }
+
+  .christina-tour-popover .driver-popover-prev-btn,
+  .christina-tour-popover .driver-popover-next-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+  }
+}
+
+/* Arrow styling */
+.christina-tour-popover .driver-popover-arrow {
+  border-color: white;
+}
+
+.christina-tour-popover .driver-popover-arrow-side-left {
+  border-left-color: white;
+}
+
+.christina-tour-popover .driver-popover-arrow-side-right {
+  border-right-color: white;
+}
+
+.christina-tour-popover .driver-popover-arrow-side-top {
+  border-top-color: white;
+}
+
+.christina-tour-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: white;
 }

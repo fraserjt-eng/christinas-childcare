@@ -1,0 +1,26 @@
+# Staff Management Voiceover Script
+# Duration: ~4:20
+# Voice: Friendly, conversational male (ElevenLabs: Josh, Sam, or Charlie)
+# Character count: ~2,700 characters
+
+---
+
+Welcome to staff management training. In this video, I'll show you how to add staff members, track certifications, assign classrooms, and keep your team information up to date for licensing compliance.
+
+Click Staff in the sidebar to open the staff management page. You'll see all current staff members listed with their photo, name, role, assigned classroom, and certification status. The colored dots indicate certification validity. Green means all current, yellow means something expires soon, and red means something has expired.
+
+To add a new team member, click the Add Staff button in the top right. You'll fill in their basic information: name, email, phone, role, start date, and which classroom they're assigned to.
+
+Let's add a new assistant teacher. Enter the name, select their role from the dropdown. We have Lead Teacher, Assistant Teacher, Aide, and Administrator options. Add their contact information and start date.
+
+The certification section is critical for licensing. Click Add Certification to upload documents. You can add CPR and First Aid, background checks, food handler permits, and state-required training certificates. Always enter the expiration date so the system can alert you before renewals are due.
+
+The system automatically tracks expiration dates. You'll receive email alerts sixty days and thirty days before any certification expires. The staff member also receives reminders. This helps you stay ahead of compliance requirements.
+
+Assign staff to classrooms using the checkbox list. Staff can be assigned to multiple rooms if they float. This assignment affects ratio calculations. The system uses it to determine if you have adequate staffing for each room.
+
+Click on any staff member to view their full profile. Here you can see all their information, uploaded documents, certification history, and assigned schedule. You can edit any information from this view.
+
+From the Reports menu, you can generate staff-related reports: a contact list for emergency purposes, certification status summary for DCYF visits, and hours worked reports for payroll. These can be exported as PDF or Excel.
+
+That covers staff management basics. Keep certification dates current, maintain accurate classroom assignments, and you'll be well-prepared for licensing inspections. Next, we'll cover attendance tracking. Thanks for watching!

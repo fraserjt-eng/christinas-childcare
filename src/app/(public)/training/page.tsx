@@ -15,53 +15,67 @@ import {
   ChevronRight,
   Clock,
   GraduationCap,
+  Youtube,
 } from 'lucide-react';
+import { YouTubeEmbed, VideoPlaceholder } from '@/components/YouTubeEmbed';
 
+/**
+ * Video tutorial configuration
+ * When you upload videos to YouTube (unlisted), add the video ID here
+ */
 const videoSections = [
   {
     id: 'lesson-builder',
     title: 'Lesson Builder',
     description: 'Create AI-powered lesson plans in minutes',
     icon: Lightbulb,
-    duration: '1:12',
-    scriptId: 'lesson-builder',
-    videoPath: '/videos/lesson-builder.mp4',
+    duration: '3:45',
+    scriptId: 'lesson-builder-intro',
+    // Replace with actual YouTube video ID when uploaded
+    // Example: youtubeId: 'dQw4w9WgXcQ',
+    youtubeId: null as string | null,
+    // Fallback to local video if no YouTube ID
+    localVideoPath: '/videos/lesson-builder.mp4',
   },
   {
     id: 'curriculum',
     title: 'Curriculum Library',
     description: 'Browse, filter, and remix curriculum content',
     icon: BookOpen,
-    duration: '0:40',
-    scriptId: 'curriculum',
-    videoPath: '/videos/curriculum-library.mp4',
+    duration: '4:00',
+    scriptId: 'curriculum-library',
+    youtubeId: null as string | null,
+    localVideoPath: '/videos/curriculum-library.mp4',
   },
   {
     id: 'staff',
     title: 'Staff Management',
     description: 'Manage staff profiles, schedules, and certifications',
     icon: Users,
-    duration: '0:38',
-    scriptId: 'staff',
-    videoPath: '/videos/staff-management.mp4',
+    duration: '4:20',
+    scriptId: 'staff-management',
+    youtubeId: null as string | null,
+    localVideoPath: '/videos/staff-management.mp4',
   },
   {
     id: 'attendance',
     title: 'Attendance & Ratios',
     description: 'Track daily attendance and maintain compliance',
     icon: Calendar,
-    duration: '0:46',
-    scriptId: 'attendance',
-    videoPath: '/videos/attendance.mp4',
+    duration: '3:30',
+    scriptId: 'attendance-ratios',
+    youtubeId: null as string | null,
+    localVideoPath: '/videos/attendance.mp4',
   },
   {
     id: 'reports',
     title: 'Reports & Analytics',
     description: 'Generate insights and compliance reports',
     icon: BarChart3,
-    duration: '0:40',
-    scriptId: 'reports',
-    videoPath: '/videos/reports.mp4',
+    duration: '4:00',
+    scriptId: 'reports-analytics',
+    youtubeId: null as string | null,
+    localVideoPath: '/videos/reports.mp4',
   },
 ];
 
@@ -169,26 +183,44 @@ export default function TrainingPage() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">Video Tutorials</h2>
+            <div className="inline-flex items-center gap-2 mb-4">
+              <Youtube className="w-6 h-6 text-red-600" />
+              <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Video Tutorials</h2>
+            </div>
             <p className="text-slate-600 max-w-2xl mx-auto">
-              Quick video guides for every feature - watch at your own pace
+              Professional video guides for every feature - watch at your own pace
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
             {videoSections.map((section) => (
               <Card key={section.id} className="overflow-hidden">
-                <div className="aspect-video bg-slate-900 relative">
-                  <video
-                    className="w-full h-full object-cover"
-                    controls
-                    preload="metadata"
-                    poster={`/videos/${section.id}-poster.jpg`}
-                  >
-                    <source src={section.videoPath} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
+                {/* Video Player - YouTube or Local */}
+                {section.youtubeId ? (
+                  <YouTubeEmbed
+                    videoId={section.youtubeId}
+                    title={section.title}
+                    lazyLoad={true}
+                  />
+                ) : section.localVideoPath ? (
+                  <div className="aspect-video bg-slate-900 relative">
+                    <video
+                      className="w-full h-full object-cover"
+                      controls
+                      preload="metadata"
+                      poster={`/videos/${section.id}-poster.jpg`}
+                    >
+                      <source src={section.localVideoPath} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                ) : (
+                  <VideoPlaceholder
+                    title={section.title}
+                    description="Video coming soon"
+                  />
+                )}
+
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">

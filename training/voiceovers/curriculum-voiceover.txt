@@ -1,0 +1,28 @@
+# Curriculum Library Voiceover Script
+# Duration: ~4:00
+# Voice: Friendly, conversational male (ElevenLabs: Josh, Sam, or Charlie)
+# Character count: ~2,500 characters
+
+---
+
+In this video, I'll show you how to manage your curriculum library: searching for lessons, organizing with favorites, filtering by age and domain, and keeping your teaching resources well organized.
+
+The Library tab shows all your saved lessons as cards. Each card displays the lesson title, age group, learning domain, duration, and whether it's marked as a favorite. Let's explore the powerful search and filter tools.
+
+The search bar lets you find lessons by keyword. Let's search for colors. The search looks at titles, topics, and even activity descriptions. Notice how lessons with colors in any part appear.
+
+Use the Age Group filter to show only lessons for specific ages. If you're planning for the toddler room today, select Toddler and you'll only see lessons appropriate for that age range.
+
+The Domain filter helps when you're focusing on specific development areas. Let's say you need more social-emotional activities. Select Social-Emotional and see only those lessons.
+
+Click the star icon on any lesson card to mark it as a favorite. Favorites are your go-to lessons that you use frequently. Toggle the favorites filter to see only your starred lessons.
+
+The sort dropdown lets you arrange lessons by newest, oldest, title alphabetically, or duration. Newest is helpful for finding lessons you just created.
+
+Click on any lesson card to see the full lesson plan. Here you can read through all the objectives, materials, and activities. The full view also gives you more action options.
+
+From the lesson view, you have several options. Edit lets you modify the lesson. Remix creates an adapted version for a different age group. We'll cover that in another video. You can download as PDF to print or share. Duplicate creates a copy for modification. And delete removes the lesson permanently.
+
+The PDF download includes several formats: a full lesson plan, printable activity cards for each activity, a parent letter explaining what their child is learning, and an assessment checklist. These are great for parent communication and documentation.
+
+That's your curriculum library! Keep it organized with favorites and clear titles, and you'll always be able to find the perfect lesson quickly. In our next video, we'll cover remixing lessons. Thanks for watching!

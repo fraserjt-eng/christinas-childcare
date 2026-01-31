@@ -1,0 +1,28 @@
+# Lesson Builder Voiceover Script
+# Duration: ~3:45
+# Voice: Friendly, conversational male (ElevenLabs: Josh, Sam, or Charlie)
+# Character count: ~2,400 characters
+
+---
+
+Welcome to Christina's Child Care Center training. In this video, I'll show you how to use our AI-powered Lesson Builder to create engaging, age-appropriate lesson plans in just minutes.
+
+To get started, log into the admin dashboard and click on Lessons in the left sidebar. This opens the Lesson Builder where you can create new lessons, view your saved lessons, remix existing ones, and see analytics about your teaching.
+
+The New Lesson tab is where the magic happens. You'll see a form with several options. Let me walk through each one.
+
+First, select your age group. We have four options: Infant for our youngest learners from six weeks to sixteen months, Toddler for sixteen to thirty-three months, Preschool for thirty-three months to five years, and School Age for children five to twelve. The AI adapts everything, including vocabulary, activity complexity, and safety considerations, based on your selection.
+
+Next, type in your topic. This can be anything you want to teach about. Let's try Weather and Seasons. You can be specific like Thunderstorms or broad like Nature. The more specific you are, the more focused your lesson will be.
+
+Choose the primary learning domain. For our weather lesson, let's pick Cognitive Development since we're focusing on understanding concepts. Other options include Language and Literacy, Physical Development, Social-Emotional, and Creative Arts.
+
+Select how long your lesson should run. For preschoolers, thirty minutes is usually ideal. The AI will adjust the number of activities and depth of content based on your time selection.
+
+The Additional Context field is optional but powerful. You can add notes like Include an outdoor component or We have a child with a nut allergy or Tie this into our field trip next week. The AI uses this to customize your lesson.
+
+Now click Generate with AI. The system will take about ten to thirty seconds to create your complete lesson plan. You'll see it generating learning objectives, activities, materials lists, and assessment ideas.
+
+And there's our lesson! We have clear learning objectives, a list of materials we'll need, step-by-step activities with timing, discussion questions, and ideas for assessing student understanding. If you're not happy with any part, you can edit it directly or click generate again for a fresh approach.
+
+When you're satisfied, click Save to Library. Your lesson is now saved and you can access it anytime from the Library tab. In our next video, we'll cover managing your lesson library. Thanks for watching!

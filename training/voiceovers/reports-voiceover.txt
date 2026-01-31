@@ -1,0 +1,26 @@
+# Reports & Analytics Voiceover Script
+# Duration: ~4:00
+# Voice: Friendly, conversational male (ElevenLabs: Josh, Sam, or Charlie)
+# Character count: ~2,400 characters
+
+---
+
+In this video, I'll walk you through the reports and analytics features. You'll learn how to generate the reports you need for billing, parent communication, and DCYF compliance visits.
+
+The Reports page organizes reports into categories: Attendance, Enrollment, Financial, Staff, and Compliance. Each category contains several pre-built reports designed for specific needs.
+
+Attendance reports include daily sign-in sheets for printing, monthly attendance summaries showing total days attended per child, and ratio compliance logs documenting that you maintained proper staffing.
+
+Let's generate a monthly attendance summary. Select the report type, choose your date range. Last month for example. Optionally filter by classroom. Then click Generate.
+
+The report displays on screen with a data table showing each child, their enrolled days, actual attendance, and attendance percentage. You can sort by any column by clicking the header.
+
+Click Export to download your report. PDF is best for printing or emailing to parents. Excel is great if you need to do further calculations. CSV works for importing into other systems like accounting software.
+
+Financial reports help with billing. You can see revenue by program, outstanding balances, payment history, and more. The revenue report shows income broken down by age group and enrollment type.
+
+The Compliance section is designed for licensing visits. Reports include staff qualification summaries showing everyone's certification status, ratio logs proving you maintained compliance, incident reports, and training documentation.
+
+Set up automatic reports that generate and email on a schedule. Great for weekly attendance summaries to management or monthly billing reports. Click Schedule, choose frequency, add email recipients, and you're set.
+
+That covers reports and analytics. Use these tools to stay on top of your center's data, keep parents informed, and breeze through DCYF visits. If you have questions, check our written guides or contact support. Thanks for watching!

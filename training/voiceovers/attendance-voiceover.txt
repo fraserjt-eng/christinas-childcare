@@ -1,0 +1,26 @@
+# Attendance & Ratio Tracking Voiceover Script
+# Duration: ~3:30
+# Voice: Friendly, conversational male (ElevenLabs: Josh, Sam, or Charlie)
+# Character count: ~2,200 characters
+
+---
+
+In this video, I'll show you how to track daily attendance, monitor staff-to-child ratios in real-time, and generate the reports you need for billing and compliance.
+
+The Attendance page shows today's date by default. You'll see a list of all enrolled children organized by classroom. The status column shows who's checked in, who's absent, and who hasn't arrived yet.
+
+When a child arrives, find their name and click the check-in button. The system records the exact time. You can also add a note. For example, if mom mentioned the child didn't sleep well, that's helpful for teachers to know.
+
+At pickup, click check-out and select the person picking up from the authorized list. If someone not on the list tries to pick up, the system will alert you. Always verify ID for anyone you don't recognize.
+
+Use the classroom tabs to see attendance for specific rooms. This is helpful when you're in a particular classroom and only need to see those children. Each tab shows current occupancy and ratio.
+
+The Ratio Monitor is critical for compliance. It shows current staff-to-child ratios for each classroom. Green means you're compliant, yellow means you're approaching the limit, and red means you're over ratio and need to take action immediately.
+
+Minnesota DCYF requires specific ratios: one staff per four infants, one per seven toddlers, one per ten preschoolers, and one per fifteen school-age children. The system knows these requirements and monitors continuously.
+
+Use the date picker to view attendance for any past date. This is essential for billing reconciliation. You can verify exactly which days a child attended. It's also important for DCYF audits when you need historical records.
+
+Generate reports for any date range. Options include daily sign-in sheets, monthly attendance summaries, and DCYF compliance logs. Export as PDF for records or Excel for further analysis.
+
+That's attendance and ratio tracking. Keep check-ins and check-outs accurate, monitor those ratios, and you'll maintain compliance easily. Thanks for watching!
