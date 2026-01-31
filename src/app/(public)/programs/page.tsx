@@ -1,6 +1,9 @@
+'use client';
+
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ScrollFadeIn } from '@/components/features/ScrollFadeIn';
 import Link from 'next/link';
 import { ArrowRight, Clock, Users, Heart, Star, BookOpen, Puzzle } from 'lucide-react';
 
@@ -59,60 +62,72 @@ export default function ProgramsPage() {
   return (
     <div className="py-12">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Our Programs</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            From first steps to first grade and beyond — we have a program designed for every stage of your child&apos;s development.
-          </p>
-        </div>
+        <ScrollFadeIn direction="up" duration={600}>
+          <div className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Our Programs</h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              From first steps to first grade and beyond — we have a program designed for every stage of your child&apos;s development.
+            </p>
+          </div>
+        </ScrollFadeIn>
 
         <div className="space-y-8">
-          {programs.map((program) => (
-            <Card key={program.title} className="overflow-hidden">
-              <div className="h-2" style={{ backgroundColor: program.color }} />
-              <div className="p-6 md:p-8">
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: program.color }}>
-                        <program.icon className="h-5 w-5 text-white" />
+          {programs.map((program, index) => (
+            <ScrollFadeIn
+              key={program.title}
+              direction="up"
+              duration={700}
+              delay={index * 100}
+              distance={50}
+            >
+              <Card className="overflow-hidden">
+                <div className="h-2" style={{ backgroundColor: program.color }} />
+                <div className="p-6 md:p-8">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: program.color }}>
+                          <program.icon className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-bold">{program.title}</h2>
+                          <p className="text-sm text-muted-foreground">{program.subtitle}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h2 className="text-2xl font-bold">{program.title}</h2>
-                        <p className="text-sm text-muted-foreground">{program.subtitle}</p>
+                      <p className="text-muted-foreground mt-4 mb-6">{program.description}</p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        <Badge variant="outline" className="gap-1"><Users className="h-3 w-3" /> Ages {program.ages}</Badge>
+                        <Badge variant="outline" className="gap-1">Ratio {program.ratio}</Badge>
+                        <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" /> {program.schedule}</Badge>
                       </div>
                     </div>
-                    <p className="text-muted-foreground mt-4 mb-6">{program.description}</p>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <Badge variant="outline" className="gap-1"><Users className="h-3 w-3" /> Ages {program.ages}</Badge>
-                      <Badge variant="outline" className="gap-1">Ratio {program.ratio}</Badge>
-                      <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" /> {program.schedule}</Badge>
+                    <div className="md:w-72 bg-muted/50 rounded-xl p-6">
+                      <h3 className="font-heading font-bold mb-3">Program Highlights</h3>
+                      <ul className="space-y-2">
+                        {program.highlights.map((h) => (
+                          <li key={h} className="flex items-start gap-2 text-sm">
+                            <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: program.color }} />
+                            {h}
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </div>
-                  <div className="md:w-72 bg-muted/50 rounded-xl p-6">
-                    <h3 className="font-heading font-bold mb-3">Program Highlights</h3>
-                    <ul className="space-y-2">
-                      {program.highlights.map((h) => (
-                        <li key={h} className="flex items-start gap-2 text-sm">
-                          <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: program.color }} />
-                          {h}
-                        </li>
-                      ))}
-                    </ul>
                   </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </ScrollFadeIn>
           ))}
         </div>
 
-        <div className="text-center mt-12 p-8 bg-muted/30 rounded-2xl">
-          <h2 className="text-2xl font-bold mb-3">Find the Right Program for Your Child</h2>
-          <p className="text-muted-foreground mb-6">Schedule a tour to visit our classrooms and meet our teachers.</p>
-          <Button asChild size="lg" className="bg-christina-red hover:bg-christina-red/90">
-            <Link href="/enroll">Schedule a Tour <ArrowRight className="ml-2 h-5 w-5" /></Link>
-          </Button>
-        </div>
+        <ScrollFadeIn direction="up" duration={600} delay={200}>
+          <div className="text-center mt-12 p-8 bg-muted/30 rounded-2xl">
+            <h2 className="text-2xl font-bold mb-3">Find the Right Program for Your Child</h2>
+            <p className="text-muted-foreground mb-6">Schedule a tour to visit our classrooms and meet our teachers.</p>
+            <Button asChild size="lg" className="bg-christina-red hover:bg-christina-red/90">
+              <Link href="/enroll">Schedule a Tour <ArrowRight className="ml-2 h-5 w-5" /></Link>
+            </Button>
+          </div>
+        </ScrollFadeIn>
       </div>
     </div>
   );
