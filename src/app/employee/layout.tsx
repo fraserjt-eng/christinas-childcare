@@ -3,19 +3,25 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { getCurrentEmployee } from '@/lib/employee-storage';
+import { getCurrentEmployee, seedSampleData } from '@/lib/employee-storage';
 
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const employee = getCurrentEmployee();
-    if (!employee) {
-      router.push('/employee-login');
-    } else {
-      setLoading(false);
+    async function init() {
+      // Ensure sample data is seeded
+      await seedSampleData();
+
+      const employee = getCurrentEmployee();
+      if (!employee) {
+        router.push('/employee-login');
+      } else {
+        setLoading(false);
+      }
     }
+    init();
   }, [router]);
 
   if (loading) {
