@@ -36,12 +36,31 @@ export function Header() {
       <nav className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <svg width="40" height="40" viewBox="0 0 40 40" className="flex-shrink-0">
+            <defs>
+              <linearGradient id="zGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#FFE082" />
+                <stop offset="50%" stopColor="#FFD54F" />
+                <stop offset="100%" stopColor="#FFC107" />
+              </linearGradient>
+              <filter id="zGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="1" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
             <circle cx="20" cy="20" r="20" fill="#C62828" />
-            {/* Formal Z */}
-            <path
-              d="M11,11 L29,11 L29,14 L16,27 L29,27 L29,30 L11,30 L11,27 L24,14 L11,14 Z"
-              fill="#FFD54F"
-            />
+            {/* Contemporary Z with dynamic slant and rounded style */}
+            <g filter="url(#zGlow)">
+              <path
+                d="M12,10 L28,10 Q30,10 29,12 L17,26 L28,26 Q30,26 30,28 Q30,30 28,30 L12,30 Q10,30 11,28 L23,14 L12,14 Q10,14 10,12 Q10,10 12,10 Z"
+                fill="url(#zGradient)"
+              />
+            </g>
+            {/* Sparkle accents */}
+            <circle cx="31" cy="9" r="1.5" fill="#FFE082" opacity="0.9" />
+            <circle cx="33" cy="12" r="1" fill="#FFE082" opacity="0.7" />
           </svg>
           <div>
             <span className="font-heading font-bold text-lg text-foreground leading-tight block">Christina&apos;s</span>

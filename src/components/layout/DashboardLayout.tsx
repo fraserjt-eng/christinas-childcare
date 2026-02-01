@@ -111,10 +111,19 @@ function SidebarContent({
       <div className="p-4 border-b">
         <Link href="/" className="flex items-center gap-2">
           <svg width="32" height="32" viewBox="0 0 40 40" className="flex-shrink-0">
+            <defs>
+              <linearGradient id="zGradientDash" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#FFE082" />
+                <stop offset="50%" stopColor="#FFD54F" />
+                <stop offset="100%" stopColor="#FFC107" />
+              </linearGradient>
+            </defs>
             <circle cx="20" cy="20" r="20" fill="#C62828" />
-            <path d="M12 14 C12 14 20 8 28 14" stroke="#FFD54F" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-            <line x1="20" y1="10" x2="20" y2="28" stroke="#FFD54F" strokeWidth="2" strokeLinecap="round" />
-            <text x="20" y="34" textAnchor="middle" fill="white" fontSize="10" fontFamily="Fredoka One, cursive" fontWeight="bold">C</text>
+            <path
+              d="M12,10 L28,10 Q30,10 29,12 L17,26 L28,26 Q30,26 30,28 Q30,30 28,30 L12,30 Q10,30 11,28 L23,14 L12,14 Q10,14 10,12 Q10,10 12,10 Z"
+              fill="url(#zGradientDash)"
+            />
+            <circle cx="31" cy="9" r="1.5" fill="#FFE082" opacity="0.9" />
           </svg>
           <span className="font-heading font-bold text-foreground">Christina&apos;s</span>
         </Link>
