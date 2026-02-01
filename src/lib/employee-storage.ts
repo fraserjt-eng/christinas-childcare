@@ -1194,77 +1194,82 @@ export async function seedSampleData(): Promise<{
   schedules: number;
   training: number;
 }> {
-  // Check if data already exists
-  const existingEmployees = await getEmployees();
-  if (existingEmployees.length > 0) {
-    return { employees: 0, timeEntries: 0, schedules: 0, training: 0 };
-  }
-
   let employeeCount = 0;
   let timeEntryCount = 0;
   let scheduleCount = 0;
   let trainingCount = 0;
 
-  // Create employees
-  const createdEmployees: Employee[] = [];
-  for (const empData of SAMPLE_EMPLOYEES) {
-    const employee = await createEmployee(empData);
-    createdEmployees.push(employee);
-    employeeCount++;
-  }
+  // Check if employees already exist
+  const existingEmployees = await getEmployees();
+  const employeesToUse: Employee[] = [...existingEmployees];
 
-  // Create time entries for each employee
-  for (const employee of createdEmployees) {
-    const timeEntries = generateSampleTimeEntries(employee.id);
-    for (const entry of timeEntries) {
-      await createTimeEntry(entry);
-      timeEntryCount++;
+  // Create employees only if none exist
+  if (existingEmployees.length === 0) {
+    for (const empData of SAMPLE_EMPLOYEES) {
+      const employee = await createEmployee(empData);
+      employeesToUse.push(employee);
+      employeeCount++;
+    }
+
+    // Create time entries for each new employee
+    for (const employee of employeesToUse) {
+      const timeEntries = generateSampleTimeEntries(employee.id);
+      for (const entry of timeEntries) {
+        await createTimeEntry(entry);
+        timeEntryCount++;
+      }
+    }
+
+    // Create schedules for each new employee
+    for (const employee of employeesToUse) {
+      const schedules = generateSampleSchedule(employee.id);
+      for (const schedule of schedules) {
+        await createScheduleEntry(schedule);
+        scheduleCount++;
+      }
     }
   }
 
-  // Create schedules for each employee
-  for (const employee of createdEmployees) {
-    const schedules = generateSampleSchedule(employee.id);
-    for (const schedule of schedules) {
-      await createScheduleEntry(schedule);
-      scheduleCount++;
-    }
+  // Always ensure training modules exist
+  const existingModules = await getTrainingModules();
+  if (existingModules.length === 0) {
+    saveToStorage(STORAGE_KEYS.trainingModules, SAMPLE_TRAINING_MODULES);
   }
 
-  // Save training modules
-  saveToStorage(STORAGE_KEYS.trainingModules, SAMPLE_TRAINING_MODULES);
+  // Ensure employee training records exist for all employees
+  const existingTraining = getFromStorage<EmployeeTraining>(STORAGE_KEYS.employeeTraining);
+  if (existingTraining.length === 0 && employeesToUse.length > 0) {
+    const employeeTraining: EmployeeTraining[] = [];
+    for (const employee of employeesToUse) {
+      for (const trainingModule of SAMPLE_TRAINING_MODULES) {
+        const now = new Date();
+        const completedAt = new Date(now);
+        completedAt.setMonth(completedAt.getMonth() - Math.floor(Math.random() * 6));
 
-  // Create employee training records
-  const employeeTraining: EmployeeTraining[] = [];
-  for (const employee of createdEmployees) {
-    for (const trainingModule of SAMPLE_TRAINING_MODULES) {
-      const now = new Date();
-      const completedAt = new Date(now);
-      completedAt.setMonth(completedAt.getMonth() - Math.floor(Math.random() * 6));
+        const expiresAt = trainingModule.expiration_months
+          ? new Date(completedAt.getTime() + trainingModule.expiration_months * 30 * 24 * 60 * 60 * 1000)
+          : undefined;
 
-      const expiresAt = trainingModule.expiration_months
-        ? new Date(completedAt.getTime() + trainingModule.expiration_months * 30 * 24 * 60 * 60 * 1000)
-        : undefined;
+        const isExpired = expiresAt && expiresAt < now;
+        const status = isExpired ? 'expired' : 'completed';
 
-      const isExpired = expiresAt && expiresAt < now;
-      const status = isExpired ? 'expired' : 'completed';
-
-      employeeTraining.push({
-        id: generateTrainingId(),
-        employee_id: employee.id,
-        module_id: trainingModule.id,
-        status,
-        started_at: completedAt.toISOString(),
-        completed_at: completedAt.toISOString(),
-        expires_at: expiresAt?.toISOString(),
-        score: 85 + Math.floor(Math.random() * 15),
-        created_at: now.toISOString(),
-        updated_at: now.toISOString(),
-      });
-      trainingCount++;
+        employeeTraining.push({
+          id: generateTrainingId(),
+          employee_id: employee.id,
+          module_id: trainingModule.id,
+          status,
+          started_at: completedAt.toISOString(),
+          completed_at: completedAt.toISOString(),
+          expires_at: expiresAt?.toISOString(),
+          score: 85 + Math.floor(Math.random() * 15),
+          created_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        });
+        trainingCount++;
+      }
     }
+    saveToStorage(STORAGE_KEYS.employeeTraining, employeeTraining);
   }
-  saveToStorage(STORAGE_KEYS.employeeTraining, employeeTraining);
 
   return {
     employees: employeeCount,
