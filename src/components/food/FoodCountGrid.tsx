@@ -8,10 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Save, Loader2 } from 'lucide-react';
 import {
   MealType,
-  CLASSROOMS,
+  Classroom,
   MEAL_TYPE_LABELS,
 } from '@/types/food';
-import { getFoodCounts, upsertFoodCount } from '@/lib/food-storage';
+import { getFoodCounts, upsertFoodCount, getClassrooms } from '@/lib/food-storage';
 
 interface FoodCountGridProps {
   date: string;
@@ -22,19 +22,25 @@ type CountData = Record<string, Record<MealType, { children: number; adults: num
 
 export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
   const [counts, setCounts] = useState<CountData>({});
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
-    async function loadCounts() {
+    async function loadData() {
       setLoading(true);
+
+      // Load classrooms first
+      const loadedClassrooms = await getClassrooms({ active_only: true });
+      setClassrooms(loadedClassrooms);
+
       const existingCounts = await getFoodCounts({ date });
 
       // Initialize with zeros for all classrooms
       const initialData: CountData = {};
-      for (const classroom of CLASSROOMS) {
+      for (const classroom of loadedClassrooms) {
         initialData[classroom.id] = {
           breakfast: { children: 0, adults: 0 },
           am_snack: { children: 0, adults: 0 },
@@ -59,7 +65,7 @@ export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
       setHasChanges(false);
     }
 
-    loadCounts();
+    loadData();
   }, [date]);
 
   const updateCount = (
@@ -87,7 +93,7 @@ export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
     setSaving(true);
 
     try {
-      for (const classroom of CLASSROOMS) {
+      for (const classroom of classrooms) {
         for (const mealType of ['breakfast', 'am_snack', 'lunch', 'pm_snack'] as MealType[]) {
           const countData = counts[classroom.id]?.[mealType];
           if (countData && (countData.children > 0 || countData.adults > 0)) {
@@ -123,7 +129,7 @@ export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
     pm_snack: { children: 0, adults: 0 },
   };
 
-  for (const classroom of CLASSROOMS) {
+  for (const classroom of classrooms) {
     for (const mealType of mealTypes) {
       totals[mealType].children += counts[classroom.id]?.[mealType]?.children || 0;
       totals[mealType].adults += counts[classroom.id]?.[mealType]?.adults || 0;
@@ -193,7 +199,7 @@ export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
             </tr>
           </thead>
           <tbody>
-            {CLASSROOMS.map((classroom) => (
+            {classrooms.map((classroom) => (
               <tr key={classroom.id} className="border-b last:border-0">
                 <td className="p-3">
                   <p className="font-medium">{classroom.name}</p>

@@ -14,10 +14,12 @@ import {
   FileText,
   TrendingUp,
   Loader2,
+  Settings,
 } from 'lucide-react';
 import { FoodCountGrid } from '@/components/food/FoodCountGrid';
 import { FoodProjectionChart } from '@/components/food/FoodProjectionChart';
 import { CostTracker } from '@/components/food/CostTracker';
+import { ClassroomSettings } from '@/components/food/ClassroomSettings';
 import {
   getCACFPDailyReport,
   getCACFPMonthlyReport,
@@ -30,6 +32,11 @@ export default function FoodCountsPage() {
     new Date().toISOString().split('T')[0]
   );
   const [dailyReport, setDailyReport] = useState<CACFPDailyReport | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleClassroomUpdate = () => {
+    setRefreshKey((k) => k + 1);
+  };
 
   const loadDailyReport = async (date: string) => {
     const report = await getCACFPDailyReport(date);
@@ -103,6 +110,10 @@ export default function FoodCountsPage() {
             <UtensilsCrossed className="h-4 w-4" />
             Cost Tracking
           </TabsTrigger>
+          <TabsTrigger value="settings" className="gap-2">
+            <Settings className="h-4 w-4" />
+            Settings
+          </TabsTrigger>
         </TabsList>
 
         {/* Daily Counts Tab */}
@@ -144,7 +155,7 @@ export default function FoodCountsPage() {
           </Card>
 
           {/* Food Count Grid */}
-          <FoodCountGrid date={selectedDate} onSave={() => loadDailyReport(selectedDate)} />
+          <FoodCountGrid key={refreshKey} date={selectedDate} onSave={() => loadDailyReport(selectedDate)} />
 
           {/* Daily Summary */}
           {dailyReport && (
@@ -196,6 +207,11 @@ export default function FoodCountsPage() {
         {/* Cost Tracking Tab */}
         <TabsContent value="costs" className="space-y-4">
           <CostTracker />
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-4">
+          <ClassroomSettings onUpdate={handleClassroomUpdate} />
         </TabsContent>
       </Tabs>
     </div>

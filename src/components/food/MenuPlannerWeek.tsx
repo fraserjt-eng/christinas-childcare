@@ -248,16 +248,16 @@ export function MenuPlannerWeek({ onSave }: MenuPlannerWeekProps) {
                     return (
                       <td key={dayIndex} className="p-3">
                         <Select
-                          value={currentMeal?.menu_item_id || ''}
+                          value={currentMeal?.menu_item_id || '__none__'}
                           onValueChange={(value) =>
-                            updateMeal(dayIndex, mealType, value)
+                            updateMeal(dayIndex, mealType, value === '__none__' ? '' : value)
                           }
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select meal..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="__none__">None</SelectItem>
                             {mealMenuItems.map((item) => (
                               <SelectItem key={item.id} value={item.id}>
                                 {item.name}

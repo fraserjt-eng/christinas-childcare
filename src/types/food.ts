@@ -210,23 +210,41 @@ export interface FoodProjection {
 // Classroom Types (for food counts)
 // ============================================================================
 
+export type AgeGroup = 'infant' | 'toddler' | 'preschool' | 'school_age';
+
 export interface Classroom {
   id: string;
   name: string;
   capacity: number;
-  age_group: 'infant' | 'toddler' | 'preschool' | 'school_age';
+  age_group: AgeGroup;
   building_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-// Default classrooms
-export const CLASSROOMS: Classroom[] = [
-  { id: 'cls_infant', name: 'Little Stars', capacity: 8, age_group: 'infant' },
-  { id: 'cls_toddler1', name: 'Busy Bees', capacity: 12, age_group: 'toddler' },
-  { id: 'cls_toddler2', name: 'Curious Cubs', capacity: 12, age_group: 'toddler' },
-  { id: 'cls_preschool1', name: 'Bright Butterflies', capacity: 20, age_group: 'preschool' },
-  { id: 'cls_preschool2', name: 'Rising Stars', capacity: 20, age_group: 'preschool' },
-  { id: 'cls_school_age', name: 'Adventure Club', capacity: 24, age_group: 'school_age' },
+export type ClassroomCreate = Omit<Classroom, 'id' | 'created_at' | 'updated_at'>;
+
+// Default classrooms (used for initial seeding)
+export const DEFAULT_CLASSROOMS: Omit<Classroom, 'id' | 'created_at' | 'updated_at'>[] = [
+  { name: 'Classroom 1', capacity: 12, age_group: 'infant', is_active: true },
+  { name: 'Classroom 2', capacity: 12, age_group: 'toddler', is_active: true },
+  { name: 'Classroom 3', capacity: 16, age_group: 'toddler', is_active: true },
+  { name: 'Classroom 4', capacity: 20, age_group: 'preschool', is_active: true },
+  { name: 'Classroom 5', capacity: 20, age_group: 'preschool', is_active: true },
+  { name: 'Classroom 6', capacity: 24, age_group: 'school_age', is_active: true },
 ];
+
+export const AGE_GROUP_LABELS: Record<AgeGroup, string> = {
+  infant: 'Infant',
+  toddler: 'Toddler',
+  preschool: 'Preschool',
+  school_age: 'School Age',
+};
+
+export function generateClassroomId(): string {
+  return `cls_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 
 // Meal type display names
 export const MEAL_TYPE_LABELS: Record<MealType, string> = {

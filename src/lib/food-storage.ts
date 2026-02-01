@@ -10,17 +10,20 @@ import {
   MenuItemCreate,
   WeeklyMenu,
   WeeklyMenuCreate,
+  Classroom,
+  ClassroomCreate,
   DailyFoodSummary,
   CACFPDailyReport,
   CACFPMonthlyReport,
   InventoryAlert,
   FoodProjection,
   MealType,
-  CLASSROOMS,
+  DEFAULT_CLASSROOMS,
   generateFoodCountId,
   generateInventoryId,
   generateMenuItemId,
   generateWeeklyMenuId,
+  generateClassroomId,
   getWeekStart,
   getWeekEnd,
   isExpiringSoon,
@@ -35,6 +38,7 @@ const STORAGE_KEYS = {
   menuItems: 'christinas_menu_items',
   weeklyMenus: 'christinas_weekly_menus',
   foodCosts: 'christinas_food_costs',
+  classrooms: 'christinas_classrooms',
 };
 
 // ============================================================================
@@ -192,15 +196,104 @@ export async function upsertFoodCount(data: FoodCountCreate): Promise<FoodCount>
 }
 
 // ============================================================================
+// Classroom CRUD
+// ============================================================================
+
+export async function getClassrooms(filters?: { active_only?: boolean }): Promise<Classroom[]> {
+  let classrooms = getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
+
+  // If no classrooms exist, seed with defaults
+  if (classrooms.length === 0) {
+    await seedClassrooms();
+    classrooms = getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
+  }
+
+  if (filters?.active_only) {
+    classrooms = classrooms.filter((c) => c.is_active);
+  }
+
+  // Sort by name
+  classrooms.sort((a, b) => a.name.localeCompare(b.name));
+
+  return classrooms;
+}
+
+export async function getClassroom(id: string): Promise<Classroom | null> {
+  const classrooms = await getClassrooms();
+  return classrooms.find((c) => c.id === id) || null;
+}
+
+export async function createClassroom(data: ClassroomCreate): Promise<Classroom> {
+  const classrooms = getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
+  const now = new Date().toISOString();
+
+  const newClassroom: Classroom = {
+    ...data,
+    id: generateClassroomId(),
+    created_at: now,
+    updated_at: now,
+  };
+
+  classrooms.push(newClassroom);
+  saveToStorage(STORAGE_KEYS.classrooms, classrooms);
+  return newClassroom;
+}
+
+export async function updateClassroom(
+  id: string,
+  updates: Partial<Classroom>
+): Promise<Classroom | null> {
+  const classrooms = getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
+  const index = classrooms.findIndex((c) => c.id === id);
+
+  if (index === -1) return null;
+
+  const updatedClassroom: Classroom = {
+    ...classrooms[index],
+    ...updates,
+    id: classrooms[index].id,
+    created_at: classrooms[index].created_at,
+    updated_at: new Date().toISOString(),
+  };
+
+  classrooms[index] = updatedClassroom;
+  saveToStorage(STORAGE_KEYS.classrooms, classrooms);
+  return updatedClassroom;
+}
+
+export async function deleteClassroom(id: string): Promise<boolean> {
+  const classrooms = getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
+  const index = classrooms.findIndex((c) => c.id === id);
+
+  if (index === -1) return false;
+
+  classrooms.splice(index, 1);
+  saveToStorage(STORAGE_KEYS.classrooms, classrooms);
+  return true;
+}
+
+async function seedClassrooms(): Promise<void> {
+  const now = new Date().toISOString();
+  const classrooms: Classroom[] = DEFAULT_CLASSROOMS.map((c, index) => ({
+    ...c,
+    id: `cls_default_${index + 1}`,
+    created_at: now,
+    updated_at: now,
+  }));
+  saveToStorage(STORAGE_KEYS.classrooms, classrooms);
+}
+
+// ============================================================================
 // CACFP Reporting
 // ============================================================================
 
 export async function getDailyFoodSummary(date: string): Promise<DailyFoodSummary[]> {
   const counts = await getFoodCounts({ date });
+  const classrooms = await getClassrooms({ active_only: true });
   const summaryMap: Record<string, DailyFoodSummary> = {};
 
   // Initialize for all classrooms
-  for (const classroom of CLASSROOMS) {
+  for (const classroom of classrooms) {
     summaryMap[classroom.id] = {
       date,
       classroom_id: classroom.id,
@@ -871,6 +964,7 @@ export async function seedFoodData(): Promise<{
   }
 
   // Seed food counts for the past 7 days
+  const classrooms = await getClassrooms();
   const today = new Date();
   for (let i = 0; i < 7; i++) {
     const date = new Date(today);
@@ -881,7 +975,7 @@ export async function seedFoodData(): Promise<{
 
     const dateString = date.toISOString().split('T')[0];
 
-    for (const classroom of CLASSROOMS) {
+    for (const classroom of classrooms) {
       // Random counts based on classroom capacity
       const baseCount = Math.floor(classroom.capacity * 0.7);
 
