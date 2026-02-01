@@ -8,7 +8,7 @@ import {
   ClipboardList, UtensilsCrossed, Clock, BarChart3,
   LogOut, Menu, GraduationCap, Target, Building2,
   DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban, Wallet,
-  CreditCard, CalendarDays, UserCog, Briefcase
+  CreditCard, CalendarDays, UserCog, Briefcase, Package, CalendarRange, CalendarPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -32,7 +32,11 @@ const adminNav = [
   { href: '/admin', label: 'Overview', icon: Home },
   { href: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
   { href: '/admin/food-counts', label: 'Food Counts', icon: UtensilsCrossed },
+  { href: '/admin/inventory', label: 'Inventory', icon: Package },
+  { href: '/admin/menu-planning', label: 'Menu Planning', icon: CalendarRange },
   { href: '/admin/scheduling', label: 'Staff Scheduling', icon: Clock },
+  { href: '/admin/schedule-requests', label: 'Schedule Requests', icon: CalendarPlus },
+  { href: '/admin/salaried-scheduling', label: 'Salaried Staff', icon: Building2 },
   { href: '/admin/ratios', label: 'Ratio Monitor', icon: BarChart3 },
   { href: '/admin/curriculum', label: 'Curriculum', icon: GraduationCap },
   { href: '/admin/strategic', label: 'Strategic Plan', icon: Target },

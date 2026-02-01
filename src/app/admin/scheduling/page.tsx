@@ -1,61 +1,54 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Clock } from 'lucide-react';
+'use client';
 
-const days = ['Mon 1/27', 'Tue 1/28', 'Wed 1/29', 'Thu 1/30', 'Fri 1/31'];
-
-const staff = [
-  { name: 'Maria Santos', role: 'Lead, Infants', shifts: ['7:00-3:00', '7:00-3:00', '7:00-3:00', '7:00-3:00', '7:00-3:00'] },
-  { name: 'James Robinson', role: 'Lead, Toddlers', shifts: ['7:00-3:00', '7:00-3:00', '7:00-3:00', '7:00-3:00', 'OFF'] },
-  { name: 'Sarah Mitchell', role: 'Lead, Toddlers', shifts: ['8:00-4:00', '8:00-4:00', '8:00-4:00', '8:00-4:00', '8:00-4:00'] },
-  { name: 'Devon Park', role: 'Lead, Preschool', shifts: ['8:00-4:00', '8:00-4:00', '8:00-4:00', '8:00-4:00', '8:00-4:00'] },
-  { name: 'Linda Chen', role: 'Lead, Preschool', shifts: ['9:00-5:00', '9:00-5:00', '9:00-5:00', '9:00-5:00', '9:00-5:00'] },
-  { name: 'Marcus Johnson', role: 'Lead, School Age', shifts: ['10:00-6:00', '10:00-6:00', '10:00-6:00', '10:00-6:00', '10:00-6:00'] },
-  { name: 'Patricia Hughes', role: 'Admin', shifts: ['8:00-4:00', '8:00-4:00', '8:00-4:00', '8:00-4:00', '8:00-4:00'] },
-  { name: 'Christina Walker', role: 'Director', shifts: ['7:00-5:00', '7:00-5:00', '7:00-5:00', '7:00-5:00', '7:00-3:00'] },
-];
+import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Clock, BarChart3 } from 'lucide-react';
+import { ScheduleGrid } from '@/components/scheduling/ScheduleGrid';
+import { WeeklyHoursSummary } from '@/components/scheduling/WeeklyHoursSummary';
 
 export default function SchedulingPage() {
+  const [currentWeekStart] = useState<Date>(() => {
+    const today = new Date();
+    const day = today.getDay();
+    const start = new Date(today);
+    start.setDate(today.getDate() - day + 1); // Start on Monday
+    return start;
+  });
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Staff Scheduling</h1>
-        <p className="text-muted-foreground">Week of January 27, 2026</p>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Clock className="h-6 w-6" />
+          Staff Scheduling
+        </h1>
+        <p className="text-muted-foreground">
+          Create and manage employee schedules
+        </p>
       </div>
 
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left p-3 font-medium min-w-[180px]">Staff Member</th>
-                {days.map(d => <th key={d} className="text-center p-3 font-medium min-w-[100px]">{d}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {staff.map((s) => (
-                <tr key={s.name} className="border-b last:border-0">
-                  <td className="p-3">
-                    <p className="font-medium">{s.name}</p>
-                    <p className="text-xs text-muted-foreground">{s.role}</p>
-                  </td>
-                  {s.shifts.map((shift, i) => (
-                    <td key={i} className="p-3 text-center">
-                      {shift === 'OFF' ? (
-                        <Badge variant="outline" className="text-xs text-muted-foreground">OFF</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs gap-1">
-                          <Clock className="h-3 w-3" />{shift}
-                        </Badge>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      {/* Tabs */}
+      <Tabs defaultValue="schedule" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="schedule" className="gap-2">
+            <Clock className="h-4 w-4" />
+            Weekly Schedule
+          </TabsTrigger>
+          <TabsTrigger value="hours" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Hours Summary
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="schedule">
+          <ScheduleGrid showHoursSummary={true} />
+        </TabsContent>
+
+        <TabsContent value="hours">
+          <WeeklyHoursSummary weekStart={currentWeekStart} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

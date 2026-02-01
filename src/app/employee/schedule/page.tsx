@@ -9,7 +9,8 @@ import {
   getScheduleEntries,
 } from '@/lib/employee-storage';
 import { Employee, ScheduleEntry, formatTime } from '@/types/employee';
-import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, CalendarPlus } from 'lucide-react';
+import Link from 'next/link';
 
 export default function EmployeeSchedulePage() {
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -103,9 +104,17 @@ export default function EmployeeSchedulePage() {
             View your upcoming work schedule
           </p>
         </div>
-        <Badge variant="outline" className="w-fit">
-          {calculateWeeklyHours()}h scheduled this week
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="w-fit">
+            {calculateWeeklyHours()}h scheduled this week
+          </Badge>
+          <Link href="/employee/schedule-request">
+            <Button variant="outline" className="gap-2">
+              <CalendarPlus className="h-4 w-4" />
+              Request Change
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Week Navigation */}

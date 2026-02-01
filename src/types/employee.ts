@@ -352,3 +352,196 @@ export function formatTime(time: string): string {
 export function getEmployeeFullName(employee: Employee): string {
   return `${employee.first_name} ${employee.last_name}`;
 }
+
+// ============================================================================
+// Schedule Request Types
+// ============================================================================
+
+export type ScheduleRequestType = 'shift_swap' | 'schedule_change' | 'time_off_coverage';
+export type ScheduleRequestStatus = 'pending' | 'approved' | 'denied';
+
+export interface ScheduleRequest {
+  id: string;
+  employee_id: string;
+  request_type: ScheduleRequestType;
+  requested_date: string; // ISO date
+  current_start_time?: string; // Current shift start (for swaps/changes)
+  current_end_time?: string; // Current shift end (for swaps/changes)
+  requested_start_time?: string; // Requested new start time
+  requested_end_time?: string; // Requested new end time
+  swap_with_employee_id?: string; // For shift swaps
+  reason: string;
+  status: ScheduleRequestStatus;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  review_notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ScheduleRequestCreate = Omit<
+  ScheduleRequest,
+  'id' | 'status' | 'reviewed_by' | 'reviewed_at' | 'review_notes' | 'created_at' | 'updated_at'
+>;
+
+// ============================================================================
+// Building Types (Multi-Location Support)
+// ============================================================================
+
+export interface Building {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  phone?: string;
+  is_primary: boolean;
+  capacity?: number;
+}
+
+// Default buildings
+export const BUILDINGS: Building[] = [
+  {
+    id: 'bld_crystal',
+    name: 'Crystal',
+    address: '5510 W Broadway Ave',
+    city: 'Crystal',
+    state: 'MN',
+    zip: '55428',
+    phone: '(763) 555-0100',
+    is_primary: true,
+    capacity: 96,
+  },
+  {
+    id: 'bld_brooklyn_park',
+    name: 'Brooklyn Park',
+    address: 'TBD',
+    city: 'Brooklyn Park',
+    state: 'MN',
+    zip: '55443',
+    is_primary: false,
+    capacity: 72,
+  },
+];
+
+// ============================================================================
+// Salaried Allocation Types
+// ============================================================================
+
+export interface SalariedAllocation {
+  id: string;
+  employee_id: string;
+  week_start: string; // ISO date (Monday)
+  building_id: string;
+  role_coverage: string; // e.g., "Morning Director", "Floater", "Admin"
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SalariedAllocationCreate = Omit<SalariedAllocation, 'id' | 'created_at' | 'updated_at'>;
+
+// ============================================================================
+// Weekly Hours Summary Types
+// ============================================================================
+
+export interface WeeklyHoursSummary {
+  employee_id: string;
+  employee_name: string;
+  week_start: string;
+  week_end: string;
+  scheduled_hours: number;
+  actual_hours: number;
+  overtime_hours: number; // Hours over 40
+  variance: number; // actual - scheduled
+  by_day: {
+    date: string;
+    day_name: string;
+    scheduled_hours: number;
+    actual_hours: number;
+  }[];
+}
+
+// ============================================================================
+// Notification Types
+// ============================================================================
+
+export type NotificationType =
+  | 'schedule_published'
+  | 'schedule_changed'
+  | 'request_approved'
+  | 'request_denied'
+  | 'time_off_reminder'
+  | 'training_due'
+  | 'general';
+
+export interface Notification {
+  id: string;
+  employee_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: boolean;
+  action_url?: string; // Optional link to related page
+  created_at: string;
+}
+
+export type NotificationCreate = Omit<Notification, 'id' | 'read' | 'created_at'>;
+
+// ============================================================================
+// Additional ID Generators
+// ============================================================================
+
+export function generateScheduleRequestId(): string {
+  return `sreq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export function generateSalariedAllocationId(): string {
+  return `salloc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export function generateNotificationId(): string {
+  return `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// ============================================================================
+// Schedule Request Helpers
+// ============================================================================
+
+export function getScheduleRequestTypeLabel(type: ScheduleRequestType): string {
+  const labels: Record<ScheduleRequestType, string> = {
+    shift_swap: 'Shift Swap',
+    schedule_change: 'Schedule Change',
+    time_off_coverage: 'Time Off Coverage',
+  };
+  return labels[type];
+}
+
+export function getScheduleRequestStatusLabel(status: ScheduleRequestStatus): string {
+  const labels: Record<ScheduleRequestStatus, string> = {
+    pending: 'Pending',
+    approved: 'Approved',
+    denied: 'Denied',
+  };
+  return labels[status];
+}
+
+// ============================================================================
+// Salaried Staff Helpers
+// ============================================================================
+
+// Job titles that are considered salaried (for filtering)
+export const SALARIED_JOB_TITLES = [
+  'Owner',
+  'Owner/Director',
+  'Director',
+  'Assistant Director',
+  'Asst Director',
+];
+
+export function isSalariedEmployee(employee: Employee): boolean {
+  return SALARIED_JOB_TITLES.some(
+    (title) => employee.job_title.toLowerCase().includes(title.toLowerCase())
+  );
+}

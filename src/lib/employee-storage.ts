@@ -14,12 +14,23 @@ import {
   ScheduleEntryCreate,
   TrainingModule,
   EmployeeTraining,
+  ScheduleRequest,
+  ScheduleRequestCreate,
+  SalariedAllocation,
+  SalariedAllocationCreate,
+  Notification,
+  NotificationCreate,
+  Building,
+  BUILDINGS,
   generateEmployeeId,
   generateTimeEntryId,
   generatePayStubId,
   generateTimeOffId,
   generateScheduleId,
   generateTrainingId,
+  generateScheduleRequestId,
+  generateSalariedAllocationId,
+  generateNotificationId,
   calculateHoursWorked,
 } from '@/types/employee';
 
@@ -33,6 +44,9 @@ const STORAGE_KEYS = {
   trainingModules: 'christinas_training_modules',
   employeeTraining: 'christinas_employee_training',
   currentEmployee: 'christinas_current_employee',
+  scheduleRequests: 'christinas_schedule_requests',
+  salariedAllocations: 'christinas_salaried_allocations',
+  notifications: 'christinas_notifications',
 };
 
 // ============================================================================
@@ -532,6 +546,336 @@ export async function deleteScheduleEntry(id: string): Promise<boolean> {
   entries.splice(index, 1);
   saveToStorage(STORAGE_KEYS.schedules, entries);
   return true;
+}
+
+// ============================================================================
+// Schedule Request CRUD
+// ============================================================================
+
+export async function getScheduleRequests(filters?: {
+  employee_id?: string;
+  status?: ScheduleRequest['status'];
+}): Promise<ScheduleRequest[]> {
+  let requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
+
+  if (filters) {
+    if (filters.employee_id) {
+      requests = requests.filter((r) => r.employee_id === filters.employee_id);
+    }
+    if (filters.status) {
+      requests = requests.filter((r) => r.status === filters.status);
+    }
+  }
+
+  // Sort by created_at descending
+  requests.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  return requests;
+}
+
+export async function getScheduleRequest(id: string): Promise<ScheduleRequest | null> {
+  const requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
+  return requests.find((r) => r.id === id) || null;
+}
+
+export async function createScheduleRequest(data: ScheduleRequestCreate): Promise<ScheduleRequest> {
+  const requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
+  const now = new Date().toISOString();
+
+  const newRequest: ScheduleRequest = {
+    ...data,
+    id: generateScheduleRequestId(),
+    status: 'pending',
+    created_at: now,
+    updated_at: now,
+  };
+
+  requests.push(newRequest);
+  saveToStorage(STORAGE_KEYS.scheduleRequests, requests);
+  return newRequest;
+}
+
+export async function updateScheduleRequest(
+  id: string,
+  updates: Partial<ScheduleRequest>
+): Promise<ScheduleRequest | null> {
+  const requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
+  const index = requests.findIndex((r) => r.id === id);
+
+  if (index === -1) return null;
+
+  const updatedRequest: ScheduleRequest = {
+    ...requests[index],
+    ...updates,
+    id: requests[index].id,
+    created_at: requests[index].created_at,
+    updated_at: new Date().toISOString(),
+  };
+
+  requests[index] = updatedRequest;
+  saveToStorage(STORAGE_KEYS.scheduleRequests, requests);
+  return updatedRequest;
+}
+
+export async function approveScheduleRequest(
+  id: string,
+  reviewerId: string,
+  notes?: string
+): Promise<ScheduleRequest | null> {
+  return updateScheduleRequest(id, {
+    status: 'approved',
+    reviewed_by: reviewerId,
+    reviewed_at: new Date().toISOString(),
+    review_notes: notes,
+  });
+}
+
+export async function denyScheduleRequest(
+  id: string,
+  reviewerId: string,
+  notes?: string
+): Promise<ScheduleRequest | null> {
+  return updateScheduleRequest(id, {
+    status: 'denied',
+    reviewed_by: reviewerId,
+    reviewed_at: new Date().toISOString(),
+    review_notes: notes,
+  });
+}
+
+export async function deleteScheduleRequest(id: string): Promise<boolean> {
+  const requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
+  const index = requests.findIndex((r) => r.id === id);
+
+  if (index === -1) return false;
+
+  requests.splice(index, 1);
+  saveToStorage(STORAGE_KEYS.scheduleRequests, requests);
+  return true;
+}
+
+// ============================================================================
+// Salaried Allocation CRUD
+// ============================================================================
+
+export async function getSalariedAllocations(filters?: {
+  employee_id?: string;
+  week_start?: string;
+  building_id?: string;
+}): Promise<SalariedAllocation[]> {
+  let allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
+
+  if (filters) {
+    if (filters.employee_id) {
+      allocations = allocations.filter((a) => a.employee_id === filters.employee_id);
+    }
+    if (filters.week_start) {
+      allocations = allocations.filter((a) => a.week_start === filters.week_start);
+    }
+    if (filters.building_id) {
+      allocations = allocations.filter((a) => a.building_id === filters.building_id);
+    }
+  }
+
+  // Sort by week_start descending
+  allocations.sort((a, b) => b.week_start.localeCompare(a.week_start));
+
+  return allocations;
+}
+
+export async function getSalariedAllocation(id: string): Promise<SalariedAllocation | null> {
+  const allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
+  return allocations.find((a) => a.id === id) || null;
+}
+
+export async function createSalariedAllocation(data: SalariedAllocationCreate): Promise<SalariedAllocation> {
+  const allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
+  const now = new Date().toISOString();
+
+  const newAllocation: SalariedAllocation = {
+    ...data,
+    id: generateSalariedAllocationId(),
+    created_at: now,
+    updated_at: now,
+  };
+
+  allocations.push(newAllocation);
+  saveToStorage(STORAGE_KEYS.salariedAllocations, allocations);
+  return newAllocation;
+}
+
+export async function updateSalariedAllocation(
+  id: string,
+  updates: Partial<SalariedAllocation>
+): Promise<SalariedAllocation | null> {
+  const allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
+  const index = allocations.findIndex((a) => a.id === id);
+
+  if (index === -1) return null;
+
+  const updatedAllocation: SalariedAllocation = {
+    ...allocations[index],
+    ...updates,
+    id: allocations[index].id,
+    created_at: allocations[index].created_at,
+    updated_at: new Date().toISOString(),
+  };
+
+  allocations[index] = updatedAllocation;
+  saveToStorage(STORAGE_KEYS.salariedAllocations, allocations);
+  return updatedAllocation;
+}
+
+export async function deleteSalariedAllocation(id: string): Promise<boolean> {
+  const allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
+  const index = allocations.findIndex((a) => a.id === id);
+
+  if (index === -1) return false;
+
+  allocations.splice(index, 1);
+  saveToStorage(STORAGE_KEYS.salariedAllocations, allocations);
+  return true;
+}
+
+// Upsert salaried allocation for employee/week/building
+export async function upsertSalariedAllocation(data: SalariedAllocationCreate): Promise<SalariedAllocation> {
+  const allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
+  const index = allocations.findIndex(
+    (a) =>
+      a.employee_id === data.employee_id &&
+      a.week_start === data.week_start &&
+      a.building_id === data.building_id
+  );
+
+  const now = new Date().toISOString();
+
+  if (index !== -1) {
+    const updatedAllocation: SalariedAllocation = {
+      ...allocations[index],
+      ...data,
+      id: allocations[index].id,
+      created_at: allocations[index].created_at,
+      updated_at: now,
+    };
+    allocations[index] = updatedAllocation;
+    saveToStorage(STORAGE_KEYS.salariedAllocations, allocations);
+    return updatedAllocation;
+  } else {
+    const newAllocation: SalariedAllocation = {
+      ...data,
+      id: generateSalariedAllocationId(),
+      created_at: now,
+      updated_at: now,
+    };
+    allocations.push(newAllocation);
+    saveToStorage(STORAGE_KEYS.salariedAllocations, allocations);
+    return newAllocation;
+  }
+}
+
+// ============================================================================
+// Notification CRUD
+// ============================================================================
+
+export async function getNotifications(filters?: {
+  employee_id?: string;
+  unread_only?: boolean;
+}): Promise<Notification[]> {
+  let notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
+
+  if (filters) {
+    if (filters.employee_id) {
+      notifications = notifications.filter((n) => n.employee_id === filters.employee_id);
+    }
+    if (filters.unread_only) {
+      notifications = notifications.filter((n) => !n.read);
+    }
+  }
+
+  // Sort by created_at descending
+  notifications.sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  return notifications;
+}
+
+export async function getNotification(id: string): Promise<Notification | null> {
+  const notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
+  return notifications.find((n) => n.id === id) || null;
+}
+
+export async function createNotification(data: NotificationCreate): Promise<Notification> {
+  const notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
+  const now = new Date().toISOString();
+
+  const newNotification: Notification = {
+    ...data,
+    id: generateNotificationId(),
+    read: false,
+    created_at: now,
+  };
+
+  notifications.push(newNotification);
+  saveToStorage(STORAGE_KEYS.notifications, notifications);
+  return newNotification;
+}
+
+export async function markNotificationRead(id: string): Promise<Notification | null> {
+  const notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
+  const index = notifications.findIndex((n) => n.id === id);
+
+  if (index === -1) return null;
+
+  notifications[index] = {
+    ...notifications[index],
+    read: true,
+  };
+
+  saveToStorage(STORAGE_KEYS.notifications, notifications);
+  return notifications[index];
+}
+
+export async function markAllNotificationsRead(employeeId: string): Promise<void> {
+  const notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
+
+  for (let i = 0; i < notifications.length; i++) {
+    if (notifications[i].employee_id === employeeId) {
+      notifications[i] = { ...notifications[i], read: true };
+    }
+  }
+
+  saveToStorage(STORAGE_KEYS.notifications, notifications);
+}
+
+export async function deleteNotification(id: string): Promise<boolean> {
+  const notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
+  const index = notifications.findIndex((n) => n.id === id);
+
+  if (index === -1) return false;
+
+  notifications.splice(index, 1);
+  saveToStorage(STORAGE_KEYS.notifications, notifications);
+  return true;
+}
+
+export async function getUnreadNotificationCount(employeeId: string): Promise<number> {
+  const notifications = await getNotifications({ employee_id: employeeId, unread_only: true });
+  return notifications.length;
+}
+
+// ============================================================================
+// Building CRUD (mostly read-only for now)
+// ============================================================================
+
+export function getBuildings(): Building[] {
+  return BUILDINGS;
+}
+
+export function getBuilding(id: string): Building | undefined {
+  return BUILDINGS.find((b) => b.id === id);
+}
+
+export function getPrimaryBuilding(): Building | undefined {
+  return BUILDINGS.find((b) => b.is_primary);
 }
 
 // ============================================================================
