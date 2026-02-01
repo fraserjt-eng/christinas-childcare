@@ -1,5 +1,5 @@
 # Remotion - only used for local video rendering
 remotion/
 
-# Training voiceover scripts
-training/
+# Training voiceover scripts (root-level only, not src/app/training)
+/training/
