@@ -16,6 +16,7 @@ import {
   MapPin,
   Quote,
 } from 'lucide-react';
+import { NewsFeed } from '@/components/features/NewsFeed';
 
 const features = [
   {
@@ -259,6 +260,9 @@ export default function HomePage() {
           </ScrollFadeInStagger>
         </div>
       </section>
+
+      {/* News & Updates Feed */}
+      <NewsFeed />
 
       {/* Enrollment CTA Banner */}
       <section className="bg-[#c44536] py-20">

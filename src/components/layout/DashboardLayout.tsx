@@ -8,7 +8,8 @@ import {
   ClipboardList, UtensilsCrossed, Clock, BarChart3,
   LogOut, Menu, GraduationCap, Target, Building2,
   DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban, Wallet,
-  CreditCard, CalendarDays, UserCog, Briefcase, Package, CalendarRange, CalendarPlus
+  CreditCard, CalendarDays, UserCog, Briefcase, Package, CalendarRange, CalendarPlus,
+  Newspaper
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -30,6 +31,7 @@ const parentNav = [
 
 const adminNav = [
   { href: '/admin', label: 'Overview', icon: Home },
+  { href: '/admin/news', label: 'News & Updates', icon: Newspaper },
   { href: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
   { href: '/admin/food-counts', label: 'Food Counts', icon: UtensilsCrossed },
   { href: '/admin/inventory', label: 'Inventory', icon: Package },
