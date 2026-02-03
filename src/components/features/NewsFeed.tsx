@@ -38,7 +38,7 @@ function getYouTubeThumbnail(videoId: string): string {
   return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 }
 
-function getBackgroundImage(item: NewsUpdate): string {
+function getBackgroundImage(item: NewsUpdate): string | null {
   const youtubeId = item.video_url ? extractYouTubeId(item.video_url) : null;
 
   if (item.type === 'video' && youtubeId) {
@@ -46,8 +46,18 @@ function getBackgroundImage(item: NewsUpdate): string {
   } else if (item.image_url) {
     return item.image_url;
   }
-  return '/images/community.png';
+  // Return null for items without images - will use gradient background
+  return null;
 }
+
+// Gradient backgrounds for items without images
+const gradientBackgrounds = [
+  'bg-gradient-to-br from-red-800 via-red-900 to-slate-900',
+  'bg-gradient-to-br from-blue-800 via-blue-900 to-slate-900',
+  'bg-gradient-to-br from-green-800 via-green-900 to-slate-900',
+  'bg-gradient-to-br from-purple-800 via-purple-900 to-slate-900',
+  'bg-gradient-to-br from-amber-700 via-orange-800 to-slate-900',
+];
 
 export function NewsFeed() {
   const [updates, setUpdates] = useState<NewsUpdate[]>([]);
@@ -99,13 +109,20 @@ export function NewsFeed() {
   }, [updates.length, isTransitioning]);
 
   const handleSlideClick = useCallback((item: NewsUpdate) => {
-    const youtubeId = item.video_url ? extractYouTubeId(item.video_url) : null;
-
-    if (item.type === 'video' && youtubeId) {
-      window.open(`https://www.youtube.com/watch?v=${youtubeId}`, '_blank');
+    // For videos, try to open YouTube
+    if (item.type === 'video' && item.video_url) {
+      const youtubeId = extractYouTubeId(item.video_url);
+      if (youtubeId) {
+        window.open(`https://www.youtube.com/watch?v=${youtubeId}`, '_blank');
+      } else {
+        // If it's a full URL that didn't parse, try opening it directly
+        window.open(item.video_url, '_blank');
+      }
     } else if (item.image_url) {
+      // For photos, open the image
       window.open(item.image_url, '_blank');
     }
+    // For articles/announcements without links, do nothing (could add modal later)
   }, []);
 
   if (loading) {
@@ -126,6 +143,7 @@ export function NewsFeed() {
   const Icon = typeIcons[currentItem.type];
   const youtubeId = currentItem.video_url ? extractYouTubeId(currentItem.video_url) : null;
   const backgroundImage = getBackgroundImage(currentItem);
+  const gradientBg = gradientBackgrounds[currentIndex % gradientBackgrounds.length];
 
   return (
     <section className="bg-[#1a1a1a]">
@@ -151,21 +169,30 @@ export function NewsFeed() {
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
-        {/* Background Image - changes with slide */}
+        {/* Background - Image or Gradient */}
         <div
-          className="absolute inset-0 transition-opacity duration-700"
+          className={`absolute inset-0 transition-opacity duration-700 ${!backgroundImage ? gradientBg : ''}`}
           key={currentItem.id}
         >
-          <Image
-            src={backgroundImage}
-            alt={currentItem.title}
-            fill
-            className="object-cover"
-            priority
-            unoptimized={backgroundImage.includes('youtube.com')}
-          />
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+          {backgroundImage ? (
+            <>
+              <Image
+                src={backgroundImage}
+                alt={currentItem.title}
+                fill
+                className="object-cover"
+                priority
+                unoptimized={backgroundImage.includes('youtube.com')}
+              />
+              {/* Gradient overlay for images */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+            </>
+          ) : (
+            /* Pattern overlay for gradient backgrounds */
+            <div className="absolute inset-0 opacity-10" style={{
+              backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.4"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
+            }} />
+          )}
         </div>
 
         {/* Play button for videos */}

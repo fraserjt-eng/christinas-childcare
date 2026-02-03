@@ -137,37 +137,19 @@ export async function toggleFeatured(id: string): Promise<NewsUpdate | null> {
 // ============================================================================
 
 const SAMPLE_NEWS: NewsUpdateCreate[] = [
+  // Sample news is empty by default - admin will add real content
+  // Uncomment below for testing:
+  /*
   {
     type: 'announcement',
-    title: 'Summer Program Registration Now Open',
-    content:
-      'We are excited to announce that registration for our 2026 Summer Program is now open! Join us for a summer filled with learning, creativity, and outdoor adventures. Spots fill up quickly, so register early to secure your child\'s place.',
+    title: 'Welcome to Christina\'s Child Care Center',
+    content: 'We are excited to share news and updates with our families through this new section!',
     is_published: true,
     is_featured: true,
     published_at: new Date().toISOString(),
     author: 'Christina Fraser',
   },
-  {
-    type: 'photo',
-    title: 'Spring Art Show Highlights',
-    content:
-      'What an amazing Spring Art Show! Our little artists showcased their creativity with paintings, sculptures, and crafts. Thank you to all the families who attended and celebrated our children\'s artistic achievements.',
-    image_url: '/images/community.png',
-    is_published: true,
-    is_featured: false,
-    published_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    author: 'Ophelia Zeogar',
-  },
-  {
-    type: 'article',
-    title: 'Tips for a Smooth Morning Drop-Off',
-    content:
-      'Morning routines can be challenging for both parents and children. Here are some strategies that have worked well for families at our center: 1) Prepare the night before, 2) Keep goodbyes short and positive, 3) Establish a consistent routine, 4) Trust that your child will be okay.',
-    is_published: true,
-    is_featured: false,
-    published_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    author: 'Christina Fraser',
-  },
+  */
 ];
 
 export async function seedSampleNews(): Promise<number> {
