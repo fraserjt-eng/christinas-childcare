@@ -208,19 +208,25 @@ function NewsForm({
         </div>
       )}
 
-      {formData.type === 'photo' && (
-        <div className="space-y-2">
-          <Label htmlFor="image_url">Image URL</Label>
-          <Input
-            id="image_url"
-            value={formData.image_url}
-            onChange={(e) =>
-              setFormData({ ...formData, image_url: e.target.value })
-            }
-            placeholder="/images/photo.jpg or external URL"
-          />
-        </div>
-      )}
+      {/* Cover image - available for all types */}
+      <div className="space-y-2">
+        <Label htmlFor="image_url">
+          Cover Image URL {formData.type !== 'photo' && '(optional)'}
+        </Label>
+        <Input
+          id="image_url"
+          value={formData.image_url}
+          onChange={(e) =>
+            setFormData({ ...formData, image_url: e.target.value })
+          }
+          placeholder="/images/photo.jpg or https://..."
+        />
+        <p className="text-xs text-muted-foreground">
+          {formData.type === 'video'
+            ? 'Leave empty to use YouTube thumbnail automatically'
+            : 'Add a cover image for the carousel. Leave empty for default placeholder.'}
+        </p>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="author">Author (optional)</Label>

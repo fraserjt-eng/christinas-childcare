@@ -38,26 +38,30 @@ function getYouTubeThumbnail(videoId: string): string {
   return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 }
 
-function getBackgroundImage(item: NewsUpdate): string | null {
+// Default placeholder images by type (from Unsplash)
+const defaultImages: Record<string, string> = {
+  video: 'https://images.unsplash.com/photo-1485546246426-74dc88dec4d9?w=1200&h=800&fit=crop', // kids playing
+  article: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=1200&h=800&fit=crop', // education
+  photo: 'https://images.unsplash.com/photo-1560541919-eb5c2da6a5a3?w=1200&h=800&fit=crop', // children art
+  announcement: 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=1200&h=800&fit=crop', // colorful
+};
+
+function getBackgroundImage(item: NewsUpdate): string {
   const youtubeId = item.video_url ? extractYouTubeId(item.video_url) : null;
 
+  // For videos with YouTube URL, use the thumbnail
   if (item.type === 'video' && youtubeId) {
     return getYouTubeThumbnail(youtubeId);
-  } else if (item.image_url) {
+  }
+
+  // If item has a custom image, use it
+  if (item.image_url) {
     return item.image_url;
   }
-  // Return null for items without images - will use gradient background
-  return null;
-}
 
-// Gradient backgrounds for items without images
-const gradientBackgrounds = [
-  'bg-gradient-to-br from-red-800 via-red-900 to-slate-900',
-  'bg-gradient-to-br from-blue-800 via-blue-900 to-slate-900',
-  'bg-gradient-to-br from-green-800 via-green-900 to-slate-900',
-  'bg-gradient-to-br from-purple-800 via-purple-900 to-slate-900',
-  'bg-gradient-to-br from-amber-700 via-orange-800 to-slate-900',
-];
+  // Fall back to default placeholder for the type
+  return defaultImages[item.type] || defaultImages.announcement;
+}
 
 export function NewsFeed() {
   const [updates, setUpdates] = useState<NewsUpdate[]>([]);
@@ -143,7 +147,6 @@ export function NewsFeed() {
   const Icon = typeIcons[currentItem.type];
   const youtubeId = currentItem.video_url ? extractYouTubeId(currentItem.video_url) : null;
   const backgroundImage = getBackgroundImage(currentItem);
-  const gradientBg = gradientBackgrounds[currentIndex % gradientBackgrounds.length];
 
   return (
     <section className="bg-[#1a1a1a]">
@@ -169,30 +172,21 @@ export function NewsFeed() {
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
-        {/* Background - Image or Gradient */}
+        {/* Background Image */}
         <div
-          className={`absolute inset-0 transition-opacity duration-700 ${!backgroundImage ? gradientBg : ''}`}
+          className="absolute inset-0 transition-opacity duration-700"
           key={currentItem.id}
         >
-          {backgroundImage ? (
-            <>
-              <Image
-                src={backgroundImage}
-                alt={currentItem.title}
-                fill
-                className="object-cover"
-                priority
-                unoptimized={backgroundImage.includes('youtube.com')}
-              />
-              {/* Gradient overlay for images */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
-            </>
-          ) : (
-            /* Pattern overlay for gradient backgrounds */
-            <div className="absolute inset-0 opacity-10" style={{
-              backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.4"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
-            }} />
-          )}
+          <Image
+            src={backgroundImage}
+            alt={currentItem.title}
+            fill
+            className="object-cover"
+            priority
+            unoptimized={backgroundImage.includes('youtube.com') || backgroundImage.includes('unsplash.com')}
+          />
+          {/* Gradient overlay for text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
         </div>
 
         {/* Play button for videos */}
