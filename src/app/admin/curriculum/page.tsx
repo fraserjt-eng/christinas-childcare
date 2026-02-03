@@ -8,6 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { BookOpen, Clock, Brain, Check, Star, MessageSquare, FileText, Users } from 'lucide-react';
 import { TourButton } from '@/components/admin/TourButton';
+import { LessonDetailDialog } from '@/components/curriculum/LessonDetailDialog';
+import { AssessmentDetailDialog } from '@/components/curriculum/AssessmentDetailDialog';
+import { ObservationDetailDialog } from '@/components/curriculum/ObservationDetailDialog';
+import { findLesson } from '@/data/curriculum-lessons';
+import type { Lesson as FullLesson } from '@/types/curriculum';
+import jsPDF from 'jspdf';
 
 type Domain = 'cognitive' | 'creative' | 'language' | 'physical' | 'social_emotional';
 const domainColors: Record<Domain, string> = { cognitive: 'bg-christina-blue', creative: 'bg-christina-coral', language: 'bg-christina-red', physical: 'bg-christina-yellow', social_emotional: 'bg-purple-500' };
@@ -286,9 +292,161 @@ const rooms: Record<string, RoomData> = {
 
 const statusBadge = (s: string) => s === 'mastered' ? 'bg-christina-green text-white' : s === 'developing' ? 'bg-christina-blue text-white' : 'bg-christina-yellow text-foreground';
 
+function generateFamilyReportPDF(assessment: Assessment, room: string) {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 20;
+  let y = 20;
+
+  doc.setFillColor('#C62828');
+  doc.rect(0, 0, pageWidth, 35, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text("Christina's Child Care Center", pageWidth / 2, 15, { align: 'center' });
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Family Progress Report', pageWidth / 2, 25, { align: 'center' });
+
+  y = 50;
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`${assessment.child} - Progress Summary`, margin, y);
+  y += 8;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor('#6B7280');
+  doc.text(`Room: ${room} | Report Date: ${new Date().toLocaleDateString()}`, margin, y);
+  y += 15;
+
+  doc.setTextColor('#C62828');
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Assessment Area', margin, y);
+  y += 7;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text(assessment.area, margin, y);
+  y += 12;
+
+  doc.setTextColor('#C62828');
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Performance Rating', margin, y);
+  y += 10;
+
+  for (let s = 1; s <= 5; s++) {
+    const x = margin + (s - 1) * 30;
+    if (s <= assessment.score) {
+      doc.setFillColor('#FFD54F');
+      doc.circle(x + 8, y + 4, 8, 'F');
+      doc.setTextColor(0, 0, 0);
+    } else {
+      doc.setDrawColor('#D1D5DB');
+      doc.circle(x + 8, y + 4, 8, 'S');
+      doc.setTextColor('#D1D5DB');
+    }
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${s}`, x + 6, y + 7);
+  }
+  y += 20;
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(11);
+  doc.text(`Score: ${assessment.score} out of 5`, margin, y);
+  y += 15;
+
+  doc.setTextColor('#C62828');
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Teacher Observations', margin, y);
+  y += 8;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  const noteLines = doc.splitTextToSize(assessment.notes, pageWidth - margin * 2);
+  doc.text(noteLines, margin, y);
+  y += noteLines.length * 6 + 15;
+
+  doc.setTextColor('#2196F3');
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('How to Support Learning at Home', margin, y);
+  y += 8;
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  const tips = [
+    'Continue practicing skills during everyday activities.',
+    'Read together daily and discuss stories.',
+    'Celebrate progress and encourage effort.',
+    'Share observations with your child\'s teacher.',
+  ];
+  tips.forEach((tip) => {
+    doc.text(`• ${tip}`, margin + 5, y);
+    y += 6;
+  });
+
+  y = Math.max(y + 20, 220);
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+  doc.text('Thank you for being a partner in your child\'s learning journey!', margin, y);
+  y += 12;
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor('#C62828');
+  doc.text("Christina's Child Care Center", margin, y);
+
+  doc.setFontSize(8);
+  doc.setTextColor('#6B7280');
+  doc.text(
+    `Generated: ${new Date().toLocaleDateString()} | ${assessment.child}`,
+    pageWidth / 2,
+    doc.internal.pageSize.getHeight() - 10,
+    { align: 'center' }
+  );
+
+  doc.save(`family-report-${assessment.child.toLowerCase().replace(/\s+/g, '-')}.pdf`);
+}
+
 export default function CurriculumPage() {
   const [activeRoom, setActiveRoom] = useState('Infant');
   const [feedbackText, setFeedbackText] = useState('');
+
+  // Dialog state
+  const [selectedLesson, setSelectedLesson] = useState<FullLesson | null>(null);
+  const [lessonDialogOpen, setLessonDialogOpen] = useState(false);
+
+  const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
+  const [assessmentDialogOpen, setAssessmentDialogOpen] = useState(false);
+  const [assessmentRoom, setAssessmentRoom] = useState('');
+
+  const [selectedObservation, setSelectedObservation] = useState<Observation | null>(null);
+  const [observationDialogOpen, setObservationDialogOpen] = useState(false);
+  const [observationRoom, setObservationRoom] = useState('');
+
+  const handleLessonClick = (roomKey: string, lessonTitle: string) => {
+    const fullLesson = findLesson(roomKey, lessonTitle);
+    if (fullLesson) {
+      setSelectedLesson(fullLesson);
+      setLessonDialogOpen(true);
+    }
+  };
+
+  const handleAssessmentClick = (roomKey: string, assessment: Assessment) => {
+    setSelectedAssessment(assessment);
+    setAssessmentRoom(roomKey);
+    setAssessmentDialogOpen(true);
+  };
+
+  const handleObservationClick = (roomKey: string, observation: Observation) => {
+    setSelectedObservation(observation);
+    setObservationRoom(roomKey);
+    setObservationDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -385,7 +543,11 @@ export default function CurriculumPage() {
               <TabsContent value="lessons">
                 <div className="space-y-4">
                   {rooms[roomKey].lessons.map((lesson, i) => (
-                    <Card key={i}>
+                    <Card
+                      key={i}
+                      className="cursor-pointer transition-shadow hover:shadow-md hover:border-christina-red/30"
+                      onClick={() => handleLessonClick(roomKey, lesson.title)}
+                    >
                       <CardContent className="p-6">
                         <div className="flex items-start gap-4">
                           <div className="w-10 h-10 rounded-lg bg-christina-red/10 flex items-center justify-center flex-shrink-0">
@@ -415,6 +577,7 @@ export default function CurriculumPage() {
                                 </div>
                               </div>
                             </div>
+                            <p className="text-xs text-christina-red mt-2">Click to view full lesson plan with segments</p>
                           </div>
                         </div>
                       </CardContent>
@@ -430,7 +593,11 @@ export default function CurriculumPage() {
                   <CardContent>
                     <div className="space-y-4">
                       {rooms[roomKey].assessments.map((a, i) => (
-                        <div key={i} className="p-4 bg-muted/30 rounded-lg">
+                        <div
+                          key={i}
+                          className="p-4 bg-muted/30 rounded-lg cursor-pointer transition-shadow hover:shadow-md hover:bg-muted/50"
+                          onClick={() => handleAssessmentClick(roomKey, a)}
+                        >
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
                               <Users className="h-4 w-4 text-christina-red" />
@@ -447,6 +614,7 @@ export default function CurriculumPage() {
                             <span className="text-xs text-muted-foreground ml-2">{a.score}/5</span>
                           </div>
                           <p className="text-sm text-muted-foreground">{a.notes}</p>
+                          <p className="text-xs text-christina-red mt-2">Click to view details & download PDF</p>
                         </div>
                       ))}
                     </div>
@@ -462,12 +630,17 @@ export default function CurriculumPage() {
                     <CardContent>
                       <div className="space-y-3">
                         {rooms[roomKey].observations.map((o, i) => (
-                          <div key={i} className="p-4 bg-muted/30 rounded-lg">
+                          <div
+                            key={i}
+                            className="p-4 bg-muted/30 rounded-lg cursor-pointer transition-shadow hover:shadow-md hover:bg-muted/50"
+                            onClick={() => handleObservationClick(roomKey, o)}
+                          >
                             <div className="flex items-center justify-between mb-2">
                               <span className="font-medium text-sm">{o.child}</span>
                               <span className="text-xs text-muted-foreground">{o.date} - {o.teacher}</span>
                             </div>
                             <p className="text-sm text-muted-foreground">{o.note}</p>
+                            <p className="text-xs text-christina-red mt-2">Click to view details & download PDF</p>
                           </div>
                         ))}
                       </div>
@@ -498,7 +671,14 @@ export default function CurriculumPage() {
                         <div key={i} className="p-4 border rounded-lg">
                           <div className="flex items-center justify-between mb-3">
                             <h3 className="font-bold">{a.child} - Progress Summary</h3>
-                            <Button variant="outline" size="sm" className="gap-1"><FileText className="h-3 w-3" /> Download PDF</Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => generateFamilyReportPDF(a, roomKey)}
+                            >
+                              <FileText className="h-3 w-3" /> Download PDF
+                            </Button>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                             <div>
@@ -528,6 +708,25 @@ export default function CurriculumPage() {
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Dialogs */}
+      <LessonDetailDialog
+        lesson={selectedLesson}
+        open={lessonDialogOpen}
+        onOpenChange={setLessonDialogOpen}
+      />
+      <AssessmentDetailDialog
+        assessment={selectedAssessment}
+        room={assessmentRoom}
+        open={assessmentDialogOpen}
+        onOpenChange={setAssessmentDialogOpen}
+      />
+      <ObservationDetailDialog
+        observation={selectedObservation}
+        room={observationRoom}
+        open={observationDialogOpen}
+        onOpenChange={setObservationDialogOpen}
+      />
     </div>
   );
 }
