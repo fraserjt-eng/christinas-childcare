@@ -35,115 +35,18 @@ function formatDate(dateString: string): string {
 }
 
 function getYouTubeThumbnail(videoId: string): string {
-  // Use maxresdefault for high quality, falls back gracefully
   return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 }
 
-interface NewsSlideProps {
-  item: NewsUpdate;
-  isActive: boolean;
-  onClick: () => void;
-}
-
-function NewsSlide({ item, isActive, onClick }: NewsSlideProps) {
-  const Icon = typeIcons[item.type];
+function getBackgroundImage(item: NewsUpdate): string {
   const youtubeId = item.video_url ? extractYouTubeId(item.video_url) : null;
 
-  // Determine the thumbnail/background image
-  let backgroundImage = '/images/community.png'; // fallback
   if (item.type === 'video' && youtubeId) {
-    backgroundImage = getYouTubeThumbnail(youtubeId);
+    return getYouTubeThumbnail(youtubeId);
   } else if (item.image_url) {
-    backgroundImage = item.image_url;
+    return item.image_url;
   }
-
-  return (
-    <div
-      className={`absolute inset-0 transition-all duration-700 ease-in-out cursor-pointer ${
-        isActive ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full pointer-events-none'
-      }`}
-      onClick={onClick}
-    >
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <Image
-          src={backgroundImage}
-          alt={item.title}
-          fill
-          className="object-cover"
-          priority={isActive}
-        />
-        {/* Gradient overlay for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
-      </div>
-
-      {/* Play button overlay for videos */}
-      {item.type === 'video' && youtubeId && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-red-600 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
-            <Play className="w-10 h-10 md:w-12 md:h-12 text-white ml-1" fill="white" />
-          </div>
-        </div>
-      )}
-
-      {/* Content overlay */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-        <div className="max-w-3xl">
-          {/* Badges */}
-          <div className="flex items-center gap-2 mb-4">
-            <Badge
-              className={`text-xs ${
-                item.type === 'video'
-                  ? 'bg-red-600 text-white'
-                  : item.type === 'article'
-                  ? 'bg-blue-600 text-white'
-                  : item.type === 'photo'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-yellow-500 text-black'
-              }`}
-            >
-              <Icon className="w-3 h-3 mr-1" />
-              {getNewsTypeLabel(item.type)}
-            </Badge>
-            {item.is_featured && (
-              <Badge className="bg-white/20 text-white text-xs backdrop-blur-sm">
-                Featured
-              </Badge>
-            )}
-          </div>
-
-          {/* Title */}
-          <h3 className="text-2xl md:text-4xl font-light text-white mb-3 line-clamp-2">
-            {item.title}
-          </h3>
-
-          {/* Description */}
-          <p className="text-white/80 text-sm md:text-base leading-relaxed mb-4 line-clamp-2 max-w-2xl">
-            {item.content}
-          </p>
-
-          {/* Meta info */}
-          <div className="flex items-center gap-4 text-xs md:text-sm text-white/60">
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3 h-3 md:w-4 md:h-4" />
-              {formatDate(item.published_at)}
-            </span>
-            {item.author && (
-              <span className="flex items-center gap-1">
-                <User className="w-3 h-3 md:w-4 md:h-4" />
-                {item.author}
-              </span>
-            )}
-          </div>
-
-          {/* Click hint */}
-          <p className="text-white/40 text-xs mt-4">
-            {item.type === 'video' ? 'Click to watch' : 'Click to read more'}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  return '/images/community.png';
 }
 
 export function NewsFeed() {
@@ -151,6 +54,7 @@ export function NewsFeed() {
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     async function loadNews() {
@@ -167,40 +71,46 @@ export function NewsFeed() {
     if (updates.length <= 1 || isPaused) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % updates.length);
-    }, 6000); // 6 seconds per slide
+      goToNext();
+    }, 6000);
 
     return () => clearInterval(interval);
-  }, [updates.length, isPaused]);
+  }, [updates.length, isPaused, currentIndex]);
 
   const goToSlide = useCallback((index: number) => {
+    if (isTransitioning || index === currentIndex) return;
+    setIsTransitioning(true);
     setCurrentIndex(index);
-  }, []);
+    setTimeout(() => setIsTransitioning(false), 700);
+  }, [currentIndex, isTransitioning]);
 
   const goToPrev = useCallback(() => {
+    if (isTransitioning || updates.length <= 1) return;
+    setIsTransitioning(true);
     setCurrentIndex((prev) => (prev - 1 + updates.length) % updates.length);
-  }, [updates.length]);
+    setTimeout(() => setIsTransitioning(false), 700);
+  }, [updates.length, isTransitioning]);
 
   const goToNext = useCallback(() => {
+    if (isTransitioning || updates.length <= 1) return;
+    setIsTransitioning(true);
     setCurrentIndex((prev) => (prev + 1) % updates.length);
-  }, [updates.length]);
+    setTimeout(() => setIsTransitioning(false), 700);
+  }, [updates.length, isTransitioning]);
 
   const handleSlideClick = useCallback((item: NewsUpdate) => {
     const youtubeId = item.video_url ? extractYouTubeId(item.video_url) : null;
 
     if (item.type === 'video' && youtubeId) {
-      // Open YouTube video in new tab
       window.open(`https://www.youtube.com/watch?v=${youtubeId}`, '_blank');
     } else if (item.image_url) {
-      // Open image in new tab
       window.open(item.image_url, '_blank');
     }
-    // For articles/announcements, could open a modal in the future
   }, []);
 
   if (loading) {
     return (
-      <section className="bg-[#1a1a1a] py-0">
+      <section className="bg-[#1a1a1a]">
         <div className="relative h-[400px] md:h-[500px] flex items-center justify-center">
           <div className="animate-pulse text-white/50">Loading updates...</div>
         </div>
@@ -211,6 +121,11 @@ export function NewsFeed() {
   if (updates.length === 0) {
     return null;
   }
+
+  const currentItem = updates[currentIndex];
+  const Icon = typeIcons[currentItem.type];
+  const youtubeId = currentItem.video_url ? extractYouTubeId(currentItem.video_url) : null;
+  const backgroundImage = getBackgroundImage(currentItem);
 
   return (
     <section className="bg-[#1a1a1a]">
@@ -236,15 +151,93 @@ export function NewsFeed() {
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
-        {/* Slides */}
-        {updates.map((item, index) => (
-          <NewsSlide
-            key={item.id}
-            item={item}
-            isActive={index === currentIndex}
-            onClick={() => handleSlideClick(item)}
+        {/* Background Image - changes with slide */}
+        <div
+          className="absolute inset-0 transition-opacity duration-700"
+          key={currentItem.id}
+        >
+          <Image
+            src={backgroundImage}
+            alt={currentItem.title}
+            fill
+            className="object-cover"
+            priority
+            unoptimized={backgroundImage.includes('youtube.com')}
           />
-        ))}
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+        </div>
+
+        {/* Play button for videos */}
+        {currentItem.type === 'video' && youtubeId && (
+          <button
+            onClick={() => handleSlideClick(currentItem)}
+            className="absolute inset-0 flex items-center justify-center z-10 cursor-pointer"
+          >
+            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-red-600 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform hover:bg-red-700">
+              <Play className="w-10 h-10 md:w-12 md:h-12 text-white ml-1" fill="white" />
+            </div>
+          </button>
+        )}
+
+        {/* Content */}
+        <div
+          className="absolute bottom-0 left-0 right-0 p-6 md:p-10 z-10 cursor-pointer"
+          onClick={() => handleSlideClick(currentItem)}
+        >
+          <div className="max-w-3xl transition-all duration-500">
+            {/* Badges */}
+            <div className="flex items-center gap-2 mb-4">
+              <Badge
+                className={`text-xs ${
+                  currentItem.type === 'video'
+                    ? 'bg-red-600 text-white'
+                    : currentItem.type === 'article'
+                    ? 'bg-blue-600 text-white'
+                    : currentItem.type === 'photo'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-yellow-500 text-black'
+                }`}
+              >
+                <Icon className="w-3 h-3 mr-1" />
+                {getNewsTypeLabel(currentItem.type)}
+              </Badge>
+              {currentItem.is_featured && (
+                <Badge className="bg-white/20 text-white text-xs backdrop-blur-sm">
+                  Featured
+                </Badge>
+              )}
+            </div>
+
+            {/* Title */}
+            <h3 className="text-2xl md:text-4xl font-light text-white mb-3 line-clamp-2">
+              {currentItem.title}
+            </h3>
+
+            {/* Description */}
+            <p className="text-white/80 text-sm md:text-base leading-relaxed mb-4 line-clamp-2 max-w-2xl">
+              {currentItem.content}
+            </p>
+
+            {/* Meta */}
+            <div className="flex items-center gap-4 text-xs md:text-sm text-white/60">
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3 md:w-4 md:h-4" />
+                {formatDate(currentItem.published_at)}
+              </span>
+              {currentItem.author && (
+                <span className="flex items-center gap-1">
+                  <User className="w-3 h-3 md:w-4 md:h-4" />
+                  {currentItem.author}
+                </span>
+              )}
+            </div>
+
+            <p className="text-white/40 text-xs mt-4">
+              {currentItem.type === 'video' ? 'Click to watch' : 'Click to read more'}
+            </p>
+          </div>
+        </div>
 
         {/* Navigation arrows */}
         {updates.length > 1 && (
@@ -252,16 +245,24 @@ export function NewsFeed() {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full h-12 w-12 backdrop-blur-sm"
-              onClick={goToPrev}
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full h-12 w-12 z-20 border border-white/20"
+              onClick={(e) => {
+                e.stopPropagation();
+                goToPrev();
+              }}
+              disabled={isTransitioning}
             >
               <ChevronLeft className="h-6 w-6" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white rounded-full h-12 w-12 backdrop-blur-sm"
-              onClick={goToNext}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full h-12 w-12 z-20 border border-white/20"
+              onClick={(e) => {
+                e.stopPropagation();
+                goToNext();
+              }}
+              disabled={isTransitioning}
             >
               <ChevronRight className="h-6 w-6" />
             </Button>
@@ -270,11 +271,15 @@ export function NewsFeed() {
 
         {/* Dot indicators */}
         {updates.length > 1 && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
             {updates.map((_, index) => (
               <button
                 key={index}
-                onClick={() => goToSlide(index)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToSlide(index);
+                }}
+                disabled={isTransitioning}
                 className={`transition-all duration-300 rounded-full ${
                   index === currentIndex
                     ? 'w-8 h-2 bg-white'
@@ -286,33 +291,11 @@ export function NewsFeed() {
           </div>
         )}
 
-        {/* Progress bar */}
-        {updates.length > 1 && !isPaused && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-            <div
-              className="h-full bg-white/60 transition-all"
-              style={{
-                animation: 'progress 6s linear infinite',
-                width: '100%',
-              }}
-            />
-          </div>
-        )}
+        {/* Slide counter */}
+        <div className="absolute top-4 right-4 bg-black/50 text-white text-sm px-3 py-1 rounded-full z-20">
+          {currentIndex + 1} / {updates.length}
+        </div>
       </div>
-
-      {/* CSS for progress animation */}
-      <style jsx>{`
-        @keyframes progress {
-          from {
-            transform: scaleX(0);
-            transform-origin: left;
-          }
-          to {
-            transform: scaleX(1);
-            transform-origin: left;
-          }
-        }
-      `}</style>
     </section>
   );
 }
