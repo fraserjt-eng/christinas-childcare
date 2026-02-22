@@ -103,22 +103,6 @@ const stats = [
 export default function HomePage() {
   return (
     <main className="min-h-screen">
-      {/* Family Photo */}
-      <section className="bg-[#1a1a1a] py-12">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto">
-            <Image
-              src="/images/family.jpg"
-              alt="The Zeogar-Fraser Family"
-              width={1200}
-              height={800}
-              className="w-full h-auto rounded-lg shadow-2xl"
-              priority
-            />
-          </div>
-        </div>
-      </section>
-
       {/* New Parallax Hero */}
       <ParallaxHero />
 
