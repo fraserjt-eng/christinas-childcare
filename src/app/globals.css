@@ -254,3 +254,27 @@
 .christina-tour-popover .driver-popover-arrow-side-bottom {
   border-bottom-color: white;
 }
+
+/* ============================================
+   Print Styles
+   ============================================ */
+
+@media print {
+  header, footer, nav, aside,
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .print\\:block {
+    display: block !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+}

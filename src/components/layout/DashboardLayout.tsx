@@ -18,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Employee, getEmployeeFullName } from '@/types/employee';
 import { getCurrentEmployee, logout as employeeLogout } from '@/lib/employee-storage';
+import { FamilyAccount } from '@/types/family';
+import { getCurrentFamily, logoutFamily } from '@/lib/family-storage';
 
 const parentNav = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -95,18 +97,32 @@ function SidebarContent({
   isAdmin,
   isEmployee,
   employee,
+  family,
   onLogout
 }: {
   isAdmin: boolean;
   isEmployee?: boolean;
   employee?: Employee | null;
+  family?: FamilyAccount | null;
   onLogout?: () => void;
 }) {
-  const displayName = employee ? getEmployeeFullName(employee) : 'Ophelia Zeogar';
-  const displayRole = employee?.job_title || 'Owner / Director';
-  const initials = employee
-    ? `${employee.first_name[0]}${employee.last_name[0]}`
-    : 'OZ';
+  let displayName = 'Ophelia Zeogar';
+  let displayRole = 'Owner / Director';
+  let initials = 'OZ';
+
+  if (employee) {
+    displayName = getEmployeeFullName(employee);
+    displayRole = employee.job_title;
+    initials = `${employee.first_name[0]}${employee.last_name[0]}`;
+  } else if (family) {
+    const primary = family.parents.find((p) => p.is_primary) || family.parents[0];
+    if (primary) {
+      displayName = primary.name;
+      displayRole = 'Parent';
+      const parts = primary.name.split(' ');
+      initials = parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : parts[0][0];
+    }
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -175,17 +191,26 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, isAdmin = false, isEmployee = false }: DashboardLayoutProps) {
   const [open, setOpen] = useState(false);
   const [employee, setEmployee] = useState<Employee | null>(null);
+  const [family, setFamily] = useState<FamilyAccount | null>(null);
 
   useEffect(() => {
     if (isEmployee) {
       const emp = getCurrentEmployee();
       setEmployee(emp);
+    } else if (!isAdmin) {
+      const fam = getCurrentFamily();
+      setFamily(fam);
     }
-  }, [isEmployee]);
+  }, [isEmployee, isAdmin]);
 
   const handleLogout = () => {
-    employeeLogout();
-    window.location.href = '/employee-login';
+    if (isEmployee) {
+      employeeLogout();
+      window.location.href = '/employee-login';
+    } else {
+      logoutFamily();
+      window.location.href = '/login';
+    }
   };
 
   return (
@@ -195,7 +220,8 @@ export function DashboardLayout({ children, isAdmin = false, isEmployee = false 
           isAdmin={isAdmin}
           isEmployee={isEmployee}
           employee={employee}
-          onLogout={isEmployee ? handleLogout : undefined}
+          family={family}
+          onLogout={(isEmployee || !isAdmin) ? handleLogout : undefined}
         />
       </aside>
       <div className="flex-1 flex flex-col min-h-0">
@@ -209,7 +235,8 @@ export function DashboardLayout({ children, isAdmin = false, isEmployee = false 
                 isAdmin={isAdmin}
                 isEmployee={isEmployee}
                 employee={employee}
-                onLogout={isEmployee ? handleLogout : undefined}
+                family={family}
+                onLogout={(isEmployee || !isAdmin) ? handleLogout : undefined}
               />
             </SheetContent>
           </Sheet>
