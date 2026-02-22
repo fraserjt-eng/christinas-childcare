@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRef, useState, useEffect } from 'react';
 import { ParallaxHero } from '@/components/features/ParallaxHero';
 import { ScrollFadeIn, ScrollFadeInStagger } from '@/components/features/ScrollFadeIn';
+import { SeasonalBanner } from '@/components/features/SeasonalBanner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,8 +17,21 @@ import {
   Clock,
   MapPin,
   Quote,
+  CheckCircle,
+  GraduationCap,
+  Baby,
+  Award,
+  Calendar,
 } from 'lucide-react';
 import { NewsFeed } from '@/components/features/NewsFeed';
+
+const trustSignals = [
+  { icon: Shield, text: 'MN Licensed' },
+  { icon: CheckCircle, text: 'Since 2020' },
+  { icon: Users, text: '50+ Families Served' },
+  { icon: Award, text: 'Background-Checked Staff' },
+  { icon: Heart, text: 'CPR Certified Teachers' },
+];
 
 const features = [
   {
@@ -51,6 +66,13 @@ const features = [
   },
 ];
 
+const ratios = [
+  { program: 'Infants', ratio: '1:4', icon: Baby },
+  { program: 'Toddlers', ratio: '1:5', icon: Heart },
+  { program: 'Preschool', ratio: '1:8', icon: BookOpen },
+  { program: 'School Age', ratio: '1:12', icon: GraduationCap },
+];
+
 const testimonials = [
   {
     quote:
@@ -76,38 +98,126 @@ const staff = [
   {
     name: 'Ophelia Zeogar',
     role: 'Lead Teacher',
-    description:
-      'Ophelia brings creativity and patience to the classroom, designing engaging activities that spark curiosity in every age group.',
+    credentials: 'CDA Certified',
+    years: 8,
+    bio: 'Ophelia brings creativity and patience to the classroom, designing engaging activities that spark curiosity in every age group.',
+    funFact: 'Collects children\'s books from around the world',
   },
   {
     name: 'Stephen Zeogar',
     role: 'Owner & Operations Manager',
-    description:
-      'Stephen ensures smooth daily operations and maintains the safe, welcoming environment families count on.',
+    credentials: 'Business Administration',
+    years: 6,
+    bio: 'Stephen ensures smooth daily operations and maintains the safe, welcoming environment families count on.',
+    funFact: 'Coaches youth soccer on weekends',
   },
   {
     name: 'Christina Fraser',
     role: 'Assistant Director',
-    description:
-      'With over 20 years in early childhood education, Christina brings expertise and heart to ensuring every child has a safe, joyful place to learn and grow.',
+    credentials: 'Early Childhood Education',
+    years: 20,
+    bio: 'With over 20 years in early childhood education, Christina brings expertise and heart to ensuring every child has a safe, joyful place to learn and grow.',
+    funFact: 'Known for her legendary read-aloud voices',
   },
 ];
 
+function AnimatedStat({ value, label }: { value: number; suffix: string; label: string }) {
+  const [count, setCount] = useState(0);
+  const [started, setStarted] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStarted(true);
+          observer.unobserve(el);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!started) return;
+    let start: number;
+    let frame: number;
+    const animate = (ts: number) => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / 2000, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.floor(eased * value));
+      if (progress < 1) frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [started, value]);
+
+  return (
+    <div ref={ref}>
+      <p className="text-4xl md:text-5xl font-light text-white mb-2">
+        {count}
+        <span className="text-3xl">+</span>
+      </p>
+      <p className="text-white/60 text-sm tracking-wide">{label}</p>
+    </div>
+  );
+}
+
 const stats = [
-  { value: '20+', label: 'Years of Experience' },
-  { value: '150+', label: 'Families Served' },
-  { value: '4', label: 'Age-Group Programs' },
-  { value: '5★', label: 'Parent Rating' },
+  { value: 20, suffix: '+', label: 'Years of Experience' },
+  { value: 150, suffix: '+', label: 'Families Served' },
+  { value: 4, suffix: '', label: 'Age-Group Programs' },
+  { value: 5, suffix: '★', label: 'Parent Rating' },
 ];
 
 export default function HomePage() {
   return (
     <main className="min-h-screen">
-      {/* New Parallax Hero */}
+      {/* Seasonal Banner */}
+      <SeasonalBanner />
+
+      {/* Parallax Hero */}
       <ParallaxHero />
 
+      {/* Trust Signals Bar */}
+      <section className="bg-[#1a1a1a] py-4 border-y border-[#333]">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+            {trustSignals.map((signal) => (
+              <div key={signal.text} className="flex items-center gap-2 text-white/80">
+                <signal.icon className="h-4 w-4 text-christina-yellow" />
+                <span className="text-sm font-medium">{signal.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Staff-to-Child Ratios */}
+      <section className="bg-[#f5f0e8] py-6 border-b border-[#e5e0d8]">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
+            <span className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b] font-medium">Our Ratios</span>
+            {ratios.map((r) => (
+              <div key={r.program} className="flex items-center gap-2">
+                <r.icon className="h-4 w-4 text-christina-red" />
+                <span className="text-sm text-[#1a1a1a]">
+                  <span className="font-medium">{r.program}:</span>{' '}
+                  <span className="text-christina-red font-bold">{r.ratio}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Free Transportation Banner */}
-      <section className="bg-[#f5f0e8] py-16 border-y border-[#e5e0d8]">
+      <section className="bg-white py-16 border-b border-[#e5e0d8]">
         <div className="container mx-auto px-6">
           <ScrollFadeIn direction="up" duration={700}>
             <div className="flex flex-col md:flex-row items-center justify-center gap-8 text-center md:text-left">
@@ -122,7 +232,7 @@ export default function HomePage() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b] mb-2">Included Service</p>
-                <h2 className="text-3xl md:text-4xl font-light text-[#1a1a1a] mb-2">
+                <h2 className="font-playful text-3xl md:text-4xl text-[#1a1a1a] mb-2">
                   Free Transportation
                 </h2>
                 <p className="text-[#6b6b6b]">
@@ -140,7 +250,7 @@ export default function HomePage() {
           <ScrollFadeIn direction="up" duration={600}>
             <div className="text-center mb-16">
               <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b] mb-4">Our Promise</p>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-light text-[#1a1a1a] mb-4">
+              <h2 className="font-playful text-3xl md:text-4xl lg:text-5xl text-[#1a1a1a] mb-4">
                 Why Families Choose Us
               </h2>
               <p className="text-lg text-[#6b6b6b] max-w-2xl mx-auto font-light">
@@ -169,13 +279,31 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Family Photo Section */}
+      <section className="relative">
+        <div className="aspect-[21/9] relative overflow-hidden">
+          <Image
+            src="/family.jpg"
+            alt="The Walker-Zeogar Family at Christina's Child Care Center"
+            fill
+            className="object-cover"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          <div className="absolute bottom-6 left-6 right-6 text-white">
+            <p className="font-playful text-xl md:text-2xl">Family-Owned Since 2020</p>
+            <p className="text-white/80 text-sm">The Zeogar family, serving Crystal, MN families</p>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials */}
       <section className="bg-[#fafafa] py-24">
         <div className="container mx-auto px-6">
           <ScrollFadeIn direction="up" duration={600}>
             <div className="text-center mb-16">
               <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b] mb-4">Testimonials</p>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-light text-[#1a1a1a]">
+              <h2 className="font-playful text-3xl md:text-4xl lg:text-5xl text-[#1a1a1a]">
                 What Parents Say
               </h2>
             </div>
@@ -210,7 +338,7 @@ export default function HomePage() {
           <ScrollFadeIn direction="up" duration={600}>
             <div className="text-center mb-16">
               <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b] mb-4">Our Team</p>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-light text-[#1a1a1a] mb-4">
+              <h2 className="font-playful text-3xl md:text-4xl lg:text-5xl text-[#1a1a1a] mb-4">
                 Meet the People Who Care
               </h2>
               <p className="text-lg text-[#6b6b6b] max-w-2xl mx-auto font-light">
@@ -224,40 +352,43 @@ export default function HomePage() {
             duration={700}
             direction="up"
             distance={35}
-            className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-4xl mx-auto"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto"
           >
             {staff.map((member) => (
-              <div key={member.name} className="text-center">
-                <div className="w-20 h-20 rounded-full bg-[#f5f0e8] mx-auto mb-4 flex items-center justify-center">
-                  <Users className="w-8 h-8 text-[#6b6b6b]" strokeWidth={1.5} />
-                </div>
-                <h3 className="text-lg font-medium text-[#1a1a1a]">{member.name}</h3>
-                <p className="text-sm text-[#c44536] mb-3">{member.role}</p>
-                <p className="text-[#6b6b6b] text-sm leading-relaxed">{member.description}</p>
-              </div>
+              <Card key={member.name} className="border-0 shadow-sm overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="bg-gradient-to-br from-christina-red/10 to-christina-coral/10 p-8 text-center">
+                    <div className="w-20 h-20 rounded-full bg-white mx-auto mb-4 flex items-center justify-center shadow-sm">
+                      <span className="text-2xl font-playful text-christina-red">
+                        {member.name.split(' ').map(n => n[0]).join('')}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-[#1a1a1a]">{member.name}</h3>
+                    <p className="text-sm text-christina-red font-medium">{member.role}</p>
+                  </div>
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <GraduationCap className="h-4 w-4 text-[#6b6b6b]" />
+                      <span className="text-xs text-[#6b6b6b]">{member.credentials} · {member.years} years</span>
+                    </div>
+                    <p className="text-[#6b6b6b] text-sm leading-relaxed mb-3">{member.bio}</p>
+                    <p className="text-xs text-christina-red/80 italic">Fun fact: {member.funFact}</p>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </ScrollFadeInStagger>
         </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Animated Stats Section */}
       <section className="bg-[#1a1a1a] py-20">
         <div className="container mx-auto px-6">
-          <ScrollFadeInStagger
-            staggerDelay={100}
-            baseDelay={0}
-            duration={600}
-            direction="up"
-            distance={25}
-            className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center max-w-4xl mx-auto"
-          >
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center max-w-4xl mx-auto">
             {stats.map((stat) => (
-              <div key={stat.label}>
-                <p className="text-4xl md:text-5xl font-light text-white mb-2">{stat.value}</p>
-                <p className="text-white/60 text-sm tracking-wide">{stat.label}</p>
-              </div>
+              <AnimatedStat key={stat.label} value={stat.value} suffix={stat.suffix} label={stat.label} />
             ))}
-          </ScrollFadeInStagger>
+          </div>
         </div>
       </section>
 
@@ -268,7 +399,7 @@ export default function HomePage() {
       <section className="bg-[#c44536] py-20">
         <div className="container mx-auto px-6 text-center">
           <ScrollFadeIn direction="up" duration={700}>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-light text-white mb-4">
+            <h2 className="font-playful text-3xl md:text-4xl lg:text-5xl text-white mb-4">
               Ready to Join Our Family?
             </h2>
           </ScrollFadeIn>
@@ -284,7 +415,7 @@ export default function HomePage() {
                 className="bg-white text-[#c44536] hover:bg-white/90 px-8 py-6 text-base font-normal tracking-wide rounded-none"
                 asChild
               >
-                <Link href="/enroll">Schedule a Tour</Link>
+                <Link href="/schedule-tour" className="flex items-center gap-2"><Calendar className="h-5 w-5" /> Schedule a Tour</Link>
               </Button>
               <Button
                 size="lg"
