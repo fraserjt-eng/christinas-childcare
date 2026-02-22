@@ -9,7 +9,7 @@ import {
   LogOut, Menu, GraduationCap, Target, Building2,
   DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban, Wallet,
   CreditCard, CalendarDays, UserCog, Briefcase, Package, CalendarRange, CalendarPlus,
-  Newspaper
+  Newspaper, ChevronDown, type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -21,7 +21,19 @@ import { getCurrentEmployee, logout as employeeLogout } from '@/lib/employee-sto
 import { FamilyAccount } from '@/types/family';
 import { getCurrentFamily, logoutFamily } from '@/lib/family-storage';
 
-const parentNav = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface NavGroup {
+  label: string;
+  icon: LucideIcon;
+  items: NavItem[];
+}
+
+const parentNav: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/children', label: 'My Children', icon: Users },
   { href: '/dashboard/progress', label: 'Progress Reports', icon: BarChart3 },
@@ -31,31 +43,67 @@ const parentNav = [
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
 ];
 
-const adminNav = [
-  { href: '/admin', label: 'Overview', icon: Home },
-  { href: '/admin/news', label: 'News & Updates', icon: Newspaper },
-  { href: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
-  { href: '/admin/food-counts', label: 'Food Counts', icon: UtensilsCrossed },
-  { href: '/admin/inventory', label: 'Inventory', icon: Package },
-  { href: '/admin/menu-planning', label: 'Menu Planning', icon: CalendarRange },
-  { href: '/admin/scheduling', label: 'Staff Scheduling', icon: Clock },
-  { href: '/admin/schedule-requests', label: 'Schedule Requests', icon: CalendarPlus },
-  { href: '/admin/salaried-scheduling', label: 'Salaried Staff', icon: Building2 },
-  { href: '/admin/ratios', label: 'Ratio Monitor', icon: BarChart3 },
-  { href: '/admin/curriculum', label: 'Curriculum', icon: GraduationCap },
-  { href: '/admin/strategic', label: 'Strategic Plan', icon: Target },
-  { href: '/admin/lessons', label: 'Lesson Builder', icon: BookOpen },
-  { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
-  { href: '/admin/financial', label: 'Financial Planning', icon: DollarSign },
-  { href: '/admin/budget', label: 'Budget', icon: Wallet },
-  { href: '/admin/payroll', label: 'Payroll', icon: CreditCard },
-  { href: '/admin/staff', label: 'Staff Directory', icon: UserCheck },
-  { href: '/admin/compliance', label: 'Compliance', icon: ShieldCheck },
-  { href: '/admin/reports', label: 'Daily Reports', icon: BookOpen },
-  { href: '/admin/pipeline', label: 'Enrollment Pipeline', icon: SquareKanban },
+const adminNavGroups: NavGroup[] = [
+  {
+    label: 'Overview',
+    icon: Home,
+    items: [
+      { href: '/admin', label: 'Dashboard', icon: Home },
+      { href: '/admin/news', label: 'News & Updates', icon: Newspaper },
+    ],
+  },
+  {
+    label: 'Classroom',
+    icon: GraduationCap,
+    items: [
+      { href: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
+      { href: '/admin/ratios', label: 'Ratio Monitor', icon: BarChart3 },
+      { href: '/admin/curriculum', label: 'Curriculum', icon: GraduationCap },
+      { href: '/admin/lessons', label: 'Lesson Builder', icon: BookOpen },
+      { href: '/admin/reports', label: 'Daily Reports', icon: FileText },
+    ],
+  },
+  {
+    label: 'Food & Supplies',
+    icon: UtensilsCrossed,
+    items: [
+      { href: '/admin/food-counts', label: 'Food Counts', icon: UtensilsCrossed },
+      { href: '/admin/inventory', label: 'Inventory', icon: Package },
+      { href: '/admin/menu-planning', label: 'Menu Planning', icon: CalendarRange },
+    ],
+  },
+  {
+    label: 'Staff',
+    icon: Users,
+    items: [
+      { href: '/admin/scheduling', label: 'Scheduling', icon: Clock },
+      { href: '/admin/schedule-requests', label: 'Schedule Requests', icon: CalendarPlus },
+      { href: '/admin/salaried-scheduling', label: 'Salaried Staff', icon: Building2 },
+      { href: '/admin/staff', label: 'Staff Directory', icon: UserCheck },
+      { href: '/admin/payroll', label: 'Payroll', icon: CreditCard },
+      { href: '/admin/compliance', label: 'Compliance', icon: ShieldCheck },
+    ],
+  },
+  {
+    label: 'Enrollment',
+    icon: SquareKanban,
+    items: [
+      { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
+      { href: '/admin/pipeline', label: 'Pipeline', icon: SquareKanban },
+    ],
+  },
+  {
+    label: 'Business',
+    icon: DollarSign,
+    items: [
+      { href: '/admin/financial', label: 'Financial Planning', icon: DollarSign },
+      { href: '/admin/budget', label: 'Budget', icon: Wallet },
+      { href: '/admin/strategic', label: 'Strategic Plan', icon: Target },
+    ],
+  },
 ];
 
-const employeeNav = [
+const employeeNav: NavItem[] = [
   { href: '/employee', label: 'Clock In/Out', icon: Clock },
   { href: '/employee/schedule', label: 'My Schedule', icon: CalendarDays },
   { href: '/employee/pay-stubs', label: 'Pay Stubs', icon: CreditCard },
@@ -64,7 +112,7 @@ const employeeNav = [
   { href: '/employee/training', label: 'Training', icon: Briefcase },
 ];
 
-function NavSection({ items, label }: { items: typeof parentNav; label: string }) {
+function NavSection({ items, label }: { items: NavItem[]; label: string }) {
   const pathname = usePathname();
   return (
     <div>
@@ -86,6 +134,107 @@ function NavSection({ items, label }: { items: typeof parentNav; label: string }
               <item.icon className="h-4 w-4" />
               {item.label}
             </Link>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
+function AdminNavSection({ groups }: { groups: NavGroup[] }) {
+  const pathname = usePathname();
+
+  // Determine which groups have an active item
+  const activeGroupIndices = groups.reduce<Set<number>>((acc, group, i) => {
+    if (group.items.some((item) => item.href === pathname)) {
+      acc.add(i);
+    }
+    return acc;
+  }, new Set());
+
+  // Initialize: expand active groups + Overview (index 0)
+  const [expanded, setExpanded] = useState<Set<number>>(() => {
+    const initial = new Set(activeGroupIndices);
+    initial.add(0);
+    return initial;
+  });
+
+  // Auto-expand when route changes
+  useEffect(() => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      activeGroupIndices.forEach((i) => next.add(i));
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  function toggle(index: number) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  }
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">Business Hub</p>
+      <nav className="space-y-1">
+        {groups.map((group, groupIndex) => {
+          const isExpanded = expanded.has(groupIndex);
+          const hasActive = group.items.some((item) => item.href === pathname);
+
+          return (
+            <div key={group.label}>
+              {/* Group header */}
+              <button
+                onClick={() => toggle(groupIndex)}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full',
+                  hasActive
+                    ? 'text-christina-red'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <group.icon className="h-4 w-4" />
+                <span className="flex-1 text-left">{group.label}</span>
+                <ChevronDown
+                  className={cn(
+                    'h-3.5 w-3.5 transition-transform',
+                    isExpanded ? 'rotate-0' : '-rotate-90'
+                  )}
+                />
+              </button>
+
+              {/* Group items */}
+              {isExpanded && (
+                <div className="ml-4 pl-3 border-l border-border/50 space-y-0.5 mt-0.5 mb-1">
+                  {group.items.map((item) => {
+                    const isActive = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-colors',
+                          isActive
+                            ? 'bg-christina-red/10 text-christina-red font-medium'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        <item.icon className="h-3.5 w-3.5" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
@@ -150,7 +299,7 @@ function SidebarContent({
         {isEmployee ? (
           <NavSection items={employeeNav} label="Employee Portal" />
         ) : isAdmin ? (
-          <NavSection items={adminNav} label="Business Hub" />
+          <AdminNavSection groups={adminNavGroups} />
         ) : (
           <NavSection items={parentNav} label="Parent Portal" />
         )}

@@ -13,6 +13,7 @@ const navLinks = [
   { href: '/scope-sequence', label: 'Curriculum' },
   { href: '/training', label: 'Training' },
   { href: '/about', label: 'About' },
+  { href: '/signup-guide', label: 'Parent Guide' },
   { href: '/enroll', label: 'Enroll' },
 ];
 

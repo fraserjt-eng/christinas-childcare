@@ -167,8 +167,15 @@ export default function ParentLoginPage() {
               <p className="text-sm font-mono">Password: parent123</p>
             </div>
 
+            {/* Signup Guide */}
+            <div className="mt-4 text-center">
+              <Link href="/signup-guide" className="text-sm text-christina-blue hover:underline">
+                New parent? View our step-by-step signup guide
+              </Link>
+            </div>
+
             {/* Other Login Links */}
-            <div className="mt-4 flex justify-center gap-4 text-sm text-muted-foreground">
+            <div className="mt-3 flex justify-center gap-4 text-sm text-muted-foreground">
               <Link href="/admin-login" className="text-christina-red hover:underline">Staff login</Link>
               <span>·</span>
               <Link href="/employee-login" className="text-christina-red hover:underline">Employee portal</Link>
