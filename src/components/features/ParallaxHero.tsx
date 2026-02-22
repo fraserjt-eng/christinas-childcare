@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, MapPin } from 'lucide-react';
 
@@ -154,24 +153,6 @@ export function ParallaxHero() {
                 <textPath href="#textArc" startOffset="50%" textAnchor="middle">Where Learning and Growth Become One</textPath>
               </text>
             </svg>
-          </div>
-
-          {/* Family Photo */}
-          <div
-            className="max-w-2xl mx-auto mb-8 rounded-lg overflow-hidden shadow-xl"
-            style={{
-              opacity: Math.max(0, 1 - scrollY / 400),
-              transform: `translateY(${scrollY * 0.35}px)`,
-            }}
-          >
-            <Image
-              src="/images/family.jpg"
-              alt="The Zeogar-Fraser Family"
-              width={800}
-              height={600}
-              className="w-full h-auto"
-              priority
-            />
           </div>
 
           {/* Main headline - Red */}
