@@ -10,6 +10,7 @@ import {
   DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban, Wallet,
   CreditCard, CalendarDays, UserCog, Briefcase, Package, CalendarRange, CalendarPlus,
   Newspaper, ChevronDown, type LucideIcon,
+  Settings, ListTodo, AlertTriangle, Mail, UserPlus, Presentation
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -99,6 +100,18 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/financial', label: 'Financial Planning', icon: DollarSign },
       { href: '/admin/budget', label: 'Budget', icon: Wallet },
       { href: '/admin/strategic', label: 'Strategic Plan', icon: Target },
+    ],
+  },
+  {
+    label: 'Friction Reduction',
+    icon: ListTodo,
+    items: [
+      { href: '/admin/tasks', label: 'Task Board', icon: ListTodo },
+      { href: '/admin/meetings', label: 'Meetings', icon: Presentation },
+      { href: '/admin/communications', label: 'Communications', icon: Mail },
+      { href: '/admin/incidents', label: 'Incidents', icon: AlertTriangle },
+      { href: '/admin/hr', label: 'HR & Onboarding', icon: UserPlus },
+      { href: '/admin/settings', label: 'Settings', icon: Settings },
     ],
   },
 ];
