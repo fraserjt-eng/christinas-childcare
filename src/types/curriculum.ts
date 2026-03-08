@@ -70,6 +70,58 @@ export const DOMAIN_COLORS: Record<LearningDomain, string> = {
 };
 
 // ============================================================================
+// Developmental Experience Types
+// ============================================================================
+
+export const EXPERIENCE_TYPES = ['community_outing', 'in_center', 'family_engagement', 'seasonal_nature'] as const;
+export type ExperienceType = typeof EXPERIENCE_TYPES[number];
+
+export const EXPERIENCE_TYPE_LABELS: Record<ExperienceType, string> = {
+  community_outing: 'Community Outing',
+  in_center: 'In-Center Experience',
+  family_engagement: 'Family Engagement',
+  seasonal_nature: 'Seasonal & Nature',
+};
+
+export const EXPERIENCE_TYPE_COLORS: Record<ExperienceType, string> = {
+  community_outing: 'bg-blue-500 text-white',
+  in_center: 'bg-emerald-600 text-white',
+  family_engagement: 'bg-rose-500 text-white',
+  seasonal_nature: 'bg-amber-600 text-white',
+};
+
+export const YEAR_RANGES: Record<AgeGroup, string[]> = {
+  infant: ['Young Infant (6 weeks - 8 months)', 'Older Infant (8 - 16 months)'],
+  toddler: ['Young Toddler (16 - 24 months)', 'Older Toddler (24 - 33 months)'],
+  preschool: ['Young Preschool (33 months - 4 years)', 'Older Preschool (4 - 5 years)'],
+  'school-age': ['Younger School Age (5 - 8 years)', 'Older School Age (8 - 12 years)'],
+};
+
+export interface DevelopmentalExperience {
+  id: string;
+  title: string;
+  type: ExperienceType;
+  ageGroup: AgeGroup;
+  yearRange: string;
+  ubuntuConnection: string;
+  coreValues: string[];
+  domains: LearningDomain[];
+  developmentalOutcomes: string[];
+  description: string;
+  preparation: string[];
+  duringExperience: string[];
+  reflection: string[];
+  familyConnection: string;
+  estimatedDuration: string;
+  bestSeason?: 'spring' | 'summer' | 'fall' | 'winter' | 'any';
+  frequency: string;
+  adaptations: {
+    simplify: string;
+    extend: string;
+  };
+}
+
+// ============================================================================
 // Lesson Segment Item
 // ============================================================================
 

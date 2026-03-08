@@ -25,10 +25,14 @@ import {
   Users,
   Sparkles,
   Star,
+  MapPin,
+  TreePine,
+  Home as HomeIcon,
 } from 'lucide-react';
 import { AGE_GROUP_DISPLAY } from '@/types/milestones';
 import { DOMAIN_OVERVIEWS, getMilestonesByDomain } from '@/lib/milestones-data';
-import { AgeGroup, LearningDomain } from '@/types/curriculum';
+import { AgeGroup, LearningDomain, DOMAIN_LABELS, EXPERIENCE_TYPE_LABELS, EXPERIENCE_TYPE_COLORS, type ExperienceType } from '@/types/curriculum';
+import { experiencesByAgeGroup } from '@/data/developmental-experiences';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Brain,
@@ -57,6 +61,15 @@ const domainColors: Record<LearningDomain, string> = {
   'math': 'bg-teal-100 text-teal-700 border-teal-200',
   'science': 'bg-amber-100 text-amber-700 border-amber-200',
 };
+
+function getExperienceIcon(type: ExperienceType) {
+  switch (type) {
+    case 'community_outing': return MapPin;
+    case 'in_center': return HomeIcon;
+    case 'family_engagement': return Heart;
+    case 'seasonal_nature': return TreePine;
+  }
+}
 
 export default function ScopeSequencePage() {
   const [activeTab, setActiveTab] = useState<AgeGroup>('infant');
@@ -110,8 +123,8 @@ export default function ScopeSequencePage() {
                   &ldquo;I Am Because We Are&rdquo;
                 </h3>
                 <p className="text-gray-600 mb-3">
-                  <span className="font-semibold text-christina-red">Ubuntu</span> &mdash; an African philosophy meaning
-                  &ldquo;I am because we are&rdquo; &mdash; guides our approach to building community. We teach children that
+                  <span className="font-semibold text-christina-red">Ubuntu</span>, an African philosophy meaning
+                  &ldquo;I am because we are,&rdquo; guides our approach to building community. We teach children that
                   their identity and worth come from being part of something greater than themselves.
                 </p>
                 <p className="text-sm text-gray-500 italic">
@@ -302,6 +315,63 @@ export default function ScopeSequencePage() {
               </TabsContent>
             ))}
           </Tabs>
+        </div>
+      </section>
+
+      {/* Developmental Experiences */}
+      <section className="bg-gradient-to-b from-white to-amber-50/30 py-16 md:py-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900">Developmental Experiences</h2>
+            <p className="text-lg text-muted-foreground mt-3 max-w-2xl mx-auto">
+              Learning that goes beyond the classroom. These experiences connect children
+              to their community, natural world, and cultural heritage.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {(experiencesByAgeGroup[activeTab] || []).map((exp) => {
+              const TypeIcon = getExperienceIcon(exp.type);
+              return (
+                <div key={exp.id} className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                  {/* Header with type badge */}
+                  <div className="px-5 pt-5 pb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${EXPERIENCE_TYPE_COLORS[exp.type]}`}>
+                        <TypeIcon className="h-3 w-3" />
+                        {EXPERIENCE_TYPE_LABELS[exp.type]}
+                      </span>
+                      {exp.bestSeason && exp.bestSeason !== 'any' && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600 capitalize">{exp.bestSeason}</span>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-semibold">{exp.title}</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">{exp.yearRange} · {exp.estimatedDuration} · {exp.frequency}</p>
+                  </div>
+
+                  {/* Description */}
+                  <div className="px-5 pb-3">
+                    <p className="text-base text-gray-600">{exp.description}</p>
+                  </div>
+
+                  {/* Ubuntu connection callout */}
+                  <div className="mx-5 mb-5 bg-amber-50 rounded-lg p-4 border-l-4 border-amber-400">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Ubuntu Connection</p>
+                    <p className="text-sm text-amber-900 italic leading-relaxed">&ldquo;{exp.ubuntuConnection}&rdquo;</p>
+                  </div>
+
+                  {/* Domain badges */}
+                  <div className="px-5 pb-5 flex flex-wrap gap-1.5">
+                    {exp.domains.map(domain => (
+                      <span key={domain} className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600">
+                        {DOMAIN_LABELS[domain]}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 

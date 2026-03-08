@@ -6,13 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { BookOpen, Clock, Brain, Check, Star, MessageSquare, FileText, Users } from 'lucide-react';
+import { BookOpen, Clock, Brain, Check, Star, MessageSquare, FileText, Users, MapPin, TreePine, Home as HomeIcon, Heart, ChevronDown, ChevronRight } from 'lucide-react';
 import { TourButton } from '@/components/admin/TourButton';
 import { LessonDetailDialog } from '@/components/curriculum/LessonDetailDialog';
 import { AssessmentDetailDialog } from '@/components/curriculum/AssessmentDetailDialog';
 import { ObservationDetailDialog } from '@/components/curriculum/ObservationDetailDialog';
 import { findLesson } from '@/data/curriculum-lessons';
-import type { Lesson as FullLesson } from '@/types/curriculum';
+import type { Lesson as FullLesson, ExperienceType } from '@/types/curriculum';
+import { EXPERIENCE_TYPE_LABELS, EXPERIENCE_TYPE_COLORS, EXPERIENCE_TYPES, DOMAIN_LABELS, DOMAIN_COLORS } from '@/types/curriculum';
+import { experiencesByRoom } from '@/data/developmental-experiences';
 import jsPDF from 'jspdf';
 
 type Domain = 'cognitive' | 'creative' | 'language' | 'physical' | 'social_emotional';
@@ -428,6 +430,10 @@ export default function CurriculumPage() {
   const [observationDialogOpen, setObservationDialogOpen] = useState(false);
   const [observationRoom, setObservationRoom] = useState('');
 
+  // Experiences tab state
+  const [expandedExperience, setExpandedExperience] = useState<string | null>(null);
+  const [experienceTypeFilter, setExperienceTypeFilter] = useState<ExperienceType | 'all'>('all');
+
   const handleLessonClick = (roomKey: string, lessonTitle: string) => {
     const fullLesson = findLesson(roomKey, lessonTitle);
     if (fullLesson) {
@@ -478,6 +484,7 @@ export default function CurriculumPage() {
                 <TabsTrigger value="assessments" className="gap-1"><Check className="h-3 w-3" /> Assessments</TabsTrigger>
                 <TabsTrigger value="feedback" className="gap-1"><MessageSquare className="h-3 w-3" /> Feedback</TabsTrigger>
                 <TabsTrigger value="reports" className="gap-1"><FileText className="h-3 w-3" /> Family Reports</TabsTrigger>
+                <TabsTrigger value="experiences" className="gap-1"><TreePine className="h-3 w-3" /> Experiences</TabsTrigger>
               </TabsList>
 
               {/* Standards/Milestones */}
@@ -704,6 +711,187 @@ export default function CurriculumPage() {
                   </CardContent>
                 </Card>
               </TabsContent>
+
+              {/* Experiences */}
+              <TabsContent value="experiences" className="space-y-4">
+                {(() => {
+                  const roomExperiences = experiencesByRoom[roomKey as keyof typeof experiencesByRoom] || [];
+                  const filtered = experienceTypeFilter === 'all'
+                    ? roomExperiences
+                    : roomExperiences.filter(e => e.type === experienceTypeFilter);
+                  const yearRanges = Array.from(new Set(filtered.map(e => e.yearRange)));
+
+                  const typeIcons: Record<ExperienceType, React.ReactNode> = {
+                    community_outing: <MapPin className="h-3 w-3" />,
+                    in_center: <HomeIcon className="h-3 w-3" />,
+                    family_engagement: <Heart className="h-3 w-3" />,
+                    seasonal_nature: <TreePine className="h-3 w-3" />,
+                  };
+
+                  return (
+                    <>
+                      {/* Type filter badges */}
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => setExperienceTypeFilter('all')}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                            experienceTypeFilter === 'all'
+                              ? 'bg-gray-800 text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          All Types
+                        </button>
+                        {EXPERIENCE_TYPES.map(t => (
+                          <button
+                            key={t}
+                            onClick={() => setExperienceTypeFilter(t)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors inline-flex items-center gap-1 ${
+                              experienceTypeFilter === t
+                                ? EXPERIENCE_TYPE_COLORS[t]
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {typeIcons[t]} {EXPERIENCE_TYPE_LABELS[t]}
+                          </button>
+                        ))}
+                      </div>
+
+                      {filtered.length === 0 && (
+                        <p className="text-sm text-gray-500 italic py-4">No experiences found for this filter.</p>
+                      )}
+
+                      {/* Grouped by year range */}
+                      {yearRanges.map(yr => (
+                        <div key={yr}>
+                          <h3 className="text-base font-semibold text-gray-700 mt-4 mb-2">{yr}</h3>
+                          {filtered.filter(e => e.yearRange === yr).map(exp => {
+                            const isExpanded = expandedExperience === exp.id;
+                            return (
+                              <div
+                                key={exp.id}
+                                className="bg-white rounded-xl border p-4 cursor-pointer mb-3"
+                                onClick={() => setExpandedExperience(isExpanded ? null : exp.id)}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${EXPERIENCE_TYPE_COLORS[exp.type]}`}>
+                                    {EXPERIENCE_TYPE_LABELS[exp.type]}
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="text-base font-semibold">{exp.title}</h4>
+                                    <p className="text-sm text-gray-500">{exp.estimatedDuration} · {exp.frequency}</p>
+                                  </div>
+                                  <div className="flex gap-1 flex-wrap">
+                                    {exp.domains.map(d => (
+                                      <span key={d} className={`px-1.5 py-0.5 rounded text-[10px] ${DOMAIN_COLORS[d]}`}>
+                                        {DOMAIN_LABELS[d]}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  {isExpanded ? <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" />}
+                                </div>
+
+                                {/* Ubuntu preview when collapsed */}
+                                {!isExpanded && (
+                                  <p className="text-sm text-gray-600 mt-2 line-clamp-2 italic">&ldquo;{exp.ubuntuConnection}&rdquo;</p>
+                                )}
+
+                                {/* Expanded detail */}
+                                {isExpanded && (
+                                  <div className="mt-4 space-y-4 border-t pt-4" onClick={e => e.stopPropagation()}>
+                                    {/* Ubuntu Connection */}
+                                    <div className="bg-amber-50 rounded-lg p-4 border-l-4 border-amber-500">
+                                      <p className="text-sm font-semibold text-amber-800 mb-1">Ubuntu Connection</p>
+                                      <p className="text-base text-amber-900 italic">&ldquo;{exp.ubuntuConnection}&rdquo;</p>
+                                    </div>
+
+                                    {/* Core Values */}
+                                    <div>
+                                      <p className="text-sm font-semibold text-gray-700 mb-1">Core Values</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {exp.coreValues.map(v => (
+                                          <span key={v} className="px-2 py-1 rounded-full bg-rose-100 text-rose-700 text-xs">{v}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Developmental Outcomes */}
+                                    <div>
+                                      <p className="text-sm font-semibold text-gray-700 mb-1">Developmental Outcomes</p>
+                                      <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                                        {exp.developmentalOutcomes.map((o, i) => (
+                                          <li key={i}>{o}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+
+                                    {/* Three columns: Preparation, During, Reflection */}
+                                    <div className="grid md:grid-cols-3 gap-4">
+                                      <div>
+                                        <p className="text-sm font-semibold text-gray-700 mb-2">Preparation</p>
+                                        <ul className="text-sm text-gray-600 space-y-1">
+                                          {exp.preparation.map((p, i) => (
+                                            <li key={i} className="flex gap-1.5"><span className="text-gray-400">•</span><span>{p}</span></li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-semibold text-gray-700 mb-2">During the Experience</p>
+                                        <ul className="text-sm text-gray-600 space-y-1">
+                                          {exp.duringExperience.map((d, i) => (
+                                            <li key={i} className="flex gap-1.5"><span className="text-gray-400">•</span><span>{d}</span></li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-semibold text-gray-700 mb-2">Reflection</p>
+                                        <ul className="text-sm text-gray-600 space-y-1">
+                                          {exp.reflection.map((r, i) => (
+                                            <li key={i} className="flex gap-1.5"><span className="text-gray-400">•</span><span>{r}</span></li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    </div>
+
+                                    {/* Family Connection */}
+                                    <div className="bg-blue-50 rounded-lg p-3">
+                                      <p className="text-sm font-semibold text-blue-800 mb-1">Family Connection</p>
+                                      <p className="text-sm text-blue-700">{exp.familyConnection}</p>
+                                    </div>
+
+                                    {/* Adaptations */}
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                      <div className="bg-green-50 rounded-lg p-3">
+                                        <p className="text-sm font-semibold text-green-800 mb-1">Simplify</p>
+                                        <p className="text-sm text-green-700">{exp.adaptations.simplify}</p>
+                                      </div>
+                                      <div className="bg-purple-50 rounded-lg p-3">
+                                        <p className="text-sm font-semibold text-purple-800 mb-1">Extend</p>
+                                        <p className="text-sm text-purple-700">{exp.adaptations.extend}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Season + Frequency badges */}
+                                    <div className="flex gap-2">
+                                      {exp.bestSeason && (
+                                        <span className="text-xs px-2 py-1 rounded-full bg-gray-100">
+                                          {exp.bestSeason === 'spring' ? '🌱' : exp.bestSeason === 'summer' ? '☀️' : exp.bestSeason === 'fall' ? '🍂' : exp.bestSeason === 'winter' ? '❄️' : '🔄'} {exp.bestSeason}
+                                        </span>
+                                      )}
+                                      <span className="text-xs px-2 py-1 rounded-full bg-gray-100">{exp.frequency}</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </>
+                  );
+                })()}
+              </TabsContent>
+
             </Tabs>
           </TabsContent>
         ))}
