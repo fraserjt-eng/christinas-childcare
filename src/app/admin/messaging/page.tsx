@@ -942,7 +942,7 @@ export default function MessagingPage() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 ml-auto"
+              className="h-6 w-6 ml-auto"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowCreateChannel(true);
@@ -963,7 +963,7 @@ export default function MessagingPage() {
                     setReplyingTo(null);
                     setSearchQuery('');
                   }}
-                  className={`flex items-center gap-2 w-full px-4 py-2 text-sm transition-colors ${
+                  className={`flex items-center gap-2 w-full px-4 py-3 text-sm transition-colors ${
                     isActive
                       ? 'bg-[#C62828]/10 text-[#C62828] font-semibold'
                       : 'text-gray-700 hover:bg-gray-100'
@@ -1000,7 +1000,7 @@ export default function MessagingPage() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 ml-auto"
+              className="h-6 w-6 ml-auto"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowNewDM(true);
@@ -1025,7 +1025,7 @@ export default function MessagingPage() {
                       setReplyingTo(null);
                       setSearchQuery('');
                     }}
-                    className={`flex items-center gap-2 w-full px-4 py-2.5 text-sm transition-colors ${
+                    className={`flex items-center gap-2 w-full px-4 py-3 text-sm transition-colors ${
                       isActive
                         ? 'bg-[#C62828]/10 text-[#C62828]'
                         : 'text-gray-700 hover:bg-gray-100'
@@ -1037,7 +1037,7 @@ export default function MessagingPage() {
                         {otherPerson.name}
                       </div>
                       {lastMsg && (
-                        <div className="text-xs text-gray-400 truncate">
+                        <div className="text-sm text-gray-400 truncate">
                           {lastMsg.senderId === CURRENT_USER_ID ? 'You: ' : ''}
                           {lastMsg.content}
                         </div>
@@ -1107,7 +1107,7 @@ export default function MessagingPage() {
             {renderAvatar(otherPerson, 'sm')}
             <div>
               <h3 className="font-semibold text-gray-900">{otherPerson.name}</h3>
-              <span className="text-xs text-gray-400">{otherPerson.role}</span>
+              <span className="text-sm text-gray-400">{otherPerson.role}</span>
             </div>
           </div>
           <Button
@@ -1163,14 +1163,14 @@ export default function MessagingPage() {
           </div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex gap-4">
           {renderAvatar(sender)}
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2">
-              <span className="font-semibold text-sm text-gray-900">{sender.name}</span>
-              <span className="text-xs text-gray-400">{formatMessageTime(msg.timestamp)}</span>
+              <span className="font-semibold text-base text-gray-900">{sender.name}</span>
+              <span className="text-sm text-gray-400">{formatMessageTime(msg.timestamp)}</span>
             </div>
-            <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap break-words">
+            <p className="text-base text-gray-700 mt-0.5 whitespace-pre-wrap break-words">
               {msg.content}
             </p>
 
@@ -1291,13 +1291,13 @@ export default function MessagingPage() {
                     : 'Type a message...'
               }
               rows={1}
-              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C62828]/30 focus:border-[#C62828] max-h-[150px]"
+              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-base min-h-[48px] focus:outline-none focus:ring-2 focus:ring-[#C62828]/30 focus:border-[#C62828] max-h-[150px]"
             />
           </div>
           <Button
             onClick={sendMessage}
             disabled={!messageInput.trim()}
-            className="h-9 w-9 flex-shrink-0 bg-[#C62828] hover:bg-[#B71C1C] disabled:opacity-40"
+            className="h-9 w-9 min-h-[44px] min-w-[44px] flex-shrink-0 bg-[#C62828] hover:bg-[#B71C1C] disabled:opacity-40"
             size="icon"
           >
             <Send className="w-4 h-4" />
@@ -1454,12 +1454,12 @@ export default function MessagingPage() {
               <h4 className="font-semibold text-gray-900 mt-2">{otherPerson.name}</h4>
               <p className="text-sm text-gray-500">{otherPerson.role}</p>
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-base text-gray-600">
                 <AtSign className="w-4 h-4 text-gray-400" />
                 <span>{otherPerson.name.toLowerCase().replace(' ', '.')}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-base text-gray-600">
                 <MessageSquare className="w-4 h-4 text-gray-400" />
                 <span>
                   {messages.filter((m) => m.dmThreadId === activeDMThread.id).length} messages in conversation
@@ -1487,7 +1487,7 @@ export default function MessagingPage() {
         </DialogHeader>
         <div className="space-y-4 mt-2">
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">Channel Name</label>
+            <label className="text-base font-medium text-gray-700 block mb-1">Channel Name</label>
             <input
               type="text"
               value={newChannelName}
@@ -1497,7 +1497,7 @@ export default function MessagingPage() {
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">Description</label>
+            <label className="text-base font-medium text-gray-700 block mb-1">Description</label>
             <textarea
               value={newChannelDesc}
               onChange={(e) => setNewChannelDesc(e.target.value)}
@@ -1507,8 +1507,8 @@ export default function MessagingPage() {
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">Type</label>
-            <div className="flex gap-3">
+            <label className="text-base font-medium text-gray-700 block mb-1">Type</label>
+            <div className="flex gap-4">
               <button
                 onClick={() => setNewChannelType('public')}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${
@@ -1534,7 +1534,7 @@ export default function MessagingPage() {
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Members</label>
+            <label className="text-base font-medium text-gray-700 block mb-2">Members</label>
             <div className="space-y-1 max-h-48 overflow-y-auto">
               {STAFF.map((person) => {
                 const isSelected = newChannelMembers.includes(person.id);
@@ -1609,8 +1609,8 @@ export default function MessagingPage() {
                 >
                   {renderAvatar(person)}
                   <div className="text-left">
-                    <div className="text-sm font-medium text-gray-800">{person.name}</div>
-                    <div className="text-xs text-gray-400">{person.role}</div>
+                    <div className="text-base font-medium text-gray-800">{person.name}</div>
+                    <div className="text-sm text-gray-400">{person.role}</div>
                   </div>
                   {existingThread && (
                     <Badge variant="secondary" className="ml-auto text-[10px]">

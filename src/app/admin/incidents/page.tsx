@@ -343,32 +343,35 @@ function IncidentForm({
       {/* Date, Time, Location */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="inc-date">Date *</Label>
+          <Label htmlFor="inc-date" className="text-base">Date *</Label>
           <Input
             id="inc-date"
             type="date"
             value={form.date}
             onChange={(e) => setForm({ ...form, date: e.target.value })}
             required
+            className="min-h-[44px]"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="inc-time">Time</Label>
+          <Label htmlFor="inc-time" className="text-base">Time</Label>
           <Input
             id="inc-time"
             type="time"
             value={form.time}
             onChange={(e) => setForm({ ...form, time: e.target.value })}
+            className="min-h-[44px]"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="inc-location">Location *</Label>
+          <Label htmlFor="inc-location" className="text-base">Location *</Label>
           <Input
             id="inc-location"
             value={form.location}
             onChange={(e) => setForm({ ...form, location: e.target.value })}
             placeholder="e.g. Outdoor Playground"
             required
+            className="min-h-[44px]"
           />
         </div>
       </div>
@@ -376,12 +379,12 @@ function IncidentForm({
       {/* Type and Severity */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Incident Type *</Label>
+          <Label className="text-base">Incident Type *</Label>
           <Select
             value={form.type}
             onValueChange={(val) => setForm({ ...form, type: val as Incident['type'] })}
           >
-            <SelectTrigger>
+            <SelectTrigger className="min-h-[44px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -394,12 +397,12 @@ function IncidentForm({
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Severity *</Label>
+          <Label className="text-base">Severity *</Label>
           <Select
             value={form.severity}
             onValueChange={(val) => setForm({ ...form, severity: val as Incident['severity'] })}
           >
-            <SelectTrigger>
+            <SelectTrigger className="min-h-[44px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -421,7 +424,7 @@ function IncidentForm({
 
       {/* Description */}
       <div className="space-y-2">
-        <Label htmlFor="inc-desc">Description *</Label>
+        <Label htmlFor="inc-desc" className="text-base">Description *</Label>
         <Textarea
           id="inc-desc"
           value={form.description}
@@ -541,7 +544,7 @@ function IncidentForm({
 
       {/* Immediate Action */}
       <div className="space-y-2">
-        <Label htmlFor="inc-action">Immediate Action Taken</Label>
+        <Label htmlFor="inc-action" className="text-base">Immediate Action Taken</Label>
         <Textarea
           id="inc-action"
           value={form.immediate_action}
@@ -617,10 +620,10 @@ function IncidentForm({
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} className="min-h-[44px]">
           Cancel
         </Button>
-        <Button type="submit" className="bg-[#C62828] hover:bg-[#B71C1C] text-white">
+        <Button type="submit" className="bg-[#C62828] hover:bg-[#B71C1C] text-white min-h-[44px]">
           Submit Incident Report
         </Button>
       </div>
@@ -654,10 +657,10 @@ function IncidentDetail({
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold">{incident.incident_number}</h2>
-            <Badge className={getSeverityColor(incident.severity)}>
+            <Badge className={`text-sm ${getSeverityColor(incident.severity)}`}>
               {incident.severity.charAt(0).toUpperCase() + incident.severity.slice(1)}
             </Badge>
-            <Badge className={getStatusColor(incident.status)}>
+            <Badge className={`text-sm ${getStatusColor(incident.status)}`}>
               {incident.status.charAt(0).toUpperCase() + incident.status.slice(1)}
             </Badge>
           </div>
@@ -669,7 +672,7 @@ function IncidentDetail({
         {next && (
           <Button
             onClick={() => onUpdateStatus(incident.id, next)}
-            className="bg-[#C62828] hover:bg-[#B71C1C] text-white"
+            className="bg-[#C62828] hover:bg-[#B71C1C] text-white min-h-[44px]"
           >
             <CheckCircle2 className="h-4 w-4 mr-2" />
             Mark as {next.charAt(0).toUpperCase() + next.slice(1)}
@@ -981,8 +984,8 @@ export default function IncidentsPage() {
           <div className="flex items-center gap-3">
             <BookOpen className="h-5 w-5 text-[#C62828]" />
             <div>
-              <p className="font-medium text-sm">Incident Response Training</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="font-medium text-base">Incident Response Training</p>
+              <p className="text-sm text-muted-foreground">
                 Make sure all staff have completed the required training modules.
               </p>
             </div>
@@ -1017,7 +1020,7 @@ export default function IncidentsPage() {
 
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#C62828] hover:bg-[#B71C1C] text-white">
+                  <Button className="bg-[#C62828] hover:bg-[#B71C1C] text-white min-h-[44px]">
                     <Plus className="h-4 w-4 mr-2" />
                     New Incident
                   </Button>
@@ -1128,7 +1131,7 @@ export default function IncidentsPage() {
                     <p>No incidents match your filters.</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {filteredIncidents.map((incident) => (
                       <button
                         key={incident.id}
@@ -1143,12 +1146,12 @@ export default function IncidentsPage() {
                               </span>
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">
+                              <p className="text-base font-medium truncate">
                                 {incident.description.length > 100
                                   ? incident.description.slice(0, 100) + '...'
                                   : incident.description}
                               </p>
-                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                                 <span>{formatDate(incident.date)}</span>
                                 <span className="flex items-center gap-1">
                                   <MapPin className="h-3 w-3" />
@@ -1165,17 +1168,17 @@ export default function IncidentsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-sm">
                               {getTypeLabel(incident.type)}
                             </Badge>
-                            <Badge className={`text-xs ${getSeverityColor(incident.severity)}`}>
+                            <Badge className={`text-sm ${getSeverityColor(incident.severity)}`}>
                               {incident.severity.charAt(0).toUpperCase() + incident.severity.slice(1)}
                             </Badge>
-                            <Badge className={`text-xs ${getStatusColor(incident.status)}`}>
+                            <Badge className={`text-sm ${getStatusColor(incident.status)}`}>
                               {incident.status.charAt(0).toUpperCase() + incident.status.slice(1)}
                             </Badge>
                             {incident.licensing_reportable && (
-                              <Badge className="bg-red-100 text-red-800 text-xs">
+                              <Badge className="bg-red-100 text-red-800 text-sm">
                                 <AlertCircle className="h-3 w-3 mr-1" />
                                 Reportable
                               </Badge>

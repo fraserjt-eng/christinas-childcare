@@ -453,13 +453,13 @@ export default function MeetingsPage() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <StatusBadge status={activeMeeting.status} />
               {activeMeeting.status === 'scheduled' && (
-                <Button onClick={startMeeting} className="bg-christina-red hover:bg-christina-red/90 text-white">
+                <Button onClick={startMeeting} className="bg-christina-red hover:bg-christina-red/90 text-white min-h-[44px]">
                   <Play className="h-4 w-4 mr-2" />
                   Start Meeting
                 </Button>
               )}
               {activeMeeting.status === 'in_progress' && (
-                <Button onClick={endMeeting} variant="outline" className="border-christina-red text-christina-red hover:bg-christina-red/10">
+                <Button onClick={endMeeting} variant="outline" className="border-christina-red text-christina-red hover:bg-christina-red/10 min-h-[44px]">
                   <Square className="h-4 w-4 mr-2" />
                   End Meeting
                 </Button>
@@ -476,7 +476,7 @@ export default function MeetingsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{presentCount}/{STAFF_LIST.length}</p>
-                  <p className="text-xs text-muted-foreground">Attendance</p>
+                  <p className="text-sm text-muted-foreground">Attendance</p>
                 </div>
               </CardContent>
             </Card>
@@ -487,7 +487,7 @@ export default function MeetingsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{meetingAgenda.filter((a) => a.completed).length}/{meetingAgenda.length}</p>
-                  <p className="text-xs text-muted-foreground">Agenda Items</p>
+                  <p className="text-sm text-muted-foreground">Agenda Items</p>
                 </div>
               </CardContent>
             </Card>
@@ -498,7 +498,7 @@ export default function MeetingsPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{completedActions}/{totalActions}</p>
-                  <p className="text-xs text-muted-foreground">Action Items</p>
+                  <p className="text-sm text-muted-foreground">Action Items</p>
                 </div>
               </CardContent>
             </Card>
@@ -515,7 +515,7 @@ export default function MeetingsPage() {
                     Agenda
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4">
                   {meetingAgenda.map((item, idx) => (
                     <div
                       key={item.id}
@@ -620,7 +620,7 @@ export default function MeetingsPage() {
                       <Button
                         onClick={addActionItem}
                         disabled={!newActionDesc.trim()}
-                        className="bg-christina-red hover:bg-christina-red/90 text-white"
+                        className="bg-christina-red hover:bg-christina-red/90 text-white min-h-[44px]"
                       >
                         <Plus className="h-4 w-4 mr-1" />
                         Add
@@ -828,7 +828,7 @@ export default function MeetingsPage() {
               <Button
                 onClick={handleCarryForward}
                 disabled={carryForwardItems.length === 0}
-                className="bg-christina-red hover:bg-christina-red/90 text-white"
+                className="bg-christina-red hover:bg-christina-red/90 text-white min-h-[44px]"
               >
                 Carry Forward ({carryForwardItems.length})
               </Button>
@@ -856,7 +856,7 @@ export default function MeetingsPage() {
               Plan, run, and track staff meetings with agendas and action items.
             </p>
           </div>
-          <Button onClick={handleOpenCreate} className="bg-christina-red hover:bg-christina-red/90 text-white">
+          <Button onClick={handleOpenCreate} className="bg-christina-red hover:bg-christina-red/90 text-white min-h-[44px]">
             <Plus className="h-4 w-4 mr-2" />
             New Meeting
           </Button>
@@ -867,7 +867,7 @@ export default function MeetingsPage() {
           <Card>
             <CardContent className="p-4">
               <p className="text-2xl font-bold">{meetings.length}</p>
-              <p className="text-xs text-muted-foreground">Total Meetings</p>
+              <p className="text-sm text-muted-foreground">Total Meetings</p>
             </CardContent>
           </Card>
           <Card>
@@ -875,7 +875,7 @@ export default function MeetingsPage() {
               <p className="text-2xl font-bold text-amber-600">
                 {meetings.filter((m) => m.status === 'in_progress').length}
               </p>
-              <p className="text-xs text-muted-foreground">In Progress</p>
+              <p className="text-sm text-muted-foreground">In Progress</p>
             </CardContent>
           </Card>
           <Card>
@@ -883,7 +883,7 @@ export default function MeetingsPage() {
               <p className="text-2xl font-bold text-blue-600">
                 {meetings.filter((m) => m.status === 'scheduled').length}
               </p>
-              <p className="text-xs text-muted-foreground">Scheduled</p>
+              <p className="text-sm text-muted-foreground">Scheduled</p>
             </CardContent>
           </Card>
           <Card>
@@ -891,7 +891,7 @@ export default function MeetingsPage() {
               <p className="text-2xl font-bold text-christina-red">
                 {actionItems.filter((a) => a.status !== 'completed').length}
               </p>
-              <p className="text-xs text-muted-foreground">Open Action Items</p>
+              <p className="text-sm text-muted-foreground">Open Action Items</p>
             </CardContent>
           </Card>
         </div>
@@ -905,7 +905,7 @@ export default function MeetingsPage() {
               <p className="text-sm text-muted-foreground mb-4">
                 Create your first meeting to get started with agendas, attendance tracking, and action items.
               </p>
-              <Button onClick={handleOpenCreate} className="bg-christina-red hover:bg-christina-red/90 text-white">
+              <Button onClick={handleOpenCreate} className="bg-christina-red hover:bg-christina-red/90 text-white min-h-[44px]">
                 <Plus className="h-4 w-4 mr-2" />
                 Create First Meeting
               </Button>
@@ -929,7 +929,7 @@ export default function MeetingsPage() {
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold truncate">{meeting.title}</h3>
+                        <h3 className="text-base font-semibold truncate">{meeting.title}</h3>
                         <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
                           <CalendarDays className="h-3.5 w-3.5" />
                           {formatDate(meeting.date)}
@@ -937,7 +937,7 @@ export default function MeetingsPage() {
                       </div>
                       <StatusBadge status={meeting.status} />
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground pt-3 border-t">
                       {meeting.status !== 'scheduled' && (
                         <span className="flex items-center gap-1">
                           <Users className="h-3.5 w-3.5" />
@@ -970,11 +970,11 @@ export default function MeetingsPage() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Template</label>
+              <label className="text-base font-medium mb-1.5 block">Template</label>
               <select
                 value={newTemplateIndex}
                 onChange={(e) => handleTemplateChange(Number(e.target.value))}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                className="w-full min-h-[44px] rounded-md border border-input bg-background px-3 text-sm"
               >
                 {DEFAULT_TEMPLATES.map((t, i) => (
                   <option key={t.name} value={i}>
@@ -984,7 +984,7 @@ export default function MeetingsPage() {
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Meeting Title</label>
+              <label className="text-base font-medium mb-1.5 block">Meeting Title</label>
               <Input
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
@@ -992,7 +992,7 @@ export default function MeetingsPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Date</label>
+              <label className="text-base font-medium mb-1.5 block">Date</label>
               <Input
                 type="date"
                 value={newDate}
@@ -1012,13 +1012,13 @@ export default function MeetingsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)} className="min-h-[44px]">
               Cancel
             </Button>
             <Button
               onClick={handleCreateMeeting}
               disabled={!newTitle.trim() || !newDate}
-              className="bg-christina-red hover:bg-christina-red/90 text-white"
+              className="bg-christina-red hover:bg-christina-red/90 text-white min-h-[44px]"
             >
               Create Meeting
             </Button>

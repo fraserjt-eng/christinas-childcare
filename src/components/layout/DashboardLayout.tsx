@@ -22,6 +22,7 @@ import { getCurrentEmployee, logout as employeeLogout } from '@/lib/employee-sto
 import { FamilyAccount } from '@/types/family';
 import { getCurrentFamily, logoutFamily } from '@/lib/family-storage';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { useRole } from '@/hooks/useRole';
 
 interface NavItem {
   href: string;
@@ -47,51 +48,52 @@ const parentNav: NavItem[] = [
 
 const adminNavGroups: NavGroup[] = [
   {
-    label: 'Overview',
+    label: 'Today',
     icon: Home,
     items: [
       { href: '/admin', label: 'Dashboard', icon: Home },
       { href: '/admin/news', label: 'News & Updates', icon: Newspaper },
-    ],
-  },
-  {
-    label: 'Classroom',
-    icon: GraduationCap,
-    items: [
       { href: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
       { href: '/admin/ratios', label: 'Ratio Monitor', icon: BarChart3 },
-      { href: '/admin/curriculum', label: 'Curriculum', icon: GraduationCap },
-      { href: '/admin/lessons', label: 'Lesson Builder', icon: BookOpen },
-      { href: '/admin/reports', label: 'Daily Reports', icon: FileText },
-    ],
-  },
-  {
-    label: 'Food & Supplies',
-    icon: UtensilsCrossed,
-    items: [
       { href: '/admin/food-counts', label: 'Food Counts', icon: UtensilsCrossed },
-      { href: '/admin/inventory', label: 'Inventory', icon: Package },
-      { href: '/admin/menu-planning', label: 'Menu Planning', icon: CalendarRange },
     ],
   },
   {
-    label: 'Staff',
+    label: 'People',
     icon: Users,
     items: [
+      { href: '/admin/staff', label: 'Staff Directory', icon: UserCheck },
       { href: '/admin/scheduling', label: 'Scheduling', icon: Clock },
       { href: '/admin/schedule-requests', label: 'Schedule Requests', icon: CalendarPlus },
       { href: '/admin/salaried-scheduling', label: 'Salaried Staff', icon: Building2 },
-      { href: '/admin/staff', label: 'Staff Directory', icon: UserCheck },
-      { href: '/admin/payroll', label: 'Payroll', icon: CreditCard },
+      { href: '/admin/hr', label: 'HR & Onboarding', icon: UserPlus },
       { href: '/admin/compliance', label: 'Compliance', icon: ShieldCheck },
+      { href: '/admin/payroll', label: 'Payroll', icon: CreditCard },
+      { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
+      { href: '/admin/pipeline', label: 'Pipeline', icon: SquareKanban },
     ],
   },
   {
-    label: 'Enrollment',
-    icon: SquareKanban,
+    label: 'Operations',
+    icon: ClipboardList,
     items: [
-      { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
-      { href: '/admin/pipeline', label: 'Pipeline', icon: SquareKanban },
+      { href: '/admin/tasks', label: 'Task Board', icon: ListTodo },
+      { href: '/admin/curriculum', label: 'Curriculum', icon: GraduationCap },
+      { href: '/admin/lessons', label: 'Lesson Builder', icon: BookOpen },
+      { href: '/admin/reports', label: 'Daily Reports', icon: FileText },
+      { href: '/admin/inventory', label: 'Inventory', icon: Package },
+      { href: '/admin/menu-planning', label: 'Menu Planning', icon: CalendarRange },
+      { href: '/admin/incidents', label: 'Incidents', icon: AlertTriangle },
+    ],
+  },
+  {
+    label: 'Communications',
+    icon: MessageSquare,
+    items: [
+      { href: '/admin/messaging', label: 'Staff Chat', icon: MessageSquare },
+      { href: '/admin/communications', label: 'Newsletters', icon: Mail },
+      { href: '/admin/notifications', label: 'Notifications', icon: Bell },
+      { href: '/admin/meetings', label: 'Meetings', icon: Presentation },
     ],
   },
   {
@@ -101,19 +103,6 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/financial', label: 'Financial Planning', icon: DollarSign },
       { href: '/admin/budget', label: 'Budget', icon: Wallet },
       { href: '/admin/strategic', label: 'Strategic Plan', icon: Target },
-    ],
-  },
-  {
-    label: 'Friction Reduction',
-    icon: ListTodo,
-    items: [
-      { href: '/admin/tasks', label: 'Task Board', icon: ListTodo },
-      { href: '/admin/meetings', label: 'Meetings', icon: Presentation },
-      { href: '/admin/messaging', label: 'Staff Chat', icon: MessageSquare },
-      { href: '/admin/notifications', label: 'Notifications', icon: Bell },
-      { href: '/admin/communications', label: 'Communications', icon: Mail },
-      { href: '/admin/incidents', label: 'Incidents', icon: AlertTriangle },
-      { href: '/admin/hr', label: 'HR & Onboarding', icon: UserPlus },
       { href: '/admin/settings', label: 'Settings', icon: Settings },
     ],
   },
@@ -143,13 +132,13 @@ function NavSection({ items, label }: { items: NavItem[]; label: string }) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                 isActive
                   ? 'bg-christina-red/10 text-christina-red'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className="h-5 w-5" />
               {item.label}
             </Link>
           );
@@ -213,13 +202,13 @@ function AdminNavSection({ groups }: { groups: NavGroup[] }) {
               <button
                 onClick={() => toggle(groupIndex)}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors w-full',
                   hasActive
                     ? 'text-christina-red'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
-                <group.icon className="h-4 w-4" />
+                <group.icon className="h-5 w-5" />
                 <span className="flex-1 text-left">{group.label}</span>
                 <ChevronDown
                   className={cn(
@@ -239,13 +228,13 @@ function AdminNavSection({ groups }: { groups: NavGroup[] }) {
                         key={item.href}
                         href={item.href}
                         className={cn(
-                          'flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm transition-colors',
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
                           isActive
                             ? 'bg-christina-red/10 text-christina-red font-medium'
                             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         )}
                       >
-                        <item.icon className="h-3.5 w-3.5" />
+                        <item.icon className="h-4 w-4" />
                         {item.label}
                       </Link>
                     );
@@ -258,6 +247,19 @@ function AdminNavSection({ groups }: { groups: NavGroup[] }) {
       </nav>
     </div>
   );
+}
+
+function RoleFilteredAdminNav() {
+  const { config } = useRole();
+  const filteredGroups = adminNavGroups
+    .filter((group) => config.navGroups.includes(group.label))
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !config.hiddenPages.includes(item.href)),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  return <AdminNavSection groups={filteredGroups} />;
 }
 
 function SidebarContent({
@@ -317,7 +319,7 @@ function SidebarContent({
         {isEmployee ? (
           <NavSection items={employeeNav} label="Employee Portal" />
         ) : isAdmin ? (
-          <AdminNavSection groups={adminNavGroups} />
+          <RoleFilteredAdminNav />
         ) : (
           <NavSection items={parentNav} label="Parent Portal" />
         )}

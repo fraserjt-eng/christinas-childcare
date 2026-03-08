@@ -311,7 +311,7 @@ function PriorityBadge({ priority }: { priority: TaskPriority }) {
   const config = PRIORITY_CONFIG[priority];
   return (
     <span
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-sm font-medium"
       style={{ backgroundColor: `${config.color}15`, color: config.color }}
     >
       {config.icon}
@@ -364,13 +364,13 @@ function TaskCard({
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0">
           <CategoryDot categoryId={task.category_id} />
-          <h4 className="text-sm font-semibold text-gray-900 truncate">{task.title}</h4>
+          <h4 className="text-base font-semibold text-gray-900 truncate">{task.title}</h4>
         </div>
         <PriorityBadge priority={task.priority} />
       </div>
 
       {/* Done standard (truncated) */}
-      <p className="text-xs text-gray-500 mb-2 line-clamp-2">{task.done_standard}</p>
+      <p className="text-sm text-gray-500 mb-2 line-clamp-2">{task.done_standard}</p>
 
       {/* Badges row */}
       <div className="flex flex-wrap gap-1.5 mb-2">
@@ -550,7 +550,7 @@ function TaskFormModal({
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: '' }));
   }
 
-  const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
+  const labelClass = 'block text-base font-medium text-gray-700 mb-1';
   const inputClass = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:border-transparent';
   const focusRing = `focus:ring-[${CHRISTINA_RED}]/30`;
 
@@ -578,13 +578,13 @@ function TaskFormModal({
               className={`${inputClass} ${focusRing} ${errors.title ? 'border-red-400' : ''}`}
               placeholder="e.g., Submit CACFP Meal Counts"
             />
-            {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
+            {errors.title && <p className="text-sm text-red-500 mt-1">{errors.title}</p>}
           </div>
 
           {/* Done Standard */}
           <div>
             <label className={labelClass}>Done Standard *</label>
-            <p className="text-xs text-gray-400 mb-1">What does done look like? Be specific and observable.</p>
+            <p className="text-sm text-gray-400 mb-1">What does done look like? Be specific and observable.</p>
             <textarea
               value={form.done_standard}
               onChange={(e) => updateField('done_standard', e.target.value)}
@@ -592,11 +592,11 @@ function TaskFormModal({
               className={`${inputClass} ${focusRing} ${errors.done_standard ? 'border-red-400' : ''}`}
               placeholder="All meal counts entered in KidKare by 4:00 PM. Each count matches sign-in sheet totals..."
             />
-            {errors.done_standard && <p className="text-xs text-red-500 mt-1">{errors.done_standard}</p>}
+            {errors.done_standard && <p className="text-sm text-red-500 mt-1">{errors.done_standard}</p>}
           </div>
 
           {/* Category + Time Block row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Category</label>
               <select
@@ -641,7 +641,7 @@ function TaskFormModal({
           </div>
 
           {/* Priority + Recurrence row */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Priority</label>
               <select
@@ -669,7 +669,7 @@ function TaskFormModal({
           </div>
 
           {/* Estimated Minutes + Nap Time row */}
-          <div className="grid grid-cols-2 gap-3 items-end">
+          <div className="grid grid-cols-2 gap-4 items-end">
             <div>
               <label className={labelClass}>Estimated Minutes</label>
               <input
@@ -687,10 +687,10 @@ function TaskFormModal({
                 id="nap_time"
                 checked={form.is_nap_time_task}
                 onChange={(e) => updateField('is_nap_time_task', e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300"
+                className="h-6 w-6 rounded border-gray-300"
                 style={{ accentColor: CHRISTINA_RED }}
               />
-              <label htmlFor="nap_time" className="text-sm text-gray-700 flex items-center gap-1">
+              <label htmlFor="nap_time" className="text-base text-gray-700 flex items-center gap-1">
                 <Moon className="h-3.5 w-3.5 text-indigo-500" />
                 Nap Time Task
               </label>
@@ -710,17 +710,17 @@ function TaskFormModal({
           </div>
 
           {/* Submit */}
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-4 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100"
+              className="px-4 py-2 min-h-[44px] text-sm font-medium text-gray-600 hover:text-gray-800 rounded-lg hover:bg-gray-100"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-sm font-semibold text-white rounded-lg shadow-sm hover:opacity-90 transition-opacity flex items-center gap-2"
+              className="px-5 py-2 min-h-[44px] text-sm font-semibold text-white rounded-lg shadow-sm hover:opacity-90 transition-opacity flex items-center gap-2"
               style={{ backgroundColor: CHRISTINA_RED }}
             >
               <Save className="h-4 w-4" />
@@ -759,7 +759,7 @@ function DelegationDashboard({ tasks }: { tasks: Task[] }) {
       <div className="flex items-center gap-2 mb-4">
         <Users className="h-5 w-5" style={{ color: CHRISTINA_RED }} />
         <h3 className="font-bold text-gray-900">Delegation Dashboard</h3>
-        <span className="text-xs text-gray-400 ml-auto">{totalActive} active tasks</span>
+        <span className="text-sm text-gray-400 ml-auto">{totalActive} active tasks</span>
       </div>
 
       {/* Bar chart */}
@@ -768,8 +768,8 @@ function DelegationDashboard({ tasks }: { tasks: Task[] }) {
           const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
           const overloaded = count > equityThreshold;
           return (
-            <div key={name} className="flex items-center gap-3">
-              <span className="text-xs text-gray-600 w-24 truncate">{name.split(' ')[0]}</span>
+            <div key={name} className="flex items-center gap-4">
+              <span className="text-sm text-gray-600 w-24 truncate">{name.split(' ')[0]}</span>
               <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden relative">
                 <div
                   className="h-full rounded-full transition-all duration-500"
@@ -860,7 +860,7 @@ function DriftAlertsSection({
         </span>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {activeAlerts.map((alert) => (
           <div
             key={alert.id}
@@ -868,20 +868,20 @@ function DriftAlertsSection({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-gray-900">{alert.task_title}</h4>
-                <p className="text-xs text-gray-600 mt-1">{alert.pattern_description}</p>
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-xs font-medium text-orange-700">
+                <h4 className="text-base font-semibold text-gray-900">{alert.task_title}</h4>
+                <p className="text-sm text-gray-600 mt-1">{alert.pattern_description}</p>
+                <div className="flex items-center gap-4 mt-2">
+                  <span className="text-sm font-medium text-orange-700">
                     {alert.miss_count} miss{alert.miss_count !== 1 ? 'es' : ''}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-sm text-gray-400">
                     Since {new Date(alert.first_miss_date).toLocaleDateString()}
                   </span>
                 </div>
               </div>
               <button
                 onClick={() => onStartRecovery(alert.id)}
-                className="flex-shrink-0 px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1.5"
+                className="flex-shrink-0 px-3 py-1.5 min-h-[44px] text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1.5"
                 style={{ backgroundColor: CHRISTINA_RED }}
               >
                 <RefreshCw className="h-3 w-3" />
@@ -1154,7 +1154,7 @@ export default function TaskBoardPage() {
               setEditingTask(null);
               setShowForm(true);
             }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-lg shadow-sm hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] text-sm font-semibold text-white rounded-lg shadow-sm hover:opacity-90 transition-opacity"
             style={{ backgroundColor: CHRISTINA_RED }}
           >
             <Plus className="h-4 w-4" />
@@ -1163,21 +1163,21 @@ export default function TaskBoardPage() {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
           <div className="bg-white rounded-lg border p-3">
-            <p className="text-xs text-gray-500">Total Tasks</p>
+            <p className="text-sm text-gray-500">Total Tasks</p>
             <p className="text-2xl font-bold text-gray-900">{totalTasks}</p>
           </div>
           <div className="bg-white rounded-lg border p-3">
-            <p className="text-xs text-gray-500">Completed Today</p>
+            <p className="text-sm text-gray-500">Completed Today</p>
             <p className="text-2xl font-bold text-green-600">{completedToday}</p>
           </div>
           <div className="bg-white rounded-lg border p-3">
-            <p className="text-xs text-gray-500">Blocked</p>
+            <p className="text-sm text-gray-500">Blocked</p>
             <p className="text-2xl font-bold text-red-600">{blockedCount}</p>
           </div>
           <div className="bg-white rounded-lg border p-3">
-            <p className="text-xs text-gray-500">Drift Alerts</p>
+            <p className="text-sm text-gray-500">Drift Alerts</p>
             <p className="text-2xl font-bold text-orange-600">{activeAlertCount}</p>
           </div>
         </div>
@@ -1217,7 +1217,7 @@ export default function TaskBoardPage() {
       {activeTab === 'board' && (
         <>
           {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-4 mb-4">
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <Filter className="h-3.5 w-3.5" />
               Filters:
@@ -1225,7 +1225,7 @@ export default function TaskBoardPage() {
             <select
               value={filterStaff}
               onChange={(e) => setFilterStaff(e.target.value)}
-              className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg bg-white text-gray-700"
+              className="text-sm px-2 py-1.5 min-h-[44px] border border-gray-200 rounded-lg bg-white text-gray-700"
             >
               <option value="">All Staff</option>
               {STAFF_MEMBERS.map((name) => (
@@ -1235,7 +1235,7 @@ export default function TaskBoardPage() {
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg bg-white text-gray-700"
+              className="text-sm px-2 py-1.5 min-h-[44px] border border-gray-200 rounded-lg bg-white text-gray-700"
             >
               <option value="">All Categories</option>
               {CATEGORIES_WITH_IDS.map((cat) => (
@@ -1269,7 +1269,7 @@ export default function TaskBoardPage() {
                   {/* Column header */}
                   <div className="flex items-center gap-2 mb-3 px-1">
                     <span style={{ color: col.color }}>{col.icon}</span>
-                    <h3 className="text-sm font-semibold text-gray-700">{col.label}</h3>
+                    <h3 className="text-base font-semibold text-gray-700">{col.label}</h3>
                     <span
                       className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full text-white"
                       style={{ backgroundColor: col.color }}

@@ -418,7 +418,7 @@ export default function NotificationsPage() {
               <Bell className="h-7 w-7" style={{ color: CHRISTINA_RED }} />
               Notification Center
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-base text-gray-500 mt-1">
               {unreadCount > 0
                 ? `You have ${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}`
                 : 'All caught up. No unread notifications.'}
@@ -518,7 +518,7 @@ export default function NotificationsPage() {
             <button
               key={tab.key}
               onClick={() => setActiveFilter(tab.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 activeFilter === tab.key
                   ? 'text-white'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -549,13 +549,13 @@ export default function NotificationsPage() {
         {notifications.length > 0 && (
           <div className="flex items-center gap-3">
             {unreadCount > 0 && (
-              <Button variant="outline" size="sm" onClick={markAllAsRead} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={markAllAsRead} className="gap-1.5 min-h-[44px]">
                 <CheckCheck className="h-4 w-4" />
                 Mark all as read
               </Button>
             )}
             {readCount > 0 && (
-              <Button variant="outline" size="sm" onClick={clearAllRead} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={clearAllRead} className="gap-1.5 min-h-[44px]">
                 <Trash2 className="h-4 w-4" />
                 Clear all read
               </Button>
@@ -564,7 +564,7 @@ export default function NotificationsPage() {
         )}
 
         {/* Notification List */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filteredNotifications.length === 0 ? (
             <EmptyState filter={activeFilter} />
           ) : (
@@ -587,7 +587,7 @@ export default function NotificationsPage() {
                   <Link
                     href={n.link_to}
                     onClick={() => markAsRead(n.id)}
-                    className="flex items-start gap-4 p-4"
+                    className="flex items-start gap-4 p-5"
                   >
                     {/* Type icon */}
                     <div
@@ -604,17 +604,17 @@ export default function NotificationsPage() {
                           <span className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500" />
                         )}
                         <p
-                          className={`text-sm ${
-                            !n.read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'
+                          className={`${
+                            !n.read ? 'text-base font-semibold text-gray-900' : 'text-sm font-medium text-gray-700'
                           }`}
                         >
                           {n.title}
                         </p>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1 line-clamp-2">{n.body}</p>
+                      <p className="text-base text-gray-500 mt-1 line-clamp-2">{n.body}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <Clock className="h-3 w-3 text-gray-400" />
-                        <span className="text-xs text-gray-400">
+                        <span className="text-sm text-gray-400">
                           {getRelativeTime(n.timestamp)}
                         </span>
                         <Badge
@@ -638,7 +638,7 @@ export default function NotificationsPage() {
                         e.stopPropagation();
                         markAsRead(n.id);
                       }}
-                      className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-gray-200 shadow-sm text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors z-10"
+                      className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 min-h-[44px] rounded-md bg-white border border-gray-200 shadow-sm text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors z-10"
                     >
                       <Eye className="h-3 w-3" />
                       Mark read
@@ -682,7 +682,7 @@ function PreferenceRow({
         </div>
         <div>
           <p className="text-sm font-medium text-gray-900">{label}</p>
-          <p className="text-xs text-gray-500">{description}</p>
+          <p className="text-sm text-gray-500">{description}</p>
         </div>
       </div>
       <Switch checked={checked} onCheckedChange={onToggle} />

@@ -298,9 +298,9 @@ function TaskCard({
           title={isDone ? 'Completed' : 'Mark complete'}
         >
           {isDone ? (
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <CheckCircle2 className="h-6 w-6 text-green-600" />
           ) : (
-            <Circle className="h-5 w-5 text-gray-300 hover:text-[#C62828] transition-colors" />
+            <Circle className="h-6 w-6 text-gray-300 hover:text-[#C62828] transition-colors" />
           )}
         </button>
 
@@ -308,7 +308,7 @@ function TaskCard({
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <h3
-              className={`font-medium text-sm ${
+              className={`font-medium text-base ${
                 isDone ? 'line-through text-gray-400' : 'text-gray-900'
               }`}
             >
@@ -328,7 +328,7 @@ function TaskCard({
               Done Standard
             </p>
             <p
-              className={`text-sm ${
+              className={`text-base ${
                 isDone ? 'text-gray-400' : 'text-gray-700'
               }`}
             >
@@ -337,7 +337,7 @@ function TaskCard({
           </div>
 
           {/* Meta row */}
-          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
             {task.delegated_by && (
               <span className="flex items-center gap-1">
                 <User className="h-3 w-3" />
@@ -413,7 +413,7 @@ function TaskCard({
               size="sm"
               variant="outline"
               onClick={() => setShowNoteField(true)}
-              className="text-xs border-[#C62828]/30 text-[#C62828] hover:bg-[#C62828]/10"
+              className="text-xs border-[#C62828]/30 text-[#C62828] hover:bg-[#C62828]/10 min-h-[44px]"
             >
               <Check className="h-3 w-3 mr-1" />
               Complete
@@ -423,7 +423,7 @@ function TaskCard({
                 size="sm"
                 variant="ghost"
                 onClick={() => onFlag(task.id, 'blocked')}
-                className="text-xs text-gray-500 hover:text-red-600"
+                className="text-xs text-gray-500 hover:text-red-600 min-h-[44px]"
               >
                 <Flag className="h-3 w-3 mr-1" />
                 Blocked
@@ -433,7 +433,7 @@ function TaskCard({
               size="sm"
               variant="ghost"
               onClick={() => onFlag(task.id, 'help')}
-              className="text-xs text-gray-500 hover:text-amber-600"
+              className="text-xs text-gray-500 hover:text-amber-600 min-h-[44px]"
             >
               <HelpCircle className="h-3 w-3 mr-1" />
               Need Help
@@ -472,7 +472,7 @@ function TimeBlockSection({
           <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
         )}
         <Clock className="h-4 w-4 text-[#C62828]" />
-        <span className="font-semibold text-gray-900">
+        <span className="text-base font-semibold text-gray-900">
           {block.name}
         </span>
         <span className="text-sm text-gray-500">
@@ -486,7 +486,7 @@ function TimeBlockSection({
         )}
       </button>
       {expanded && (
-        <div className="space-y-3 ml-6">
+        <div className="space-y-4 ml-6">
           {block.tasks.length === 0 ? (
             <p className="text-sm text-gray-400 italic">No tasks in this block.</p>
           ) : (
@@ -620,7 +620,7 @@ export default function EmployeeTasksPage() {
         {/* Page header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">My Tasks</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-base text-gray-500 mt-1">
             Hi, {employeeName.split(' ')[0]}. Here is everything on your plate today.
           </p>
         </div>

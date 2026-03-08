@@ -476,16 +476,16 @@ function NewsletterForm({
       </div>
 
       {/* Content Sections */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <Label>Content Sections</Label>
-          <Button type="button" variant="outline" size="sm" onClick={addSection}>
+          <Button type="button" variant="outline" size="sm" onClick={addSection} className="min-h-[44px]">
             <Plus className="h-3.5 w-3.5 mr-1" />
             Add Section
           </Button>
         </div>
         {form.sections.map((section, idx) => (
-          <div key={section.id} className="border rounded-lg p-4 space-y-3 bg-muted/20">
+          <div key={section.id} className="border rounded-lg p-4 space-y-4 bg-muted/20">
             <div className="flex items-center gap-2">
               <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
               <Input
@@ -528,10 +528,10 @@ function NewsletterForm({
             />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Classroom Highlights</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addHighlight}>
+              <Button type="button" variant="outline" size="sm" onClick={addHighlight} className="min-h-[44px]">
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Add
               </Button>
@@ -556,10 +556,10 @@ function NewsletterForm({
             ))}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Upcoming Events</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addEvent}>
+              <Button type="button" variant="outline" size="sm" onClick={addEvent} className="min-h-[44px]">
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Add
               </Button>
@@ -607,10 +607,10 @@ function NewsletterForm({
             />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Policy Reminders</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addReminder}>
+              <Button type="button" variant="outline" size="sm" onClick={addReminder} className="min-h-[44px]">
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Add
               </Button>
@@ -635,10 +635,10 @@ function NewsletterForm({
             ))}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Announcements</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addAnnouncement}>
+              <Button type="button" variant="outline" size="sm" onClick={addAnnouncement} className="min-h-[44px]">
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Add
               </Button>
@@ -666,7 +666,7 @@ function NewsletterForm({
       )}
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t">
+      <div className="flex flex-col sm:flex-row justify-between gap-4 pt-4 border-t">
         <Button
           type="button"
           variant="outline"
@@ -749,7 +749,7 @@ function NewsletterPreview({
             <h3 className="text-lg font-semibold text-[#C62828]">
               Christina&apos;s Child Care Center
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-base text-muted-foreground">
               Nurturing Growth, Building Futures
             </p>
           </div>
@@ -760,7 +760,7 @@ function NewsletterPreview({
               <h4 className="text-lg font-semibold text-gray-900 border-l-4 border-[#C62828] pl-3">
                 {section.heading}
               </h4>
-              <p className="text-sm leading-relaxed text-gray-700 pl-3">{section.body}</p>
+              <p className="text-base leading-relaxed text-gray-700 pl-3">{section.body}</p>
             </div>
           ))}
 
@@ -770,7 +770,7 @@ function NewsletterPreview({
               <h4 className="text-lg font-semibold text-orange-800 flex items-center gap-2">
                 <span>This Week&apos;s Menu</span>
               </h4>
-              <p className="text-sm text-orange-900 leading-relaxed whitespace-pre-line">
+              <p className="text-base text-orange-900 leading-relaxed whitespace-pre-line">
                 {newsletter.menu_summary}
               </p>
             </div>
@@ -783,7 +783,7 @@ function NewsletterPreview({
               </h4>
               <ul className="space-y-1.5 pl-3">
                 {newsletter.classroom_highlights.map((highlight, i) => (
-                  <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                  <li key={i} className="text-base text-gray-700 flex items-start gap-2">
                     <span className="text-[#C62828] mt-1 shrink-0">*</span>
                     {highlight}
                   </li>
@@ -813,7 +813,7 @@ function NewsletterPreview({
           {!isParent && newsletter.teaching_focus && (
             <div className="bg-teal-50 rounded-lg p-4 space-y-2">
               <h4 className="text-lg font-semibold text-teal-800">Teaching Focus</h4>
-              <p className="text-sm text-teal-900 leading-relaxed">{newsletter.teaching_focus}</p>
+              <p className="text-base text-teal-900 leading-relaxed">{newsletter.teaching_focus}</p>
             </div>
           )}
 
@@ -824,7 +824,7 @@ function NewsletterPreview({
               </h4>
               <ul className="space-y-1.5 pl-3">
                 {newsletter.policy_reminders.map((reminder, i) => (
-                  <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                  <li key={i} className="text-base text-gray-700 flex items-start gap-2">
                     <span className="text-[#C62828] mt-1 shrink-0">*</span>
                     {reminder}
                   </li>
@@ -838,7 +838,7 @@ function NewsletterPreview({
               <h4 className="text-lg font-semibold text-amber-800">Announcements</h4>
               <ul className="space-y-1.5">
                 {newsletter.announcements.map((announcement, i) => (
-                  <li key={i} className="text-sm text-amber-900 flex items-start gap-2">
+                  <li key={i} className="text-base text-amber-900 flex items-start gap-2">
                     <span className="text-amber-600 mt-1 shrink-0">*</span>
                     {announcement}
                   </li>
@@ -848,7 +848,7 @@ function NewsletterPreview({
           )}
 
           {/* Footer */}
-          <div className="border-t pt-4 text-center text-xs text-muted-foreground space-y-1">
+          <div className="border-t pt-4 text-center text-sm text-muted-foreground space-y-1">
             <p className="font-medium">Christina&apos;s Child Care Center</p>
             <p>
               Created by {newsletter.created_by || 'Staff'} on{' '}
@@ -984,7 +984,7 @@ export default function CommunicationsPage() {
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-2xl font-bold">{newsletters.length}</div>
-                  <p className="text-sm text-muted-foreground">Total Newsletters</p>
+                  <p className="text-base text-muted-foreground">Total Newsletters</p>
                 </CardContent>
               </Card>
               <Card>
@@ -992,7 +992,7 @@ export default function CommunicationsPage() {
                   <div className="text-2xl font-bold text-purple-600">
                     {parentNewsletters.length}
                   </div>
-                  <p className="text-sm text-muted-foreground">Parent Newsletters</p>
+                  <p className="text-base text-muted-foreground">Parent Newsletters</p>
                 </CardContent>
               </Card>
               <Card>
@@ -1000,7 +1000,7 @@ export default function CommunicationsPage() {
                   <div className="text-2xl font-bold text-teal-600">
                     {staffNewsletters.length}
                   </div>
-                  <p className="text-sm text-muted-foreground">Staff Newsletters</p>
+                  <p className="text-base text-muted-foreground">Staff Newsletters</p>
                 </CardContent>
               </Card>
               <Card>
@@ -1022,11 +1022,11 @@ export default function CommunicationsPage() {
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList>
-                <TabsTrigger value="parent" className="flex items-center gap-2">
+                <TabsTrigger value="parent" className="flex items-center gap-2 min-h-[44px]">
                   <Users className="h-4 w-4" />
                   Parent ({parentNewsletters.length})
                 </TabsTrigger>
-                <TabsTrigger value="staff" className="flex items-center gap-2">
+                <TabsTrigger value="staff" className="flex items-center gap-2 min-h-[44px]">
                   <Briefcase className="h-4 w-4" />
                   Staff ({staffNewsletters.length})
                 </TabsTrigger>
@@ -1094,7 +1094,7 @@ function NewsletterList({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {newsletters.map((nl) => (
         <Card key={nl.id} className="hover:shadow-md transition-shadow">
           <CardContent className="p-4 sm:p-5">
@@ -1109,7 +1109,7 @@ function NewsletterList({
                     {nl.status.charAt(0).toUpperCase() + nl.status.slice(1)}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     Week of {formatWeekOf(nl.week_of)}
@@ -1120,7 +1120,7 @@ function NewsletterList({
                     {nl.content_sections.length !== 1 ? 's' : ''}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground line-clamp-2">
+                <p className="text-base text-muted-foreground line-clamp-2">
                   {snippetFromSections(nl.content_sections)}
                 </p>
               </button>

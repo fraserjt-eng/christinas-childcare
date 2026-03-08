@@ -600,7 +600,7 @@ export default function HROnboardingPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {viewingTemplate.fields.map((field, idx) => (
                   <div
                     key={field.id}
@@ -611,8 +611,8 @@ export default function HROnboardingPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium">{field.label}</span>
-                        <Badge variant="secondary" className="text-xs">
+                        <span className="text-base font-medium">{field.label}</span>
+                        <Badge variant="secondary" className="text-sm">
                           {field.type}
                         </Badge>
                         {field.required && (
@@ -622,7 +622,7 @@ export default function HROnboardingPage() {
                         )}
                       </div>
                       {field.options && field.options.length > 0 && (
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                           Options: {field.options.join(', ')}
                         </p>
                       )}
@@ -674,7 +674,7 @@ export default function HROnboardingPage() {
               {next && (
                 <button
                   onClick={() => advanceDocumentStatus(viewingDocument.id)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] text-base font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
                 >
                   <ChevronRight className="h-4 w-4" />
                   Move to {getStatusLabel(next)}
@@ -682,7 +682,7 @@ export default function HROnboardingPage() {
               )}
               <button
                 onClick={handleGeneratePDF}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] text-base font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Download className="h-4 w-4" />
                 Generate PDF
@@ -844,7 +844,7 @@ export default function HROnboardingPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{templates.length}</p>
-                  <p className="text-sm text-muted-foreground">Templates</p>
+                  <p className="text-base text-muted-foreground">Templates</p>
                 </div>
               </div>
             </CardContent>
@@ -857,7 +857,7 @@ export default function HROnboardingPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{documents.length}</p>
-                  <p className="text-sm text-muted-foreground">Documents</p>
+                  <p className="text-base text-muted-foreground">Documents</p>
                 </div>
               </div>
             </CardContent>
@@ -870,7 +870,7 @@ export default function HROnboardingPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{disciplineRecords.length}</p>
-                  <p className="text-sm text-muted-foreground">Discipline Records</p>
+                  <p className="text-base text-muted-foreground">Discipline Records</p>
                 </div>
               </div>
             </CardContent>
@@ -884,7 +884,7 @@ export default function HROnboardingPage() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`
-                px-4 py-2.5 text-sm font-medium border-b-2 transition-colors capitalize
+                px-4 py-2.5 min-h-[44px] text-base font-medium border-b-2 transition-colors capitalize
                 ${
                   activeTab === tab
                     ? 'border-[#C62828] text-[#C62828]'
@@ -904,14 +904,14 @@ export default function HROnboardingPage() {
               <h2 className="text-lg font-semibold">HR Templates</h2>
               <button
                 onClick={() => setShowTemplateForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] text-base font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 New Template
               </button>
             </div>
 
-            <div className="grid gap-3">
+            <div className="grid gap-4">
               {templates.map((tpl) => (
                 <Card
                   key={tpl.id}
@@ -925,21 +925,21 @@ export default function HROnboardingPage() {
                           <FileText className="h-5 w-5 text-[#C62828]" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="font-medium truncate">{tpl.name}</h3>
+                          <h3 className="text-base font-semibold truncate">{tpl.name}</h3>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <Badge className={`text-xs ${getTypeBadgeColor(tpl.type)}`}>
+                            <Badge className={`text-sm ${getTypeBadgeColor(tpl.type)}`}>
                               {getTypeLabel(tpl.type)}
                             </Badge>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-sm text-muted-foreground">
                               {tpl.fields.length} field{tpl.fields.length !== 1 ? 's' : ''}
                             </span>
                             {tpl.is_system ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
                                 <Lock className="h-3 w-3" />
                                 System
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
                                 <Unlock className="h-3 w-3" />
                                 Custom
                               </span>
@@ -1081,13 +1081,13 @@ export default function HROnboardingPage() {
                   <div className="flex justify-end gap-3 pt-2">
                     <button
                       onClick={resetTemplateForm}
-                      className="px-4 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="px-4 py-2 min-h-[44px] text-base font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={saveTemplate}
-                      className="px-4 py-2 text-sm font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
+                      className="px-4 py-2 min-h-[44px] text-base font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
                     >
                       Create Template
                     </button>
@@ -1105,7 +1105,7 @@ export default function HROnboardingPage() {
               <h2 className="text-lg font-semibold">HR Documents</h2>
               <button
                 onClick={() => setShowDocumentForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] text-base font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 New Document
@@ -1120,7 +1120,7 @@ export default function HROnboardingPage() {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-3">
+              <div className="grid gap-4">
                 {sortedDocuments.map((doc) => (
                   <Card
                     key={doc.id}
@@ -1134,21 +1134,21 @@ export default function HROnboardingPage() {
                             <FileText className="h-5 w-5 text-blue-600" />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="font-medium truncate">{doc.title}</h3>
+                            <h3 className="text-base font-semibold truncate">{doc.title}</h3>
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <span className="text-sm text-muted-foreground">{doc.employee_name}</span>
                               <span className="text-muted-foreground">|</span>
-                              <Badge className={`text-xs ${getTypeBadgeColor(doc.type)}`}>
+                              <Badge className={`text-sm ${getTypeBadgeColor(doc.type)}`}>
                                 {getTypeLabel(doc.type)}
                               </Badge>
-                              <Badge className={`text-xs ${getStatusBadgeColor(doc.status)}`}>
+                              <Badge className={`text-sm ${getStatusBadgeColor(doc.status)}`}>
                                 {getStatusLabel(doc.status)}
                               </Badge>
                             </div>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-xs text-muted-foreground">{formatDate(doc.created_at)}</p>
+                          <p className="text-sm text-muted-foreground">{formatDate(doc.created_at)}</p>
                           <Eye className="h-4 w-4 text-muted-foreground ml-auto mt-1" />
                         </div>
                       </div>
@@ -1302,13 +1302,13 @@ export default function HROnboardingPage() {
                   <div className="flex justify-end gap-3 pt-2">
                     <button
                       onClick={resetDocumentForm}
-                      className="px-4 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="px-4 py-2 min-h-[44px] text-base font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={saveDocument}
-                      className="px-4 py-2 text-sm font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
+                      className="px-4 py-2 min-h-[44px] text-base font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
                     >
                       Create Document
                     </button>
@@ -1326,7 +1326,7 @@ export default function HROnboardingPage() {
               <h2 className="text-lg font-semibold">Discipline Records</h2>
               <button
                 onClick={() => setShowDisciplineForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] text-base font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 New Record
@@ -1337,7 +1337,7 @@ export default function HROnboardingPage() {
             <Card>
               <CardContent className="py-3">
                 <div className="flex items-center gap-1 flex-wrap">
-                  <span className="text-xs text-muted-foreground mr-2">Levels:</span>
+                  <span className="text-sm text-muted-foreground mr-2">Levels:</span>
                   {DISCIPLINE_LEVELS.map((level, idx) => (
                     <div key={level.value} className="flex items-center gap-1">
                       {idx > 0 && <ChevronRight className="h-3 w-3 text-gray-400" />}
@@ -1403,20 +1403,20 @@ export default function HROnboardingPage() {
                                           {getDisciplineLevelLabel(record.level)}
                                         </span>
                                         {record.employee_acknowledged ? (
-                                          <Badge className="bg-green-100 text-green-800 border-green-300 text-xs gap-1">
+                                          <Badge className="bg-green-100 text-green-800 border-green-300 text-sm gap-1">
                                             <CheckCircle2 className="h-3 w-3" />
                                             Acknowledged
                                           </Badge>
                                         ) : (
-                                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-xs gap-1">
+                                          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300 text-sm gap-1">
                                             <Clock className="h-3 w-3" />
                                             Pending
                                           </Badge>
                                         )}
                                       </div>
-                                      <h4 className="font-medium">{record.reason}</h4>
+                                      <h4 className="text-base font-medium">{record.reason}</h4>
                                     </div>
-                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <span className="text-sm text-muted-foreground flex items-center gap-1">
                                       <Calendar className="h-3 w-3" />
                                       {formatDate(record.created_at)}
                                     </span>
@@ -1431,7 +1431,7 @@ export default function HROnboardingPage() {
                                     </div>
                                   )}
 
-                                  <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                                  <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                                     <span>Issued by: {record.issued_by}</span>
                                     {record.witness && <span>Witness: {record.witness}</span>}
                                     {record.follow_up_date && (
@@ -1442,7 +1442,7 @@ export default function HROnboardingPage() {
                                   {!record.employee_acknowledged && (
                                     <button
                                       onClick={() => toggleAcknowledgment(record.id)}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors"
                                     >
                                       <CheckCircle2 className="h-3 w-3" />
                                       Mark Acknowledged
@@ -1555,13 +1555,13 @@ export default function HROnboardingPage() {
                   <div className="flex justify-end gap-3 pt-2">
                     <button
                       onClick={resetDisciplineForm}
-                      className="px-4 py-2 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="px-4 py-2 min-h-[44px] text-base font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={saveDisciplineRecord}
-                      className="px-4 py-2 text-sm font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
+                      className="px-4 py-2 min-h-[44px] text-base font-medium rounded-md bg-[#C62828] text-white hover:bg-[#B71C1C] transition-colors"
                     >
                       Create Record
                     </button>
