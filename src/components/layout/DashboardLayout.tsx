@@ -10,7 +10,7 @@ import {
   DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban, Wallet,
   CreditCard, CalendarDays, UserCog, Briefcase, Package, CalendarRange, CalendarPlus,
   Newspaper, ChevronDown, type LucideIcon,
-  Settings, ListTodo, AlertTriangle, Mail, UserPlus, Presentation
+  Settings, ListTodo, AlertTriangle, Mail, UserPlus, Presentation, Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -21,6 +21,7 @@ import { Employee, getEmployeeFullName } from '@/types/employee';
 import { getCurrentEmployee, logout as employeeLogout } from '@/lib/employee-storage';
 import { FamilyAccount } from '@/types/family';
 import { getCurrentFamily, logoutFamily } from '@/lib/family-storage';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface NavItem {
   href: string;
@@ -108,6 +109,8 @@ const adminNavGroups: NavGroup[] = [
     items: [
       { href: '/admin/tasks', label: 'Task Board', icon: ListTodo },
       { href: '/admin/meetings', label: 'Meetings', icon: Presentation },
+      { href: '/admin/messaging', label: 'Staff Chat', icon: MessageSquare },
+      { href: '/admin/notifications', label: 'Notifications', icon: Bell },
       { href: '/admin/communications', label: 'Communications', icon: Mail },
       { href: '/admin/incidents', label: 'Incidents', icon: AlertTriangle },
       { href: '/admin/hr', label: 'HR & Onboarding', icon: UserPlus },
@@ -118,11 +121,13 @@ const adminNavGroups: NavGroup[] = [
 
 const employeeNav: NavItem[] = [
   { href: '/employee', label: 'Clock In/Out', icon: Clock },
+  { href: '/employee/tasks', label: 'My Tasks', icon: ListTodo },
   { href: '/employee/schedule', label: 'My Schedule', icon: CalendarDays },
   { href: '/employee/pay-stubs', label: 'Pay Stubs', icon: CreditCard },
   { href: '/employee/time-off', label: 'Time Off', icon: Calendar },
   { href: '/employee/profile', label: 'My Profile', icon: UserCog },
   { href: '/employee/training', label: 'Training', icon: Briefcase },
+  { href: '/admin/messaging', label: 'Staff Chat', icon: MessageSquare },
 ];
 
 function NavSection({ items, label }: { items: NavItem[]; label: string }) {
@@ -403,6 +408,7 @@ export function DashboardLayout({ children, isAdmin = false, isEmployee = false 
             </SheetContent>
           </Sheet>
           <div className="flex items-center gap-3">
+            {(isAdmin || isEmployee) && <NotificationBell />}
             <Badge variant="outline" className="hidden sm:flex gap-1 items-center">
               <Building2 className="h-3 w-3" />
               5510 W Broadway Ave, Crystal
