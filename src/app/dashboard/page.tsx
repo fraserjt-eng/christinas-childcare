@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Users, Calendar, FileText, Camera, Bell,
+  Users, Calendar, FileText, Camera, Bell, Newspaper,
   Pencil, Plus, Upload, Trash2, Heart, MapPin,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -312,11 +312,12 @@ export default function ParentDashboard() {
       </div>
 
       {/* Quick Links */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
           { href: '/dashboard/children', label: 'My Children', icon: Users, color: 'bg-christina-red' },
           { href: '/dashboard/progress', label: 'Progress', icon: FileText, color: 'bg-christina-blue' },
           { href: '/dashboard/photos', label: 'Photos', icon: Camera, color: 'bg-christina-coral' },
+          { href: '/dashboard/news', label: 'Newsletter', icon: Newspaper, color: 'bg-christina-green' },
           { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar, color: 'bg-christina-yellow' },
         ].map((link) => (
           <Link key={link.href} href={link.href}>

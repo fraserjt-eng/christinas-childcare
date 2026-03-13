@@ -41,6 +41,7 @@ const parentNav: NavItem[] = [
   { href: '/dashboard/children', label: 'My Children', icon: Users },
   { href: '/dashboard/progress', label: 'Progress Reports', icon: BarChart3 },
   { href: '/dashboard/photos', label: 'Photo Gallery', icon: Camera },
+  { href: '/dashboard/news', label: 'Newsletter', icon: Newspaper },
   { href: '/dashboard/documents', label: 'Documents', icon: FileText },
   { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
@@ -92,6 +93,7 @@ const adminNavGroups: NavGroup[] = [
     items: [
       { href: '/admin/messaging', label: 'Staff Chat', icon: MessageSquare },
       { href: '/admin/communications', label: 'Newsletters', icon: Mail },
+      { href: '/admin/communications/photos', label: 'Photo Review', icon: Camera },
       { href: '/admin/notifications', label: 'Notifications', icon: Bell },
       { href: '/admin/meetings', label: 'Meetings', icon: Presentation },
     ],
@@ -110,6 +112,8 @@ const adminNavGroups: NavGroup[] = [
 
 const employeeNav: NavItem[] = [
   { href: '/employee', label: 'Clock In/Out', icon: Clock },
+  { href: '/employee/meal-count', label: 'Meal Count', icon: UtensilsCrossed },
+  { href: '/employee/photos', label: 'Upload Photos', icon: Camera },
   { href: '/employee/tasks', label: 'My Tasks', icon: ListTodo },
   { href: '/employee/schedule', label: 'My Schedule', icon: CalendarDays },
   { href: '/employee/pay-stubs', label: 'Pay Stubs', icon: CreditCard },

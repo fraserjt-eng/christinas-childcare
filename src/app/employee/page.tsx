@@ -28,6 +28,8 @@ import {
   ChevronRight,
   X,
   Megaphone,
+  UtensilsCrossed,
+  Camera,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -433,7 +435,7 @@ export default function EmployeeDashboardPage() {
           </div>
         )}
 
-        {/* ── Big 4 Tile Grid ─────────────────────────────────────────── */}
+        {/* ── Big Tile Grid ──────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4">
           {/* Clock In/Out */}
           <HomeTile
@@ -449,6 +451,24 @@ export default function EmployeeDashboardPage() {
                   : 'Start your shift'
             }
             onClick={activeEntry ? handleClockOut : handleClockIn}
+          />
+
+          {/* Meal Count */}
+          <HomeTile
+            href="/employee/meal-count"
+            icon={UtensilsCrossed}
+            label="Meal Count"
+            bgColor="bg-teal-600"
+            subtitle="Enter counts"
+          />
+
+          {/* Upload Photos */}
+          <HomeTile
+            href="/employee/photos"
+            icon={Camera}
+            label="Photos"
+            bgColor="bg-pink-600"
+            subtitle="Upload today"
           />
 
           {/* Chat */}
