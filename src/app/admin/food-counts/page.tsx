@@ -15,11 +15,20 @@ import {
   TrendingUp,
   Loader2,
   Settings,
+  ShieldCheck,
+  DollarSign,
 } from 'lucide-react';
 import { FoodCountGrid } from '@/components/food/FoodCountGrid';
 import { FoodProjectionChart } from '@/components/food/FoodProjectionChart';
 import { CostTracker } from '@/components/food/CostTracker';
 import { ClassroomSettings } from '@/components/food/ClassroomSettings';
+import { ComplianceSummary } from '@/components/food/ComplianceSummary';
+import { RevenueImpactCard } from '@/components/food/RevenueImpactCard';
+import { MealReminderBanner } from '@/components/food/MealReminderBanner';
+import { QuickMealEntry } from '@/components/food/QuickMealEntry';
+import { CACFPComplianceChecklist } from '@/components/admin/CACFPComplianceChecklist';
+import { AuditReadinessScore } from '@/components/admin/AuditReadinessScore';
+import { ReimbursementTracker } from '@/components/admin/ReimbursementTracker';
 import {
   getCACFPDailyReport,
   getCACFPMonthlyReport,
@@ -33,6 +42,9 @@ export default function FoodCountsPage() {
   );
   const [dailyReport, setDailyReport] = useState<CACFPDailyReport | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [quickEntryMeal, setQuickEntryMeal] = useState<MealType | undefined>();
+  const [auditScore, setAuditScore] = useState(0);
 
   const handleClassroomUpdate = () => {
     setRefreshKey((k) => k + 1);
@@ -45,7 +57,6 @@ export default function FoodCountsPage() {
 
   useEffect(() => {
     async function init() {
-      // Seed sample data if needed
       await seedFoodData();
       loadDailyReport(selectedDate);
     }
@@ -76,6 +87,11 @@ export default function FoodCountsPage() {
 
   const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
 
+  const handleQuickEntry = (mealType: MealType) => {
+    setQuickEntryMeal(mealType);
+    setShowQuickEntry(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -91,12 +107,31 @@ export default function FoodCountsPage() {
         </div>
       </div>
 
+      {/* Meal Reminder Banner */}
+      <MealReminderBanner onQuickEntry={handleQuickEntry} />
+
+      {/* Quick Entry Modal */}
+      {showQuickEntry && (
+        <QuickMealEntry
+          mealType={quickEntryMeal}
+          onComplete={() => {
+            setShowQuickEntry(false);
+            setRefreshKey((k) => k + 1);
+            loadDailyReport(selectedDate);
+          }}
+        />
+      )}
+
       {/* Tabs */}
       <Tabs defaultValue="daily" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="daily" className="gap-2">
             <Calendar className="h-4 w-4" />
             Daily Counts
+          </TabsTrigger>
+          <TabsTrigger value="compliance" className="gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            Compliance
           </TabsTrigger>
           <TabsTrigger value="reports" className="gap-2">
             <FileText className="h-4 w-4" />
@@ -107,7 +142,7 @@ export default function FoodCountsPage() {
             Projections
           </TabsTrigger>
           <TabsTrigger value="costs" className="gap-2">
-            <UtensilsCrossed className="h-4 w-4" />
+            <DollarSign className="h-4 w-4" />
             Cost Tracking
           </TabsTrigger>
           <TabsTrigger value="settings" className="gap-2">
@@ -192,6 +227,29 @@ export default function FoodCountsPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Compliance Tab (Tools 01 + 10) */}
+        <TabsContent value="compliance" className="space-y-4">
+          {/* Meal Count Compliance + Revenue Impact (Tool 01) */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <ComplianceSummary />
+            <RevenueImpactCard />
+          </div>
+
+          {/* Quick Entry for missing counts */}
+          <QuickMealEntry />
+
+          {/* CACFP Compliance Checklist + Audit Score (Tool 10) */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="md:col-span-2">
+              <CACFPComplianceChecklist onScoreChange={(score) => setAuditScore(score)} />
+            </div>
+            <div className="space-y-4">
+              <AuditReadinessScore score={auditScore} />
+              <ReimbursementTracker />
+            </div>
+          </div>
         </TabsContent>
 
         {/* CACFP Reports Tab */}

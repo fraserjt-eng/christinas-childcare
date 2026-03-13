@@ -1,21 +1,21 @@
 'use client';
 
-import { PhotoFeed } from '@/components/dashboard/PhotoFeed';
+import { PhotoReviewGrid } from '@/components/admin/PhotoReviewGrid';
 import { Camera } from 'lucide-react';
 
-export default function PhotosPage() {
+export default function PhotoReviewPage() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Camera className="h-6 w-6" />
-          Photo Gallery
+          Daily Photo Review
         </h1>
         <p className="text-muted-foreground">
-          Photos from your children&apos;s classrooms
+          Review and approve staff-uploaded photos before sharing with parents
         </p>
       </div>
-      <PhotoFeed />
+      <PhotoReviewGrid />
     </div>
   );
 }

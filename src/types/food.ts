@@ -17,8 +17,45 @@ export interface FoodCount {
   adult_count: number;
   notes?: string;
   recorded_by?: string;
+  submitted_at?: string; // ISO timestamp when count was submitted
+  on_time?: boolean; // whether count was submitted before the deadline
   created_at: string;
   updated_at: string;
+}
+
+// CACFP reimbursement rates (Tier 1, 2024-2025)
+export const CACFP_RATES: Record<MealType, number> = {
+  breakfast: 2.07,
+  am_snack: 0.97,
+  lunch: 3.91,
+  pm_snack: 0.97,
+};
+
+// Meal count deadlines (hour of day in 24h format)
+export const MEAL_DEADLINES: Record<MealType, { hour: number; minute: number }> = {
+  breakfast: { hour: 9, minute: 0 },
+  am_snack: { hour: 10, minute: 30 },
+  lunch: { hour: 13, minute: 0 },
+  pm_snack: { hour: 15, minute: 30 },
+};
+
+// Meal reminder config
+export interface MealReminderConfig {
+  enabled: boolean;
+  reminderMinutesBefore: number; // minutes before deadline to send reminder
+  browserNotifications: boolean;
+}
+
+// Compliance summary for a period
+export interface MealComplianceSummary {
+  period: string; // YYYY-MM or YYYY-Www
+  total_expected: number;
+  total_submitted: number;
+  on_time_count: number;
+  late_count: number;
+  missed_count: number;
+  compliance_rate: number; // 0-100
+  estimated_revenue_lost: number;
 }
 
 export type FoodCountCreate = Omit<FoodCount, 'id' | 'created_at' | 'updated_at'>;

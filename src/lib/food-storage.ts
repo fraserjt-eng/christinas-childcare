@@ -18,6 +18,10 @@ import {
   InventoryAlert,
   FoodProjection,
   MealType,
+  MealComplianceSummary,
+  MealReminderConfig,
+  MEAL_DEADLINES,
+  CACFP_RATES,
   DEFAULT_CLASSROOMS,
   generateFoodCountId,
   generateInventoryId,
@@ -157,6 +161,29 @@ export async function deleteFoodCount(id: string): Promise<boolean> {
   return true;
 }
 
+// Check if a meal count submission is on time
+function isMealCountOnTime(date: string, mealType: MealType): boolean {
+  const now = new Date();
+  const deadline = MEAL_DEADLINES[mealType];
+  const countDate = new Date(date + 'T00:00:00');
+
+  // If submitting for a past date, it's always late
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  countDate.setHours(0, 0, 0, 0);
+  if (countDate < today) return false;
+
+  // If submitting for today, check against deadline
+  if (countDate.getTime() === today.getTime()) {
+    const deadlineTime = new Date();
+    deadlineTime.setHours(deadline.hour, deadline.minute, 0, 0);
+    return now <= deadlineTime;
+  }
+
+  // Future date submissions are always on time
+  return true;
+}
+
 // Upsert a food count for a specific date/classroom/meal
 export async function upsertFoodCount(data: FoodCountCreate): Promise<FoodCount> {
   const counts = getFromStorage<FoodCount>(STORAGE_KEYS.foodCounts);
@@ -168,6 +195,7 @@ export async function upsertFoodCount(data: FoodCountCreate): Promise<FoodCount>
   );
 
   const now = new Date().toISOString();
+  const onTime = isMealCountOnTime(data.date, data.meal_type);
 
   if (index !== -1) {
     // Update existing
@@ -177,6 +205,9 @@ export async function upsertFoodCount(data: FoodCountCreate): Promise<FoodCount>
       id: counts[index].id,
       created_at: counts[index].created_at,
       updated_at: now,
+      // Only set submitted_at on first submission (when count goes from 0 to >0)
+      submitted_at: counts[index].submitted_at || now,
+      on_time: counts[index].on_time ?? onTime,
     };
     counts[index] = updatedCount;
     saveToStorage(STORAGE_KEYS.foodCounts, counts);
@@ -186,6 +217,8 @@ export async function upsertFoodCount(data: FoodCountCreate): Promise<FoodCount>
     const newCount: FoodCount = {
       ...data,
       id: generateFoodCountId(),
+      submitted_at: now,
+      on_time: onTime,
       created_at: now,
       updated_at: now,
     };
@@ -1001,6 +1034,171 @@ export async function seedFoodData(): Promise<{
     menuItems: menuItemCount,
     foodCounts: foodCountCount,
   };
+}
+
+// ============================================================================
+// Meal Compliance & Reminders
+// ============================================================================
+
+const REMINDER_CONFIG_KEY = 'meal-reminder-config';
+
+export function getMealReminderConfig(): MealReminderConfig {
+  if (typeof window === 'undefined') {
+    return { enabled: true, reminderMinutesBefore: 15, browserNotifications: false };
+  }
+  try {
+    const raw = localStorage.getItem(REMINDER_CONFIG_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* use default */ }
+  return { enabled: true, reminderMinutesBefore: 15, browserNotifications: false };
+}
+
+export function saveMealReminderConfig(config: MealReminderConfig): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(REMINDER_CONFIG_KEY, JSON.stringify(config));
+}
+
+// Get missing meal counts for a specific date
+export async function getMissingMealCounts(date: string): Promise<{
+  classroom_id: string;
+  classroom_name: string;
+  meal_type: MealType;
+}[]> {
+  const classrooms = await getClassrooms({ active_only: true });
+  const counts = await getFoodCounts({ date });
+
+  const missing: { classroom_id: string; classroom_name: string; meal_type: MealType }[] = [];
+  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
+
+  for (const classroom of classrooms) {
+    for (const mealType of mealTypes) {
+      const exists = counts.find(
+        (c) => c.classroom_id === classroom.id && c.meal_type === mealType && c.child_count > 0
+      );
+      if (!exists) {
+        missing.push({
+          classroom_id: classroom.id,
+          classroom_name: classroom.name,
+          meal_type: mealType,
+        });
+      }
+    }
+  }
+
+  return missing;
+}
+
+// Get compliance summary for a given month (YYYY-MM)
+export async function getMealComplianceSummary(month: string): Promise<MealComplianceSummary> {
+  const year = parseInt(month.split('-')[0]);
+  const monthNum = parseInt(month.split('-')[1]);
+  const daysInMonth = new Date(year, monthNum, 0).getDate();
+  const today = new Date();
+
+  const startDate = `${month}-01`;
+  const endDate = `${month}-${daysInMonth.toString().padStart(2, '0')}`;
+
+  const counts = await getFoodCounts({ startDate, endDate });
+  const classrooms = await getClassrooms({ active_only: true });
+
+  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
+
+  // Count weekdays up to today (or end of month)
+  let weekdays = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, monthNum - 1, d);
+    if (date > today) break;
+    const day = date.getDay();
+    if (day !== 0 && day !== 6) weekdays++;
+  }
+
+  const totalExpected = weekdays * classrooms.length * mealTypes.length;
+
+  let onTimeCount = 0;
+  let lateCount = 0;
+
+  for (const count of counts) {
+    if (count.child_count > 0) {
+      if (count.on_time) {
+        onTimeCount++;
+      } else {
+        lateCount++;
+      }
+    }
+  }
+
+  const totalSubmitted = onTimeCount + lateCount;
+  const missedCount = Math.max(0, totalExpected - totalSubmitted);
+  const complianceRate = totalExpected > 0 ? Math.round((onTimeCount / totalExpected) * 100) : 100;
+
+  // Estimate lost revenue from missed counts
+  // Use average children per classroom per meal
+  const avgChildrenPerMeal = counts.length > 0
+    ? counts.reduce((sum, c) => sum + c.child_count, 0) / counts.length
+    : 10;
+
+  let estimatedRevenueLost = 0;
+  if (missedCount > 0) {
+    // Distribute missed counts across meal types proportionally
+    const missedPerMeal = missedCount / mealTypes.length;
+    for (const mealType of mealTypes) {
+      estimatedRevenueLost += missedPerMeal * avgChildrenPerMeal * CACFP_RATES[mealType];
+    }
+  }
+
+  return {
+    period: month,
+    total_expected: totalExpected,
+    total_submitted: totalSubmitted,
+    on_time_count: onTimeCount,
+    late_count: lateCount,
+    missed_count: missedCount,
+    compliance_rate: complianceRate,
+    estimated_revenue_lost: Math.round(estimatedRevenueLost * 100) / 100,
+  };
+}
+
+// Get the current active meal window (which meal should be counted right now)
+export function getCurrentMealWindow(): { mealType: MealType; isActive: boolean; minutesUntilDeadline: number } | null {
+  const now = new Date();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  const currentMinutes = hour * 60 + minute;
+
+  const mealWindows: { mealType: MealType; startHour: number; startMinute: number }[] = [
+    { mealType: 'breakfast', startHour: 7, startMinute: 0 },
+    { mealType: 'am_snack', startHour: 9, startMinute: 0 },
+    { mealType: 'lunch', startHour: 11, startMinute: 0 },
+    { mealType: 'pm_snack', startHour: 14, startMinute: 0 },
+  ];
+
+  for (const window of mealWindows) {
+    const windowStart = window.startHour * 60 + window.startMinute;
+    const deadline = MEAL_DEADLINES[window.mealType];
+    const deadlineMinutes = deadline.hour * 60 + deadline.minute;
+
+    if (currentMinutes >= windowStart && currentMinutes <= deadlineMinutes) {
+      return {
+        mealType: window.mealType,
+        isActive: true,
+        minutesUntilDeadline: deadlineMinutes - currentMinutes,
+      };
+    }
+  }
+
+  // Find next upcoming meal
+  for (const window of mealWindows) {
+    const windowStart = window.startHour * 60 + window.startMinute;
+    if (currentMinutes < windowStart) {
+      return {
+        mealType: window.mealType,
+        isActive: false,
+        minutesUntilDeadline: windowStart - currentMinutes,
+      };
+    }
+  }
+
+  return null;
 }
 
 // Clear all food data (for testing)

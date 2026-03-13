@@ -11,11 +11,13 @@ export type AlertSeverity = 'urgent' | 'warning' | 'info';
 export type AlertType =
   | 'overdue_task'
   | 'food_count'
+  | 'missed_meal_count'
   | 'incident'
   | 'message'
   | 'staffing'
   | 'inventory'
   | 'compliance'
+  | 'cacfp_compliance'
   | 'drift'
   | 'training';
 
@@ -213,6 +215,75 @@ export function getDashboardAlerts(): DashboardAlert[] {
         linkTo: '/admin/messaging',
         zoneRelevance: ['opening', 'core', 'closing'],
       });
+    }
+  }
+
+  // ── Meal counts: check for missing counts past deadline ──
+  const foodCounts = safeParseJSON<Array<{ date: string; classroom_id: string; meal_type: string; child_count: number }>>(
+    'christinas_food_counts'
+  );
+  if (foodCounts) {
+    const today = new Date().toISOString().split('T')[0];
+    const hour = new Date().getHours();
+    const minute = new Date().getMinutes();
+    const currentMinutes = hour * 60 + minute;
+
+    // Meal deadlines + 30 min grace period
+    const mealChecks = [
+      { type: 'breakfast', deadlineMin: 9 * 60 + 30 }, // 9:30 AM (deadline 9:00 + 30 grace)
+      { type: 'am_snack', deadlineMin: 11 * 60 }, // 11:00 AM
+      { type: 'lunch', deadlineMin: 13 * 60 + 30 }, // 1:30 PM
+      { type: 'pm_snack', deadlineMin: 16 * 60 }, // 4:00 PM
+    ];
+
+    for (const check of mealChecks) {
+      if (currentMinutes >= check.deadlineMin) {
+        const todayCounts = foodCounts.filter(
+          (c) => c.date === today && c.meal_type === check.type && c.child_count > 0
+        );
+        if (todayCounts.length === 0) {
+          const mealLabels: Record<string, string> = {
+            breakfast: 'Breakfast',
+            am_snack: 'AM Snack',
+            lunch: 'Lunch',
+            pm_snack: 'PM Snack',
+          };
+          alerts.push({
+            id: `missed_meal_${check.type}`,
+            type: 'missed_meal_count',
+            severity: 'urgent',
+            title: `Missing ${mealLabels[check.type]} counts`,
+            description: `No ${mealLabels[check.type].toLowerCase()} counts submitted today. This affects CACFP reimbursement.`,
+            linkTo: '/admin/food-counts',
+            zoneRelevance: ['opening', 'core', 'closing'],
+          });
+        }
+      }
+    }
+  }
+
+  // ── CACFP compliance: check for incomplete required items ──
+  const complianceData = safeParseJSON<Record<string, { checklist: Array<{ required: boolean; completed: boolean }>; audit_score: number }>>(
+    'cacfp-compliance'
+  );
+  if (complianceData) {
+    const currentMonth = `${new Date().getFullYear()}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}`;
+    const monthRecord = complianceData[currentMonth];
+    if (monthRecord && monthRecord.audit_score < 70) {
+      const missingRequired = monthRecord.checklist.filter(
+        (item) => item.required && !item.completed
+      ).length;
+      if (missingRequired > 0) {
+        alerts.push({
+          id: 'cacfp_compliance_low',
+          type: 'cacfp_compliance',
+          severity: monthRecord.audit_score < 50 ? 'urgent' : 'warning',
+          title: `CACFP audit readiness: ${monthRecord.audit_score}%`,
+          description: `${missingRequired} required compliance item${missingRequired !== 1 ? 's' : ''} incomplete this month.`,
+          linkTo: '/admin/food-counts',
+          zoneRelevance: ['core', 'closing'],
+        });
+      }
     }
   }
 
