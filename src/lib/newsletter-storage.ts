@@ -23,6 +23,11 @@ export interface Newsletter {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  // Compatibility: existing admin comms page uses these fields
+  title?: string; // maps to subject
+  audience?: 'parent' | 'staff';
+  week_of?: string;
+  content_sections?: { id: string; heading: string; body: string; sort_order?: number }[];
 }
 
 export const SECTION_TYPE_LABELS: Record<string, string> = {
@@ -60,10 +65,38 @@ function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+// Normalize newsletters from localStorage (handles both old and new data formats)
+function normalizeNewsletter(raw: Record<string, unknown>): Newsletter {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const n = raw as any;
+
+  // Map content_sections (old format) to sections (new format) if needed
+  let sections = n.sections || [];
+  if ((!sections || sections.length === 0) && n.content_sections && n.content_sections.length > 0) {
+    sections = n.content_sections.map((cs: { id: string; heading: string; body: string; sort_order?: number }) => ({
+      id: cs.id,
+      type: 'custom' as const,
+      title: cs.heading,
+      content_html: cs.body,
+      order: cs.sort_order || 0,
+    }));
+  }
+
+  return {
+    ...n,
+    subject: n.subject || n.title || 'Untitled',
+    sections,
+    status: n.status || 'draft',
+    created_at: n.created_at || new Date().toISOString(),
+    updated_at: n.updated_at || new Date().toISOString(),
+  };
+}
+
 export async function getNewsletters(filters?: {
   status?: NewsletterStatus;
 }): Promise<Newsletter[]> {
-  let newsletters = getFromStorage<Newsletter>(NEWSLETTERS_KEY);
+  const raw = getFromStorage<Record<string, unknown>>(NEWSLETTERS_KEY);
+  let newsletters = raw.map(normalizeNewsletter);
 
   if (filters?.status) {
     newsletters = newsletters.filter(n => n.status === filters.status);
