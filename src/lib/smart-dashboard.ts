@@ -262,6 +262,40 @@ export function getDashboardAlerts(): DashboardAlert[] {
     }
   }
 
+  // ── Certification expiry alerts ──
+  const certs = safeParseJSON<Array<{ employee_name: string; cert_name: string; expiry_date: string; status: string }>>(
+    'christinas_certifications'
+  );
+  if (certs) {
+    const expiring = certs.filter(c => c.status === 'expiring_soon' || c.status === 'expired');
+    if (expiring.length > 0) {
+      const expired = expiring.filter(c => c.status === 'expired');
+      const soonCount = expiring.length - expired.length;
+      if (expired.length > 0) {
+        alerts.push({
+          id: 'certs_expired',
+          type: 'training',
+          severity: 'urgent',
+          title: `${expired.length} expired certification${expired.length !== 1 ? 's' : ''}`,
+          description: `${expired.map(c => `${c.employee_name}: ${c.cert_name}`).slice(0, 2).join(', ')}${expired.length > 2 ? ` +${expired.length - 2} more` : ''}`,
+          linkTo: '/admin/staff/development',
+          zoneRelevance: ['opening', 'core'],
+        });
+      }
+      if (soonCount > 0) {
+        alerts.push({
+          id: 'certs_expiring',
+          type: 'training',
+          severity: 'warning',
+          title: `${soonCount} certification${soonCount !== 1 ? 's' : ''} expiring soon`,
+          description: 'Review staff certifications to avoid compliance gaps.',
+          linkTo: '/admin/staff/development',
+          zoneRelevance: ['core'],
+        });
+      }
+    }
+  }
+
   // ── Nap time reminder (12:15-12:30 PM) ──
   const napHour = new Date().getHours();
   const napMinute = new Date().getMinutes();
