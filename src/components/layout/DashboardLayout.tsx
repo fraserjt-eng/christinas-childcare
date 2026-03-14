@@ -76,6 +76,9 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/payroll', label: 'Payroll', icon: CreditCard },
       { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
       { href: '/admin/pipeline', label: 'Pipeline', icon: SquareKanban },
+      { href: '/admin/pipeline/authorizations', label: 'Authorizations', icon: ShieldCheck },
+      { href: '/admin/pipeline/enrollment', label: 'Enrollment Funnel', icon: UserPlus },
+      { href: '/admin/pipeline/tours', label: 'Tour Manager', icon: ClipboardList },
     ],
   },
   {
@@ -108,6 +111,7 @@ const adminNavGroups: NavGroup[] = [
     icon: DollarSign,
     items: [
       { href: '/admin/financial', label: 'Financial Planning', icon: DollarSign },
+      { href: '/admin/financial/forecasting', label: 'Revenue Forecast', icon: Target },
       { href: '/admin/budget', label: 'Budget', icon: Wallet },
       { href: '/admin/strategic', label: 'Strategic Plan', icon: Target },
       { href: '/admin/settings', label: 'Settings', icon: Settings },
