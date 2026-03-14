@@ -80,6 +80,7 @@ const adminNavGroups: NavGroup[] = [
     icon: ClipboardList,
     items: [
       { href: '/admin/tasks', label: 'Task Board', icon: ListTodo },
+      { href: '/admin/operations', label: 'Cross-Site Ops', icon: Building2 },
       { href: '/admin/curriculum', label: 'Curriculum', icon: GraduationCap },
       { href: '/admin/lessons', label: 'Lesson Builder', icon: BookOpen },
       { href: '/admin/reports', label: 'Daily Reports', icon: FileText },
@@ -115,6 +116,7 @@ const employeeNav: NavItem[] = [
   { href: '/employee', label: 'Clock In/Out', icon: Clock },
   { href: '/employee/meal-count', label: 'Meal Count', icon: UtensilsCrossed },
   { href: '/employee/photos', label: 'Upload Photos', icon: Camera },
+  { href: '/employee/nap-tasks', label: 'Nap Time Tasks', icon: Clock },
   { href: '/employee/tasks', label: 'My Tasks', icon: ListTodo },
   { href: '/employee/schedule', label: 'My Schedule', icon: CalendarDays },
   { href: '/employee/pay-stubs', label: 'Pay Stubs', icon: CreditCard },

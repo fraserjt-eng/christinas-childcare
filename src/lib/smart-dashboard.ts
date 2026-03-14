@@ -262,6 +262,27 @@ export function getDashboardAlerts(): DashboardAlert[] {
     }
   }
 
+  // ── Nap time reminder (12:15-12:30 PM) ──
+  const napHour = new Date().getHours();
+  const napMinute = new Date().getMinutes();
+  if (napHour === 12 && napMinute >= 15 && napMinute <= 45) {
+    const tasks = safeParseJSON<Task[]>(KEYS.tasks);
+    if (tasks) {
+      const napTasks = tasks.filter(t => t.is_nap_time_task && t.status !== 'done');
+      if (napTasks.length > 0) {
+        alerts.push({
+          id: 'nap_time_reminder',
+          type: 'food_count',
+          severity: 'info',
+          title: `${napTasks.length} nap time task${napTasks.length !== 1 ? 's' : ''} ready`,
+          description: 'Nap time window is starting. Check your task queue.',
+          linkTo: '/admin/tasks',
+          zoneRelevance: ['core'],
+        });
+      }
+    }
+  }
+
   // ── CACFP compliance: check for incomplete required items ──
   const complianceData = safeParseJSON<Record<string, { checklist: Array<{ required: boolean; completed: boolean }>; audit_score: number }>>(
     'cacfp-compliance'
