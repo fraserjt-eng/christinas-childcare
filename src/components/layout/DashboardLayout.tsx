@@ -45,6 +45,7 @@ const parentNav: NavItem[] = [
   { href: '/dashboard/documents', label: 'Documents', icon: FileText },
   { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
 ];
 
 const adminNavGroups: NavGroup[] = [
