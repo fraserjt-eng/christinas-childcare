@@ -476,7 +476,42 @@ export async function getScheduleEntries(filters?: {
   startDate?: string;
   endDate?: string;
 }): Promise<ScheduleEntry[]> {
-  let entries = getFromStorage<ScheduleEntry>(STORAGE_KEYS.schedules);
+  // Read from the original schedule storage
+  const originalEntries = getFromStorage<ScheduleEntry>(STORAGE_KEYS.schedules);
+
+  // Also read from the schedule-optimizer shifts (drag board data)
+  // and convert them to ScheduleEntry format so all components see the same data
+  const optimizerShifts = getFromStorage<{
+    id: string;
+    employee_id: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    classroom_id?: string;
+    created_at?: string;
+    updated_at?: string;
+  }>('christinas_schedule_shifts');
+
+  const convertedShifts: ScheduleEntry[] = optimizerShifts.map(s => ({
+    id: s.id,
+    employee_id: s.employee_id,
+    date: s.date,
+    start_time: s.start_time,
+    end_time: s.end_time,
+    classroom_id: s.classroom_id,
+    created_at: s.created_at || new Date().toISOString(),
+    updated_at: s.updated_at || new Date().toISOString(),
+  }));
+
+  // Merge both sources, dedup by id
+  const idsSeen = new Set<string>();
+  let entries: ScheduleEntry[] = [];
+  for (const entry of [...originalEntries, ...convertedShifts]) {
+    if (!idsSeen.has(entry.id)) {
+      idsSeen.add(entry.id);
+      entries.push(entry);
+    }
+  }
 
   if (filters) {
     if (filters.employee_id) {
@@ -512,6 +547,17 @@ export async function createScheduleEntry(data: ScheduleEntryCreate): Promise<Sc
 
   entries.push(newEntry);
   saveToStorage(STORAGE_KEYS.schedules, entries);
+
+  // Also write to schedule-optimizer storage so the drag board sees it
+  const optimizerShifts = getFromStorage<Record<string, unknown>>('christinas_schedule_shifts');
+  optimizerShifts.push({
+    ...newEntry,
+    employee_name: '',
+    center_id: 'crystal',
+    is_overtime: false,
+  });
+  saveToStorage('christinas_schedule_shifts', optimizerShifts);
+
   return newEntry;
 }
 
@@ -519,33 +565,53 @@ export async function updateScheduleEntry(
   id: string,
   updates: Partial<ScheduleEntry>
 ): Promise<ScheduleEntry | null> {
+  // Try original store first
   const entries = getFromStorage<ScheduleEntry>(STORAGE_KEYS.schedules);
   const index = entries.findIndex((e) => e.id === id);
 
-  if (index === -1) return null;
+  if (index !== -1) {
+    const updatedEntry: ScheduleEntry = {
+      ...entries[index],
+      ...updates,
+      id: entries[index].id,
+      created_at: entries[index].created_at,
+      updated_at: new Date().toISOString(),
+    };
+    entries[index] = updatedEntry;
+    saveToStorage(STORAGE_KEYS.schedules, entries);
+    return updatedEntry;
+  }
 
-  const updatedEntry: ScheduleEntry = {
-    ...entries[index],
-    ...updates,
-    id: entries[index].id,
-    created_at: entries[index].created_at,
-    updated_at: new Date().toISOString(),
-  };
+  // Also try optimizer store
+  const shifts = getFromStorage<ScheduleEntry & Record<string, unknown>>('christinas_schedule_shifts');
+  const shiftIndex = shifts.findIndex((s) => s.id === id);
+  if (shiftIndex !== -1) {
+    shifts[shiftIndex] = { ...shifts[shiftIndex], ...updates, updated_at: new Date().toISOString() };
+    saveToStorage('christinas_schedule_shifts', shifts);
+    return shifts[shiftIndex] as ScheduleEntry;
+  }
 
-  entries[index] = updatedEntry;
-  saveToStorage(STORAGE_KEYS.schedules, entries);
-  return updatedEntry;
+  return null;
 }
 
 export async function deleteScheduleEntry(id: string): Promise<boolean> {
+  // Delete from original store
   const entries = getFromStorage<ScheduleEntry>(STORAGE_KEYS.schedules);
-  const index = entries.findIndex((e) => e.id === id);
+  const origIndex = entries.findIndex((e) => e.id === id);
+  if (origIndex !== -1) {
+    entries.splice(origIndex, 1);
+    saveToStorage(STORAGE_KEYS.schedules, entries);
+  }
 
-  if (index === -1) return false;
+  // Also delete from optimizer store
+  const shifts = getFromStorage<ScheduleEntry>('christinas_schedule_shifts');
+  const shiftIndex = shifts.findIndex((s) => s.id === id);
+  if (shiftIndex !== -1) {
+    shifts.splice(shiftIndex, 1);
+    saveToStorage('christinas_schedule_shifts', shifts);
+  }
 
-  entries.splice(index, 1);
-  saveToStorage(STORAGE_KEYS.schedules, entries);
-  return true;
+  return origIndex !== -1 || shiftIndex !== -1;
 }
 
 // ============================================================================
