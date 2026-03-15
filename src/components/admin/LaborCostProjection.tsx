@@ -109,12 +109,15 @@ function EmployeeCostRow({ emp }: { emp: EmployeeCostSummary }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function LaborCostProjection() {
+  const [mounted, setMounted] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
   const [dailyCosts, setDailyCosts] = useState<LaborCostDay[]>([]);
   const [employeeCosts, setEmployeeCosts] = useState<EmployeeCostSummary[]>([]);
   const [totalCost, setTotalCost] = useState(0);
   const [totalHours, setTotalHours] = useState(0);
   const [overtimeAlerts, setOvertimeAlerts] = useState<OvertimeAlert[]>([]);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const monday = getMondayOfWeek(weekOffset);
 
@@ -136,6 +139,8 @@ export function LaborCostProjection() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  if (!mounted) { return <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-christina-red" /></div>; }
 
   const weekLabel = `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${
     new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 4).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })

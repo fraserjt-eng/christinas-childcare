@@ -62,12 +62,17 @@ function rowBg(status: ReturnType<typeof complianceStatus>): string {
 }
 
 export function RatioComplianceView() {
+  const [mounted, setMounted] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [results, setResults] = useState<RatioComplianceResult[]>([]);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     setResults(getRatioCompliance(selectedDate));
   }, [selectedDate]);
+
+  if (!mounted) { return <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-christina-red" /></div>; }
 
   function shiftDate(delta: number) {
     const d = new Date(selectedDate + 'T12:00:00');

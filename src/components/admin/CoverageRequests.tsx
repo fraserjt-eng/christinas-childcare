@@ -221,10 +221,13 @@ function RequestCard({ request, onApproveClick, onDeny }: RequestCardProps) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function CoverageRequests() {
+  const [mounted, setMounted] = useState(false);
   const [allRequests, setAllRequests] = useState<CoverageRequest[]>([]);
   const [tab, setTab] = useState<'pending' | 'history'>('pending');
   const [approveTarget, setApproveTarget] = useState<CoverageRequest | undefined>();
   const [approveOpen, setApproveOpen] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   function loadRequests() {
     setAllRequests(getCoverageRequests());
@@ -233,6 +236,8 @@ export function CoverageRequests() {
   useEffect(() => {
     loadRequests();
   }, []);
+
+  if (!mounted) { return <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-christina-red" /></div>; }
 
   function handleApproveClick(request: CoverageRequest) {
     setApproveTarget(request);

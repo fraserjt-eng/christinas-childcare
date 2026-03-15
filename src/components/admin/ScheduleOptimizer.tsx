@@ -282,6 +282,9 @@ function RatioRow({ compliance }: { compliance: RatioComplianceResult[] }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ScheduleOptimizer() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const [weekOffset, setWeekOffset] = useState(0);
   const [shifts, setShifts] = useState<ScheduleShift[]>([]);
   const [compliance, setCompliance] = useState<RatioComplianceResult[]>([]);
@@ -335,6 +338,10 @@ export function ScheduleOptimizer() {
   const filteredStaff = STAFF.filter(s =>
     centerFilter === 'all' || s.center === centerFilter
   );
+
+  if (!mounted) {
+    return <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-christina-red" /></div>;
+  }
 
   return (
     <div className="space-y-4">
