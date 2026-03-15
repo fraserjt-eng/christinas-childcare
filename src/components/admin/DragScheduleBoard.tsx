@@ -14,19 +14,6 @@ import {
 } from '@dnd-kit/core';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
   ChevronLeft,
@@ -244,9 +231,9 @@ function DroppableRow({ employeeId, date, shifts, onShiftClick, onEmptyClick }: 
   );
 }
 
-// ─── Shift Edit Dialog ────────────────────────────────────────────────────
+// ─── Inline Shift Edit Panel (no Radix Dialog/Select to avoid portal crashes) ──
 
-interface ShiftDialogProps {
+interface ShiftPanelProps {
   open: boolean;
   mode: 'add' | 'edit';
   shift?: ScheduleShift;
@@ -257,7 +244,7 @@ interface ShiftDialogProps {
   onClose: () => void;
 }
 
-function ShiftDialog({ open, mode, shift, employeeId, date, centerId, onSave, onClose }: ShiftDialogProps) {
+function ShiftPanel({ open, mode, shift, employeeId, date, centerId, onSave, onClose }: ShiftPanelProps) {
   const [startTime, setStartTime] = useState('07:00');
   const [endTime, setEndTime] = useState('15:30');
 
@@ -270,6 +257,8 @@ function ShiftDialog({ open, mode, shift, employeeId, date, centerId, onSave, on
       setEndTime('15:30');
     }
   }, [shift, open]);
+
+  if (!open) return null;
 
   const handleSave = () => {
     const weeklyApprox = shiftDurationHours(startTime, endTime) * 5;
@@ -306,68 +295,64 @@ function ShiftDialog({ open, mode, shift, employeeId, date, centerId, onSave, on
     : STAFF.find(s => s.id === employeeId);
 
   return (
-    <Dialog open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="text-christina-red font-heading">
-            {mode === 'add' ? 'Add Shift' : 'Edit Shift'}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 pt-2">
+    <Card className="border-2 border-christina-red/30 bg-white shadow-lg">
+      <div className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-700">{emp?.name}</p>
+            <p className="font-semibold text-christina-red">
+              {mode === 'add' ? 'Add Shift' : 'Edit Shift'}
+            </p>
+            <p className="text-sm text-gray-700">{emp?.name}</p>
             <p className="text-xs text-gray-500">
               {date || shift?.date} &middot; {centerId ? CENTER_LABELS[centerId] : shift ? CENTER_LABELS[shift.center_id] : ''}
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Start Time</Label>
-              <Select value={startTime} onValueChange={setStartTime}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIME_OPTIONS.map(t => (
-                    <SelectItem key={t} value={t}>{formatTimeDisplay(t)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">End Time</Label>
-              <Select value={endTime} onValueChange={setEndTime}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIME_OPTIONS.map(t => (
-                    <SelectItem key={t} value={t}>{formatTimeDisplay(t)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Start Time</Label>
+            <select
+              value={startTime}
+              onChange={e => setStartTime(e.target.value)}
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {TIME_OPTIONS.map(t => (
+                <option key={t} value={t}>{formatTimeDisplay(t)}</option>
+              ))}
+            </select>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Clock className="h-4 w-4" />
-            <span>{shiftDurationHours(startTime, endTime).toFixed(1)} hours</span>
-          </div>
-          <div className="flex items-center gap-2 pt-2">
-            <Button onClick={handleSave} className="flex-1 bg-christina-red hover:bg-christina-red/90 text-white">
-              Save Shift
-            </Button>
-            {mode === 'edit' && (
-              <Button variant="outline" size="icon" onClick={handleDelete} className="border-red-200 text-red-600 hover:bg-red-50">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-            <Button variant="outline" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+          <div className="space-y-1">
+            <Label className="text-xs">End Time</Label>
+            <select
+              value={endTime}
+              onChange={e => setEndTime(e.target.value)}
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              {TIME_OPTIONS.map(t => (
+                <option key={t} value={t}>{formatTimeDisplay(t)}</option>
+              ))}
+            </select>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Clock className="h-4 w-4" />
+          <span>{shiftDurationHours(startTime, endTime).toFixed(1)} hours</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSave} className="flex-1 bg-christina-red hover:bg-christina-red/90 text-white">
+            Save Shift
+          </Button>
+          {mode === 'edit' && (
+            <Button variant="outline" size="icon" onClick={handleDelete} className="border-red-200 text-red-600 hover:bg-red-50">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -692,7 +677,7 @@ export default function DragScheduleBoard() {
     </DndContext>
 
     {/* Shift Dialog — outside DndContext to prevent portal conflicts */}
-    <ShiftDialog
+    <ShiftPanel
       open={dialogOpen}
       mode={dialogMode}
       shift={dialogShift}
