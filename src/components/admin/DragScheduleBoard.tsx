@@ -31,19 +31,16 @@ import {
   CENTER_LABELS,
   type ScheduleShift,
 } from '@/lib/schedule-optimizer-storage';
+import { getEmployees } from '@/lib/employee-storage';
+import type { Employee } from '@/types/employee';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────
 
-const STAFF = [
-  { id: 'emp-oz', name: 'Ophelia Zeogar', center: 'crystal' as const },
-  { id: 'emp-cf', name: 'Christina Fraser', center: 'crystal' as const },
-  { id: 'emp-ms', name: 'Maria Santos', center: 'crystal' as const },
-  { id: 'emp-jr', name: 'James Robinson', center: 'crystal' as const },
-  { id: 'emp-sk', name: 'Sarah Kim', center: 'brooklyn_park' as const },
-  { id: 'emp-dc', name: 'David Chen', center: 'brooklyn_park' as const },
-  { id: 'emp-lj', name: 'Lisa Johnson', center: 'brooklyn_park' as const },
-  { id: 'emp-sz', name: 'Stephen Zeogar', center: 'crystal' as const },
-];
+interface StaffMember {
+  id: string;
+  name: string;
+  center: 'crystal' | 'brooklyn_park';
+}
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -238,13 +235,15 @@ interface ShiftPanelProps {
   mode: 'add' | 'edit';
   shift?: ScheduleShift;
   employeeId?: string;
+  employeeName?: string;
   date?: string;
   centerId?: 'crystal' | 'brooklyn_park';
+  staffList: StaffMember[];
   onSave: () => void;
   onClose: () => void;
 }
 
-function ShiftPanel({ open, mode, shift, employeeId, date, centerId, onSave, onClose }: ShiftPanelProps) {
+function ShiftPanel({ open, mode, shift, employeeId, employeeName, date, centerId, staffList, onSave, onClose }: ShiftPanelProps) {
   const [startTime, setStartTime] = useState('07:00');
   const [endTime, setEndTime] = useState('15:30');
 
@@ -267,18 +266,16 @@ function ShiftPanel({ open, mode, shift, employeeId, date, centerId, onSave, onC
     if (mode === 'edit' && shift) {
       updateShift(shift.id, { start_time: startTime, end_time: endTime, is_overtime: isOvertime });
     } else if (mode === 'add' && employeeId && date && centerId) {
-      const emp = STAFF.find(s => s.id === employeeId);
-      if (emp) {
-        createShift({
-          employee_id: employeeId,
-          employee_name: emp.name,
-          center_id: centerId,
-          date,
-          start_time: startTime,
-          end_time: endTime,
-          is_overtime: isOvertime,
-        });
-      }
+      const emp = staffList.find(s => s.id === employeeId);
+      createShift({
+        employee_id: employeeId,
+        employee_name: emp?.name || employeeName || 'Staff',
+        center_id: centerId,
+        date,
+        start_time: startTime,
+        end_time: endTime,
+        is_overtime: isOvertime,
+      });
     }
     onSave();
     onClose();
@@ -291,8 +288,8 @@ function ShiftPanel({ open, mode, shift, employeeId, date, centerId, onSave, onC
   };
 
   const emp = shift
-    ? STAFF.find(s => s.id === shift.employee_id)
-    : STAFF.find(s => s.id === employeeId);
+    ? staffList.find(s => s.id === shift?.employee_id)
+    : staffList.find(s => s.id === employeeId);
 
   return (
     <Card className="border-2 border-christina-red/30 bg-white shadow-lg">
@@ -365,6 +362,7 @@ export default function DragScheduleBoard() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [shifts, setShifts] = useState<ScheduleShift[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [activeDragPreset, setActiveDragPreset] = useState<PresetShift | null>(null);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -383,6 +381,24 @@ export default function DragScheduleBoard() {
     const weekShifts = getShifts({ week_start: mondayStr });
     setShifts(weekShifts);
   }, [mondayStr]);
+
+  // Load real employees from employee-storage
+  useEffect(() => {
+    if (!mounted) return;
+    async function loadStaff() {
+      const employees = await getEmployees();
+      const active = employees.filter((e: Employee) => e.employment_status === 'active');
+      const mapped: StaffMember[] = active.map((e: Employee) => ({
+        id: e.id,
+        name: `${e.first_name} ${e.last_name}`,
+        center: 'crystal' as const, // Default center; can be extended
+      }));
+      if (mapped.length > 0) {
+        setStaff(mapped);
+      }
+    }
+    loadStaff();
+  }, [mounted]);
 
   useEffect(() => {
     if (mounted) loadShifts();
@@ -405,7 +421,7 @@ export default function DragScheduleBoard() {
 
     const preset = active.data.current.preset as PresetShift;
     const { employeeId, date } = over.data.current as { employeeId: string; date: string };
-    const emp = STAFF.find(s => s.id === employeeId);
+    const emp = staff.find(s => s.id === employeeId);
     if (!emp) return;
 
     const weeklyApprox = shiftDurationHours(preset.start, preset.end) * 5;
@@ -431,7 +447,7 @@ export default function DragScheduleBoard() {
   };
 
   const handleEmptyClick = (employeeId: string, date: string) => {
-    const emp = STAFF.find(s => s.id === employeeId);
+    const emp = staff.find(s => s.id === employeeId);
     if (!emp) return;
     setDialogMode('add');
     setDialogShift(undefined);
@@ -476,7 +492,7 @@ export default function DragScheduleBoard() {
 
   const dayDate = dateStr(monday, selectedDayIndex);
   const dayShiftsMap: Record<string, ScheduleShift[]> = {};
-  STAFF.forEach(emp => {
+  staff.forEach(emp => {
     dayShiftsMap[emp.id] = shifts.filter(s => s.employee_id === emp.id && s.date === dayDate);
   });
 
@@ -609,8 +625,8 @@ export default function DragScheduleBoard() {
               </div>
 
               {/* Employee Rows */}
-              {STAFF.map((emp, idx) => {
-                const isLastCrystal = emp.center === 'crystal' && (STAFF[idx + 1]?.center !== 'crystal');
+              {staff.map((emp, idx) => {
+                const isLastCrystal = emp.center === 'crystal' && (staff[idx + 1]?.center !== 'crystal');
                 return (
                   <div
                     key={emp.id}
@@ -683,8 +699,10 @@ export default function DragScheduleBoard() {
       mode={dialogMode}
       shift={dialogShift}
       employeeId={dialogEmployeeId}
+      employeeName={dialogEmployeeId ? staff.find(s => s.id === dialogEmployeeId)?.name : undefined}
       date={dialogDate}
       centerId={dialogCenterId}
+      staffList={staff}
       onSave={loadShifts}
       onClose={() => setDialogOpen(false)}
     />
