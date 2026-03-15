@@ -23,6 +23,8 @@ import { FamilyAccount } from '@/types/family';
 import { getCurrentFamily, logoutFamily } from '@/lib/family-storage';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useRole } from '@/hooks/useRole';
+import { Suspense } from 'react';
+import { useTourLauncher } from '@/hooks/useTourLauncher';
 
 interface NavItem {
   href: string;
@@ -378,6 +380,12 @@ interface DashboardLayoutProps {
   isEmployee?: boolean;
 }
 
+// Auto-launch tours from ?tour= query param (wrapped in Suspense for useSearchParams)
+function TourLauncherWrapper() {
+  useTourLauncher();
+  return null;
+}
+
 export function DashboardLayout({ children, isAdmin = false, isEmployee = false }: DashboardLayoutProps) {
   const [open, setOpen] = useState(false);
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -439,6 +447,9 @@ export function DashboardLayout({ children, isAdmin = false, isEmployee = false 
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+          <Suspense fallback={null}>
+            <TourLauncherWrapper />
+          </Suspense>
           {children}
         </main>
       </div>
