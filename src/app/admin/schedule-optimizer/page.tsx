@@ -1,37 +1,52 @@
 'use client';
 
-// Dynamic imports with ssr:false to avoid hydration issues
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, ShieldCheck, DollarSign, RefreshCw } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import { Calendar, ShieldCheck, DollarSign, RefreshCw, Loader2 } from 'lucide-react';
 
-// Dynamic imports to isolate client-side rendering issues
-const ScheduleOptimizer = dynamic(
-  () => import('@/components/admin/ScheduleOptimizer').then(m => ({ default: m.ScheduleOptimizer })),
-  { ssr: false, loading: () => <LoadingPlaceholder /> }
-);
-const RatioComplianceView = dynamic(
-  () => import('@/components/admin/RatioComplianceView').then(m => ({ default: m.RatioComplianceView })),
-  { ssr: false, loading: () => <LoadingPlaceholder /> }
-);
-const LaborCostProjection = dynamic(
-  () => import('@/components/admin/LaborCostProjection').then(m => ({ default: m.LaborCostProjection })),
-  { ssr: false, loading: () => <LoadingPlaceholder /> }
-);
-const CoverageRequests = dynamic(
-  () => import('@/components/admin/CoverageRequests').then(m => ({ default: m.CoverageRequests })),
-  { ssr: false, loading: () => <LoadingPlaceholder /> }
-);
-
-function LoadingPlaceholder() {
-  return (
-    <div className="flex items-center justify-center py-12">
-      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-christina-red" />
-    </div>
-  );
+// Lazy load to ensure client-only rendering
+function useMounted() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted;
 }
 
 export default function ScheduleOptimizerPage() {
+  const mounted = useMounted();
+  const [LoadedComponents, setLoaded] = useState<{
+    ScheduleOptimizer?: React.ComponentType;
+    RatioComplianceView?: React.ComponentType;
+    LaborCostProjection?: React.ComponentType;
+    CoverageRequests?: React.ComponentType;
+  }>({});
+
+  useEffect(() => {
+    if (!mounted) return;
+    Promise.all([
+      import('@/components/admin/ScheduleOptimizer'),
+      import('@/components/admin/RatioComplianceView'),
+      import('@/components/admin/LaborCostProjection'),
+      import('@/components/admin/CoverageRequests'),
+    ]).then(([s, r, l, c]) => {
+      setLoaded({
+        ScheduleOptimizer: s.ScheduleOptimizer,
+        RatioComplianceView: r.RatioComplianceView,
+        LaborCostProjection: l.LaborCostProjection,
+        CoverageRequests: c.CoverageRequests,
+      });
+    }).catch(err => {
+      console.error('Failed to load schedule components:', err);
+    });
+  }, [mounted]);
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -63,21 +78,29 @@ export default function ScheduleOptimizerPage() {
         </TabsList>
 
         <TabsContent value="schedule">
-          <ScheduleOptimizer />
+          {LoadedComponents.ScheduleOptimizer ? <LoadedComponents.ScheduleOptimizer /> : <Loading />}
         </TabsContent>
 
         <TabsContent value="ratios">
-          <RatioComplianceView />
+          {LoadedComponents.RatioComplianceView ? <LoadedComponents.RatioComplianceView /> : <Loading />}
         </TabsContent>
 
         <TabsContent value="cost">
-          <LaborCostProjection />
+          {LoadedComponents.LaborCostProjection ? <LoadedComponents.LaborCostProjection /> : <Loading />}
         </TabsContent>
 
         <TabsContent value="coverage">
-          <CoverageRequests />
+          {LoadedComponents.CoverageRequests ? <LoadedComponents.CoverageRequests /> : <Loading />}
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function Loading() {
+  return (
+    <div className="flex items-center justify-center py-12">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
     </div>
   );
 }
