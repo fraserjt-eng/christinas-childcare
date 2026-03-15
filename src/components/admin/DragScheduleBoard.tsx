@@ -506,6 +506,7 @@ export default function DragScheduleBoard() {
   }
 
   return (
+    <>
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="space-y-4">
 
@@ -688,18 +689,19 @@ export default function DragScheduleBoard() {
           </div>
         )}
       </DragOverlay>
-
-      {/* Shift Dialog */}
-      <ShiftDialog
-        open={dialogOpen}
-        mode={dialogMode}
-        shift={dialogShift}
-        employeeId={dialogEmployeeId}
-        date={dialogDate}
-        centerId={dialogCenterId}
-        onSave={loadShifts}
-        onClose={() => setDialogOpen(false)}
-      />
     </DndContext>
+
+    {/* Shift Dialog — outside DndContext to prevent portal conflicts */}
+    <ShiftDialog
+      open={dialogOpen}
+      mode={dialogMode}
+      shift={dialogShift}
+      employeeId={dialogEmployeeId}
+      date={dialogDate}
+      centerId={dialogCenterId}
+      onSave={loadShifts}
+      onClose={() => setDialogOpen(false)}
+    />
+    </>
   );
 }
