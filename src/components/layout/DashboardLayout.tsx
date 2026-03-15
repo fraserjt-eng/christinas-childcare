@@ -93,6 +93,7 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/inventory', label: 'Inventory', icon: Package },
       { href: '/admin/menu-planning', label: 'Menu Planning', icon: CalendarRange },
       { href: '/admin/incidents', label: 'Incidents', icon: AlertTriangle },
+      { href: '/admin/incidents/log', label: 'Incident Log', icon: FileText },
     ],
   },
   {
@@ -104,6 +105,7 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/communications/photos', label: 'Photo Review', icon: Camera },
       { href: '/admin/notifications', label: 'Notifications', icon: Bell },
       { href: '/admin/meetings', label: 'Meetings', icon: Presentation },
+      { href: '/admin/meetings/efficiency', label: 'Meeting Efficiency', icon: Target },
     ],
   },
   {
@@ -127,6 +129,7 @@ const employeeNav: NavItem[] = [
   { href: '/employee/tasks', label: 'My Tasks', icon: ListTodo },
   { href: '/employee/knowledge', label: 'Knowledge Base', icon: BookOpen },
   { href: '/employee/development', label: 'My Development', icon: GraduationCap },
+  { href: '/employee/supplies', label: 'Request Supplies', icon: Package },
   { href: '/employee/schedule', label: 'My Schedule', icon: CalendarDays },
   { href: '/employee/pay-stubs', label: 'Pay Stubs', icon: CreditCard },
   { href: '/employee/time-off', label: 'Time Off', icon: Calendar },
