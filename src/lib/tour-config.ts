@@ -727,6 +727,1182 @@ export const reportsTour: TourConfig = {
   ],
 };
 
+// ============================================
+// Meal Count Tour - Employee Portal (4 steps)
+// ============================================
+export const mealCountTour: TourConfig = {
+  id: 'meal-count',
+  title: 'Meal Count Tour',
+  description: 'Submit your classroom meal counts quickly',
+  steps: [
+    {
+      popover: {
+        title: 'Meal Counts in 15 Seconds',
+        description: 'No spreadsheet, no waiting for Christina. This tour shows you how to submit your classroom meal count from your phone in under a minute.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'select',
+      popover: {
+        title: 'Select Your Classroom',
+        description: 'Pick your classroom from the dropdown list. Only the rooms you&apos;re assigned to will appear.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Adjust the Count',
+        description: 'The form pre-fills with your enrolled number. Use the plus and minus buttons to adjust for absences or extras.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'form',
+      popover: {
+        title: 'Hit Submit',
+        description: 'Tap Submit and you&apos;re done. Christina sees it instantly in her dashboard. No follow-up needed.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Photo Upload Tour - Employee Portal (5 steps)
+// ============================================
+export const photoUploadTour: TourConfig = {
+  id: 'photo-upload',
+  title: 'Photo Upload Tour',
+  description: 'Share classroom moments with families',
+  steps: [
+    {
+      popover: {
+        title: 'Share Your Classroom Moments',
+        description: 'Families love seeing what their kids are up to. This tour shows you how to upload photos in under a minute.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'input[type="file"]',
+      popover: {
+        title: 'Select Your Photos',
+        description: 'Tap to choose photos from your camera or gallery. You can upload up to 5 at a time.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'select',
+      popover: {
+        title: 'Pick the Activity Type',
+        description: 'Label the moment so families know what was happening: art, outdoor play, circle time, sensory, music, and more.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'form',
+      popover: {
+        title: 'Choose Your Classroom',
+        description: 'Select the classroom so parents can find photos of their child&apos;s specific group.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Add a Caption and Submit',
+        description: 'A short caption goes a long way. Then hit Submit. Christina reviews every photo before parents can see it, so nothing goes out unreviewed.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Nap Tasks Tour - Employee Portal (4 steps)
+// ============================================
+export const napTasksTour: TourConfig = {
+  id: 'nap-tasks',
+  title: 'Nap Tasks Tour',
+  description: 'Make the most of your nap window',
+  steps: [
+    {
+      popover: {
+        title: 'Your Power Window',
+        description: 'The 90 minutes while kids sleep is the most productive time in your day. This tour shows you how to use the task tracker to get through your list without losing track of time.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Tasks Sorted by Quickest First',
+        description: 'Your assigned tasks are sorted so the fastest ones appear at the top. Knock out small wins first, then tackle the longer ones.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Tap Start',
+        description: 'When you begin a task, tap Start. The timer runs so you know how long you&apos;ve been on it.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Tap Done, Watch the Bar Move',
+        description: 'Each completed task moves the progress bar forward. You can see at a glance whether you&apos;re on pace to finish before kids wake up.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Supply Request Tour - Employee Portal (3 steps)
+// ============================================
+export const supplyRequestTour: TourConfig = {
+  id: 'supply-request',
+  title: 'Supply Request Tour',
+  description: 'Request supplies without the sticky note',
+  steps: [
+    {
+      popover: {
+        title: 'Need Supplies?',
+        description: 'Skip the sticky note on Christina&apos;s door. Submit a supply request from your phone and she gets it immediately.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'form',
+      popover: {
+        title: 'Describe What You Need',
+        description: 'Type the item name, quantity, and which classroom it&apos;s for. Be specific so Christina can order the right thing.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'select',
+      popover: {
+        title: 'Set the Urgency Level',
+        description: 'Is this needed today, this week, or whenever? Setting urgency helps Christina prioritize her orders.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+  ],
+};
+
+// ============================================
+// My Development Tour - Employee Portal (4 steps)
+// ============================================
+export const myDevelopmentTour: TourConfig = {
+  id: 'my-development',
+  title: 'My Development Tour',
+  description: 'Track your certifications and professional goals',
+  steps: [
+    {
+      popover: {
+        title: 'Your Professional Growth',
+        description: 'Certifications, training hours, and professional goals, all in one place. This tour walks you through what&apos;s tracked and how to read it.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Certification Status',
+        description: 'Green means your certification is current. Yellow means it expires within 60 days. Red means it&apos;s expired and needs attention.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'Training Hours',
+        description: 'Your annual training hours are tracked here against the state requirement. The bar fills as you log completed trainings.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Professional Development Goals',
+        description: 'View goals set during your last review and update your progress. Christina sees your updates, so this is a live conversation, not a once-a-year form.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// My Schedule Tour - Employee Portal (3 steps)
+// ============================================
+export const myScheduleTour: TourConfig = {
+  id: 'my-schedule',
+  title: 'My Schedule Tour',
+  description: 'View your shifts and request changes',
+  steps: [
+    {
+      popover: {
+        title: 'Your Schedule, Always Accessible',
+        description: 'See your upcoming shifts, request changes, and plan your week without having to ask Christina for a copy of the schedule.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Navigate Between Weeks',
+        description: 'Use the arrow buttons to move forward or back through weeks. You can see the current week and as far ahead as Christina has published.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'Your Daily Details',
+        description: 'Each day shows your start time, end time, and classroom assignment. Need a change? Tap Request Change to send a schedule request directly to Christina.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Parent Photos Tour - Parent Portal (3 steps)
+// ============================================
+export const parentPhotosTour: TourConfig = {
+  id: 'parent-photos',
+  title: 'Parent Photos Tour',
+  description: 'See daily photos from your child&apos;s classroom',
+  steps: [
+    {
+      popover: {
+        title: 'See What Your Child Did Today',
+        description: 'Photos uploaded by staff and reviewed by Christina appear here. This tour shows you how to browse and interact with your child&apos;s classroom moments.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Daily Photo Feed',
+        description: 'Photos are organized by date with the most recent at the top. You&apos;ll see activity labels and captions from the teacher.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'select',
+      popover: {
+        title: 'Filter by Classroom',
+        description: 'If you have children in different classrooms, use the filter to see just your child&apos;s room. Tap the heart icon to react. Staff can see your engagement.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Parent Newsletter Tour - Parent Portal (3 steps)
+// ============================================
+export const parentNewsletterTour: TourConfig = {
+  id: 'parent-newsletter',
+  title: 'Parent Newsletter Tour',
+  description: 'Read and search center newsletters',
+  steps: [
+    {
+      popover: {
+        title: 'Weekly Updates, Always Available',
+        description: 'Every newsletter Christina sends lives here permanently. You can always come back and find something you missed.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'input',
+      popover: {
+        title: 'Search Past Newsletters',
+        description: 'Type a keyword to find specific newsletters. Searching "fall festival" or "flu season" pulls up every newsletter that mentioned it.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Click to Read',
+        description: 'Click any newsletter card to expand the full content. Each one includes classroom highlights, upcoming events, and any announcements from the center.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Notification Preferences Tour - Parent Portal (4 steps)
+// ============================================
+export const notificationPrefsTour: TourConfig = {
+  id: 'notification-prefs',
+  title: 'Notification Preferences Tour',
+  description: 'Control how and when the center contacts you',
+  steps: [
+    {
+      popover: {
+        title: 'Hear From Us Your Way',
+        description: 'You choose how the center reaches you. This tour walks you through every option so you never miss something important and never get bothered when you don&apos;t want to.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'form',
+      popover: {
+        title: 'Choose Your Channels',
+        description: 'Toggle email, text, or phone call notifications on or off independently. You can mix and match based on what works for your life.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Set Your Frequency',
+        description: 'Choose how often you hear from us: immediate (as it happens), daily digest (one summary per day), or weekly summary (just the highlights).',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Topics and Quiet Hours',
+        description: 'Choose which topics you want to hear about: newsletters, incidents, closures, or new photos. Then set quiet hours so we never send messages during times that don&apos;t work for you.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Food Counts Compliance Tour - Admin Portal (6 steps)
+// ============================================
+export const foodCountsComplianceTour: TourConfig = {
+  id: 'food-counts-compliance',
+  title: 'Food Counts Compliance Tour',
+  description: 'Keep CACFP counts accurate and audit-ready',
+  steps: [
+    {
+      popover: {
+        title: 'Every Missed Count Costs Money',
+        description: 'CACFP reimbursements depend on accurate meal counts. This tour shows you every tool on this tab so nothing slips through.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Quick-Fill Buttons',
+        description: 'Three options: Copy Yesterday, Fill from Enrollment, or Everyone Here. One click fills the entire grid. Adjust individual rooms from there.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Compliance Rate',
+        description: 'Your on-time submission percentage is tracked here. CACFP programs with consistent late submissions can trigger audits.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Revenue Impact',
+        description: 'This card shows exactly how much money missed or late counts have cost you. It&apos;s the clearest way to see why this matters.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'CACFP Checklist',
+        description: 'All 16 compliance items are tracked here. Where the system can verify automatically, it does. The rest show as manual items to confirm.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Audit Readiness Score',
+        description: 'A 0-100 score that tells you how prepared you are for a CACFP audit right now. Green means ready. Anything below 80 shows you what to fix.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Schedule Board Tour - Admin Portal (6 steps)
+// ============================================
+export const scheduleBoardTour: TourConfig = {
+  id: 'schedule-board',
+  title: 'Schedule Board Tour',
+  description: 'Build weekly schedules with drag-and-drop',
+  steps: [
+    {
+      popover: {
+        title: 'Build Schedules by Dragging Blocks',
+        description: 'No more typing numbers into a spreadsheet. This tour shows you how to build next week&apos;s schedule in minutes.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Shift Palette',
+        description: 'The palette on the left holds your preset shifts: Morning, Full Day, Afternoon, and any custom shifts you&apos;ve created. Grab one to start.',
+        side: 'right',
+        align: 'start',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'Drop onto an Employee Row',
+        description: 'Drag any shift block from the palette and drop it onto an employee&apos;s row for the day you want. The shift snaps into place.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Click to Edit or Delete',
+        description: 'Click any shift block on the board to edit the start and end times or remove it. The ratio calculator updates in real time as you make changes.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Copy Last Week',
+        description: 'If schedules don&apos;t change much week to week, use Copy Last Week to duplicate the entire schedule in one click. Then make your adjustments.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Publish the Schedule',
+        description: 'Switch to the Publish tab when you&apos;re done. Publishing sends the schedule to all staff so they can see their shifts in the employee portal.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Photo Review Tour - Admin Portal (4 steps)
+// ============================================
+export const photoReviewTour: TourConfig = {
+  id: 'photo-review',
+  title: 'Photo Review Tour',
+  description: 'Review and approve staff photo uploads',
+  steps: [
+    {
+      popover: {
+        title: 'You Approve Before Parents See Anything',
+        description: 'Staff upload photos. They come here first. Nothing reaches families until you approve it. This tour shows you the review workflow.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Today&apos;s Uploads by Classroom',
+        description: 'Photos are grouped by classroom so you can review each room&apos;s batch together. The upload time and staff name are shown for each photo.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Approve or Reject',
+        description: 'Click Approve to send it to the parent portal or Reject to remove it. Rejected photos don&apos;t notify the staff member unless you add a note.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Bulk Actions and Stats',
+        description: 'Use Select All when a batch looks good and you want to approve everything at once. The stats bar at the top shows pending, approved, and rejected counts for the day.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Newsletter Builder Tour - Admin Portal (6 steps)
+// ============================================
+export const newsletterBuilderTour: TourConfig = {
+  id: 'newsletter-builder',
+  title: 'Newsletter Builder Tour',
+  description: 'Build and send family newsletters',
+  steps: [
+    {
+      popover: {
+        title: 'A Newsletter Builder Built Into Your Platform',
+        description: 'Create, design, and send newsletters to families without leaving the platform. This tour covers everything from writing to sending.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'input',
+      popover: {
+        title: 'Write Your Subject Line',
+        description: 'The subject line is what families see in their inbox. Keep it specific and timely: "March Newsletter: Spring Events and Classroom Updates".',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Add Sections',
+        description: 'Build your newsletter by adding sections: Photo Highlights, Upcoming Events, Classroom Spotlight, and Announcements. Each section has its own content area.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'form',
+      popover: {
+        title: 'Rich Text Editor',
+        description: 'Each section uses a full editor: bold, italic, headings, images, and links. Write naturally and format as you go.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Drag to Reorder',
+        description: 'Drag sections up or down to change the order before you send. Put the most important content at the top.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Preview, Send, or Schedule',
+        description: 'Toggle Preview to see exactly what families will receive. Then choose Send Now to send immediately, Schedule for later to pick a date and time, or Download as PDF to print copies.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Task Kanban Tour - Admin Portal (4 steps)
+// ============================================
+export const taskKanbanTour: TourConfig = {
+  id: 'task-kanban',
+  title: 'Task Kanban Tour',
+  description: 'See and manage everything that needs doing',
+  steps: [
+    {
+      popover: {
+        title: 'Everything in One Board',
+        description: 'See every task, who&apos;s handling it, and where it stands. No more wondering what&apos;s in progress or what got dropped.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Three Columns, Drag Between Them',
+        description: 'To Do, In Progress, and Done. Drag any card to move it between columns as work progresses. The board updates for everyone in real time.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'What Each Card Shows',
+        description: 'Task name, who it&apos;s assigned to, estimated time, priority level, and category. Everything you need to understand the work without opening the card.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Filter and Switch to Insights',
+        description: 'Use filters to view tasks by category, person, or center. Switch to the Insights tab to see a breakdown of where your team&apos;s time is actually going.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Cross-Site Ops Tour - Admin Portal (3 steps)
+// ============================================
+export const crossSiteOpsTour: TourConfig = {
+  id: 'cross-site-ops',
+  title: 'Cross-Site Operations Tour',
+  description: 'Monitor both centers from one view',
+  steps: [
+    {
+      popover: {
+        title: 'Both Centers at Once',
+        description: 'See Crystal Center and Brooklyn Park side by side without driving between them. This tour shows you how to read the dashboard and act on what you see.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'Side-by-Side Status',
+        description: 'Each center shows kids present, staff on duty, and ratio compliance right now. You can compare at a glance and see which site needs attention.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Color Codes and Weekly Trends',
+        description: 'Green means everything is fine. Yellow means something needs attention soon. Red means act now. Switch to the Weekly Trends tab to see patterns across the full week for both sites.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Knowledge Base Tour - Admin Portal (5 steps)
+// ============================================
+export const knowledgeBaseTour: TourConfig = {
+  id: 'knowledge-base',
+  title: 'Knowledge Base Tour',
+  description: 'Build institutional memory that stays when staff leave',
+  steps: [
+    {
+      popover: {
+        title: 'Stop Losing Knowledge When Staff Leave',
+        description: 'When a great employee leaves, their routines, tricks, and procedures leave with them. The knowledge base is how you keep that knowledge inside the center.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Browse by Category',
+        description: 'Entries are organized by type: procedures, protocols, daily routines, templates, and checklists. Browse the category that matches what you need.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'input',
+      popover: {
+        title: 'Search Across Everything',
+        description: 'Type any keyword to search all entries at once. Searching "nap" or "allergy" pulls up every relevant entry across all categories.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Create New Entries',
+        description: 'Click New Entry to add a procedure, routine, or checklist. The rich text editor supports headings, bullet lists, and numbered steps.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Tag as Required Reading',
+        description: 'Mark any entry as required reading for new hires. When you assign a new employee to an onboarding template, they&apos;ll see these entries in their checklist.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Onboarding Tour - Admin Portal (5 steps)
+// ============================================
+export const onboardingTour: TourConfig = {
+  id: 'onboarding',
+  title: 'Onboarding Tour',
+  description: 'Take new hires from hired to classroom-ready',
+  steps: [
+    {
+      popover: {
+        title: 'From Hire to Classroom-Ready',
+        description: 'A scrambled first two weeks costs you time and sets new hires up to fail. This tour shows you how to turn onboarding into a structured, trackable path.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Four-Phase Templates',
+        description: 'Build onboarding templates with four phases: Pre-Start (before day one), Day 1, Week 1, and Month 1. Each phase holds its own tasks, readings, and checkpoints.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'form',
+      popover: {
+        title: 'Assign to a New Hire',
+        description: 'Select a template and a new hire, enter their start date, and assign. The system calculates all the phase deadlines automatically.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'Track Their Progress',
+        description: 'Each new hire shows a status: ahead of schedule, on track, behind, or blocked. You can see at a glance who needs a check-in.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'New Hires See Their Own Checklist',
+        description: 'New employees log in and see their personal onboarding checklist. They can self-check items as they complete them, so you don&apos;t have to track every step manually.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Enrollment Funnel Tour - Admin Portal (5 steps)
+// ============================================
+export const enrollmentFunnelTour: TourConfig = {
+  id: 'enrollment-funnel',
+  title: 'Enrollment Funnel Tour',
+  description: 'Track every prospective family from contact to enrolled',
+  steps: [
+    {
+      popover: {
+        title: 'No More Leads Falling Through Cracks',
+        description: 'Every prospective family from first contact to enrolled, tracked in one place. This tour shows you how the funnel works.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Funnel Chart',
+        description: 'The funnel chart shows how many families are at each stage and the conversion rate between stages. A big drop at one stage tells you where to focus.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Pipeline Board',
+        description: 'Each prospective family is a card you can advance through stages: inquiry, tour scheduled, tour complete, application submitted, enrolled.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'Lead Source Tracking',
+        description: 'See which sources actually convert: website, referral, drive-by, social media, community event. Focus your marketing on what&apos;s working.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Revenue Projection',
+        description: 'The revenue projection shows how much money is in your pipeline weighted by probability. Great for forecasting and justifying enrollment investment.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Tour Manager Tour - Admin Portal (4 steps)
+// ============================================
+export const tourManagerTour: TourConfig = {
+  id: 'tour-manager',
+  title: 'Tour Manager Tour',
+  description: 'Schedule and track center tours for prospective families',
+  steps: [
+    {
+      popover: {
+        title: 'Every Tour Should Feel the Same',
+        description: 'A great center tour is one of your best enrollment tools. This tour shows you how to schedule, run, and follow up on tours consistently.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'form',
+      popover: {
+        title: 'Schedule a Tour',
+        description: 'Enter the parent&apos;s contact info, preferred date and time, and which center. The system adds it to your calendar and sends a confirmation to the family.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Follow the 8-Step Checklist',
+        description: 'During the tour, pull up the 8-step checklist on your phone. It keeps you consistent: welcome, safety overview, classroom visits, Q and A, next steps.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'Follow Up and Track Conversion',
+        description: 'After the tour, send a follow-up email with one click. Track each family through: tour complete, follow-up sent, application received. See your tour-to-enrollment rate.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Revenue Forecast Tour - Admin Portal (5 steps)
+// ============================================
+export const revenueForecastTour: TourConfig = {
+  id: 'revenue-forecast',
+  title: 'Revenue Forecast Tour',
+  description: 'See your financial picture 6 months out',
+  steps: [
+    {
+      popover: {
+        title: 'Stop Being Surprised by Your Finances',
+        description: 'The revenue forecast gives you a clear view of what&apos;s coming so you can plan, not react. This tour covers every section.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Financial Health Indicators',
+        description: 'Three key numbers: revenue per child (how efficiently you&apos;re monetizing enrollment), operating margin (how much you keep), and break-even enrollment (how many kids you need to cover costs).',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Cash Flow Chart',
+        description: 'Six months of projected revenue versus expenses on one chart. See where you&apos;re comfortable and where months look tight.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Scenario Modeling',
+        description: 'Slide enrollment numbers up or down and watch the financial impact update in real time. Model the difference between 80% and 90% capacity.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Save and Compare Scenarios',
+        description: 'Save up to three scenarios and compare them side by side. Useful for board presentations or deciding whether to expand.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Incident Log Tour - Admin Portal (5 steps)
+// ============================================
+export const incidentLogTour: TourConfig = {
+  id: 'incident-log',
+  title: 'Incident Log Tour',
+  description: 'Document incidents properly and stay compliant',
+  steps: [
+    {
+      popover: {
+        title: 'Document Every Incident Properly',
+        description: 'Proper incident documentation protects you, protects the child, and satisfies DCYF. This tour shows you the full workflow.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'form',
+      popover: {
+        title: 'Structured Form, Required Fields',
+        description: 'The form requires all critical fields: what happened, when, where, who was involved, what action was taken, and how the parent was notified. Nothing gets skipped.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Notify Parent with One Click',
+        description: 'The Notify Parent button generates the notification message using incident details and sends it via the parent&apos;s preferred channel. The timestamp is logged automatically.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'Incident Timeline',
+        description: 'All incidents are listed with filters by classroom, date, and type. A red flag appears on any incident where the 24-hour parent notification deadline is approaching.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Pattern Analytics',
+        description: 'The Analytics tab shows patterns: which classrooms have the most incidents, what times of day, and whether frequency is trending up or down. Use it for targeted prevention.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Meeting Efficiency Tour - Admin Portal (5 steps)
+// ============================================
+export const meetingEfficiencyTour: TourConfig = {
+  id: 'meeting-efficiency',
+  title: 'Meeting Efficiency Tour',
+  description: 'Run meetings that end on time and produce results',
+  steps: [
+    {
+      popover: {
+        title: 'Meetings That Actually End on Time',
+        description: 'This tool turns your meeting into a structured, timed session with real action items. This tour shows you all of it.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'form',
+      popover: {
+        title: 'Build the Agenda',
+        description: 'Add agenda items with time allocations. The calculator at the bottom warns you if your total exceeds the meeting length before you even start.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Live Timer During the Meeting',
+        description: 'During the meeting, each agenda item has a countdown timer. It turns yellow at 80% and red when time is up. The group sees it, so everyone moves.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Capture Decisions and Action Items',
+        description: 'As decisions get made and action items are assigned, record them in real time. Each action item gets an owner and a due date.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Meeting Effectiveness Score',
+        description: 'After the meeting, the system calculates an effectiveness score based on whether action items from previous meetings got done. It&apos;s honest feedback on whether your meetings are working.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Inventory Tour - Admin Portal (4 steps)
+// ============================================
+export const inventoryTour: TourConfig = {
+  id: 'inventory',
+  title: 'Inventory Tour',
+  description: 'Track supplies and reorder before you run out',
+  steps: [
+    {
+      popover: {
+        title: 'Never Run Out of Supplies Again',
+        description: 'Track stock levels, reorder automatically, and see what you&apos;re spending. This tour covers the full inventory system.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'Color-Coded Stock Levels',
+        description: 'Every item shows its current quantity with a color indicator: green (well stocked), yellow (running low), red (below threshold, order now).',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'button',
+      popover: {
+        title: 'Reorder Generator',
+        description: 'Click Generate Reorder List to get a ready-made list of everything below its reorder threshold. Export it with one click to send to your supplier.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: 'h1',
+      popover: {
+        title: 'Supply Spend by Category',
+        description: 'The spend chart shows monthly supply costs broken down by category: art supplies, cleaning products, food, office supplies. Useful for budget reviews.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
+// ============================================
+// Staff Development Tour - Admin Portal (4 steps)
+// ============================================
+export const staffDevelopmentTour: TourConfig = {
+  id: 'staff-development',
+  title: 'Staff Development Tour',
+  description: 'Track certifications and training hours for your whole team',
+  steps: [
+    {
+      popover: {
+        title: 'Certifications Expire. Training Hours Are Required.',
+        description: 'This tab tracks it all so nothing falls through the cracks. This tour shows you the three main sections.',
+        side: 'bottom',
+        align: 'center',
+      },
+    },
+    {
+      element: 'table',
+      popover: {
+        title: 'Certification Grid',
+        description: 'Every employee across every required certification: CPR, First Aid, Food Handler, and State License. Status is color-coded. Expiration dates are sortable.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '.space-y-4',
+      popover: {
+        title: 'Training Hours Log',
+        description: 'Track hours per employee against the annual state requirement. The progress bar fills as hours are logged. Anyone below pace is flagged.',
+        side: 'bottom',
+        align: 'start',
+      },
+    },
+    {
+      element: '[role="tablist"]',
+      popover: {
+        title: 'Development Plans',
+        description: 'Professional goals set during performance reviews live here. Staff can update their progress. You can track goal completion across your whole team from this one tab.',
+        side: 'top',
+        align: 'center',
+      },
+    },
+  ],
+};
+
 // Export all tours
 export const tours: Record<string, TourConfig> = {
   'lesson-builder': lessonBuilderTour,
@@ -734,6 +1910,30 @@ export const tours: Record<string, TourConfig> = {
   'staff-management': staffManagementTour,
   'attendance': attendanceTour,
   'reports': reportsTour,
+  'meal-count': mealCountTour,
+  'photo-upload': photoUploadTour,
+  'nap-tasks': napTasksTour,
+  'supply-request': supplyRequestTour,
+  'my-development': myDevelopmentTour,
+  'my-schedule': myScheduleTour,
+  'parent-photos': parentPhotosTour,
+  'parent-newsletter': parentNewsletterTour,
+  'notification-prefs': notificationPrefsTour,
+  'food-counts-compliance': foodCountsComplianceTour,
+  'schedule-board': scheduleBoardTour,
+  'photo-review': photoReviewTour,
+  'newsletter-builder': newsletterBuilderTour,
+  'task-kanban': taskKanbanTour,
+  'cross-site-ops': crossSiteOpsTour,
+  'knowledge-base': knowledgeBaseTour,
+  'onboarding': onboardingTour,
+  'enrollment-funnel': enrollmentFunnelTour,
+  'tour-manager': tourManagerTour,
+  'revenue-forecast': revenueForecastTour,
+  'incident-log': incidentLogTour,
+  'meeting-efficiency': meetingEfficiencyTour,
+  'inventory': inventoryTour,
+  'staff-development': staffDevelopmentTour,
 };
 
 export function getTourById(id: string): TourConfig | undefined {

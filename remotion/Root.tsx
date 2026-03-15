@@ -11,6 +11,14 @@ import {
   AttendanceScreenRecording,
   ReportsScreenRecording,
 } from './compositions/ScreenRecordingVideo';
+import { WelcomeVideo } from './compositions/WelcomeVideo';
+import { EmployeeWorkflowVideo } from './compositions/EmployeeWorkflowVideo';
+import { ParentExperienceVideo } from './compositions/ParentExperienceVideo';
+import { SchedulingVideo } from './compositions/SchedulingVideo';
+import { ComplianceVideo } from './compositions/ComplianceVideo';
+import { CommunicationVideo } from './compositions/CommunicationVideo';
+import { StaffDevelopmentVideo } from './compositions/StaffDevelopmentVideo';
+import { BusinessIntelligenceVideo } from './compositions/BusinessIntelligenceVideo';
 
 // Video settings
 const FPS = 30;
@@ -131,6 +139,83 @@ export const RemotionRoot: React.FC = () => {
           Use this for custom one-off videos
           Note: defaultProps must be provided via a wrapper component
           ============================================ */}
+
+      {/* ============================================
+          PORTAL & FEATURE OVERVIEW VIDEOS
+          60s welcome + 7 x 50s feature videos
+          ============================================ */}
+      <Composition
+        id="Welcome"
+        component={WelcomeVideo}
+        durationInFrames={FPS * 60} // 60 seconds
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{}}
+      />
+      <Composition
+        id="EmployeeWorkflow"
+        component={EmployeeWorkflowVideo}
+        durationInFrames={FPS * 60} // 60 seconds
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{}}
+      />
+      <Composition
+        id="ParentExperience"
+        component={ParentExperienceVideo}
+        durationInFrames={FPS * 50} // 50 seconds
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{}}
+      />
+      <Composition
+        id="Scheduling"
+        component={SchedulingVideo}
+        durationInFrames={FPS * 50} // 50 seconds
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{}}
+      />
+      <Composition
+        id="Compliance"
+        component={ComplianceVideo}
+        durationInFrames={FPS * 50} // 50 seconds
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{}}
+      />
+      <Composition
+        id="Communication"
+        component={CommunicationVideo}
+        durationInFrames={FPS * 50} // 50 seconds
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{}}
+      />
+      <Composition
+        id="StaffDevelopment"
+        component={StaffDevelopmentVideo}
+        durationInFrames={FPS * 50} // 50 seconds
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{}}
+      />
+      <Composition
+        id="BusinessIntelligence"
+        component={BusinessIntelligenceVideo}
+        durationInFrames={FPS * 50} // 50 seconds
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{}}
+      />
     </>
   );
 };

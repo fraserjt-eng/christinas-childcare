@@ -46,6 +46,7 @@ const parentNav: NavItem[] = [
   { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
+  { href: '/guide', label: 'Help & Guide', icon: BookOpen },
 ];
 
 const adminNavGroups: NavGroup[] = [
@@ -136,6 +137,7 @@ const employeeNav: NavItem[] = [
   { href: '/employee/profile', label: 'My Profile', icon: UserCog },
   { href: '/employee/training', label: 'Training', icon: Briefcase },
   { href: '/admin/messaging', label: 'Staff Chat', icon: MessageSquare },
+  { href: '/guide', label: 'Help & Guide', icon: BookOpen },
 ];
 
 function NavSection({ items, label }: { items: NavItem[]; label: string }) {
