@@ -20,8 +20,11 @@ interface WeeklyHoursSummaryProps {
 }
 
 export function WeeklyHoursSummary({ weekStart }: WeeklyHoursSummaryProps) {
+  const [mounted, setMounted] = useState(false);
   const [summaries, setSummaries] = useState<WeeklyHoursSummaryType[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -119,6 +122,10 @@ export function WeeklyHoursSummary({ weekStart }: WeeklyHoursSummaryProps) {
 
     loadData();
   }, [weekStart]);
+
+  if (!mounted) {
+    return <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-christina-red" /></div>;
+  }
 
   if (loading) {
     return (

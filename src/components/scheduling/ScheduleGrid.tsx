@@ -21,6 +21,7 @@ export function ScheduleGrid({
   showHoursSummary = true,
   onScheduleChange,
 }: ScheduleGridProps) {
+  const [mounted, setMounted] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +38,8 @@ export function ScheduleGrid({
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
 
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -130,6 +133,10 @@ export function ScheduleGrid({
       year: 'numeric',
     })}`;
   };
+
+  if (!mounted) {
+    return <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-christina-red" /></div>;
+  }
 
   if (loading) {
     return (

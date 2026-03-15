@@ -120,11 +120,12 @@ export function LaborCostProjection() {
   useEffect(() => { setMounted(true); }, []);
 
   const monday = getMondayOfWeek(weekOffset);
+  const mondayStr = monday.toISOString().slice(0, 10);
 
   const loadData = useCallback(() => {
-    const start = monday.toISOString().slice(0, 10);
-    const endDate = new Date(monday);
-    endDate.setDate(monday.getDate() + 4);
+    const start = mondayStr;
+    const endDate = new Date(mondayStr + 'T12:00:00');
+    endDate.setDate(endDate.getDate() + 4);
     const end = endDate.toISOString().slice(0, 10);
 
     const data = getLaborCost(start, end);
@@ -134,7 +135,7 @@ export function LaborCostProjection() {
     setTotalHours(data.total_hours);
 
     setOvertimeAlerts(getOvertimeAlerts(start));
-  }, [monday]);
+  }, [mondayStr]);
 
   useEffect(() => {
     loadData();
