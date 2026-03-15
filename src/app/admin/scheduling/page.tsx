@@ -57,13 +57,6 @@ function Spinner() {
 }
 
 export default function SchedulingPage() {
-  const [currentWeekStart] = useState<Date>(() => {
-    const today = new Date();
-    const day = today.getDay();
-    const start = new Date(today);
-    start.setDate(today.getDate() - day + 1);
-    return start;
-  });
 
   return (
     <div className="space-y-6">
@@ -118,7 +111,7 @@ export default function SchedulingPage() {
         </TabsContent>
 
         <TabsContent value="hours">
-          <WeeklyHoursSummary weekStart={currentWeekStart} />
+          <WeeklyHoursSummary />
         </TabsContent>
 
         <TabsContent value="ratios">

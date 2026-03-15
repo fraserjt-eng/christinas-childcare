@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, Clock, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, Clock, CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   WeeklyHoursSummary as WeeklyHoursSummaryType,
   getEmployeeFullName,
@@ -16,15 +17,28 @@ import {
 } from '@/lib/employee-storage';
 
 interface WeeklyHoursSummaryProps {
-  weekStart: Date;
+  weekStart?: Date;
 }
 
-export function WeeklyHoursSummary({ weekStart }: WeeklyHoursSummaryProps) {
+function getMonday(offset: number): Date {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon = new Date(today);
+  mon.setDate(today.getDate() + diff + offset * 7);
+  mon.setHours(0, 0, 0, 0);
+  return mon;
+}
+
+export function WeeklyHoursSummary({ weekStart: weekStartProp }: WeeklyHoursSummaryProps) {
   const [mounted, setMounted] = useState(false);
   const [summaries, setSummaries] = useState<WeeklyHoursSummaryType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [weekOffset, setWeekOffset] = useState(0);
 
   useEffect(() => { setMounted(true); }, []);
+
+  const weekStart = weekStartProp || getMonday(weekOffset);
 
   useEffect(() => {
     async function loadData() {
@@ -121,7 +135,8 @@ export function WeeklyHoursSummary({ weekStart }: WeeklyHoursSummaryProps) {
     }
 
     loadData();
-  }, [weekStart]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekOffset, weekStartProp]);
 
   if (!mounted) {
     return <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-christina-red" /></div>;
@@ -158,12 +173,27 @@ export function WeeklyHoursSummary({ weekStart }: WeeklyHoursSummaryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Weekly Hours Summary
-          </span>
-          <Badge variant="outline">{formatWeekRange()}</Badge>
+        <CardTitle className="text-lg">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Weekly Hours Summary
+            </span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w - 1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Badge variant="outline" className="min-w-[140px] text-center justify-center">{formatWeekRange()}</Badge>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekOffset(w => w + 1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              {weekOffset !== 0 && (
+                <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => setWeekOffset(0)}>
+                  This Week
+                </Button>
+              )}
+            </div>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
