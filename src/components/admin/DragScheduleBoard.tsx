@@ -377,11 +377,12 @@ export default function DragScheduleBoard() {
 
   const monday = getMondayOfWeek(weekOffset);
   const currentDate = dateStr(monday, selectedDayIndex);
+  const mondayStr = monday.toISOString().slice(0, 10);
 
   const loadShifts = useCallback(() => {
-    const weekShifts = getShifts({ week_start: monday.toISOString().slice(0, 10) });
+    const weekShifts = getShifts({ week_start: mondayStr });
     setShifts(weekShifts);
-  }, [monday]);
+  }, [mondayStr]);
 
   useEffect(() => {
     if (mounted) loadShifts();
@@ -443,7 +444,7 @@ export default function DragScheduleBoard() {
   const handleCopyLastWeek = () => {
     const prevMonday = getMondayOfWeek(weekOffset - 1);
     const prevShifts = getShifts({ week_start: prevMonday.toISOString().slice(0, 10) });
-    const currentMondayStr = monday.toISOString().slice(0, 10);
+    const currentMondayStr = mondayStr;
 
     if (prevShifts.length === 0) return;
 
