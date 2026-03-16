@@ -833,6 +833,64 @@ export default function GuidePage() {
         </div>
       )}
 
+      {/* Video Walkthroughs Section */}
+      <div className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Watch It In Action</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Real recordings of the live platform with narrated walkthroughs. See exactly what each portal looks like.
+            </p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              {
+                title: 'Public Website',
+                description: 'What families see: home page, programs, gallery, tour scheduling, and the feature guide.',
+                src: '/videos/walkthroughs/public-final.mp4',
+                color: 'border-christina-red',
+                duration: '~45 sec',
+              },
+              {
+                title: 'Employee Portal',
+                description: 'Staff daily workflow: PIN login, meal counts, photo uploads, tasks, and schedule.',
+                src: '/videos/walkthroughs/employee-final.mp4',
+                color: 'border-christina-green',
+                duration: '~60 sec',
+              },
+              {
+                title: 'Admin Portal',
+                description: 'Christina&apos;s command center: dashboard, scheduling, compliance, communications, and analytics.',
+                src: '/videos/walkthroughs/admin-final.mp4',
+                color: 'border-christina-blue',
+                duration: '~2 min',
+              },
+            ].map((video) => (
+              <div key={video.title} className={`bg-white rounded-xl shadow-sm border-t-4 ${video.color} overflow-hidden`}>
+                <div className="aspect-video bg-gray-900 relative">
+                  <video
+                    controls
+                    preload="metadata"
+                    className="w-full h-full object-cover"
+                    poster=""
+                  >
+                    <source src={video.src} type="video/mp4" />
+                    Your browser does not support video playback.
+                  </video>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-bold text-gray-900">{video.title}</h3>
+                    <span className="text-xs text-gray-400">{video.duration}</span>
+                  </div>
+                  <p className="text-sm text-gray-600">{video.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Footer nudge */}
       <div className="py-14 bg-gradient-to-br from-christina-red via-red-800 to-red-950 text-center">
         <div className="container mx-auto px-4">
