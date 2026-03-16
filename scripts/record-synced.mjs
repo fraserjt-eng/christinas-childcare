@@ -255,7 +255,7 @@ async function recordSyncedWalkthrough(sectionName, pages) {
 
   // Step 4: Convert to MP4
   console.log('  Converting to MP4...');
-  execSync(`ffmpeg -y -i "${rawVideo}" -c:v libx264 -crf 20 -preset fast "${mp4Video}" 2>/dev/null`);
+  execSync(`ffmpeg -y -i "${rawVideo}" -c:v libx264 -crf 20 -preset fast "${mp4Video}" `, { stdio: 'pipe' });
   fs.unlinkSync(rawVideo); // clean up webm
 
   // Step 5: Concatenate all audio segments
@@ -265,12 +265,15 @@ async function recordSyncedWalkthrough(sectionName, pages) {
 
   const listContent = segments.map(s => `file '${s.audioPath}'`).join('\n');
   fs.writeFileSync(audioList, listContent);
-  execSync(`ffmpeg -y -f concat -safe 0 -i "${audioList}" -c copy "${fullAudio}" 2>/dev/null`);
+  // Use ffmpeg to concatenate by filtering instead of concat protocol (handles paths with spaces)
+  const audioInputs = segments.map((s, i) => `-i "${s.audioPath}"`).join(' ');
+  const filterParts = segments.map((_, i) => `[${i}:a]`).join('');
+  execSync(`ffmpeg -y ${audioInputs} -filter_complex "${filterParts}concat=n=${segments.length}:v=0:a=1[out]" -map "[out]" "${fullAudio}"`, { stdio: 'pipe' });
 
   // Step 6: Merge video + audio
   console.log('  Merging video + audio...');
   const finalVideo = path.join(OUT, `${sectionName}-final.mp4`);
-  execSync(`ffmpeg -y -i "${mp4Video}" -i "${fullAudio}" -c:v copy -c:a aac -shortest "${finalVideo}" 2>/dev/null`);
+  execSync(`ffmpeg -y -i "${mp4Video}" -i "${fullAudio}" -c:v copy -c:a aac -shortest "${finalVideo}" `, { stdio: 'pipe' });
 
   const size = (fs.statSync(finalVideo).size / 1024 / 1024).toFixed(1);
   console.log(`  DONE: ${finalVideo} (${size} MB)`);

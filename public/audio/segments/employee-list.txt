@@ -1,0 +1,5 @@
+file '/Users/jfraser/Desktop/Desktop Winter 26 - Drive/09_Childcare-Business/Christina's Child Care Center/christinas-childcare/public/audio/segments/employee-0-employee-login.mp3'
+file '/Users/jfraser/Desktop/Desktop Winter 26 - Drive/09_Childcare-Business/Christina's Child Care Center/christinas-childcare/public/audio/segments/employee-1-employee-home.mp3'
+file '/Users/jfraser/Desktop/Desktop Winter 26 - Drive/09_Childcare-Business/Christina's Child Care Center/christinas-childcare/public/audio/segments/employee-2-meal-count.mp3'
+file '/Users/jfraser/Desktop/Desktop Winter 26 - Drive/09_Childcare-Business/Christina's Child Care Center/christinas-childcare/public/audio/segments/employee-3-upload-photos.mp3'
+file '/Users/jfraser/Desktop/Desktop Winter 26 - Drive/09_Childcare-Business/Christina's Child Care Center/christinas-childcare/public/audio/segments/employee-4-my-schedule.mp3'

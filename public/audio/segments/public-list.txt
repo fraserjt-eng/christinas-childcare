@@ -1,0 +1,3 @@
+file '/Users/jfraser/Desktop/Desktop Winter 26 - Drive/09_Childcare-Business/Christina's Child Care Center/christinas-childcare/public/audio/segments/public-0-home-page.mp3'
+file '/Users/jfraser/Desktop/Desktop Winter 26 - Drive/09_Childcare-Business/Christina's Child Care Center/christinas-childcare/public/audio/segments/public-1-programs.mp3'
+file '/Users/jfraser/Desktop/Desktop Winter 26 - Drive/09_Childcare-Business/Christina's Child Care Center/christinas-childcare/public/audio/segments/public-2-feature-guide.mp3'
