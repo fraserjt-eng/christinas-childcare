@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /dashboard/
+Disallow: /api/
+
+Sitemap: https://christinas-childcare.vercel.app/sitemap.xml

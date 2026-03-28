@@ -314,6 +314,17 @@ export default function AdminDashboard() {
 
   const greeting = getGreeting('Christina');
 
+  // Backup reminder: check when the last snapshot was taken
+  const backupDaysAgo = (() => {
+    if (typeof window === 'undefined') return null;
+    const raw = localStorage.getItem('christinas_last_snapshot');
+    if (!raw) return null;
+    const last = new Date(raw);
+    if (isNaN(last.getTime())) return null;
+    return Math.floor((Date.now() - last.getTime()) / (1000 * 60 * 60 * 24));
+  })();
+  const showBackupBanner = backupDaysAgo === null || backupDaysAgo > 3;
+
   return (
     <DashboardLayout isAdmin>
       <div className="max-w-2xl mx-auto space-y-6 pb-8">
@@ -336,6 +347,29 @@ export default function AdminDashboard() {
             Center Open
           </Badge>
         </div>
+
+        {/* ── Backup Reminder ── */}
+        {showBackupBanner && (
+          <div className="flex items-center gap-3 p-4 rounded-xl border bg-amber-50 border-amber-200">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-amber-100 text-amber-600">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900">Weekly backup is due.</p>
+              <p className="text-xs text-gray-600">
+                {backupDaysAgo === null
+                  ? 'Your last backup was never recorded.'
+                  : `Your last backup was ${backupDaysAgo} day${backupDaysAgo === 1 ? '' : 's'} ago.`}
+              </p>
+            </div>
+            <Link
+              href="/admin/settings/backup"
+              className="flex-shrink-0 text-xs font-semibold text-amber-700 hover:underline whitespace-nowrap"
+            >
+              Back Up Now
+            </Link>
+          </div>
+        )}
 
         {/* ── Attention Now ── */}
         <section>

@@ -51,12 +51,18 @@ export default function ScheduleTourPage() {
 
     // POST to API route (saves to Supabase)
     try {
-      await fetch('/api/tours', {
+      const res = await fetch('/api/tours', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(tourRequest),
       });
-    } catch {}
+      if (res.status === 429) {
+        // Still save locally and show success (don't punish the user)
+        console.warn('Rate limited on tour submission');
+      }
+    } catch {
+      // Network error, still save locally
+    }
 
     // Save to localStorage as backup
     const existing = localStorage.getItem('christinas_tour_requests');

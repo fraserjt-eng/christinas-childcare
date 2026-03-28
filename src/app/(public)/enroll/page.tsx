@@ -48,12 +48,18 @@ export default function EnrollPage() {
 
     // POST to API route (saves to Supabase)
     try {
-      await fetch('/api/inquiries', {
+      const res = await fetch('/api/inquiries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-    } catch {}
+      if (res.status === 429) {
+        // Still save locally and show success (don't punish the user)
+        console.warn('Rate limited on enrollment submission');
+      }
+    } catch {
+      // Network error, still save locally
+    }
 
     // Persist to localStorage as backup
     const inquiry: InquiryData = {

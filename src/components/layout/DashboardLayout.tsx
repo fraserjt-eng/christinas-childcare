@@ -120,6 +120,7 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/budget', label: 'Budget', icon: Wallet },
       { href: '/admin/strategic', label: 'Strategic Plan', icon: Target },
       { href: '/admin/settings', label: 'Settings', icon: Settings },
+      { href: '/admin/settings/backup', label: 'Backup & Restore', icon: ShieldCheck },
       { href: '/guide', label: 'Help & Guide', icon: BookOpen },
     ],
   },
