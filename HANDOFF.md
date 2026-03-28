@@ -1,54 +1,57 @@
-# Session Handoff - Christina's Child Care Center
+# Session Handoff: Christina's Child Care Center
+**Last Updated:** March 28, 2026
+**Last Session:** Production readiness (all 4 phases)
 
-## Current Task: Deploy Spiral Hero Animation
+## Project State
 
-### What's Done
-The HeroCarousel.tsx has been completely rewritten with a true vertical spiral design:
-- **File**: `src/components/features/HeroCarousel.tsx` (867 lines)
-- **Features implemented**:
-  - True vertical spiral from bottom to top (DNA-helix style)
-  - Red color (#C62828) with animated gradients
-  - Two interweaving spiral strands (front and back)
-  - Animated dashed overlays moving up and down
-  - Floating particles traveling along the spiral
-  - Rotating ellipse connector rings for 3D depth effect
-  - Same 5 stages: Infant → Toddler → Preschool → School Age → College
-  - Same detailed character graphics (crawling baby, diverse children, graduate)
-  - Sparkle effects around current character
+The platform is in **soft-launch readiness**. Supabase backend is live, auth is enforced, critical data persists to the cloud. Christina can demo the full platform and begin staff testing.
 
-### What Needs to Be Done
-1. **Commit the changes** - The spiral code is in the file but NOT committed
-2. **Deploy to Vercel** - Push to make it live at https://christinas-childcare.vercel.app/
+### Infrastructure
+- **Live URL:** https://christinas-childcare.vercel.app/
+- **GitHub:** https://github.com/fraserjt-eng/christinas-childcare.git
+- **Supabase:** `dkzxcxwjhhxqfgksynjb` (East US, 4 migrations pushed, RLS active)
+- **Vercel:** `christinas-childcare` (env vars set: SUPABASE_URL, ANON_KEY, SERVICE_ROLE_KEY)
 
-### Git Status
-- **Last commit**: `c3a46b93` - "Fix ESLint errors with disable comments"
-- **Uncommitted changes**: `src/components/features/HeroCarousel.tsx` (spiral redesign)
+### What's Production-Ready
+- Supabase backend with 5 critical storage modules (food, employees, incidents, enrollment, tours)
+- Real auth enforcement (middleware checks sessions, demo credentials removed)
+- Role-based RLS policies on all database tables
+- Daily operations report at `/admin/reports/daily` with CSV export
+- Privacy policy, security headers, OG image, Vercel Analytics
+- Auto-clock-out, session expiry warnings, form draft persistence
+- Incident audit trail (append-only), HTML sanitizer, error reporter
+- Rate limiting on API routes, enrollment deduplication
 
-### Commands to Run
-```bash
-git status
-git add src/components/features/HeroCarousel.tsx
-git commit -m "Redesign hero to true vertical spiral with animated movement
+### What's Not Production-Ready Yet
+- 18 storage modules still localStorage-only (knowledge, meetings, financial, etc.)
+- No email notifications on enrollment/tour submissions
+- Daily report is on-demand only (not auto-emailed)
+- No load testing done with 40+ concurrent users
+- Staff onboarding flow is scaffolded but needs content
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
-git push
-vercel --prod
-```
+## Key Files
 
-### Project Details
-- **Vercel URL**: https://christinas-childcare.vercel.app/
-- **GitHub**: https://github.com/fraserjt-eng/christinas-childcare.git
-- **Vercel Project ID**: prj_qW94FCjLSoy6WWRp0PfBN47fo2le
+| File | What It Does |
+|------|-------------|
+| `src/lib/supabase/client.ts` | Supabase client with `isSupabaseConfigured` guard |
+| `src/lib/supabase/service.ts` | Generic CRUD helpers (supabaseSelect, Insert, Upsert, Update, Delete) |
+| `src/lib/smart-dashboard.ts` | Time-aware alert engine (Opening/Core/Closing zones) |
+| `middleware.ts` | Route protection (checks session cookies, rate limits API) |
+| `src/lib/auth.ts` | Auth with Supabase Auth or cookie fallback |
+| `src/lib/error-reporter.ts` | Logs errors to Supabase `error_logs` table |
+| `src/lib/auto-clockout.ts` | Closes open time entries at 6 PM |
+| `src/lib/sanitize.ts` | HTML sanitizer for newsletter/message content |
+| `src/lib/export-csv.ts` | CSV export utility + full data backup |
+| `src/app/admin/reports/daily/page.tsx` | Daily operations report with AM/PM views |
 
-### Branding Colors
+## Branding Colors
 - Primary: `christina-red` (#C62828)
 - Secondary: `christina-blue` (#2196F3)
 - Accent: `christina-yellow` (#FFD54F), `christina-green` (#4CAF50), `christina-coral` (#FF7043)
 
-### Recent Completed Work (This Session)
-- AI-powered Lesson Builder with Claude integration
-- Fixed ESLint errors for Vercel deployment
-- Rewrote HeroCarousel with vertical spiral animation
-
-### Plan File Location
-Full implementation plan at: `/Users/jfraser/.claude/plans/zany-finding-hickey.md`
+## Next Priorities
+1. Wire remaining 18 storage modules to Supabase (same dual-write pattern)
+2. Add email notifications via Resend for enrollment/tour submissions
+3. Auto-email daily report at 6 AM and 6:30 PM
+4. Load test with simulated 40 concurrent users
+5. Parent-facing improvements (hero copy rewrite, gallery photos, pricing clarity)

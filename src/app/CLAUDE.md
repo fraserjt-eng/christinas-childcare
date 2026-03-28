@@ -6,56 +6,118 @@
 *No recent activity*
 </claude-mem-context>
 
-# Christina's Child Care — Claude Code Instructions
+# Christina's Child Care Center: Claude Code Instructions
 
-## Current build priority
+## Project Status (Updated March 28, 2026)
 
-Read `FRICTION_TOOLS_PRD.md` in the project root. It contains 20 friction-reducing tools to add to this platform, organized in 6 build phases. Build them in phase order.
+**Production readiness work completed.** Supabase backend is live, auth is enforced, 5 critical storage modules are cloud-backed, daily reports and CSV export are available. The platform is in soft-launch readiness for staff testing.
 
-## What already exists
+## What This Is
 
-This is a Next.js 14 app (App Router) with three portals:
-- `/admin` — Christina's owner/operator dashboard (food-counts, attendance, scheduling, tasks, messaging, compliance, inventory, etc.)
-- `/employee` — Staff portal (tasks, schedule, time-off requests, training)
-- `/dashboard` — Parent portal (messages, photos, calendar, child progress)
+A multi-portal childcare operations platform for Christina's Child Care Center (Crystal, MN). 94 pages, 5 API routes, 23 storage modules, 20 friction-reducing tools. Three portals:
+- `/admin` -- Owner/director dashboard (scheduling, CACFP, tasks, HR, compliance, incidents, communications, financial, reports)
+- `/employee` -- Staff portal (clock in/out, meal counts, photos, tasks, schedule, training)
+- `/dashboard` -- Parent portal (messages, photos, newsletters, child progress)
 
-## Tech stack (already configured, do not change)
+## Infrastructure
 
-- Next.js 14 with App Router and TypeScript strict
+| Service | Details |
+|---------|---------|
+| **Framework** | Next.js 14 App Router, TypeScript strict |
+| **Database** | Supabase `dkzxcxwjhhxqfgksynjb` (4 migrations, RLS active) |
+| **Hosting** | Vercel `christinas-childcare` |
+| **Live URL** | https://christinas-childcare.vercel.app/ |
+| **GitHub** | https://github.com/fraserjt-eng/christinas-childcare.git |
+| **Auth** | Supabase Auth (when configured) + cookie-based session fallback |
+
+## Tech Stack (do not change without discussion)
+
 - Tailwind CSS with custom christina-red/blue/yellow/green/coral color tokens
 - shadcn/ui components (Radix primitives) in `src/components/ui/`
 - Supabase (PostgreSQL + Auth + Storage + Realtime)
 - Recharts for data visualization
 - Zustand for client state
 - TipTap for rich text editing
-- @dnd-kit for drag-and-drop
+- @dnd-kit for drag-and-drop scheduling
 - date-fns for date utilities
 - zod for validation
 - react-hook-form for forms
+- jsPDF for PDF generation
+- @vercel/analytics + @vercel/speed-insights
+- Remotion for video compositions
 
-## Architecture rules
+## Data Architecture
+
+### Supabase-backed (cloud persistent, multi-device)
+These 5 storage modules dual-write to Supabase first, localStorage as cache:
+- `src/lib/food-storage.ts` -- meal counts, inventory, menus, classrooms
+- `src/lib/employee-storage.ts` -- staff records, time entries, schedules, pay stubs
+- `src/lib/incident-log-storage.ts` -- safety incidents (append-only audit trail)
+- `src/lib/enrollment-pipeline-storage.ts` -- leads, funnel stats
+- `src/lib/tour-storage.ts` -- tour requests
+
+### localStorage-only (browser cache, single device)
+The remaining 18 storage modules still use localStorage exclusively. Lower-priority data:
+- `cacfp-compliance-storage.ts`, `comms-storage.ts`, `newsletter-storage.ts`
+- `photo-storage.ts`, `notification-prefs-storage.ts`, `knowledge-storage.ts`
+- `schedule-optimizer-storage.ts`, `onboarding-storage.ts`, `staff-development-storage.ts`
+- `financial-storage.ts`, `authorization-storage.ts`, `supply-inventory-storage.ts`
+- `meeting-storage.ts`, `news-storage.ts`, `user-storage.ts`, `family-storage.ts`
+- `newsletter-analytics-storage.ts`, `lesson-storage.ts`
+
+### Dual-write pattern (use this for new storage modules)
+```typescript
+import { supabaseSelect, supabaseInsert } from '@/lib/supabase/service';
+
+// READ: cloud first, localStorage fallback
+export async function getItems(): Promise<Item[]> {
+  const cloudData = await supabaseSelect<Item>('table_name');
+  if (cloudData !== null) return cloudData;
+  return getFromStorage<Item>(STORAGE_KEYS.items);
+}
+
+// WRITE: cloud first, then cache locally
+export async function saveItem(data: Item): Promise<Item> {
+  await supabaseInsert('table_name', data);
+  const items = getFromStorage<Item>(STORAGE_KEYS.items);
+  items.push(data);
+  saveToStorage(STORAGE_KEYS.items, items);
+  return data;
+}
+```
+
+## Database Tables (4 migrations)
+
+**001_foundation.sql:** centers, employees, classrooms, food_counts, attendance, staff_schedules
+**002_friction_tools.sql:** cacfp_compliance, daily_photos, photo_reactions, communications, communication_reads, newsletters
+**003_operational_tables.sql:** enrollment_inquiries, tour_requests, incident_reports, hr_documents, training_records
+**004_fix_rls_policies.sql:** Role-based RLS (admin/owner/staff/parent/anon), error_logs table, helper functions
+
+## Safety Systems
+
+- **Auto-clock-out:** `src/lib/auto-clockout.ts` closes open time entries from previous days at 6 PM
+- **Session warning:** `src/components/layout/SessionWarning.tsx` shows countdown 30 min before session expiry
+- **Form drafts:** `src/hooks/useFormDraft.ts` persists form state on every keystroke
+- **Incident audit trail:** Edits to incidents are append-only with changed_by, changed_at, field diffs
+- **Error reporting:** `src/lib/error-reporter.ts` logs errors to Supabase `error_logs` table
+- **HTML sanitizer:** `src/lib/sanitize.ts` strips scripts/iframes from newsletter content
+- **Rate limiting:** `src/lib/rate-limit.ts` applied to API routes (5 req/min per IP)
+
+## Architecture Rules
 
 1. Every new page goes in the correct portal: `src/app/admin/`, `src/app/employee/`, or `src/app/dashboard/`
 2. Components go in `src/components/admin/`, `src/components/employee/`, or `src/components/dashboard/`
 3. Shared UI components use `src/components/ui/` (shadcn/ui)
 4. Types go in `src/types/` with one file per domain
 5. Data/storage utilities go in `src/lib/`
-6. Use existing patterns: check how `food-counts`, `tasks`, and `scheduling` pages are structured before building new features
+6. New storage modules MUST use the dual-write pattern (Supabase + localStorage)
 7. All pages use `'use client'` directive (this is a client-heavy app)
-8. Use existing DashboardLayout wrapper for admin pages
+8. Use existing DashboardLayout wrapper for admin/employee pages
 9. Integrate alerts into `src/lib/smart-dashboard.ts` `getDashboardAlerts()` function
+10. Use `sanitizeHTML()` before any `dangerouslySetInnerHTML` rendering
+11. Report errors with `reportError()` from `src/lib/error-reporter.ts`
 
-## Component patterns
-
-- Cards: `<Card>` with `<CardHeader>`, `<CardTitle>`, `<CardContent>` from shadcn
-- Forms: react-hook-form + zod schemas
-- Tables: shadcn `<Table>` components
-- Charts: Recharts with christina color tokens
-- Tabs: Radix `<Tabs>` for multi-section pages
-- Badges: color-coded by severity (green/yellow/orange/red) or status
-- Icons: lucide-react exclusively
-
-## Color system
+## Color System
 
 ```
 christina-red: #C62828 (primary, headers, CTAs)
@@ -65,100 +127,36 @@ christina-green: #4CAF50 (success, on-track)
 christina-coral: #FF7043 (alerts, destructive)
 ```
 
-## Database patterns
-
-- Supabase client: `src/lib/supabase.ts`
-- Many features currently use localStorage (see `src/lib/*-storage.ts` files)
-- New features should use Supabase tables where data needs to persist across devices
-- localStorage is acceptable for configuration and caching only
-- RLS policies required on every Supabase table
-
-## What NOT to do
+## What NOT to Do
 
 - Do not change the existing color system or font stack
-- Do not remove or refactor existing pages (additive only)
 - Do not add new npm dependencies without checking if existing ones cover the need
 - Do not create standalone pages outside the three portal routes
 - Do not use inline styles (Tailwind classes only)
 - Do not skip TypeScript types (strict mode is on)
 - Do not hardcode center-specific data (always reference center_id for multi-site support)
+- Do not store sensitive data in localStorage only (use Supabase for anything compliance-critical)
+- Do not render user-generated HTML without `sanitizeHTML()` first
+- Do not use `dangerouslySetInnerHTML` on unsanitized content
+- Do not remove or weaken RLS policies
 
-## Build order
+## Key Commands
 
-Follow the 6 phases in `FRICTION_TOOLS_PRD.md`:
-1. Revenue protection (Tools 01, 10)
-2. Parent experience (Tools 02, 11, 18)
-3. Owner time liberation (Tools 03, 07, 09, 13)
-4. Staff systems (Tools 05, 06, 12, 16)
-5. Growth engine (Tools 04, 08, 14, 19)
-6. Compliance and communication (Tools 15, 17, 20)
+```bash
+npm run dev          # Development server (port 3000)
+npm run build        # Production build
+npm run typecheck    # TypeScript check
+npm run lint         # ESLint check
+vercel --prod        # Deploy to production
+supabase db push     # Push new migrations
+```
 
-Do not skip phases. Each builds on the last. Test each tool before moving to the next.
+## All 20 Friction Tools: COMPLETE
 
-## Completed friction tools
-
-### Tool 01: Automated Meal Count Reminder System (Phase 1) — DONE
-- Extended `FoodCount` type with `submitted_at`, `on_time` fields
-- Added `CACFP_RATES`, `MEAL_DEADLINES`, `MealReminderConfig`, `MealComplianceSummary` to `src/types/food.ts`
-- Added compliance/reminder functions to `src/lib/food-storage.ts`: `getMealReminderConfig`, `saveMealReminderConfig`, `getMissingMealCounts`, `getMealComplianceSummary`, `getCurrentMealWindow`
-- Added `missed_meal_count` alert type to `src/lib/smart-dashboard.ts`
-- New components in `src/components/food/`:
-  - `ComplianceSummary.tsx` — weekly on-time % card
-  - `RevenueImpactCard.tsx` — missed counts x reimbursement rate
-  - `MealReminderBanner.tsx` — time-aware banner showing active meal window + missing counts
-  - `QuickMealEntry.tsx` — staff quick-entry form by classroom
-- Updated `/admin/food-counts` page with new "Compliance" tab, reminder banner, and quick entry
-
-### Tool 10: CACFP Compliance Tracker (Phase 1) — DONE
-- New storage module `src/lib/cacfp-compliance-storage.ts` with checklist CRUD, audit score calculation, reimbursement tracking, gap analysis
-- Types: `CACFPChecklistItem`, `CACFPComplianceRecord`, `ReimbursementRecord`
-- 16 default checklist items across 5 categories: meal_counts, documentation, training, facility, records
-- 3 auto-verified items (meal counts data), 13 manual check items
-- Audit score: required items worth 80%, optional 20%
-- Added `cacfp_compliance` alert type to `src/lib/smart-dashboard.ts` (fires when audit score < 70%)
-- New components in `src/components/admin/`:
-  - `CACFPComplianceChecklist.tsx` — monthly checklist with category grouping, auto/manual verification
-  - `AuditReadinessScore.tsx` — 0-100% score with gap report (critical + recommended)
-  - `ReimbursementTracker.tsx` — expected vs actual monthly reimbursement with discrepancy tracking
-- Integrated into `/admin/food-counts` Compliance tab alongside Tool 01 components
-- localStorage keys: `cacfp-compliance`, `cacfp-reimbursements`
-
-### Tool 02: Daily Photo/Video Upload Workflow (Phase 2) — DONE
-- New storage module `src/lib/photo-storage.ts` with full CRUD, reactions, stats
-- Types: `DailyPhoto`, `PhotoReaction`, `ActivityType`, `PhotoStatus`
-- New routes:
-  - `/employee/photos` — staff photo upload with file input, activity tagging, classroom selector
-  - `/admin/communications/photos` — admin review grid with approve/reject, bulk actions, stats
-  - `/dashboard/photos` — parent photo feed with heart reactions (replaces old static placeholder)
-- New components:
-  - `src/app/employee/photos/page.tsx` — upload form with base64 preview
-  - `src/components/admin/PhotoReviewGrid.tsx` — filterable grid, bulk approve/reject
-  - `src/components/dashboard/PhotoFeed.tsx` — chronological feed with reactions
-- localStorage keys: `christinas_daily_photos`, `christinas_photo_reactions`
-
-### Tool 11: Parent Communication Hub (Phase 2) — DONE
-- New storage module `src/lib/comms-storage.ts` with communications CRUD, templates, read receipts
-- Types: `Communication`, `CommunicationType`, `AudienceType`, `MessageTemplate`, `CommunicationRead`
-- Created `src/types/communications.ts` for existing newsletter page types
-- 5 pre-built message templates (closure, illness, field trip, supply request, fee reminder, positive update)
-- New components:
-  - `src/components/admin/CommunicationHub.tsx` — unified tabs for announcements, individual, templates; compose form with audience selector
-  - `src/components/admin/CommunicationLog.tsx` — searchable history with read receipts
-  - `src/components/dashboard/ParentInbox.tsx` — parent-facing message center with read tracking
-
-### Tool 18: Weekly Family Newsletter Generator (Phase 2) — DONE
-- New storage module `src/lib/newsletter-storage.ts` with newsletter CRUD, sections, default generation
-- Types: `Newsletter`, `NewsletterSection`, `NewsletterStatus`
-- Section types: photos, events, menu, classroom_spotlight, milestones, announcements, custom
-- New components:
-  - `src/components/admin/NewsletterBuilder.tsx` — section editor, preview, schedule/send
-  - `src/components/dashboard/NewsletterArchive.tsx` — parent-facing archive with search
-- New route: `/dashboard/news` — newsletter archive page
-- localStorage key: `christinas_newsletters`
-
-### Supabase Migration
-- `supabase/migrations/20260313_002_friction_tools.sql` — all Phase 1+2 tables
-  - Extends food_counts with submitted_at, on_time
-  - New tables: cacfp_compliance, daily_photos, photo_reactions, communications, communication_reads, newsletters
-  - Storage buckets: daily-photos, compliance-docs
-  - RLS + permissive policies matching existing pattern
+See `FRICTION_TOOLS_PRD.md` for full specifications. All 6 phases built:
+1. Revenue protection (Tools 01, 10) -- CACFP meal counts + compliance
+2. Parent experience (Tools 02, 11, 18) -- photos, communication hub, newsletters
+3. Owner time liberation (Tools 03, 07, 09, 13) -- task board, scheduling, reports
+4. Staff systems (Tools 05, 06, 12, 16) -- training, knowledge base, onboarding
+5. Growth engine (Tools 04, 08, 14, 19) -- enrollment pipeline, revenue forecast
+6. Compliance and communication (Tools 15, 17, 20) -- incidents, compliance dashboard
