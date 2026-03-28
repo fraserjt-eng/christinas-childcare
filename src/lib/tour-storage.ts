@@ -1,5 +1,11 @@
-// Tour Experience Standardizer — localStorage storage module
-// Tool 14 for Christina's Child Care Center
+// Tour Experience Standardizer
+// Supabase-first with localStorage as fallback cache
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+} from '@/lib/supabase/service';
 
 export interface TourChecklistItem {
   id: string;
@@ -292,7 +298,11 @@ export async function getTours(filters?: {
   date?: string;
 }): Promise<Tour[]> {
   ensureSeeded();
-  let tours = getFromStorage<Tour>(TOURS_KEY);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<Tour>('tour_requests');
+  let tours = cloudData !== null
+    ? cloudData
+    : getFromStorage<Tour>(TOURS_KEY);
 
   if (filters) {
     if (filters.status) {
@@ -314,7 +324,6 @@ export async function createTour(
   data: Omit<Tour, 'id' | 'created_at' | 'status' | 'checklist_completed'>
 ): Promise<Tour> {
   ensureSeeded();
-  const tours = getFromStorage<Tour>(TOURS_KEY);
   const tour: Tour = {
     ...data,
     id: generateId('tour'),
@@ -323,6 +332,9 @@ export async function createTour(
     checklist_items: getDefaultChecklist(),
     created_at: new Date().toISOString(),
   };
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<Tour>('tour_requests', tour as unknown as Record<string, unknown>);
+  const tours = getFromStorage<Tour>(TOURS_KEY);
   tours.push(tour);
   saveToStorage(TOURS_KEY, tours);
   return tour;
@@ -333,6 +345,10 @@ export async function updateTour(
   updates: Partial<Tour>
 ): Promise<Tour | null> {
   ensureSeeded();
+
+  // Write to Supabase first
+  await supabaseUpdate<Tour>('tour_requests', id, updates as Record<string, unknown>);
+
   const tours = getFromStorage<Tour>(TOURS_KEY);
   const index = tours.findIndex(t => t.id === id);
   if (index === -1) return null;
@@ -368,8 +384,9 @@ export async function getAvailableSlots(
   );
 
   // Filter out already-booked times
-  const booked = getFromStorage<Tour>(TOURS_KEY)
-    .filter(t => t.scheduled_date === date && t.center_id === centerId && t.status === 'scheduled')
+  const allTours = await getTours({ center_id: centerId, date });
+  const booked = allTours
+    .filter(t => t.status === 'scheduled')
     .map(t => t.scheduled_time);
 
   return centerSlots
@@ -379,7 +396,8 @@ export async function getAvailableSlots(
 
 export async function getTourStats(): Promise<TourStats> {
   ensureSeeded();
-  const tours = getFromStorage<Tour>(TOURS_KEY);
+  const cloudData = await supabaseSelect<Tour>('tour_requests');
+  const tours = cloudData !== null ? cloudData : getFromStorage<Tour>(TOURS_KEY);
 
   const completed = tours.filter(t => t.status === 'completed');
   const noShow = tours.filter(t => t.status === 'no_show');

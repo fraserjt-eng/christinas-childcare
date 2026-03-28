@@ -70,7 +70,11 @@ export function EnrollmentFunnel() {
   const [stats, setStats] = useState<FunnelStat[]>([]);
 
   useEffect(() => {
-    setStats(getFunnelStats());
+    const load = async () => {
+      const data = await getFunnelStats();
+      setStats(data);
+    };
+    load();
   }, []);
 
   const chartData = stats.map((s) => ({

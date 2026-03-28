@@ -1,5 +1,11 @@
 // Incident & Communication Log Storage for Christina's Child Care Center
-// Uses localStorage for persistence, designed for easy Supabase migration
+// Supabase-first with localStorage as fallback cache
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+} from '@/lib/supabase/service';
 
 // ============================================================================
 // Types
@@ -22,6 +28,12 @@ export const SEVERITY_LABELS: Record<IncidentSeverity, string> = {
   serious: 'Serious',
 };
 
+export interface IncidentAuditEntry {
+  changed_by: string;
+  changed_at: string;
+  changes: Array<{ field: string; old_value: string; new_value: string }>;
+}
+
 export interface IncidentLog {
   id: string;
   date: string;
@@ -43,6 +55,7 @@ export interface IncidentLog {
   notes?: string;
   created_by: string;
   created_at: string;
+  audit_trail?: IncidentAuditEntry[];
 }
 
 export interface IncidentStats {
@@ -101,7 +114,9 @@ export async function getIncidents(filters?: {
   startDate?: string;
   endDate?: string;
 }): Promise<IncidentLog[]> {
-  let incidents = getFromStorage();
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<IncidentLog>('incident_reports');
+  let incidents = cloudData !== null ? cloudData : getFromStorage();
 
   if (incidents.length === 0) {
     await seedIncidentData();
@@ -141,12 +156,16 @@ export async function getIncidents(filters?: {
 export async function createIncident(
   data: Omit<IncidentLog, 'id' | 'created_at'>
 ): Promise<IncidentLog> {
-  const incidents = getFromStorage();
   const incident: IncidentLog = {
     ...data,
     id: generateId(),
     created_at: new Date().toISOString(),
+    audit_trail: [],
   };
+
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<IncidentLog>('incident_reports', incident as unknown as Record<string, unknown>);
+  const incidents = getFromStorage();
   incidents.push(incident);
   saveToStorage(incidents);
   return incident;
@@ -154,14 +173,56 @@ export async function createIncident(
 
 export async function updateIncident(
   id: string,
-  updates: Partial<Omit<IncidentLog, 'id' | 'created_at'>>
+  updates: Partial<Omit<IncidentLog, 'id' | 'created_at'>>,
+  changedBy?: string
 ): Promise<IncidentLog | null> {
   const incidents = getFromStorage();
   const index = incidents.findIndex((i) => i.id === id);
   if (index === -1) return null;
-  incidents[index] = { ...incidents[index], ...updates, id, created_at: incidents[index].created_at };
+
+  const existing = incidents[index];
+
+  // Build an audit entry that records what changed
+  const trackedFields = [
+    'date', 'time', 'child_name', 'classroom', 'incident_type', 'severity',
+    'description', 'action_taken', 'witnesses', 'staff_on_duty', 'parent_notified',
+    'follow_up_required', 'notes',
+  ] as const;
+
+  const changes: Array<{ field: string; old_value: string; new_value: string }> = [];
+  for (const field of trackedFields) {
+    if (field in updates) {
+      const oldVal = String(existing[field] ?? '');
+      const newVal = String((updates as Record<string, unknown>)[field] ?? '');
+      if (oldVal !== newVal) {
+        changes.push({ field, old_value: oldVal, new_value: newVal });
+      }
+    }
+  }
+
+  const auditEntry: IncidentAuditEntry = {
+    changed_by: changedBy || 'unknown',
+    changed_at: new Date().toISOString(),
+    changes,
+  };
+
+  const updatedIncident: IncidentLog = {
+    ...existing,
+    ...updates,
+    id,
+    created_at: existing.created_at,
+    audit_trail: [...(existing.audit_trail || []), auditEntry],
+  };
+
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<IncidentLog>('incident_reports', id, {
+    ...updates,
+    audit_trail: updatedIncident.audit_trail,
+  } as Record<string, unknown>);
+
+  incidents[index] = updatedIncident;
   saveToStorage(incidents);
-  return incidents[index];
+  return updatedIncident;
 }
 
 // ============================================================================
@@ -237,7 +298,8 @@ export async function getComplianceReport(): Promise<{
   overdue_notifications: number;
   follow_up_pending: number;
 }> {
-  const incidents = getFromStorage();
+  const cloudData = await supabaseSelect<IncidentLog>('incident_reports');
+  const incidents = cloudData !== null ? cloudData : getFromStorage();
   if (incidents.length === 0) return {
     total_incidents: 0,
     parent_notified_pct: 100,
@@ -273,7 +335,8 @@ export async function getComplianceReport(): Promise<{
 // ============================================================================
 
 export async function getWeeklyTrend(): Promise<{ week: string; count: number }[]> {
-  const incidents = getFromStorage();
+  const cloudData = await supabaseSelect<IncidentLog>('incident_reports');
+  const incidents = cloudData !== null ? cloudData : getFromStorage();
   const result: { week: string; count: number }[] = [];
   const now = new Date();
 

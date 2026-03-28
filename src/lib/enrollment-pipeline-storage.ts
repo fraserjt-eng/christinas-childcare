@@ -1,5 +1,11 @@
 // Enrollment Pipeline Storage Module — Tool 08: Enrollment Funnel
-// localStorage for demo mode, designed for Supabase migration
+// Supabase-first with localStorage as fallback cache
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+} from '@/lib/supabase/service';
 
 export type PipelineStage =
   | 'inquiry'
@@ -398,13 +404,17 @@ function buildSeedActivities(leads: PipelineLead[]): PipelineActivity[] {
 
 // ─── CRUD ───────────────────────────────────────────────────────────
 
-export function getLeads(filters?: {
+export async function getLeads(filters?: {
   stage?: PipelineStage;
   lead_source?: LeadSource;
   assigned_to?: string;
   center_id?: string;
-}): PipelineLead[] {
-  let leads = getFromStorage<PipelineLead>(LEADS_KEY);
+}): Promise<PipelineLead[]> {
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<PipelineLead>('enrollment_inquiries');
+  let leads = cloudData !== null
+    ? cloudData
+    : getFromStorage<PipelineLead>(LEADS_KEY);
 
   if (leads.length === 0) {
     leads = buildSeedLeads();
@@ -431,52 +441,56 @@ export function getLeads(filters?: {
   return leads.sort((a, b) => b.last_activity.localeCompare(a.last_activity));
 }
 
-export function createLead(
+export async function createLead(
   data: Omit<PipelineLead, 'id' | 'created_at' | 'updated_at'>
-): PipelineLead {
-  const leads = getFromStorage<PipelineLead>(LEADS_KEY);
+): Promise<PipelineLead> {
   const lead: PipelineLead = {
     ...data,
     id: `lead_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<PipelineLead>('enrollment_inquiries', lead as unknown as Record<string, unknown>);
+  const leads = getFromStorage<PipelineLead>(LEADS_KEY);
   leads.push(lead);
   saveToStorage(LEADS_KEY, leads);
   return lead;
 }
 
-export function updateLeadStage(
+export async function updateLeadStage(
   id: string,
   stage: PipelineStage,
   notes?: string
-): PipelineLead | null {
+): Promise<PipelineLead | null> {
   const leads = getFromStorage<PipelineLead>(LEADS_KEY);
   const index = leads.findIndex((l) => l.id === id);
   if (index === -1) return null;
 
   const prevStage = leads[index].stage;
-  leads[index] = {
-    ...leads[index],
+  const stageUpdates = {
     stage,
     last_activity: new Date().toISOString().split('T')[0],
     updated_at: new Date().toISOString(),
   };
 
+  // Write to Supabase first
+  await supabaseUpdate<PipelineLead>('enrollment_inquiries', id, stageUpdates);
+
+  leads[index] = { ...leads[index], ...stageUpdates };
   saveToStorage(LEADS_KEY, leads);
 
   // Log activity
-  addActivity(id, 'stage_change', notes || `Moved from ${STAGE_LABELS[prevStage]} to ${STAGE_LABELS[stage]}`);
+  await addActivity(id, 'stage_change', notes || `Moved from ${STAGE_LABELS[prevStage]} to ${STAGE_LABELS[stage]}`);
 
   return leads[index];
 }
 
-export function addActivity(
+export async function addActivity(
   pipelineId: string,
   activityType: ActivityType,
   notes: string
-): PipelineActivity {
-  const activities = getFromStorage<PipelineActivity>(ACTIVITIES_KEY);
+): Promise<PipelineActivity> {
   const activity: PipelineActivity = {
     id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     pipeline_id: pipelineId,
@@ -484,6 +498,10 @@ export function addActivity(
     notes,
     created_at: new Date().toISOString(),
   };
+
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<PipelineActivity>('pipeline_activities', activity as unknown as Record<string, unknown>);
+  const activities = getFromStorage<PipelineActivity>(ACTIVITIES_KEY);
   activities.push(activity);
   saveToStorage(ACTIVITIES_KEY, activities);
 
@@ -499,7 +517,13 @@ export function addActivity(
   return activity;
 }
 
-export function getActivitiesForLead(pipelineId: string): PipelineActivity[] {
+export async function getActivitiesForLead(pipelineId: string): Promise<PipelineActivity[]> {
+  const cloudData = await supabaseSelect<PipelineActivity>('pipeline_activities', {
+    filters: { pipeline_id: pipelineId },
+  });
+  if (cloudData !== null) {
+    return cloudData.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
   const activities = getFromStorage<PipelineActivity>(ACTIVITIES_KEY);
   return activities
     .filter((a) => a.pipeline_id === pipelineId)
@@ -516,8 +540,8 @@ export interface FunnelStat {
   avgDaysInStage: number;
 }
 
-export function getFunnelStats(): FunnelStat[] {
-  const leads = getLeads();
+export async function getFunnelStats(): Promise<FunnelStat[]> {
+  const leads = await getLeads();
   const today = new Date().toISOString().split('T')[0];
 
   const countByStage: Record<PipelineStage, number> = {
@@ -570,8 +594,8 @@ export interface LeadSourceStat {
   conversionRate: number;
 }
 
-export function getLeadSourceStats(): LeadSourceStat[] {
-  const leads = getLeads();
+export async function getLeadSourceStats(): Promise<LeadSourceStat[]> {
+  const leads = await getLeads();
   const convertedStages = new Set<PipelineStage>(['enrolled', 'active']);
 
   const sourceKeys: LeadSource[] = ['website', 'referral', 'drive_by', 'social_media', 'other'];
@@ -592,8 +616,8 @@ export function getLeadSourceStats(): LeadSourceStat[] {
   });
 }
 
-export function getStaleLeads(daysSinceActivity = 7): PipelineLead[] {
-  const leads = getLeads();
+export async function getStaleLeads(daysSinceActivity = 7): Promise<PipelineLead[]> {
+  const leads = await getLeads();
   const today = new Date().toISOString().split('T')[0];
   return leads.filter((l) => {
     if (l.stage === 'active') return false;
@@ -609,8 +633,8 @@ export interface RevenueProjection {
   openSlots: number;
 }
 
-export function getRevenueProjection(avgMonthlyRate = 1350): RevenueProjection {
-  const leads = getLeads();
+export async function getRevenueProjection(avgMonthlyRate = 1350): Promise<RevenueProjection> {
+  const leads = await getLeads();
 
   const byStage = STAGE_ORDER.map((stage) => {
     const count = leads.filter((l) => l.stage === stage).length;

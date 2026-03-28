@@ -84,15 +84,19 @@ export async function signUp(
 }
 
 /**
- * Sign in with email and password
+ * Sign in with email and password.
+ * When Supabase is configured, delegates to Supabase Auth.
+ * When Supabase is NOT configured, login is blocked entirely.
  */
 export async function signIn(
   email: string,
   password: string
 ): Promise<AuthResult> {
   if (!supabaseAuth) {
-    // Demo mode - check against hardcoded credentials
-    return demoSignIn(email, password);
+    return {
+      success: false,
+      error: 'Database not connected. Contact administrator.',
+    };
   }
 
   try {
@@ -126,71 +130,6 @@ export async function signIn(
 }
 
 /**
- * Demo sign in for development without Supabase
- */
-function demoSignIn(email: string, password: string): AuthResult {
-  const demoUsers: Record<string, { password: string; user: AuthUser }> = {
-    'admin@demo.com': {
-      password: 'admin123',
-      user: {
-        id: 'demo-admin',
-        email: 'admin@demo.com',
-        full_name: 'Demo Admin',
-        role: 'admin',
-      },
-    },
-    'christina@childcare.com': {
-      password: 'owner123',
-      user: {
-        id: 'demo-owner',
-        email: 'christina@childcare.com',
-        full_name: 'Christina Zeogar',
-        role: 'owner',
-      },
-    },
-    'teacher@demo.com': {
-      password: 'teacher123',
-      user: {
-        id: 'demo-teacher',
-        email: 'teacher@demo.com',
-        full_name: 'Demo Teacher',
-        role: 'teacher',
-      },
-    },
-    'parent@demo.com': {
-      password: 'parent123',
-      user: {
-        id: 'demo-parent',
-        email: 'parent@demo.com',
-        full_name: 'Demo Parent',
-        role: 'parent',
-      },
-    },
-  };
-
-  const demoUser = demoUsers[email.toLowerCase()];
-
-  if (!demoUser) {
-    return { success: false, error: 'Invalid email or password' };
-  }
-
-  if (demoUser.password !== password) {
-    return { success: false, error: 'Invalid email or password' };
-  }
-
-  // Store demo session in localStorage
-  if (typeof window !== 'undefined') {
-    const session = {
-      user: demoUser.user,
-      expires_at: Date.now() + 8 * 60 * 60 * 1000, // 8 hours
-    };
-    localStorage.setItem('auth_session', JSON.stringify(session));
-  }
-
-  return { success: true, user: demoUser.user };
-}
-
-/**
  * Sign out current user
  */
 export async function signOut(): Promise<void> {
@@ -198,9 +137,9 @@ export async function signOut(): Promise<void> {
     await supabaseAuth.auth.signOut();
   }
 
-  // Clear local session
+  // Clear the auth_session cookie (used when Supabase is not configured)
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('auth_session');
+    document.cookie = 'auth_session=; Max-Age=0; path=/; SameSite=Lax';
   }
 }
 
@@ -226,24 +165,30 @@ export async function getSession(): Promise<AuthSession | null> {
     };
   }
 
-  // Demo mode - check localStorage
+  // No Supabase: read the auth_session cookie set by the login page.
+  // This path only runs in the browser (server-side checks are in middleware).
   if (typeof window === 'undefined') return null;
 
-  const stored = localStorage.getItem('auth_session');
-  if (!stored) return null;
+  // Read cookie value by name
+  const cookieValue = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('auth_session='))
+    ?.split('=')
+    .slice(1)
+    .join('=');
+
+  if (!cookieValue) return null;
 
   try {
-    const session = JSON.parse(stored);
+    const session = JSON.parse(decodeURIComponent(cookieValue));
 
-    // Check if expired
     if (session.expires_at && session.expires_at < Date.now()) {
-      localStorage.removeItem('auth_session');
       return null;
     }
 
     return {
       user: session.user,
-      access_token: 'demo-token',
+      access_token: 'no-supabase',
       expires_at: session.expires_at,
     };
   } catch {

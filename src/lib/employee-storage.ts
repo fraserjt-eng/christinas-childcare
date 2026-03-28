@@ -1,5 +1,13 @@
 // Employee Storage Module for Christina's Child Care Center
-// Uses localStorage for persistence, designed for easy Supabase migration
+// Supabase-first with localStorage as fallback cache
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+  supabaseUpsert,
+  supabaseDelete,
+} from '@/lib/supabase/service';
 
 import {
   Employee,
@@ -78,6 +86,9 @@ function saveToStorage<T>(key: string, data: T[]): void {
 // ============================================================================
 
 export async function getEmployees(): Promise<Employee[]> {
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<Employee>('employees');
+  if (cloudData !== null) return cloudData;
   return getFromStorage<Employee>(STORAGE_KEYS.employees);
 }
 
@@ -97,9 +108,7 @@ export async function getEmployeeByPin(pin: string): Promise<Employee | null> {
 }
 
 export async function createEmployee(data: EmployeeCreate): Promise<Employee> {
-  const employees = await getEmployees();
   const now = new Date().toISOString();
-
   const newEmployee: Employee = {
     ...data,
     id: generateEmployeeId(),
@@ -107,12 +116,18 @@ export async function createEmployee(data: EmployeeCreate): Promise<Employee> {
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<Employee>('employees', newEmployee as unknown as Record<string, unknown>);
+  const employees = getFromStorage<Employee>(STORAGE_KEYS.employees);
   employees.push(newEmployee);
   saveToStorage(STORAGE_KEYS.employees, employees);
   return newEmployee;
 }
 
 export async function updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | null> {
+  // Write to Supabase first
+  await supabaseUpdate<Employee>('employees', id, updates as Record<string, unknown>);
+
   const employees = await getEmployees();
   const index = employees.findIndex((e) => e.id === id);
 
@@ -132,6 +147,9 @@ export async function updateEmployee(id: string, updates: Partial<Employee>): Pr
 }
 
 export async function deleteEmployee(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('employees', id);
+
   const employees = await getEmployees();
   const index = employees.findIndex((e) => e.id === id);
 
@@ -152,7 +170,11 @@ export async function getTimeEntries(filters?: {
   startDate?: string;
   endDate?: string;
 }): Promise<TimeEntry[]> {
-  let entries = getFromStorage<TimeEntry>(STORAGE_KEYS.timeEntries);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<TimeEntry>('time_entries');
+  let entries = cloudData !== null
+    ? cloudData
+    : getFromStorage<TimeEntry>(STORAGE_KEYS.timeEntries);
 
   if (filters) {
     if (filters.employee_id) {
@@ -179,6 +201,8 @@ export async function getTimeEntries(filters?: {
 }
 
 export async function getTimeEntry(id: string): Promise<TimeEntry | null> {
+  const cloudData = await supabaseSelect<TimeEntry>('time_entries', { filters: { id } });
+  if (cloudData !== null) return cloudData[0] || null;
   const entries = getFromStorage<TimeEntry>(STORAGE_KEYS.timeEntries);
   return entries.find((e) => e.id === id) || null;
 }
@@ -189,7 +213,6 @@ export async function getActiveTimeEntry(employeeId: string): Promise<TimeEntry 
 }
 
 export async function clockIn(employeeId: string): Promise<TimeEntry> {
-  const entries = getFromStorage<TimeEntry>(STORAGE_KEYS.timeEntries);
   const now = new Date();
   const today = now.toISOString().split('T')[0];
 
@@ -201,25 +224,34 @@ export async function clockIn(employeeId: string): Promise<TimeEntry> {
     created_at: now.toISOString(),
   };
 
+  // Write to Supabase first for multi-device visibility, then cache locally
+  await supabaseInsert<TimeEntry>('time_entries', newEntry as unknown as Record<string, unknown>);
+  const entries = getFromStorage<TimeEntry>(STORAGE_KEYS.timeEntries);
   entries.push(newEntry);
   saveToStorage(STORAGE_KEYS.timeEntries, entries);
   return newEntry;
 }
 
 export async function clockOut(entryId: string, breakMinutes: number = 0): Promise<TimeEntry | null> {
+  const now = new Date().toISOString();
   const entries = getFromStorage<TimeEntry>(STORAGE_KEYS.timeEntries);
   const index = entries.findIndex((e) => e.id === entryId);
 
   if (index === -1) return null;
 
-  const now = new Date().toISOString();
   const hoursWorked = calculateHoursWorked(entries[index].clock_in, now, breakMinutes);
-
-  entries[index] = {
-    ...entries[index],
+  const clockOutUpdates = {
     clock_out: now,
     hours_worked: hoursWorked,
     break_minutes: breakMinutes,
+  };
+
+  // Write to Supabase first for multi-device visibility, then cache locally
+  await supabaseUpdate<TimeEntry>('time_entries', entryId, clockOutUpdates);
+
+  entries[index] = {
+    ...entries[index],
+    ...clockOutUpdates,
   };
 
   saveToStorage(STORAGE_KEYS.timeEntries, entries);
@@ -227,8 +259,6 @@ export async function clockOut(entryId: string, breakMinutes: number = 0): Promi
 }
 
 export async function createTimeEntry(data: TimeEntryCreate): Promise<TimeEntry> {
-  const entries = getFromStorage<TimeEntry>(STORAGE_KEYS.timeEntries);
-
   const newEntry: TimeEntry = {
     ...data,
     id: generateTimeEntryId(),
@@ -244,12 +274,18 @@ export async function createTimeEntry(data: TimeEntryCreate): Promise<TimeEntry>
     );
   }
 
+  // Write to Supabase first for multi-device visibility, then cache locally
+  await supabaseInsert<TimeEntry>('time_entries', newEntry as unknown as Record<string, unknown>);
+  const entries = getFromStorage<TimeEntry>(STORAGE_KEYS.timeEntries);
   entries.push(newEntry);
   saveToStorage(STORAGE_KEYS.timeEntries, entries);
   return newEntry;
 }
 
 export async function updateTimeEntry(id: string, updates: Partial<TimeEntry>): Promise<TimeEntry | null> {
+  // Write to Supabase first
+  await supabaseUpdate<TimeEntry>('time_entries', id, updates as Record<string, unknown>);
+
   const entries = getFromStorage<TimeEntry>(STORAGE_KEYS.timeEntries);
   const index = entries.findIndex((e) => e.id === id);
 
@@ -278,6 +314,9 @@ export async function updateTimeEntry(id: string, updates: Partial<TimeEntry>): 
 }
 
 export async function deleteTimeEntry(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('time_entries', id);
+
   const entries = getFromStorage<TimeEntry>(STORAGE_KEYS.timeEntries);
   const index = entries.findIndex((e) => e.id === id);
 
@@ -298,7 +337,11 @@ export async function getPayStubs(filters?: {
   periodStart?: string;
   periodEnd?: string;
 }): Promise<PayStub[]> {
-  let stubs = getFromStorage<PayStub>(STORAGE_KEYS.payStubs);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<PayStub>('pay_stubs');
+  let stubs = cloudData !== null
+    ? cloudData
+    : getFromStorage<PayStub>(STORAGE_KEYS.payStubs);
 
   if (filters) {
     if (filters.employee_id) {
@@ -322,14 +365,14 @@ export async function getPayStubs(filters?: {
 }
 
 export async function getPayStub(id: string): Promise<PayStub | null> {
+  const cloudData = await supabaseSelect<PayStub>('pay_stubs', { filters: { id } });
+  if (cloudData !== null) return cloudData[0] || null;
   const stubs = getFromStorage<PayStub>(STORAGE_KEYS.payStubs);
   return stubs.find((s) => s.id === id) || null;
 }
 
 export async function createPayStub(data: PayStubCreate): Promise<PayStub> {
-  const stubs = getFromStorage<PayStub>(STORAGE_KEYS.payStubs);
   const now = new Date().toISOString();
-
   const newStub: PayStub = {
     ...data,
     id: generatePayStubId(),
@@ -337,12 +380,18 @@ export async function createPayStub(data: PayStubCreate): Promise<PayStub> {
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<PayStub>('pay_stubs', newStub as unknown as Record<string, unknown>);
+  const stubs = getFromStorage<PayStub>(STORAGE_KEYS.payStubs);
   stubs.push(newStub);
   saveToStorage(STORAGE_KEYS.payStubs, stubs);
   return newStub;
 }
 
 export async function updatePayStub(id: string, updates: Partial<PayStub>): Promise<PayStub | null> {
+  // Write to Supabase first
+  await supabaseUpdate<PayStub>('pay_stubs', id, updates as Record<string, unknown>);
+
   const stubs = getFromStorage<PayStub>(STORAGE_KEYS.payStubs);
   const index = stubs.findIndex((s) => s.id === id);
 
@@ -362,6 +411,9 @@ export async function updatePayStub(id: string, updates: Partial<PayStub>): Prom
 }
 
 export async function deletePayStub(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('pay_stubs', id);
+
   const stubs = getFromStorage<PayStub>(STORAGE_KEYS.payStubs);
   const index = stubs.findIndex((s) => s.id === id);
 
@@ -380,7 +432,11 @@ export async function getTimeOffRequests(filters?: {
   employee_id?: string;
   status?: TimeOffRequest['status'];
 }): Promise<TimeOffRequest[]> {
-  let requests = getFromStorage<TimeOffRequest>(STORAGE_KEYS.timeOffRequests);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<TimeOffRequest>('time_off_requests');
+  let requests = cloudData !== null
+    ? cloudData
+    : getFromStorage<TimeOffRequest>(STORAGE_KEYS.timeOffRequests);
 
   if (filters) {
     if (filters.employee_id) {
@@ -398,14 +454,14 @@ export async function getTimeOffRequests(filters?: {
 }
 
 export async function getTimeOffRequest(id: string): Promise<TimeOffRequest | null> {
+  const cloudData = await supabaseSelect<TimeOffRequest>('time_off_requests', { filters: { id } });
+  if (cloudData !== null) return cloudData[0] || null;
   const requests = getFromStorage<TimeOffRequest>(STORAGE_KEYS.timeOffRequests);
   return requests.find((r) => r.id === id) || null;
 }
 
 export async function createTimeOffRequest(data: TimeOffRequestCreate): Promise<TimeOffRequest> {
-  const requests = getFromStorage<TimeOffRequest>(STORAGE_KEYS.timeOffRequests);
   const now = new Date().toISOString();
-
   const newRequest: TimeOffRequest = {
     ...data,
     id: generateTimeOffId(),
@@ -414,6 +470,9 @@ export async function createTimeOffRequest(data: TimeOffRequestCreate): Promise<
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<TimeOffRequest>('time_off_requests', newRequest as unknown as Record<string, unknown>);
+  const requests = getFromStorage<TimeOffRequest>(STORAGE_KEYS.timeOffRequests);
   requests.push(newRequest);
   saveToStorage(STORAGE_KEYS.timeOffRequests, requests);
   return newRequest;
@@ -423,6 +482,9 @@ export async function updateTimeOffRequest(
   id: string,
   updates: Partial<TimeOffRequest>
 ): Promise<TimeOffRequest | null> {
+  // Write to Supabase first
+  await supabaseUpdate<TimeOffRequest>('time_off_requests', id, updates as Record<string, unknown>);
+
   const requests = getFromStorage<TimeOffRequest>(STORAGE_KEYS.timeOffRequests);
   const index = requests.findIndex((r) => r.id === id);
 
@@ -535,9 +597,7 @@ export async function getScheduleEntries(filters?: {
 }
 
 export async function createScheduleEntry(data: ScheduleEntryCreate): Promise<ScheduleEntry> {
-  const entries = getFromStorage<ScheduleEntry>(STORAGE_KEYS.schedules);
   const now = new Date().toISOString();
-
   const newEntry: ScheduleEntry = {
     ...data,
     id: generateScheduleId(),
@@ -545,6 +605,9 @@ export async function createScheduleEntry(data: ScheduleEntryCreate): Promise<Sc
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<ScheduleEntry>('staff_schedules', newEntry as unknown as Record<string, unknown>);
+  const entries = getFromStorage<ScheduleEntry>(STORAGE_KEYS.schedules);
   entries.push(newEntry);
   saveToStorage(STORAGE_KEYS.schedules, entries);
 
@@ -565,6 +628,9 @@ export async function updateScheduleEntry(
   id: string,
   updates: Partial<ScheduleEntry>
 ): Promise<ScheduleEntry | null> {
+  // Write to Supabase first
+  await supabaseUpdate<ScheduleEntry>('staff_schedules', id, updates as Record<string, unknown>);
+
   // Try original store first
   const entries = getFromStorage<ScheduleEntry>(STORAGE_KEYS.schedules);
   const index = entries.findIndex((e) => e.id === id);
@@ -595,6 +661,9 @@ export async function updateScheduleEntry(
 }
 
 export async function deleteScheduleEntry(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('staff_schedules', id);
+
   // Delete from original store
   const entries = getFromStorage<ScheduleEntry>(STORAGE_KEYS.schedules);
   const origIndex = entries.findIndex((e) => e.id === id);
@@ -622,7 +691,11 @@ export async function getScheduleRequests(filters?: {
   employee_id?: string;
   status?: ScheduleRequest['status'];
 }): Promise<ScheduleRequest[]> {
-  let requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<ScheduleRequest>('schedule_requests');
+  let requests = cloudData !== null
+    ? cloudData
+    : getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
 
   if (filters) {
     if (filters.employee_id) {
@@ -640,14 +713,14 @@ export async function getScheduleRequests(filters?: {
 }
 
 export async function getScheduleRequest(id: string): Promise<ScheduleRequest | null> {
+  const cloudData = await supabaseSelect<ScheduleRequest>('schedule_requests', { filters: { id } });
+  if (cloudData !== null) return cloudData[0] || null;
   const requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
   return requests.find((r) => r.id === id) || null;
 }
 
 export async function createScheduleRequest(data: ScheduleRequestCreate): Promise<ScheduleRequest> {
-  const requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
   const now = new Date().toISOString();
-
   const newRequest: ScheduleRequest = {
     ...data,
     id: generateScheduleRequestId(),
@@ -656,6 +729,9 @@ export async function createScheduleRequest(data: ScheduleRequestCreate): Promis
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<ScheduleRequest>('schedule_requests', newRequest as unknown as Record<string, unknown>);
+  const requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
   requests.push(newRequest);
   saveToStorage(STORAGE_KEYS.scheduleRequests, requests);
   return newRequest;
@@ -665,6 +741,9 @@ export async function updateScheduleRequest(
   id: string,
   updates: Partial<ScheduleRequest>
 ): Promise<ScheduleRequest | null> {
+  // Write to Supabase first
+  await supabaseUpdate<ScheduleRequest>('schedule_requests', id, updates as Record<string, unknown>);
+
   const requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
   const index = requests.findIndex((r) => r.id === id);
 
@@ -710,6 +789,9 @@ export async function denyScheduleRequest(
 }
 
 export async function deleteScheduleRequest(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('schedule_requests', id);
+
   const requests = getFromStorage<ScheduleRequest>(STORAGE_KEYS.scheduleRequests);
   const index = requests.findIndex((r) => r.id === id);
 
@@ -729,7 +811,11 @@ export async function getSalariedAllocations(filters?: {
   week_start?: string;
   building_id?: string;
 }): Promise<SalariedAllocation[]> {
-  let allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<SalariedAllocation>('salaried_allocations');
+  let allocations = cloudData !== null
+    ? cloudData
+    : getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
 
   if (filters) {
     if (filters.employee_id) {
@@ -750,14 +836,14 @@ export async function getSalariedAllocations(filters?: {
 }
 
 export async function getSalariedAllocation(id: string): Promise<SalariedAllocation | null> {
+  const cloudData = await supabaseSelect<SalariedAllocation>('salaried_allocations', { filters: { id } });
+  if (cloudData !== null) return cloudData[0] || null;
   const allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
   return allocations.find((a) => a.id === id) || null;
 }
 
 export async function createSalariedAllocation(data: SalariedAllocationCreate): Promise<SalariedAllocation> {
-  const allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
   const now = new Date().toISOString();
-
   const newAllocation: SalariedAllocation = {
     ...data,
     id: generateSalariedAllocationId(),
@@ -765,6 +851,9 @@ export async function createSalariedAllocation(data: SalariedAllocationCreate): 
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<SalariedAllocation>('salaried_allocations', newAllocation as unknown as Record<string, unknown>);
+  const allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
   allocations.push(newAllocation);
   saveToStorage(STORAGE_KEYS.salariedAllocations, allocations);
   return newAllocation;
@@ -774,6 +863,9 @@ export async function updateSalariedAllocation(
   id: string,
   updates: Partial<SalariedAllocation>
 ): Promise<SalariedAllocation | null> {
+  // Write to Supabase first
+  await supabaseUpdate<SalariedAllocation>('salaried_allocations', id, updates as Record<string, unknown>);
+
   const allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
   const index = allocations.findIndex((a) => a.id === id);
 
@@ -793,6 +885,9 @@ export async function updateSalariedAllocation(
 }
 
 export async function deleteSalariedAllocation(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('salaried_allocations', id);
+
   const allocations = getFromStorage<SalariedAllocation>(STORAGE_KEYS.salariedAllocations);
   const index = allocations.findIndex((a) => a.id === id);
 
@@ -823,6 +918,8 @@ export async function upsertSalariedAllocation(data: SalariedAllocationCreate): 
       created_at: allocations[index].created_at,
       updated_at: now,
     };
+    // Write to Supabase first, then cache locally
+    await supabaseUpsert<SalariedAllocation>('salaried_allocations', updatedAllocation as unknown as Record<string, unknown>, 'id');
     allocations[index] = updatedAllocation;
     saveToStorage(STORAGE_KEYS.salariedAllocations, allocations);
     return updatedAllocation;
@@ -833,6 +930,8 @@ export async function upsertSalariedAllocation(data: SalariedAllocationCreate): 
       created_at: now,
       updated_at: now,
     };
+    // Write to Supabase first, then cache locally
+    await supabaseInsert<SalariedAllocation>('salaried_allocations', newAllocation as unknown as Record<string, unknown>);
     allocations.push(newAllocation);
     saveToStorage(STORAGE_KEYS.salariedAllocations, allocations);
     return newAllocation;
@@ -847,7 +946,11 @@ export async function getNotifications(filters?: {
   employee_id?: string;
   unread_only?: boolean;
 }): Promise<Notification[]> {
-  let notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudNotifications = await supabaseSelect<Notification>('notifications');
+  let notifications = cloudNotifications !== null
+    ? cloudNotifications
+    : getFromStorage<Notification>(STORAGE_KEYS.notifications);
 
   if (filters) {
     if (filters.employee_id) {
@@ -865,27 +968,32 @@ export async function getNotifications(filters?: {
 }
 
 export async function getNotification(id: string): Promise<Notification | null> {
+  const cloudData = await supabaseSelect<Notification>('notifications', { filters: { id } });
+  if (cloudData !== null) return cloudData[0] || null;
   const notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
   return notifications.find((n) => n.id === id) || null;
 }
 
 export async function createNotification(data: NotificationCreate): Promise<Notification> {
-  const notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
-  const now = new Date().toISOString();
-
   const newNotification: Notification = {
     ...data,
     id: generateNotificationId(),
     read: false,
-    created_at: now,
+    created_at: new Date().toISOString(),
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<Notification>('notifications', newNotification as unknown as Record<string, unknown>);
+  const notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
   notifications.push(newNotification);
   saveToStorage(STORAGE_KEYS.notifications, notifications);
   return newNotification;
 }
 
 export async function markNotificationRead(id: string): Promise<Notification | null> {
+  // Write to Supabase first
+  await supabaseUpdate<Notification>('notifications', id, { read: true });
+
   const notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
   const index = notifications.findIndex((n) => n.id === id);
 
@@ -913,6 +1021,9 @@ export async function markAllNotificationsRead(employeeId: string): Promise<void
 }
 
 export async function deleteNotification(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('notifications', id);
+
   const notifications = getFromStorage<Notification>(STORAGE_KEYS.notifications);
   const index = notifications.findIndex((n) => n.id === id);
 
@@ -949,10 +1060,15 @@ export function getPrimaryBuilding(): Building | undefined {
 // ============================================================================
 
 export async function getTrainingModules(): Promise<TrainingModule[]> {
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<TrainingModule>('training_modules');
+  if (cloudData !== null) return cloudData;
   return getFromStorage<TrainingModule>(STORAGE_KEYS.trainingModules);
 }
 
 export async function getEmployeeTraining(employeeId: string): Promise<EmployeeTraining[]> {
+  const cloudData = await supabaseSelect<EmployeeTraining>('employee_training', { filters: { employee_id: employeeId } });
+  if (cloudData !== null) return cloudData;
   const training = getFromStorage<EmployeeTraining>(STORAGE_KEYS.employeeTraining);
   return training.filter((t) => t.employee_id === employeeId);
 }
@@ -961,6 +1077,9 @@ export async function updateEmployeeTraining(
   id: string,
   updates: Partial<EmployeeTraining>
 ): Promise<EmployeeTraining | null> {
+  // Write to Supabase first
+  await supabaseUpdate<EmployeeTraining>('employee_training', id, updates as Record<string, unknown>);
+
   const training = getFromStorage<EmployeeTraining>(STORAGE_KEYS.employeeTraining);
   const index = training.findIndex((t) => t.id === id);
 

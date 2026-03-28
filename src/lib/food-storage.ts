@@ -1,5 +1,13 @@
 // Food Storage Module for Christina's Child Care Center
-// Uses localStorage for persistence, designed for easy Supabase migration
+// Supabase-first with localStorage as fallback cache
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+  supabaseUpsert,
+  supabaseDelete,
+} from '@/lib/supabase/service';
 
 import {
   FoodCount,
@@ -80,7 +88,11 @@ export async function getFoodCounts(filters?: {
   classroom_id?: string;
   meal_type?: MealType;
 }): Promise<FoodCount[]> {
-  let counts = getFromStorage<FoodCount>(STORAGE_KEYS.foodCounts);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<FoodCount>('food_counts');
+  let counts = cloudData !== null
+    ? cloudData
+    : getFromStorage<FoodCount>(STORAGE_KEYS.foodCounts);
 
   if (filters) {
     if (filters.date) {
@@ -111,14 +123,14 @@ export async function getFoodCounts(filters?: {
 }
 
 export async function getFoodCount(id: string): Promise<FoodCount | null> {
+  const cloudData = await supabaseSelect<FoodCount>('food_counts', { filters: { id } });
+  if (cloudData !== null) return cloudData[0] || null;
   const counts = getFromStorage<FoodCount>(STORAGE_KEYS.foodCounts);
   return counts.find((c) => c.id === id) || null;
 }
 
 export async function createFoodCount(data: FoodCountCreate): Promise<FoodCount> {
-  const counts = getFromStorage<FoodCount>(STORAGE_KEYS.foodCounts);
   const now = new Date().toISOString();
-
   const newCount: FoodCount = {
     ...data,
     id: generateFoodCountId(),
@@ -126,12 +138,18 @@ export async function createFoodCount(data: FoodCountCreate): Promise<FoodCount>
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<FoodCount>('food_counts', newCount as unknown as Record<string, unknown>);
+  const counts = getFromStorage<FoodCount>(STORAGE_KEYS.foodCounts);
   counts.push(newCount);
   saveToStorage(STORAGE_KEYS.foodCounts, counts);
   return newCount;
 }
 
 export async function updateFoodCount(id: string, updates: Partial<FoodCount>): Promise<FoodCount | null> {
+  // Write to Supabase first
+  await supabaseUpdate<FoodCount>('food_counts', id, updates as Record<string, unknown>);
+
   const counts = getFromStorage<FoodCount>(STORAGE_KEYS.foodCounts);
   const index = counts.findIndex((c) => c.id === id);
 
@@ -151,6 +169,9 @@ export async function updateFoodCount(id: string, updates: Partial<FoodCount>): 
 }
 
 export async function deleteFoodCount(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('food_counts', id);
+
   const counts = getFromStorage<FoodCount>(STORAGE_KEYS.foodCounts);
   const index = counts.findIndex((c) => c.id === id);
 
@@ -209,6 +230,8 @@ export async function upsertFoodCount(data: FoodCountCreate): Promise<FoodCount>
       submitted_at: counts[index].submitted_at || now,
       on_time: counts[index].on_time ?? onTime,
     };
+    // Write to Supabase first, then cache locally
+    await supabaseUpsert<FoodCount>('food_counts', updatedCount as unknown as Record<string, unknown>, 'id');
     counts[index] = updatedCount;
     saveToStorage(STORAGE_KEYS.foodCounts, counts);
     return updatedCount;
@@ -222,6 +245,8 @@ export async function upsertFoodCount(data: FoodCountCreate): Promise<FoodCount>
       created_at: now,
       updated_at: now,
     };
+    // Write to Supabase first, then cache locally
+    await supabaseInsert<FoodCount>('food_counts', newCount as unknown as Record<string, unknown>);
     counts.push(newCount);
     saveToStorage(STORAGE_KEYS.foodCounts, counts);
     return newCount;
@@ -233,7 +258,11 @@ export async function upsertFoodCount(data: FoodCountCreate): Promise<FoodCount>
 // ============================================================================
 
 export async function getClassrooms(filters?: { active_only?: boolean }): Promise<Classroom[]> {
-  let classrooms = getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<Classroom>('classrooms');
+  let classrooms = cloudData !== null
+    ? cloudData
+    : getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
 
   // If no classrooms exist, seed with defaults
   if (classrooms.length === 0) {
@@ -257,9 +286,7 @@ export async function getClassroom(id: string): Promise<Classroom | null> {
 }
 
 export async function createClassroom(data: ClassroomCreate): Promise<Classroom> {
-  const classrooms = getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
   const now = new Date().toISOString();
-
   const newClassroom: Classroom = {
     ...data,
     id: generateClassroomId(),
@@ -267,6 +294,9 @@ export async function createClassroom(data: ClassroomCreate): Promise<Classroom>
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<Classroom>('classrooms', newClassroom as unknown as Record<string, unknown>);
+  const classrooms = getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
   classrooms.push(newClassroom);
   saveToStorage(STORAGE_KEYS.classrooms, classrooms);
   return newClassroom;
@@ -276,6 +306,9 @@ export async function updateClassroom(
   id: string,
   updates: Partial<Classroom>
 ): Promise<Classroom | null> {
+  // Write to Supabase first
+  await supabaseUpdate<Classroom>('classrooms', id, updates as Record<string, unknown>);
+
   const classrooms = getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
   const index = classrooms.findIndex((c) => c.id === id);
 
@@ -295,6 +328,9 @@ export async function updateClassroom(
 }
 
 export async function deleteClassroom(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('classrooms', id);
+
   const classrooms = getFromStorage<Classroom>(STORAGE_KEYS.classrooms);
   const index = classrooms.findIndex((c) => c.id === id);
 
@@ -433,7 +469,11 @@ export async function getInventoryItems(filters?: {
   lowStock?: boolean;
   expiringSoon?: boolean;
 }): Promise<InventoryItem[]> {
-  let items = getFromStorage<InventoryItem>(STORAGE_KEYS.inventory);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<InventoryItem>('inventory_items');
+  let items = cloudData !== null
+    ? cloudData
+    : getFromStorage<InventoryItem>(STORAGE_KEYS.inventory);
 
   if (filters) {
     if (filters.category) {
@@ -457,14 +497,14 @@ export async function getInventoryItems(filters?: {
 }
 
 export async function getInventoryItem(id: string): Promise<InventoryItem | null> {
+  const cloudData = await supabaseSelect<InventoryItem>('inventory_items', { filters: { id } });
+  if (cloudData !== null) return cloudData[0] || null;
   const items = getFromStorage<InventoryItem>(STORAGE_KEYS.inventory);
   return items.find((i) => i.id === id) || null;
 }
 
 export async function createInventoryItem(data: InventoryItemCreate): Promise<InventoryItem> {
-  const items = getFromStorage<InventoryItem>(STORAGE_KEYS.inventory);
   const now = new Date().toISOString();
-
   const newItem: InventoryItem = {
     ...data,
     id: generateInventoryId(),
@@ -472,6 +512,9 @@ export async function createInventoryItem(data: InventoryItemCreate): Promise<In
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<InventoryItem>('inventory_items', newItem as unknown as Record<string, unknown>);
+  const items = getFromStorage<InventoryItem>(STORAGE_KEYS.inventory);
   items.push(newItem);
   saveToStorage(STORAGE_KEYS.inventory, items);
   return newItem;
@@ -481,6 +524,9 @@ export async function updateInventoryItem(
   id: string,
   updates: Partial<InventoryItem>
 ): Promise<InventoryItem | null> {
+  // Write to Supabase first
+  await supabaseUpdate<InventoryItem>('inventory_items', id, updates as Record<string, unknown>);
+
   const items = getFromStorage<InventoryItem>(STORAGE_KEYS.inventory);
   const index = items.findIndex((i) => i.id === id);
 
@@ -500,6 +546,9 @@ export async function updateInventoryItem(
 }
 
 export async function deleteInventoryItem(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('inventory_items', id);
+
   const items = getFromStorage<InventoryItem>(STORAGE_KEYS.inventory);
   const index = items.findIndex((i) => i.id === id);
 
@@ -560,7 +609,11 @@ export async function getInventoryAlerts(): Promise<InventoryAlert[]> {
 // ============================================================================
 
 export async function getMenuItems(filters?: { meal_type?: MealType }): Promise<MenuItem[]> {
-  let items = getFromStorage<MenuItem>(STORAGE_KEYS.menuItems);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<MenuItem>('menu_items');
+  let items = cloudData !== null
+    ? cloudData
+    : getFromStorage<MenuItem>(STORAGE_KEYS.menuItems);
 
   if (filters?.meal_type) {
     items = items.filter((i) => i.meal_type === filters.meal_type);
@@ -576,14 +629,14 @@ export async function getMenuItems(filters?: { meal_type?: MealType }): Promise<
 }
 
 export async function getMenuItem(id: string): Promise<MenuItem | null> {
+  const cloudData = await supabaseSelect<MenuItem>('menu_items', { filters: { id } });
+  if (cloudData !== null) return cloudData[0] || null;
   const items = getFromStorage<MenuItem>(STORAGE_KEYS.menuItems);
   return items.find((i) => i.id === id) || null;
 }
 
 export async function createMenuItem(data: MenuItemCreate): Promise<MenuItem> {
-  const items = getFromStorage<MenuItem>(STORAGE_KEYS.menuItems);
   const now = new Date().toISOString();
-
   const newItem: MenuItem = {
     ...data,
     id: generateMenuItemId(),
@@ -591,12 +644,18 @@ export async function createMenuItem(data: MenuItemCreate): Promise<MenuItem> {
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<MenuItem>('menu_items', newItem as unknown as Record<string, unknown>);
+  const items = getFromStorage<MenuItem>(STORAGE_KEYS.menuItems);
   items.push(newItem);
   saveToStorage(STORAGE_KEYS.menuItems, items);
   return newItem;
 }
 
 export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Promise<MenuItem | null> {
+  // Write to Supabase first
+  await supabaseUpdate<MenuItem>('menu_items', id, updates as Record<string, unknown>);
+
   const items = getFromStorage<MenuItem>(STORAGE_KEYS.menuItems);
   const index = items.findIndex((i) => i.id === id);
 
@@ -616,6 +675,9 @@ export async function updateMenuItem(id: string, updates: Partial<MenuItem>): Pr
 }
 
 export async function deleteMenuItem(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('menu_items', id);
+
   const items = getFromStorage<MenuItem>(STORAGE_KEYS.menuItems);
   const index = items.findIndex((i) => i.id === id);
 
@@ -634,7 +696,11 @@ export async function getWeeklyMenus(filters?: {
   week_start?: string;
   status?: 'draft' | 'published';
 }): Promise<WeeklyMenu[]> {
-  let menus = getFromStorage<WeeklyMenu>(STORAGE_KEYS.weeklyMenus);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await supabaseSelect<WeeklyMenu>('weekly_menus');
+  let menus = cloudData !== null
+    ? cloudData
+    : getFromStorage<WeeklyMenu>(STORAGE_KEYS.weeklyMenus);
 
   if (filters) {
     if (filters.week_start) {
@@ -652,6 +718,8 @@ export async function getWeeklyMenus(filters?: {
 }
 
 export async function getWeeklyMenu(id: string): Promise<WeeklyMenu | null> {
+  const cloudData = await supabaseSelect<WeeklyMenu>('weekly_menus', { filters: { id } });
+  if (cloudData !== null) return cloudData[0] || null;
   const menus = getFromStorage<WeeklyMenu>(STORAGE_KEYS.weeklyMenus);
   return menus.find((m) => m.id === id) || null;
 }
@@ -663,9 +731,7 @@ export async function getCurrentWeeklyMenu(): Promise<WeeklyMenu | null> {
 }
 
 export async function createWeeklyMenu(data: WeeklyMenuCreate): Promise<WeeklyMenu> {
-  const menus = getFromStorage<WeeklyMenu>(STORAGE_KEYS.weeklyMenus);
   const now = new Date().toISOString();
-
   const newMenu: WeeklyMenu = {
     ...data,
     id: generateWeeklyMenuId(),
@@ -673,12 +739,18 @@ export async function createWeeklyMenu(data: WeeklyMenuCreate): Promise<WeeklyMe
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<WeeklyMenu>('weekly_menus', newMenu as unknown as Record<string, unknown>);
+  const menus = getFromStorage<WeeklyMenu>(STORAGE_KEYS.weeklyMenus);
   menus.push(newMenu);
   saveToStorage(STORAGE_KEYS.weeklyMenus, menus);
   return newMenu;
 }
 
 export async function updateWeeklyMenu(id: string, updates: Partial<WeeklyMenu>): Promise<WeeklyMenu | null> {
+  // Write to Supabase first
+  await supabaseUpdate<WeeklyMenu>('weekly_menus', id, updates as Record<string, unknown>);
+
   const menus = getFromStorage<WeeklyMenu>(STORAGE_KEYS.weeklyMenus);
   const index = menus.findIndex((m) => m.id === id);
 
@@ -698,6 +770,9 @@ export async function updateWeeklyMenu(id: string, updates: Partial<WeeklyMenu>)
 }
 
 export async function deleteWeeklyMenu(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete('weekly_menus', id);
+
   const menus = getFromStorage<WeeklyMenu>(STORAGE_KEYS.weeklyMenus);
   const index = menus.findIndex((m) => m.id === id);
 
