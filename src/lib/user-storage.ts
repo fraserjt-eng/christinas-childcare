@@ -1,0 +1,346 @@
+import { UserRole } from '@/types/database';
+
+export interface AppUser {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  status: 'active' | 'inactive' | 'pending';
+  avatar_url?: string;
+  phone?: string;
+  child_ids?: string[]; // For parent role
+  created_at: string;
+  last_login?: string;
+}
+
+export interface SecuritySettings {
+  password_min_length: number;
+  require_uppercase: boolean;
+  require_number: boolean;
+  require_special_char: boolean;
+  session_timeout_hours: number;
+  max_failed_attempts: number;
+  lockout_duration_minutes: number;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  user_id: string;
+  user_email: string;
+  action: string;
+  resource_type: string;
+  resource_id?: string;
+  details?: string;
+  ip_address?: string;
+  timestamp: string;
+}
+
+const USERS_KEY = 'app_users';
+const SECURITY_SETTINGS_KEY = 'security_settings';
+const AUDIT_LOG_KEY = 'audit_log';
+
+// Default security settings
+const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
+  password_min_length: 8,
+  require_uppercase: false,
+  require_number: false,
+  require_special_char: false,
+  session_timeout_hours: 8,
+  max_failed_attempts: 5,
+  lockout_duration_minutes: 15,
+};
+
+// Sample users for demo
+const SAMPLE_USERS: AppUser[] = [
+  {
+    id: 'user-1',
+    email: 'christina@childcare.com',
+    first_name: 'Christina',
+    last_name: 'Zeogar',
+    role: 'owner',
+    status: 'active',
+    phone: '(612) 555-0100',
+    created_at: '2024-01-01T00:00:00Z',
+    last_login: new Date().toISOString(),
+  },
+  {
+    id: 'user-2',
+    email: 'admin@demo.com',
+    first_name: 'Demo',
+    last_name: 'Admin',
+    role: 'admin',
+    status: 'active',
+    phone: '(612) 555-0101',
+    created_at: '2024-01-15T00:00:00Z',
+    last_login: new Date().toISOString(),
+  },
+  {
+    id: 'user-3',
+    email: 'maria.johnson@childcare.com',
+    first_name: 'Maria',
+    last_name: 'Johnson',
+    role: 'teacher',
+    status: 'active',
+    phone: '(612) 555-0102',
+    created_at: '2024-02-01T00:00:00Z',
+    last_login: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 'user-4',
+    email: 'sarah.williams@childcare.com',
+    first_name: 'Sarah',
+    last_name: 'Williams',
+    role: 'teacher',
+    status: 'active',
+    phone: '(612) 555-0103',
+    created_at: '2024-02-15T00:00:00Z',
+    last_login: new Date(Date.now() - 172800000).toISOString(),
+  },
+  {
+    id: 'user-5',
+    email: 'parent@demo.com',
+    first_name: 'Demo',
+    last_name: 'Parent',
+    role: 'parent',
+    status: 'active',
+    child_ids: ['child-1', 'child-2'],
+    phone: '(612) 555-0104',
+    created_at: '2024-03-01T00:00:00Z',
+    last_login: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 'user-6',
+    email: 'jennifer.lee@email.com',
+    first_name: 'Jennifer',
+    last_name: 'Lee',
+    role: 'parent',
+    status: 'pending',
+    child_ids: ['child-3'],
+    phone: '(612) 555-0105',
+    created_at: '2024-06-01T00:00:00Z',
+  },
+];
+
+function getStorageItem<T>(key: string, defaultValue: T): T {
+  if (typeof window === 'undefined') return defaultValue;
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+}
+
+function setStorageItem<T>(key: string, value: T): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Failed to save ${key}:`, error);
+  }
+}
+
+// User Management Functions
+export function getUsers(): AppUser[] {
+  return getStorageItem<AppUser[]>(USERS_KEY, SAMPLE_USERS);
+}
+
+export function getUserById(id: string): AppUser | undefined {
+  const users = getUsers();
+  return users.find(u => u.id === id);
+}
+
+export function getUserByEmail(email: string): AppUser | undefined {
+  const users = getUsers();
+  return users.find(u => u.email.toLowerCase() === email.toLowerCase());
+}
+
+export function createUser(userData: Omit<AppUser, 'id' | 'created_at'>): AppUser {
+  const users = getUsers();
+  const newUser: AppUser = {
+    ...userData,
+    id: `user-${Date.now()}`,
+    created_at: new Date().toISOString(),
+  };
+  users.push(newUser);
+  setStorageItem(USERS_KEY, users);
+  addAuditLog('create', 'user', newUser.id, `Created user: ${newUser.email}`);
+  return newUser;
+}
+
+export function updateUser(id: string, updates: Partial<AppUser>): AppUser | null {
+  const users = getUsers();
+  const index = users.findIndex(u => u.id === id);
+  if (index === -1) return null;
+
+  const updatedUser = { ...users[index], ...updates };
+  users[index] = updatedUser;
+  setStorageItem(USERS_KEY, users);
+  addAuditLog('update', 'user', id, `Updated user: ${updatedUser.email}`);
+  return updatedUser;
+}
+
+export function deactivateUser(id: string): boolean {
+  const result = updateUser(id, { status: 'inactive' });
+  if (result) {
+    addAuditLog('deactivate', 'user', id, `Deactivated user: ${result.email}`);
+  }
+  return result !== null;
+}
+
+export function activateUser(id: string): boolean {
+  const result = updateUser(id, { status: 'active' });
+  if (result) {
+    addAuditLog('activate', 'user', id, `Activated user: ${result.email}`);
+  }
+  return result !== null;
+}
+
+export function deleteUser(id: string): boolean {
+  const users = getUsers();
+  const user = users.find(u => u.id === id);
+  if (!user) return false;
+
+  const filtered = users.filter(u => u.id !== id);
+  setStorageItem(USERS_KEY, filtered);
+  addAuditLog('delete', 'user', id, `Deleted user: ${user.email}`);
+  return true;
+}
+
+export function getUsersByRole(role: UserRole): AppUser[] {
+  const users = getUsers();
+  return users.filter(u => u.role === role);
+}
+
+export function searchUsers(query: string): AppUser[] {
+  const users = getUsers();
+  const lowerQuery = query.toLowerCase();
+  return users.filter(u =>
+    u.email.toLowerCase().includes(lowerQuery) ||
+    u.first_name.toLowerCase().includes(lowerQuery) ||
+    u.last_name.toLowerCase().includes(lowerQuery)
+  );
+}
+
+// Security Settings Functions
+export function getSecuritySettings(): SecuritySettings {
+  return getStorageItem<SecuritySettings>(SECURITY_SETTINGS_KEY, DEFAULT_SECURITY_SETTINGS);
+}
+
+export function updateSecuritySettings(settings: Partial<SecuritySettings>): SecuritySettings {
+  const current = getSecuritySettings();
+  const updated = { ...current, ...settings };
+  setStorageItem(SECURITY_SETTINGS_KEY, updated);
+  addAuditLog('update', 'security_settings', undefined, 'Updated security settings');
+  return updated;
+}
+
+export function validatePassword(password: string): { valid: boolean; errors: string[] } {
+  const settings = getSecuritySettings();
+  const errors: string[] = [];
+
+  if (password.length < settings.password_min_length) {
+    errors.push(`Password must be at least ${settings.password_min_length} characters`);
+  }
+  if (settings.require_uppercase && !/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  if (settings.require_number && !/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  if (settings.require_special_char && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
+    errors.push('Password must contain at least one special character');
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+// Audit Log Functions
+export function getAuditLog(): AuditLogEntry[] {
+  return getStorageItem<AuditLogEntry[]>(AUDIT_LOG_KEY, []);
+}
+
+export function addAuditLog(
+  action: string,
+  resource_type: string,
+  resource_id?: string,
+  details?: string
+): void {
+  const logs = getAuditLog();
+  const entry: AuditLogEntry = {
+    id: `audit-${Date.now()}`,
+    user_id: 'current-user', // Would be replaced with actual user from session
+    user_email: 'admin@demo.com', // Would be replaced with actual user email
+    action,
+    resource_type,
+    resource_id,
+    details,
+    timestamp: new Date().toISOString(),
+  };
+
+  // Keep last 1000 entries
+  const updatedLogs = [entry, ...logs].slice(0, 1000);
+  setStorageItem(AUDIT_LOG_KEY, updatedLogs);
+}
+
+export function searchAuditLog(filters: {
+  user_email?: string;
+  action?: string;
+  resource_type?: string;
+  start_date?: string;
+  end_date?: string;
+}): AuditLogEntry[] {
+  const logs = getAuditLog();
+
+  return logs.filter(log => {
+    if (filters.user_email && !log.user_email.toLowerCase().includes(filters.user_email.toLowerCase())) {
+      return false;
+    }
+    if (filters.action && log.action !== filters.action) {
+      return false;
+    }
+    if (filters.resource_type && log.resource_type !== filters.resource_type) {
+      return false;
+    }
+    if (filters.start_date && log.timestamp < filters.start_date) {
+      return false;
+    }
+    if (filters.end_date && log.timestamp > filters.end_date) {
+      return false;
+    }
+    return true;
+  });
+}
+
+// Initialize with sample data if empty
+export function seedUserData(): void {
+  const existingUsers = getStorageItem<AppUser[] | null>(USERS_KEY, null);
+  if (!existingUsers || existingUsers.length === 0) {
+    setStorageItem(USERS_KEY, SAMPLE_USERS);
+  }
+}
+
+// Role definitions for display
+export const ROLE_DEFINITIONS = {
+  owner: {
+    label: 'Owner',
+    description: 'Full access to all features and settings',
+    color: 'bg-purple-100 text-purple-800',
+  },
+  admin: {
+    label: 'Admin',
+    description: 'Manage operations, staff, and most settings',
+    color: 'bg-blue-100 text-blue-800',
+  },
+  teacher: {
+    label: 'Teacher',
+    description: 'Access curriculum, attendance, and classroom features',
+    color: 'bg-green-100 text-green-800',
+  },
+  parent: {
+    label: 'Parent',
+    description: 'View child information and communicate with staff',
+    color: 'bg-yellow-100 text-yellow-800',
+  },
+};

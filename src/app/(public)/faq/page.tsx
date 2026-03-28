@@ -133,7 +133,7 @@ const faqCategories: FAQCategory[] = [
       {
         question: 'What are your tuition rates?',
         answer:
-          'Tuition varies by program and schedule. We offer competitive rates for Crystal and the surrounding area. Please contact us directly for our current rate sheet. We are happy to walk you through pricing options and help you find the best fit for your family\'s needs and budget.',
+          'Weekly full-time rates: Infant Care $375, Toddler Program $325, Preschool $285, School Age $185. Part-time schedules are available at adjusted rates. We offer sibling discounts, accept county child care assistance, and flexible spending accounts (FSA). Contact us for a personalized quote based on your family\'s schedule.',
       },
       {
         question: 'Do you accept child care assistance?',

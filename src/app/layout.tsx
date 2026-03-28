@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,6 +28,14 @@ export const metadata: Metadata = {
     siteName: "Christina's Child Care Center",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Christina's Child Care Center - Licensed Childcare in Crystal, MN",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -104,6 +114,8 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         {children}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

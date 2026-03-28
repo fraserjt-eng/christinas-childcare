@@ -12,8 +12,6 @@ const navLinks = [
   { href: '/about', label: 'About' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/faq', label: 'FAQ' },
-  { href: '/signup-guide', label: 'Parent Guide' },
-  { href: '/guide', label: 'Feature Guide' },
   { href: '/enroll', label: 'Enroll' },
 ];
 

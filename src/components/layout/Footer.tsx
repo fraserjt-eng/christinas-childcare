@@ -106,7 +106,10 @@ export function Footer() {
         </div>
         <div className="border-t border-gray-700 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm">&copy; 2026 Christina&apos;s Child Care Center. All rights reserved.</p>
-          <p className="text-sm flex items-center gap-1">Made with <Heart className="h-3 w-3 text-christina-red" /> for our families</p>
+          <div className="flex items-center gap-4 text-sm">
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <p className="flex items-center gap-1">Made with <Heart className="h-3 w-3 text-christina-red" /> for our families</p>
+          </div>
         </div>
       </div>
     </footer>

@@ -106,6 +106,81 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
+type TimeZone = 'opening' | 'core' | 'closing';
+
+function getTimeZone(): TimeZone {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 9) return 'opening';
+  if (hour >= 9 && hour < 15) return 'core';
+  if (hour >= 15 && hour < 18) return 'closing';
+  if (hour < 6) return 'opening';
+  return 'closing';
+}
+
+interface MealDeadline {
+  meal: string;
+  deadline: string;
+  deadlineHour: number;
+  deadlineMinute: number;
+}
+
+const MEAL_DEADLINES: MealDeadline[] = [
+  { meal: 'Breakfast', deadline: '9:30 AM', deadlineHour: 9, deadlineMinute: 30 },
+  { meal: 'AM Snack', deadline: '11:00 AM', deadlineHour: 11, deadlineMinute: 0 },
+  { meal: 'Lunch', deadline: '1:30 PM', deadlineHour: 13, deadlineMinute: 30 },
+  { meal: 'PM Snack', deadline: '4:00 PM', deadlineHour: 16, deadlineMinute: 0 },
+];
+
+function getMealCountStatus(): { label: string; urgent: boolean } {
+  const now = new Date();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  const currentMinutes = hour * 60 + minute;
+
+  // Check today's food counts from localStorage
+  const today = now.toISOString().split('T')[0];
+  let todayCounts: Array<{ date: string; meal_type: string }> = [];
+  try {
+    const raw = localStorage.getItem('christinas_food_counts');
+    if (raw) {
+      const all = JSON.parse(raw);
+      todayCounts = all.filter((c: { date: string }) => c.date === today);
+    }
+  } catch {}
+
+  const submittedMeals = new Set(todayCounts.map((c) => c.meal_type?.toLowerCase()));
+
+  // Find the current or next meal deadline
+  for (const md of MEAL_DEADLINES) {
+    const deadlineMinutes = md.deadlineHour * 60 + md.deadlineMinute;
+    const mealKey = md.meal.toLowerCase().replace(' ', '_');
+
+    if (!submittedMeals.has(mealKey) && !submittedMeals.has(md.meal.toLowerCase())) {
+      if (currentMinutes > deadlineMinutes) {
+        return { label: `${md.meal} OVERDUE`, urgent: true };
+      }
+      if (currentMinutes >= deadlineMinutes - 60) {
+        return { label: `${md.meal} due by ${md.deadline}`, urgent: false };
+      }
+    }
+  }
+
+  // Check if all meals for the day are done
+  if (hour >= 16) {
+    return { label: 'All counts submitted', urgent: false };
+  }
+
+  // Find next upcoming meal
+  for (const md of MEAL_DEADLINES) {
+    const deadlineMinutes = md.deadlineHour * 60 + md.deadlineMinute;
+    if (currentMinutes < deadlineMinutes) {
+      return { label: `${md.meal} due by ${md.deadline}`, urgent: false };
+    }
+  }
+
+  return { label: 'Enter counts', urgent: false };
+}
+
 function getRelativeTime(timestamp: string): string {
   const now = Date.now();
   const then = new Date(timestamp).getTime();
@@ -435,69 +510,101 @@ export default function EmployeeDashboardPage() {
           </div>
         )}
 
-        {/* ── Big Tile Grid ──────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Clock In/Out */}
-          <HomeTile
-            href="#"
-            icon={Clock}
-            label={activeEntry ? 'Clock Out' : 'Clock In'}
-            bgColor={activeEntry ? 'bg-red-600' : 'bg-green-600'}
-            subtitle={
-              loading
-                ? 'Processing...'
-                : activeEntry
-                  ? elapsedLabel
-                  : 'Start your shift'
-            }
-            onClick={activeEntry ? handleClockOut : handleClockIn}
-          />
+        {/* ── Big Tile Grid (time-aware ordering) ──────────────────── */}
+        {(() => {
+          const mealStatus = getMealCountStatus();
+          const zone = getTimeZone();
 
-          {/* Meal Count */}
-          <HomeTile
-            href="/employee/meal-count"
-            icon={UtensilsCrossed}
-            label="Meal Count"
-            bgColor="bg-teal-600"
-            subtitle="Enter counts"
-          />
+          const clockTile = (
+            <HomeTile
+              key="clock"
+              href="#"
+              icon={Clock}
+              label={activeEntry ? 'Clock Out' : 'Clock In'}
+              bgColor={activeEntry ? 'bg-red-600' : 'bg-green-600'}
+              subtitle={
+                loading
+                  ? 'Processing...'
+                  : activeEntry
+                    ? elapsedLabel
+                    : 'Start your shift'
+              }
+              onClick={activeEntry ? handleClockOut : handleClockIn}
+            />
+          );
 
-          {/* Upload Photos */}
-          <HomeTile
-            href="/employee/photos"
-            icon={Camera}
-            label="Photos"
-            bgColor="bg-pink-600"
-            subtitle="Upload today"
-          />
+          const mealTile = (
+            <HomeTile
+              key="meal"
+              href="/employee/meal-count"
+              icon={UtensilsCrossed}
+              label="Meal Count"
+              bgColor={mealStatus.urgent ? 'bg-red-600' : 'bg-teal-600'}
+              subtitle={mealStatus.label}
+            />
+          );
 
-          {/* Chat */}
-          <HomeTile
-            href="/admin/messaging"
-            icon={MessageSquare}
-            label="Chat"
-            bgColor="bg-blue-600"
-            badge={unreadMessageCount || undefined}
-          />
+          const photoTile = (
+            <HomeTile
+              key="photos"
+              href="/employee/photos"
+              icon={Camera}
+              label="Photos"
+              bgColor="bg-pink-600"
+              subtitle="Upload today"
+            />
+          );
 
-          {/* My Schedule */}
-          <HomeTile
-            href="/employee/schedule"
-            icon={CalendarDays}
-            label="My Schedule"
-            bgColor="bg-purple-600"
-            subtitle={todayShift || undefined}
-          />
+          const chatTile = (
+            <HomeTile
+              key="chat"
+              href="/admin/messaging"
+              icon={MessageSquare}
+              label="Chat"
+              bgColor="bg-blue-600"
+              badge={unreadMessageCount || undefined}
+            />
+          );
 
-          {/* Training */}
-          <HomeTile
-            href="/employee/training"
-            icon={GraduationCap}
-            label="Training"
-            bgColor="bg-orange-600"
-            badge={incompleteTrainingCount || undefined}
-          />
-        </div>
+          const scheduleTile = (
+            <HomeTile
+              key="schedule"
+              href="/employee/schedule"
+              icon={CalendarDays}
+              label="My Schedule"
+              bgColor="bg-purple-600"
+              subtitle={todayShift || undefined}
+            />
+          );
+
+          const trainingTile = (
+            <HomeTile
+              key="training"
+              href="/employee/training"
+              icon={GraduationCap}
+              label="Training"
+              bgColor="bg-orange-600"
+              badge={incompleteTrainingCount || undefined}
+            />
+          );
+
+          // Order tiles by time of day
+          let tiles;
+          switch (zone) {
+            case 'opening':
+              tiles = [clockTile, scheduleTile, mealTile, chatTile, photoTile, trainingTile];
+              break;
+            case 'core':
+              tiles = [mealTile, clockTile, photoTile, chatTile, scheduleTile, trainingTile];
+              break;
+            case 'closing':
+              tiles = [clockTile, chatTile, mealTile, scheduleTile, photoTile, trainingTile];
+              break;
+          }
+
+          return <div className="grid grid-cols-2 gap-4">{tiles}</div>;
+        })()}
+
 
         {/* ── Daily Task Checklist ────────────────────────────────────── */}
         <div className="rounded-2xl border bg-card p-4 sm:p-5">

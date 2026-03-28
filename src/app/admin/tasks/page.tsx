@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { TaskKanban } from '@/components/admin/TaskKanban';
+import { TimeBlockSchedule } from '@/components/admin/TimeBlockSchedule';
+import { DelegationTracker } from '@/components/admin/DelegationTracker';
+import { TimeInsights } from '@/components/admin/TimeInsights';
 import {
   Task,
   TaskStatus,
@@ -969,7 +973,7 @@ function NapTimeOptimizer({ tasks }: { tasks: Task[] }) {
 export default function TaskBoardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [driftAlerts, setDriftAlerts] = useState<DriftAlert[]>([]);
-  const [activeTab, setActiveTab] = useState<'board' | 'delegation'>('board');
+  const [activeTab, setActiveTab] = useState<'board' | 'delegation' | 'kanban' | 'timeline' | 'insights'>('board');
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filterStaff, setFilterStaff] = useState<string>('');
@@ -1211,6 +1215,45 @@ export default function TaskBoardPage() {
             Delegation
           </span>
         </button>
+        <button
+          onClick={() => setActiveTab('kanban')}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'kanban'
+              ? 'border-current text-[#C62828]'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Kanban (DnD)
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('timeline')}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'timeline'
+              ? 'border-current text-[#C62828]'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Timeline
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('insights')}
+          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'insights'
+              ? 'border-current text-[#C62828]'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Insights
+          </span>
+        </button>
       </div>
 
       {/* Board View */}
@@ -1313,6 +1356,28 @@ export default function TaskBoardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <DelegationDashboard tasks={tasks} />
           <NapTimeOptimizer tasks={tasks} />
+        </div>
+      )}
+
+      {/* Kanban DnD View */}
+      {activeTab === 'kanban' && <TaskKanban />}
+
+      {/* Timeline View */}
+      {activeTab === 'timeline' && <TimeBlockSchedule />}
+
+      {/* Insights View */}
+      {activeTab === 'insights' && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-base font-semibold mb-1">Delegation Tracker</h2>
+            <p className="text-sm text-muted-foreground mb-4">Delegation score and staff workload distribution.</p>
+            <DelegationTracker />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold mb-1">Time Insights</h2>
+            <p className="text-sm text-muted-foreground mb-4">Auto-generated patterns from your task data.</p>
+            <TimeInsights />
+          </div>
         </div>
       )}
 

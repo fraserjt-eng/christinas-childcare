@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollFadeIn } from '@/components/features/ScrollFadeIn';
+import Link from 'next/link';
 import {
   CalendarDays,
   CheckCircle,
@@ -28,7 +29,7 @@ export default function ScheduleTourPage() {
     return tomorrow.toISOString().split('T')[0];
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
@@ -48,7 +49,16 @@ export default function ScheduleTourPage() {
       submittedAt: new Date().toISOString(),
     };
 
-    // Save to localStorage
+    // POST to API route (saves to Supabase)
+    try {
+      await fetch('/api/tours', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tourRequest),
+      });
+    } catch {}
+
+    // Save to localStorage as backup
     const existing = localStorage.getItem('christinas_tour_requests');
     const requests = existing ? JSON.parse(existing) : [];
     requests.push(tourRequest);
@@ -234,6 +244,13 @@ export default function ScheduleTourPage() {
                     >
                       {loading ? 'Submitting...' : 'Request Tour'}
                     </Button>
+                    <p className="text-xs text-muted-foreground mt-3 text-center">
+                      By submitting, you agree to our{' '}
+                      <Link href="/privacy" className="text-christina-red hover:underline">
+                        Privacy Policy
+                      </Link>
+                      . We never share your family&apos;s information.
+                    </p>
                   </form>
                 </CardContent>
               </Card>

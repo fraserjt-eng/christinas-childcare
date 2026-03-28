@@ -183,10 +183,24 @@ function AdminNavSection({ groups }: { groups: NavGroup[] }) {
     return acc;
   }, new Set());
 
-  // Initialize: expand active groups + Overview (index 0)
+  // Initialize: expand active groups + time-aware defaults
   const [expanded, setExpanded] = useState<Set<number>>(() => {
     const initial = new Set(activeGroupIndices);
+    // Always show Today (index 0)
     initial.add(0);
+    // Time-aware defaults: expand contextually relevant groups
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 9) {
+      // Opening: Today already added, People for staffing check
+      initial.add(1);
+    } else if (hour >= 9 && hour < 15) {
+      // Core hours: Operations + Communications
+      initial.add(2);
+      initial.add(3);
+    } else if (hour >= 15 && hour < 18) {
+      // Closing: Today + Communications for handoff
+      initial.add(3);
+    }
     return initial;
   });
 

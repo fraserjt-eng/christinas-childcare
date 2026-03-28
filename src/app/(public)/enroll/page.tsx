@@ -46,7 +46,16 @@ export default function EnrollPage() {
     e.preventDefault();
     setLoading(true);
 
-    // Persist to localStorage
+    // POST to API route (saves to Supabase)
+    try {
+      await fetch('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+    } catch {}
+
+    // Persist to localStorage as backup
     const inquiry: InquiryData = {
       ...formData,
       submittedAt: new Date().toISOString(),
@@ -221,6 +230,13 @@ export default function EnrollPage() {
                   >
                     {loading ? 'Submitting...' : 'Submit Inquiry'}
                   </Button>
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    By submitting, you agree to our{' '}
+                    <Link href="/privacy" className="text-christina-red hover:underline">
+                      Privacy Policy
+                    </Link>
+                    . We never share your family&apos;s information.
+                  </p>
                 </form>
               </CardContent>
             </Card>
