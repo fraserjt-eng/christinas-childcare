@@ -94,29 +94,33 @@ async function getTodayAttendance(childId: string): Promise<AttendanceRow | null
   return data?.[0] || null;
 }
 
+// Crystal Center ID (from seeded centers table)
+const CRYSTAL_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
+
 async function checkInChild(child: FamilyChildRow, familyId: string): Promise<void> {
   const today = getTodayDate();
-  // Check if already checked in
   const existing = await getTodayAttendance(child.id);
   if (existing) return;
 
-  await supabase.from('attendance').insert({
+  const { error } = await supabase.from('attendance').insert({
     child_id: child.id,
     child_name: child.name,
-    family_id: familyId,
     date: today,
     check_in: new Date().toISOString(),
-    check_out: null,
+    center_id: CRYSTAL_CENTER_ID,
+    notes: `family:${familyId}`,
   });
+  if (error) console.error('Check-in error:', error.message);
 }
 
 async function checkOutChild(childId: string): Promise<void> {
   const today = getTodayDate();
-  await supabase
+  const { error } = await supabase
     .from('attendance')
     .update({ check_out: new Date().toISOString() })
     .eq('child_id', childId)
     .eq('date', today);
+  if (error) console.error('Check-out error:', error.message);
 }
 
 // ============================================================================

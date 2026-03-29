@@ -302,6 +302,29 @@ export default function AdminDashboard() {
     const currentZone = getTimeZone();
     setZone(currentZone);
     setAlerts(getDashboardAlerts());
+
+    // Fetch live attendance from Supabase
+    async function fetchAttendance() {
+      try {
+        const { supabase } = await import('@/lib/supabase');
+        const today = new Date().toISOString().split('T')[0];
+        const { data } = await supabase
+          .from('attendance')
+          .select('id, child_name, check_in, check_out')
+          .eq('date', today);
+        if (data) {
+          const checkedIn = data.filter((r: { check_out: string | null }) => !r.check_out).length;
+          setSnapshot((prev) => ({
+            ...prev,
+            childrenPresent: checkedIn,
+            totalEnrolled: Math.max(prev.totalEnrolled, checkedIn),
+          }));
+        }
+      } catch {
+        // Supabase not available, keep defaults
+      }
+    }
+    fetchAttendance();
     setSnapshot(getTodaySnapshot());
     setActions(getQuickActions(currentZone));
 
