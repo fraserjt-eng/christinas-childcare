@@ -767,7 +767,12 @@ export default function FamiliesPage() {
   const loadFamilies = useCallback(async () => {
     await seedFamilyData();
     const data = await getFamilies();
-    setFamilies(data);
+    // Backfill status for families created before the status field existed
+    const migrated = data.map((f) => ({
+      ...f,
+      status: f.status || 'active' as const,
+    }));
+    setFamilies(migrated);
   }, []);
 
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { getFamilyByPin } from '@/lib/family-storage';
+import { getFamilyByPin, getFamilies, seedFamilyData } from '@/lib/family-storage';
 import { FamilyAccount, FamilyChild } from '@/types/family';
 
 // ============================================================================
@@ -490,6 +490,17 @@ function WelcomeScreen({ family, onDone }: WelcomeScreenProps) {
 
 export default function KioskPage() {
   const [activeFamily, setActiveFamily] = useState<FamilyAccount | null>(null);
+
+  // Seed demo families if none exist (first visit)
+  useEffect(() => {
+    async function ensureFamilies() {
+      const existing = await getFamilies();
+      if (existing.length === 0) {
+        await seedFamilyData();
+      }
+    }
+    ensureFamilies();
+  }, []);
 
   function handlePinSuccess(family: FamilyAccount) {
     setActiveFamily(family);
