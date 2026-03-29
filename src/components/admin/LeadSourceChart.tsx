@@ -47,7 +47,7 @@ export function LeadSourceChart() {
   const [stats, setStats] = useState<LeadSourceStat[]>([]);
 
   useEffect(() => {
-    setStats(getLeadSourceStats());
+    getLeadSourceStats().then(setStats);
   }, []);
 
   const nonEmpty = stats.filter((s) => s.count > 0);

@@ -127,7 +127,7 @@ function LeadDetailDialog({
 }: {
   lead: PipelineLead | null;
   onClose: () => void;
-  onUpdate: () => void;
+  onUpdate: () => void | Promise<void>;
 }) {
   const [activities, setActivities] = useState<PipelineActivity[]>([]);
   const [newNote, setNewNote] = useState('');
@@ -136,7 +136,7 @@ function LeadDetailDialog({
 
   useEffect(() => {
     if (lead) {
-      setActivities(getActivitiesForLead(lead.id));
+      getActivitiesForLead(lead.id).then(setActivities);
     }
   }, [lead]);
 
@@ -145,18 +145,19 @@ function LeadDetailDialog({
   const currentStageIdx = STAGE_ORDER.indexOf(lead.stage);
   const nextStage = currentStageIdx < STAGE_ORDER.length - 1 ? STAGE_ORDER[currentStageIdx + 1] : null;
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!newNote.trim()) return;
-    addActivity(lead.id, noteType, newNote.trim());
+    await addActivity(lead.id, noteType, newNote.trim());
     setNewNote('');
-    setActivities(getActivitiesForLead(lead.id));
+    const fresh = await getActivitiesForLead(lead.id);
+    setActivities(fresh);
     onUpdate();
   };
 
-  const handleAdvance = () => {
+  const handleAdvance = async () => {
     if (!nextStage) return;
     setAdvancing(true);
-    updateLeadStage(lead.id, nextStage);
+    await updateLeadStage(lead.id, nextStage);
     onUpdate();
   };
 
@@ -335,8 +336,9 @@ export function PipelineBoard() {
   const [leads, setLeads] = useState<PipelineLead[]>([]);
   const [selectedLead, setSelectedLead] = useState<PipelineLead | null>(null);
 
-  function load() {
-    setLeads(getLeads());
+  async function load() {
+    const fresh = await getLeads();
+    setLeads(fresh);
   }
 
   useEffect(() => {
@@ -400,8 +402,8 @@ export function PipelineBoard() {
       <LeadDetailDialog
         lead={selectedLead}
         onClose={() => setSelectedLead(null)}
-        onUpdate={() => {
-          const freshLeads = getLeads();
+        onUpdate={async () => {
+          const freshLeads = await getLeads();
           setLeads(freshLeads);
           setSelectedLead((prev) =>
             prev ? (freshLeads.find((l) => l.id === prev.id) ?? null) : null

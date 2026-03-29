@@ -87,7 +87,7 @@ export function EnrollmentRevenueProjection() {
   const [projection, setProjection] = useState<RevenueProjection | null>(null);
 
   useEffect(() => {
-    setProjection(getRevenueProjection(AVG_MONTHLY_RATE));
+    getRevenueProjection(AVG_MONTHLY_RATE).then(setProjection);
   }, []);
 
   if (!projection) return null;
