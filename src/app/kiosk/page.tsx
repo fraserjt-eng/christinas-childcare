@@ -100,8 +100,21 @@ const CRYSTAL_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 async function checkInChild(child: FamilyChildRow, familyId: string): Promise<void> {
   const today = getTodayDate();
   const existing = await getTodayAttendance(child.id);
-  if (existing) return;
 
+  // If already checked in and not checked out, skip
+  if (existing && existing.check_in && !existing.check_out) return;
+
+  // If they checked out earlier, clear the check_out to re-check-in
+  if (existing && existing.check_out) {
+    const { error } = await supabase
+      .from('attendance')
+      .update({ check_out: null, check_in: new Date().toISOString() })
+      .eq('id', existing.id);
+    if (error) console.error('Re-check-in error:', error.message);
+    return;
+  }
+
+  // First check-in of the day
   const { error } = await supabase.from('attendance').insert({
     child_id: child.id,
     child_name: child.name,
