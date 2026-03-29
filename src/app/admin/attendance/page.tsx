@@ -44,9 +44,10 @@ export default function AttendancePage() {
     const today = new Date().toISOString().split('T')[0];
 
     // Get all children from Supabase
-    const { data: children } = await supabase
+    const { data: children, error: childErr } = await supabase
       .from('family_children')
       .select('id, name, classroom, family_id');
+    if (childErr) console.error('Children fetch error:', childErr.message);
 
     // Get today's attendance
     const { data: attendance } = await supabase
