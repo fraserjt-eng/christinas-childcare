@@ -36,6 +36,10 @@ export interface FamilyAccount {
   id: string;
   email: string;
   password_hash: string;
+  pin?: string;
+  status: 'pending' | 'active' | 'inactive';
+  approved_by?: string;
+  approved_at?: string;
   parents: FamilyParent[];
   children: FamilyChild[];
   family_bio?: string;

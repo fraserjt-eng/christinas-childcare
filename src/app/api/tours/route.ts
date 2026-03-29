@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseReady } from '@/lib/supabase';
 import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { track } from '@vercel/analytics/server';
+import { sendNotificationEmail } from '@/lib/email';
 
 // Max 5 tour requests per minute per IP for the public scheduling form
 const TOUR_RATE_LIMIT = {
@@ -42,6 +43,21 @@ export async function POST(req: NextRequest) {
         // Do not expose DB errors to the user; still return success
       }
     }
+
+    // Send email notification to the center owner
+    await sendNotificationEmail(
+      `New Tour Request: ${data.parentName}`,
+      `<h2>New tour request received</h2>
+       <p><strong>Parent:</strong> ${data.parentName}</p>
+       <p><strong>Email:</strong> ${data.email}</p>
+       <p><strong>Phone:</strong> ${data.phone}</p>
+       <p><strong>Preferred Date:</strong> ${data.preferredDate}</p>
+       <p><strong>Preferred Time:</strong> ${data.preferredTime}</p>
+       <p><strong>Number of Children:</strong> ${data.numberOfChildren || 'Not specified'}</p>
+       <p><strong>Children Ages:</strong> ${data.childrenAges || 'Not specified'}</p>
+       <p><strong>Questions:</strong> ${data.questions || 'None'}</p>
+       <p><a href="https://christinas-childcare.vercel.app/admin/tours">View in admin dashboard</a></p>`
+    );
 
     // Track conversion event
     try {

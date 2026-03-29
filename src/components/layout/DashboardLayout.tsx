@@ -78,6 +78,7 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/compliance', label: 'Compliance', icon: ShieldCheck },
       { href: '/admin/payroll', label: 'Payroll', icon: CreditCard },
       { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
+      { href: '/admin/families', label: 'Families', icon: Users },
       { href: '/admin/pipeline', label: 'Pipeline', icon: SquareKanban },
       { href: '/admin/pipeline/authorizations', label: 'Authorizations', icon: ShieldCheck },
       { href: '/admin/pipeline/enrollment', label: 'Enrollment Funnel', icon: UserPlus },

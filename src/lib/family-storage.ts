@@ -58,12 +58,29 @@ export async function getFamilyByEmail(email: string): Promise<FamilyAccount | n
   return families.find((f) => f.email.toLowerCase() === email.toLowerCase()) || null;
 }
 
+export async function getFamilyByPin(pin: string): Promise<FamilyAccount | null> {
+  const families = await getFamilies();
+  return families.find((f) => f.pin === pin && f.status === 'active') || null;
+}
+
+export function generateFamilyPin(): string {
+  // Generate unique 4-digit PIN not already in use
+  const families = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
+  const existingPins = new Set(families.map((f) => f.pin).filter(Boolean));
+  let pin: string;
+  do {
+    pin = String(Math.floor(1000 + Math.random() * 9000));
+  } while (existingPins.has(pin));
+  return pin;
+}
+
 export async function createFamily(data: Omit<FamilyAccount, 'id' | 'created_at' | 'updated_at'>): Promise<FamilyAccount> {
   const families = await getFamilies();
   const now = new Date().toISOString();
 
   const newFamily: FamilyAccount = {
     ...data,
+    status: data.status || 'active',
     id: generateFamilyId(),
     created_at: now,
     updated_at: now,
@@ -301,24 +318,31 @@ export async function registerFamily(
   const family = await createFamily({
     email,
     password_hash: password, // In production, use proper hashing
+    status: 'pending',
     parents: [primaryParent],
     children: [],
   });
 
-  setCurrentFamily(family);
+  // Do not set as current family until approved
   return family;
 }
 
 export async function authenticateFamily(
   email: string,
   password: string
-): Promise<FamilyAccount | null> {
+): Promise<{ family: FamilyAccount | null; pending: boolean }> {
   const family = await getFamilyByEmail(email);
   if (family && family.password_hash === password) {
+    if (family.status === 'pending') {
+      return { family: null, pending: true };
+    }
+    if (family.status === 'inactive') {
+      return { family: null, pending: false };
+    }
     setCurrentFamily(family);
-    return family;
+    return { family, pending: false };
   }
-  return null;
+  return { family: null, pending: false };
 }
 
 export function logoutFamily(): void {
@@ -333,6 +357,8 @@ const SEED_FAMILIES: Omit<FamilyAccount, 'id' | 'created_at' | 'updated_at'>[] =
   {
     email: 'parent@demo.com',
     password_hash: 'parent123',
+    status: 'active',
+    pin: '1234',
     parents: [
       {
         id: 'par_demo_1',
@@ -380,6 +406,8 @@ const SEED_FAMILIES: Omit<FamilyAccount, 'id' | 'created_at' | 'updated_at'>[] =
   {
     email: 'garcia@demo.com',
     password_hash: 'garcia123',
+    pin: '5678',
+    status: 'active',
     parents: [
       {
         id: 'par_demo_3',

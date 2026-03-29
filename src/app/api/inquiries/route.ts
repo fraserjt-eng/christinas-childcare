@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseReady } from '@/lib/supabase';
 import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { track } from '@vercel/analytics/server';
+import { sendNotificationEmail } from '@/lib/email';
 
 // Max 5 submission attempts per minute per IP for the public enrollment form
 const INQUIRY_RATE_LIMIT = {
@@ -65,6 +66,20 @@ export async function POST(req: NextRequest) {
         // Do not expose DB errors to the user; still return success
       }
     }
+
+    // Send email notification to the center owner
+    await sendNotificationEmail(
+      `New Enrollment Inquiry: ${data.childName}`,
+      `<h2>New enrollment inquiry received</h2>
+       <p><strong>Parent:</strong> ${data.parentName}</p>
+       <p><strong>Email:</strong> ${data.email}</p>
+       <p><strong>Phone:</strong> ${data.phone}</p>
+       <p><strong>Child:</strong> ${data.childName}, ${data.childAge}</p>
+       <p><strong>Program:</strong> ${data.program}</p>
+       <p><strong>Start Date:</strong> ${data.startDate || 'Not specified'}</p>
+       <p><strong>Message:</strong> ${data.message || 'None'}</p>
+       <p><a href="https://christinas-childcare.vercel.app/admin/inquiries">View in admin dashboard</a></p>`
+    );
 
     // Track conversion event
     try {

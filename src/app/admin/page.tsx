@@ -37,6 +37,10 @@ import {
   type QuickAction,
   type AlertSeverity,
 } from '@/lib/smart-dashboard';
+import {
+  requestNotificationPermission,
+  showNotification,
+} from '@/lib/push-notifications';
 
 // ─── Icon Resolver ──────────────────────────────────────────────────
 // Maps iconName strings from QuickAction to actual Lucide components.
@@ -300,6 +304,45 @@ export default function AdminDashboard() {
     setAlerts(getDashboardAlerts());
     setSnapshot(getTodaySnapshot());
     setActions(getQuickActions(currentZone));
+
+    // Request browser notification permission so Christina receives
+    // push alerts when new enrollment inquiries arrive.
+    requestNotificationPermission().then((granted) => {
+      if (!granted) return;
+
+      // Check localStorage for new inquiries submitted today
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const raw = localStorage.getItem('christinas_inquiries');
+        if (!raw) return;
+        const inquiries: Array<{
+          status: string;
+          created_at: string;
+          parent_name?: string;
+          parentName?: string;
+          program?: string;
+        }> = JSON.parse(raw);
+
+        const newToday = inquiries.filter((inq) => {
+          const isNew = inq.status === 'new';
+          const createdToday = (inq.created_at || '').startsWith(today);
+          return isNew && createdToday;
+        });
+
+        if (newToday.length > 0) {
+          const first = newToday[0];
+          const parentName = first.parent_name || first.parentName || 'A parent';
+          const program = first.program || 'a program';
+          showNotification(
+            `New Enrollment Inquiry (${newToday.length})`,
+            `${parentName} is asking about ${program}`,
+            '/admin/inquiries'
+          );
+        }
+      } catch {
+        // localStorage read failure must not crash the dashboard
+      }
+    });
   }, []);
 
   // Filter alerts by current zone

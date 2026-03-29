@@ -32,9 +32,12 @@ export default function ParentLoginPage() {
 
     await new Promise((r) => setTimeout(r, 500));
 
-    const family = await authenticateFamily(email, password);
-    if (family) {
+    const result = await authenticateFamily(email, password);
+    if (result.family) {
       router.push('/dashboard');
+    } else if (result.pending) {
+      setSignInError('Your account is pending approval. Christina will review and activate your account within 24 hours.');
+      setLoading(false);
     } else {
       setSignInError('Invalid email or password.');
       setLoading(false);
@@ -70,7 +73,8 @@ export default function ParentLoginPage() {
       const { registerFamily } = await import('@/lib/family-storage');
       await registerFamily(email, password, name, phone);
       setSignUpSuccess(true);
-      setTimeout(() => router.push('/dashboard'), 500);
+      setLoading(false);
+      // Do not redirect: account is pending approval
     } catch (err) {
       setSignUpError(err instanceof Error ? err.message : 'Registration failed.');
       setLoading(false);
@@ -126,8 +130,8 @@ export default function ParentLoginPage() {
                     <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
                       <UserPlus className="h-6 w-6 text-green-600" />
                     </div>
-                    <p className="font-semibold text-green-700">Account created!</p>
-                    <p className="text-sm text-muted-foreground mt-1">Redirecting to your dashboard...</p>
+                    <p className="font-semibold text-green-700">Registration received!</p>
+                    <p className="text-sm text-muted-foreground mt-1">Your account is pending approval. Christina will review your information and activate your account within 24 hours. You will be able to log in once approved.</p>
                   </div>
                 ) : (
                   <form onSubmit={handleSignUp} className="space-y-4">
