@@ -8,9 +8,12 @@
 
 # Christina's Child Care Center: Claude Code Instructions
 
-## Project Status (Updated March 28, 2026)
+## Project Status (Updated March 28, 2026 - End of Day)
 
-**Production readiness work completed.** Supabase backend is live, auth is enforced, 5 critical storage modules are cloud-backed, daily reports and CSV export are available. The platform is in soft-launch readiness for staff testing.
+**Production readiness + kiosk + family/employee management completed.** Supabase backend is live with 6 migrations and 22+ tables. iPad kiosk reads/writes directly to Supabase (zero localStorage). Attendance and ratio monitor show live kiosk data. Family management with approval flow. Employee registration with CSV bulk upload. Enrollment notifications (in-app + email + push) built. 97 pages, 13 commits this session.
+
+**Crystal Center ID:** `3104ae69-4f26-4c1e-a767-3ff45b534860` (use this for all attendance inserts)
+**Demo PINs:** 1234 (Brown family: Noah + Ava), 5678 (Garcia family: Sofia)
 
 ## What This Is
 
@@ -139,6 +142,16 @@ christina-coral: #FF7043 (alerts, destructive)
 - Do not render user-generated HTML without `sanitizeHTML()` first
 - Do not use `dangerouslySetInnerHTML` on unsanitized content
 - Do not remove or weaken RLS policies
+
+## Gotchas (Lessons Learned March 28, 2026)
+
+1. **Set spread fails:** Use `Array.from(new Set(...))` not `[...new Set(...)]`. The tsconfig target doesn't support downlevelIteration.
+2. **Migration timestamps must be unique dates:** Two migrations on YYYYMMDD cause `duplicate key` errors. Bump the date.
+3. **`attendance` table requires `center_id`:** Crystal Center ID is `3104ae69-4f26-4c1e-a767-3ff45b534860`. Always include it.
+4. **`authenticateFamily` returns `{ family, pending }`** not `FamilyAccount | null`. Destructure the result.
+5. **ENFILE during local builds:** Too many parallel processes. Just deploy with `vercel --prod` instead.
+6. **Kiosk uses Supabase directly.** No localStorage. Any kiosk feature must query/write Supabase, not storage modules.
+7. **Anon key works for kiosk queries.** RLS policies allow anon SELECT on families and INSERT/UPDATE on attendance.
 
 ## Key Commands
 
