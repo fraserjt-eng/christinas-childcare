@@ -17,7 +17,7 @@ const AVATAR_CLIPS = [
 ];
 
 // Use the OG image URL as source (D-ID needs a publicly accessible image)
-const SOURCE_IMAGE_URL = 'https://christinas-childcare.vercel.app/og-image.png';
+const SOURCE_IMAGE_URL = 'https://christinas-childcare.vercel.app/avatar-jf.jpg';
 
 async function createTalkingHead(text, outputPath) {
   if (!DID_API_KEY) {
