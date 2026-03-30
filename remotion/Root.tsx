@@ -1,4 +1,5 @@
 import { Composition } from 'remotion';
+import { WalkthroughVideo } from './compositions/WalkthroughVideo';
 import { LessonBuilderVideo } from './compositions/LessonBuilderVideo';
 import { CurriculumLibraryVideo } from './compositions/CurriculumLibraryVideo';
 import { StaffManagementVideo } from './compositions/StaffManagementVideo';
@@ -215,6 +216,41 @@ export const RemotionRoot: React.FC = () => {
         width={WIDTH}
         height={HEIGHT}
         defaultProps={{}}
+      />
+
+      {/* ============================================
+          WALKTHROUGH VIDEO (manifest-driven, multi-chapter)
+          Driven by a WalkthroughManifest built by the
+          8-phase pipeline in scripts/record-v3.mjs.
+          Max 15 minutes; actual duration is determined by
+          the manifest at render time.
+          ============================================ */}
+      <Composition
+        id="WalkthroughVideo"
+        component={WalkthroughVideo}
+        durationInFrames={FPS * 60 * 15} // 15 min ceiling
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={{
+          manifest: {
+            id: 'admin-walkthrough',
+            title: 'Admin Portal Guide',
+            fps: 30,
+            width: 1920,
+            height: 1080,
+            totalDurationMs: 600000,
+            branding: {
+              primaryColor: '#C62828',
+              secondaryColor: '#2196F3',
+              backgroundColor: '#FDFBF7',
+              centerName: "Christina's Child Care Center",
+              initial: 'C',
+            },
+            chapters: [],
+            pageTransitions: [],
+          },
+        }}
       />
     </>
   );
