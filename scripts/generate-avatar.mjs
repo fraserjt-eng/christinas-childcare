@@ -4,36 +4,29 @@ import path from 'path';
 
 const DID_API_KEY = process.env.DID_API_KEY;
 const AVATAR_IMAGE = path.resolve('assets/avatar-jf.jpg');
-const VOICE_DIR = '/tmp/christinas-voice';
 const OUT_DIR = '/tmp/christinas-avatar';
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 const AVATAR_CLIPS = [
-  'avatar-intro',
-  'avatar-operations-transition',
-  'avatar-communication-transition',
-  'avatar-growth-transition',
-  'avatar-outro',
+  { id: 'avatar-intro', text: "Welcome to the admin portal. This is your command center for managing every aspect of Christina's Child Care Center." },
+  { id: 'avatar-operations-transition', text: "Now let's look at the operations tools that keep your center running smoothly." },
+  { id: 'avatar-communication-transition', text: "Next, we'll explore the communication and engagement tools." },
+  { id: 'avatar-growth-transition', text: "Let's look at the tools that help grow your enrollment and revenue." },
+  { id: 'avatar-outro', text: "That covers the admin portal. Every tool here is designed to save you time and keep your center running at its best." },
 ];
 
-async function createTalkingHead(audioPath, outputPath) {
+// Use the OG image URL as source (D-ID needs a publicly accessible image)
+const SOURCE_IMAGE_URL = 'https://christinas-childcare.vercel.app/og-image.png';
+
+async function createTalkingHead(text, outputPath) {
   if (!DID_API_KEY) {
     console.log('  [skip] DID_API_KEY not set. Using static image fallback.');
-    // Copy the static image as a "clip" placeholder
     fs.copyFileSync(AVATAR_IMAGE, outputPath.replace('.mp4', '.jpg'));
     return outputPath.replace('.mp4', '.jpg');
   }
 
-  // Upload the source image
-  const imageBuffer = fs.readFileSync(AVATAR_IMAGE);
-  const imageBase64 = imageBuffer.toString('base64');
-
-  // Read the audio file
-  const audioBuffer = fs.readFileSync(audioPath);
-  const audioBase64 = audioBuffer.toString('base64');
-
-  // Create talk
+  // Create talk using text-based script (D-ID generates voice + lip sync)
   const createRes = await fetch('https://api.d-id.com/talks', {
     method: 'POST',
     headers: {
@@ -41,12 +34,12 @@ async function createTalkingHead(audioPath, outputPath) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      source_url: `data:image/jpeg;base64,${imageBase64}`,
+      source_url: SOURCE_IMAGE_URL,
       script: {
-        type: 'audio',
-        audio_url: `data:audio/mpeg;base64,${audioBase64}`,
+        type: 'text',
+        input: text,
+        provider: { type: 'microsoft', voice_id: 'en-US-AvaNeural' },
       },
-      config: { stitch: true },
     }),
   });
 
@@ -67,7 +60,6 @@ async function createTalkingHead(audioPath, outputPath) {
     const status = await statusRes.json();
 
     if (status.status === 'done') {
-      // Download the result
       const videoRes = await fetch(status.result_url);
       const videoBuffer = Buffer.from(await videoRes.arrayBuffer());
       fs.writeFileSync(outputPath, videoBuffer);
@@ -85,27 +77,24 @@ async function createTalkingHead(audioPath, outputPath) {
 
 console.log('Generating avatar clips...\n');
 
-for (const clipId of AVATAR_CLIPS) {
-  const audioPath = path.join(VOICE_DIR, `${clipId}.mp3`);
-  const outputPath = path.join(OUT_DIR, `${clipId}.mp4`);
+for (const clip of AVATAR_CLIPS) {
+  const outputPath = path.join(OUT_DIR, `${clip.id}.mp4`);
 
   if (fs.existsSync(outputPath) && fs.statSync(outputPath).size > 1024) {
-    console.log(`  [cached] ${clipId}`);
-    continue;
-  }
-
-  if (!fs.existsSync(audioPath)) {
-    console.log(`  [skip] No audio for ${clipId}`);
+    console.log(`  [cached] ${clip.id}`);
     continue;
   }
 
   try {
-    await createTalkingHead(audioPath, outputPath);
+    // Remove stale fallback JPG if exists
+    const jpgFallback = path.join(OUT_DIR, `${clip.id}.jpg`);
+    if (fs.existsSync(jpgFallback)) fs.unlinkSync(jpgFallback);
+
+    await createTalkingHead(clip.text, outputPath);
   } catch (err) {
-    console.error(`  [error] ${clipId}: ${err.message}`);
-    // Fallback to static image, don't abort the pipeline
-    fs.copyFileSync(AVATAR_IMAGE, path.join(OUT_DIR, `${clipId}.jpg`));
-    console.log(`  [fallback] Using static image for ${clipId}`);
+    console.error(`  [error] ${clip.id}: ${err.message}`);
+    fs.copyFileSync(AVATAR_IMAGE, path.join(OUT_DIR, `${clip.id}.jpg`));
+    console.log(`  [fallback] Using static image for ${clip.id}`);
   }
 }
 
