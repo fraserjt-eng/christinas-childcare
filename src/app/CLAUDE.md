@@ -153,6 +153,45 @@ christina-coral: #FF7043 (alerts, destructive)
 6. **Kiosk uses Supabase directly.** No localStorage. Any kiosk feature must query/write Supabase, not storage modules.
 7. **Anon key works for kiosk queries.** RLS policies allow anon SELECT on families and INSERT/UPDATE on attendance.
 
+## Video Pipeline (March 29, 2026)
+
+8-phase pipeline at `scripts/record-v3.mjs`. Run with `node scripts/record-v3.mjs <phase> [section]`.
+
+**Completed phases:** voice (25 MP3s via ElevenLabs Sarah), timestamps (25 JSONs estimated), avatar (5 D-ID clips), manifest (7.1 min, 25 chapters)
+**Pending phases:** record (needs headed Playwright for 20 admin pages), render (Remotion), mix, final
+**ElevenLabs voice:** Sarah (EXAVITQu4vr4xnSDxMaL), not "Ava" (doesn't exist). Starter plan active.
+**Baseline score:** 45/70 (Acceptable). Target: 55+ (Good).
+
+**Gotchas learned during video pipeline build:**
+8. **edge-tts binary not on PATH.** It lives at `/tmp/tts-env/bin/edge-tts`. The venv may need to be recreated: `python3 -m venv /tmp/tts-env && /tmp/tts-env/bin/pip install edge-tts`
+9. **whisper.cpp not installed.** Timestamp generation falls back to duration-based estimation. Captions will use estimated word timing. Install whisper model at `~/.cache/whisper/ggml-base.en.bin` for real timestamps.
+10. **Voice files go to `/tmp/christinas-voice/`.** Timestamps to `/tmp/christinas-timestamps/`. Avatar clips to `/tmp/christinas-avatar/`. Recordings to `/tmp/christinas-recordings/`. Manifest at `/tmp/christinas-manifest.json`. All ephemeral; regenerate with the pipeline.
+11. **Remotion composition imports components with relative paths** (`../components/X`) but types with alias (`@/types/video-schema`). This is consistent with how the existing compositions work.
+12. **Quality gate skill** at `~/.claude/skills/operational-quality-gate/SKILL.md`. Run after every subagent task, before marking complete. Issues ACCEPT/REVISE/REJECT.
+13. **D-ID needs a publicly hosted face image URL.** Base64 data URLs return 500 error. Images without a face (logos, graphics) return "face not detected." The avatar photo is deployed at `public/avatar-jf.jpg`.
+14. **D-ID free tier is ~5 minutes.** All 5 avatar clips used it up. Re-runs will need the paid tier or new account.
+15. **ElevenLabs voice "Ava" doesn't exist.** The closest match is "Sarah" (EXAVITQu4vr4xnSDxMaL): Mature, Reassuring, Confident, Professional, American, Female.
+
+## Development Process (Superpowers)
+
+This project uses the Superpowers development methodology.
+
+### For any new feature or significant change:
+1. Use `brainstorming` to explore and design first
+2. Use `writing-plans` to create the implementation plan
+3. Use `subagent-driven-development` to execute with review
+4. Use `verification-before-completion` before any completion claims
+5. Use `finishing-a-development-branch` to wrap up
+
+### For bug fixes:
+1. Use `systematic-debugging` to find root cause
+2. Use `test-driven-development` to write the fix
+
+### For all work:
+- ALWAYS use git worktrees for isolation (never work directly on main for features)
+- ALWAYS run verification commands before claiming success
+- Direct fixes (typos, config changes) can skip the full workflow
+
 ## Key Commands
 
 ```bash
