@@ -28,7 +28,7 @@ import {
   TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Info,
   DollarSign, PieChart, BarChart3, Wallet
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+
 
 // Site definitions
 const sites = [
@@ -214,10 +214,12 @@ export default function BudgetPage() {
   };
 
   // Export to Excel
-  const exportToExcel = () => {
-    const wb = XLSX.utils.book_new();
+  const exportToExcel = async () => {
+    const ExcelJS = (await import('exceljs')).default;
+    const wb = new ExcelJS.Workbook();
 
     // Dashboard summary sheet
+    const dashboardSheet = wb.addWorksheet('Dashboard');
     const dashboardData = [
       ['Christina\'s Child Care - Budget Report'],
       ['Site:', sites.find(s => s.id === selectedSite)?.name || selectedSite],
@@ -230,36 +232,34 @@ export default function BudgetPage() {
       ['Burn Rate', calculations.burnRate.toFixed(1) + '%'],
       ['Budget Health Score', calculations.healthScore.toFixed(0) + '/100'],
     ];
-    const dashboardSheet = XLSX.utils.aoa_to_sheet(dashboardData);
-    XLSX.utils.book_append_sheet(wb, dashboardSheet, 'Dashboard');
+    dashboardData.forEach(row => dashboardSheet.addRow(row));
 
     // Annual budget sheet
+    const annualSheet = wb.addWorksheet('Annual Budget');
     const annualHeaders = [
       'Category',
       ...months.flatMap(m => [`${m.toUpperCase()} Budget`, `${m.toUpperCase()} Actual`]),
       'YTD Budget', 'YTD Actual', 'Variance', '% Used'
     ];
-    const annualRows = calculations.rowTotals.map(row => [
-      row.category,
-      ...months.flatMap(m => [row[m].budget, row[m].actual]),
-      row.ytdBudget, row.ytdActual, row.variance, (row.percentUsed).toFixed(1) + '%'
-    ]);
-    const annualData = [annualHeaders, ...annualRows];
-
-    // Add totals row
-    annualData.push([
+    annualSheet.addRow(annualHeaders);
+    calculations.rowTotals.forEach(row => {
+      annualSheet.addRow([
+        row.category,
+        ...months.flatMap(m => [row[m].budget, row[m].actual]),
+        row.ytdBudget, row.ytdActual, row.variance, (row.percentUsed).toFixed(1) + '%'
+      ]);
+    });
+    annualSheet.addRow([
       'TOTAL',
       ...months.flatMap(m => [calculations.columnTotals[m].budget, calculations.columnTotals[m].actual]),
       calculations.totalBudget, calculations.totalActual, calculations.totalVariance,
       calculations.burnRate.toFixed(1) + '%'
     ]);
 
-    const annualSheet = XLSX.utils.aoa_to_sheet(annualData);
-    XLSX.utils.book_append_sheet(wb, annualSheet, 'Annual Budget');
-
     // Site comparison sheet
-    const comparisonHeaders = ['Category', ...sites.flatMap(s => [`${s.name} Budget`, `${s.name} Actual`])];
-    const comparisonRows = budgetCategories.map(cat => {
+    const comparisonSheet = wb.addWorksheet('Site Comparison');
+    comparisonSheet.addRow(['Category', ...sites.flatMap(s => [`${s.name} Budget`, `${s.name} Actual`])]);
+    budgetCategories.forEach(cat => {
       const row: (string | number)[] = [cat.name];
       sites.forEach(site => {
         const siteRow = budgetData[site.id].find(r => r.categoryId === cat.id);
@@ -269,24 +269,28 @@ export default function BudgetPage() {
           row.push(ytdBudget, ytdActual);
         }
       });
-      return row;
+      comparisonSheet.addRow(row);
     });
-    const comparisonSheet = XLSX.utils.aoa_to_sheet([comparisonHeaders, ...comparisonRows]);
-    XLSX.utils.book_append_sheet(wb, comparisonSheet, 'Site Comparison');
 
     // Monthly breakdown sheet
-    const monthlyHeaders = ['Month', 'Total Budget', 'Total Actual', 'Variance', '% Used'];
-    const monthlyRows = months.map((m, idx) => {
+    const monthlySheet = wb.addWorksheet('Monthly View');
+    monthlySheet.addRow(['Month', 'Total Budget', 'Total Actual', 'Variance', '% Used']);
+    months.forEach((m, idx) => {
       const budget = calculations.columnTotals[m].budget;
       const actual = calculations.columnTotals[m].actual;
       const variance = budget - actual;
       const percent = budget > 0 ? (actual / budget * 100).toFixed(1) + '%' : '0%';
-      return [monthLabels[idx], budget, actual, variance, percent];
+      monthlySheet.addRow([monthLabels[idx], budget, actual, variance, percent]);
     });
-    const monthlySheet = XLSX.utils.aoa_to_sheet([monthlyHeaders, ...monthlyRows]);
-    XLSX.utils.book_append_sheet(wb, monthlySheet, 'Monthly View');
 
-    XLSX.writeFile(wb, `Christina-Budget-${selectedSite}-${new Date().toISOString().split('T')[0]}.xlsx`);
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Christina-Budget-${selectedSite}-${new Date().toISOString().split('T')[0]}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Dashboard insights

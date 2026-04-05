@@ -1,5 +1,14 @@
 // Family Storage Module for Christina's Child Care Center
-// Uses localStorage for persistence, designed for easy Supabase migration
+// Supabase-first with localStorage as fallback cache
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+  supabaseDelete,
+  isSupabaseConfigured,
+} from '@/lib/supabase/service';
+import { getSupabase } from '@/lib/supabase/client';
 
 import {
   FamilyAccount,
@@ -9,6 +18,24 @@ import {
   generateParentId,
   generateChildId,
 } from '@/types/family';
+
+// ============================================================================
+// Password Hashing (SHA-256 via Web Crypto — works in browser + Node 18+)
+// ============================================================================
+
+async function hashPasswordAsync(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  // globalThis.crypto.subtle works in both browser and Node.js 18+
+  const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  const hash = await hashPasswordAsync(password);
+  return hash === storedHash;
+}
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -41,10 +68,113 @@ function saveToStorage<T>(key: string, data: T[]): void {
 }
 
 // ============================================================================
+// Supabase Helpers — reconstruct FamilyAccount from 3 tables
+// ============================================================================
+
+// Row shapes returned by Supabase (snake_case, UUIDs for ids)
+interface FamilyRow {
+  id: string;
+  email: string;
+  password_hash: string;
+  pin: string | null;
+  status: 'pending' | 'active' | 'inactive';
+  approved_by: string | null;
+  approved_at: string | null;
+  address: string | null;
+  family_bio: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface FamilyParentRow {
+  id: string;
+  family_id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  relationship: string;
+  is_primary: boolean;
+  created_at: string;
+}
+
+interface FamilyChildRow {
+  id: string;
+  family_id: string;
+  name: string;
+  date_of_birth: string | null;
+  classroom: string | null;
+  allergies: string[];
+  medical_notes: string | null;
+  created_at: string;
+}
+
+async function fetchFamiliesFromSupabase(): Promise<FamilyAccount[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const [families, parents, children] = await Promise.all([
+      supabaseSelect<FamilyRow>('families'),
+      supabaseSelect<FamilyParentRow>('family_parents'),
+      supabaseSelect<FamilyChildRow>('family_children'),
+    ]);
+
+    if (!families) return null;
+
+    return families.map((f) => {
+      const familyParents: FamilyParent[] = (parents || [])
+        .filter((p) => p.family_id === f.id)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          phone: p.phone || '',
+          email: p.email || '',
+          relationship: (p.relationship || 'guardian') as FamilyParent['relationship'],
+          is_primary: p.is_primary,
+        }));
+
+      const familyChildren: FamilyChild[] = (children || [])
+        .filter((c) => c.family_id === f.id)
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          date_of_birth: c.date_of_birth || '',
+          classroom: c.classroom || '',
+          allergies: c.allergies || [],
+          medical_notes: c.medical_notes || undefined,
+          emergency_contacts: [],
+        }));
+
+      return {
+        id: f.id,
+        email: f.email,
+        password_hash: f.password_hash,
+        pin: f.pin || undefined,
+        status: f.status,
+        approved_by: f.approved_by || undefined,
+        approved_at: f.approved_at || undefined,
+        address: f.address || undefined,
+        family_bio: f.family_bio || undefined,
+        parents: familyParents,
+        children: familyChildren,
+        created_at: f.created_at,
+        updated_at: f.updated_at,
+      } as FamilyAccount;
+    });
+  } catch (err) {
+    console.error('Error fetching families from Supabase:', err);
+    return null;
+  }
+}
+
+// ============================================================================
 // Family CRUD
 // ============================================================================
 
 export async function getFamilies(): Promise<FamilyAccount[]> {
+  const cloudData = await fetchFamiliesFromSupabase();
+  if (cloudData !== null) {
+    saveToStorage(STORAGE_KEYS.families, cloudData);
+    return cloudData;
+  }
   return getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
 }
 
@@ -75,13 +205,74 @@ export function generateFamilyPin(): string {
 }
 
 export async function createFamily(data: Omit<FamilyAccount, 'id' | 'created_at' | 'updated_at'>): Promise<FamilyAccount> {
-  const families = await getFamilies();
   const now = new Date().toISOString();
+  const localId = generateFamilyId();
 
+  if (isSupabaseConfigured) {
+    try {
+      const familyRow = await supabaseInsert<FamilyRow>('families', {
+        email: data.email,
+        password_hash: data.password_hash,
+        pin: data.pin || null,
+        status: data.status || 'active',
+        approved_by: data.approved_by || null,
+        approved_at: data.approved_at || null,
+        address: data.address || null,
+        family_bio: data.family_bio || null,
+      });
+
+      if (familyRow) {
+        const supabase = getSupabase()!;
+        // Insert parents
+        if (data.parents && data.parents.length > 0) {
+          await supabase.from('family_parents').insert(
+            data.parents.map((p) => ({
+              family_id: familyRow.id,
+              name: p.name,
+              phone: p.phone || null,
+              email: p.email || null,
+              relationship: p.relationship || 'guardian',
+              is_primary: p.is_primary || false,
+            }))
+          );
+        }
+        // Insert children
+        if (data.children && data.children.length > 0) {
+          await supabase.from('family_children').insert(
+            data.children.map((c) => ({
+              family_id: familyRow.id,
+              name: c.name,
+              date_of_birth: c.date_of_birth || null,
+              classroom: c.classroom || null,
+              allergies: c.allergies || [],
+              medical_notes: c.medical_notes || null,
+            }))
+          );
+        }
+
+        const newFamily: FamilyAccount = {
+          ...data,
+          id: familyRow.id,
+          created_at: familyRow.created_at,
+          updated_at: familyRow.updated_at,
+        };
+
+        const families = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
+        families.push(newFamily);
+        saveToStorage(STORAGE_KEYS.families, families);
+        return newFamily;
+      }
+    } catch (err) {
+      console.error('Error creating family in Supabase:', err);
+    }
+  }
+
+  // localStorage-only fallback
+  const families = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
   const newFamily: FamilyAccount = {
     ...data,
     status: data.status || 'active',
-    id: generateFamilyId(),
+    id: localId,
     created_at: now,
     updated_at: now,
   };
@@ -92,7 +283,36 @@ export async function createFamily(data: Omit<FamilyAccount, 'id' | 'created_at'
 }
 
 export async function updateFamily(id: string, updates: Partial<FamilyAccount>): Promise<FamilyAccount | null> {
-  const families = await getFamilies();
+  if (isSupabaseConfigured) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { parents: _p, children: _c, ...rowUpdates } = updates;
+      const updated = await supabaseUpdate<FamilyRow>('families', id, {
+        email: rowUpdates.email,
+        password_hash: rowUpdates.password_hash,
+        pin: rowUpdates.pin ?? null,
+        status: rowUpdates.status,
+        approved_by: rowUpdates.approved_by ?? null,
+        approved_at: rowUpdates.approved_at ?? null,
+        address: rowUpdates.address ?? null,
+        family_bio: rowUpdates.family_bio ?? null,
+      });
+
+      if (updated) {
+        // Refresh full family list from Supabase
+        const families = await fetchFamiliesFromSupabase();
+        if (families) {
+          saveToStorage(STORAGE_KEYS.families, families);
+          return families.find((f) => f.id === id) || null;
+        }
+      }
+    } catch (err) {
+      console.error('Error updating family in Supabase:', err);
+    }
+  }
+
+  // localStorage fallback
+  const families = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
   const index = families.findIndex((f) => f.id === id);
 
   if (index === -1) return null;
@@ -115,7 +335,52 @@ export async function updateFamily(id: string, updates: Partial<FamilyAccount>):
 // ============================================================================
 
 export async function addChild(familyId: string, child: Omit<FamilyChild, 'id'>): Promise<FamilyChild | null> {
-  const families = await getFamilies();
+  if (isSupabaseConfigured) {
+    try {
+      const supabase = getSupabase()!;
+      const { data, error } = await supabase
+        .from('family_children')
+        .insert({
+          family_id: familyId,
+          name: child.name,
+          date_of_birth: child.date_of_birth || null,
+          classroom: child.classroom || null,
+          allergies: child.allergies || [],
+          medical_notes: child.medical_notes || null,
+        })
+        .select()
+        .single();
+
+      if (!error && data) {
+        const newChild: FamilyChild = {
+          id: data.id,
+          name: data.name,
+          date_of_birth: data.date_of_birth || '',
+          classroom: data.classroom || '',
+          allergies: data.allergies || [],
+          medical_notes: data.medical_notes || undefined,
+          emergency_contacts: child.emergency_contacts || [],
+        };
+
+        // Update cache
+        const families = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
+        const idx = families.findIndex((f) => f.id === familyId);
+        if (idx >= 0) {
+          families[idx].children.push(newChild);
+          families[idx].updated_at = new Date().toISOString();
+          saveToStorage(STORAGE_KEYS.families, families);
+          const current = getCurrentFamily();
+          if (current && current.id === familyId) setCurrentFamily(families[idx]);
+        }
+        return newChild;
+      }
+    } catch (err) {
+      console.error('Error adding child in Supabase:', err);
+    }
+  }
+
+  // localStorage fallback
+  const families = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
   const index = families.findIndex((f) => f.id === familyId);
 
   if (index === -1) return null;
@@ -129,7 +394,6 @@ export async function addChild(familyId: string, child: Omit<FamilyChild, 'id'>)
   families[index].updated_at = new Date().toISOString();
   saveToStorage(STORAGE_KEYS.families, families);
 
-  // Update current family session if it matches
   const current = getCurrentFamily();
   if (current && current.id === familyId) {
     setCurrentFamily(families[index]);
@@ -143,7 +407,48 @@ export async function updateChild(
   childId: string,
   updates: Partial<FamilyChild>
 ): Promise<FamilyChild | null> {
-  const families = await getFamilies();
+  if (isSupabaseConfigured) {
+    try {
+      const supabase = getSupabase()!;
+      const { data, error } = await supabase
+        .from('family_children')
+        .update({
+          name: updates.name,
+          date_of_birth: updates.date_of_birth ?? undefined,
+          classroom: updates.classroom ?? undefined,
+          allergies: updates.allergies ?? undefined,
+          medical_notes: updates.medical_notes ?? undefined,
+        })
+        .eq('id', childId)
+        .select()
+        .single();
+
+      if (!error && data) {
+        const families = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
+        const familyIdx = families.findIndex((f) => f.id === familyId);
+        if (familyIdx >= 0) {
+          const childIdx = families[familyIdx].children.findIndex((c) => c.id === childId);
+          if (childIdx >= 0) {
+            families[familyIdx].children[childIdx] = {
+              ...families[familyIdx].children[childIdx],
+              ...updates,
+              id: childId,
+            };
+            families[familyIdx].updated_at = new Date().toISOString();
+            saveToStorage(STORAGE_KEYS.families, families);
+            const current = getCurrentFamily();
+            if (current && current.id === familyId) setCurrentFamily(families[familyIdx]);
+          }
+          return families[familyIdx].children.find((c) => c.id === childId) || null;
+        }
+      }
+    } catch (err) {
+      console.error('Error updating child in Supabase:', err);
+    }
+  }
+
+  // localStorage fallback
+  const families = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
   const familyIndex = families.findIndex((f) => f.id === familyId);
 
   if (familyIndex === -1) return null;
@@ -161,7 +466,6 @@ export async function updateChild(
   families[familyIndex].updated_at = new Date().toISOString();
   saveToStorage(STORAGE_KEYS.families, families);
 
-  // Update current family session if it matches
   const current = getCurrentFamily();
   if (current && current.id === familyId) {
     setCurrentFamily(families[familyIndex]);
@@ -171,7 +475,28 @@ export async function updateChild(
 }
 
 export async function removeChild(familyId: string, childId: string): Promise<boolean> {
-  const families = await getFamilies();
+  if (isSupabaseConfigured) {
+    try {
+      const result = await supabaseDelete('family_children', childId);
+      if (result) {
+        const families = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
+        const idx = families.findIndex((f) => f.id === familyId);
+        if (idx >= 0) {
+          families[idx].children = families[idx].children.filter((c) => c.id !== childId);
+          families[idx].updated_at = new Date().toISOString();
+          saveToStorage(STORAGE_KEYS.families, families);
+          const current = getCurrentFamily();
+          if (current && current.id === familyId) setCurrentFamily(families[idx]);
+        }
+        return true;
+      }
+    } catch (err) {
+      console.error('Error removing child in Supabase:', err);
+    }
+  }
+
+  // localStorage fallback
+  const families = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
   const familyIndex = families.findIndex((f) => f.id === familyId);
 
   if (familyIndex === -1) return false;
@@ -183,7 +508,6 @@ export async function removeChild(familyId: string, childId: string): Promise<bo
   families[familyIndex].updated_at = new Date().toISOString();
   saveToStorage(STORAGE_KEYS.families, families);
 
-  // Update current family session if it matches
   const current = getCurrentFamily();
   if (current && current.id === familyId) {
     setCurrentFamily(families[familyIndex]);
@@ -317,7 +641,7 @@ export async function registerFamily(
 
   const family = await createFamily({
     email,
-    password_hash: password, // In production, use proper hashing
+    password_hash: await hashPasswordAsync(password),
     status: 'pending',
     parents: [primaryParent],
     children: [],
@@ -332,7 +656,7 @@ export async function authenticateFamily(
   password: string
 ): Promise<{ family: FamilyAccount | null; pending: boolean }> {
   const family = await getFamilyByEmail(email);
-  if (family && family.password_hash === password) {
+  if (family && await verifyPassword(password, family.password_hash)) {
     if (family.status === 'pending') {
       return { family: null, pending: true };
     }
@@ -356,7 +680,7 @@ export function logoutFamily(): void {
 const SEED_FAMILIES: Omit<FamilyAccount, 'id' | 'created_at' | 'updated_at'>[] = [
   {
     email: 'parent@demo.com',
-    password_hash: 'parent123',
+    password_hash: '82e3edf5f5f3a46b5f94579b61817fd9a1f356adcef5ee22da3b96ef775c4860',
     status: 'active',
     pin: '1234',
     parents: [
@@ -405,7 +729,7 @@ const SEED_FAMILIES: Omit<FamilyAccount, 'id' | 'created_at' | 'updated_at'>[] =
   },
   {
     email: 'garcia@demo.com',
-    password_hash: 'garcia123',
+    password_hash: '589abe9e2a0564741d6761595f0b6a19870e00b1aebc9a421a724aa8dd3bf890',
     pin: '5678',
     status: 'active',
     parents: [

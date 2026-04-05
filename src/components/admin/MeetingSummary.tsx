@@ -23,6 +23,7 @@ import {
   type Meeting,
   type AgendaItemPurpose,
 } from '@/lib/meeting-storage';
+import { sanitizeHTML } from '@/lib/sanitize';
 
 interface MeetingSummaryProps {
   meetingId?: string;
@@ -176,7 +177,7 @@ function MeetingSummaryCard({ meeting, onBack }: { meeting: Meeting; onBack?: ()
             <CardContent>
               <div
                 className="prose prose-sm max-w-none text-foreground"
-                dangerouslySetInnerHTML={{ __html: meeting.notes_html }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHTML(meeting.notes_html) }}
               />
             </CardContent>
           )}

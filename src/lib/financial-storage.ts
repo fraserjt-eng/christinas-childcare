@@ -1,5 +1,13 @@
-// Revenue Forecasting — localStorage storage module
+// Revenue Forecasting — Supabase-first with localStorage fallback
 // Tool 19 for Christina's Child Care Center
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+  supabaseDelete,
+  isSupabaseConfigured,
+} from '@/lib/supabase/service';
 
 export interface FinancialRecord {
   id: string;
@@ -138,7 +146,7 @@ function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-function ensureSeeded(): void {
+function ensureSeededLocally(): void {
   if (typeof window === 'undefined') return;
   const existing = getFromStorage<FinancialRecord>(RECORDS_KEY);
   if (existing.length === 0) {
@@ -151,7 +159,39 @@ function ensureSeeded(): void {
 }
 
 export async function getFinancialRecords(): Promise<FinancialRecord[]> {
-  ensureSeeded();
+  const cloudData = await supabaseSelect<FinancialRecord>('financial_records');
+
+  if (cloudData !== null) {
+    // Seed Supabase if empty
+    if (cloudData.length === 0) {
+      for (const r of SEED_RECORDS) {
+        await supabaseInsert<FinancialRecord>('financial_records', {
+          month: r.month,
+          revenue_tuition: r.revenue_tuition,
+          revenue_cacfp: r.revenue_cacfp,
+          revenue_other: r.revenue_other,
+          expenses_labor: r.expenses_labor,
+          expenses_supplies: r.expenses_supplies,
+          expenses_fixed: r.expenses_fixed,
+          expenses_other: r.expenses_other,
+          notes: r.notes || null,
+        });
+      }
+      // Re-fetch after seeding
+      const seeded = await supabaseSelect<FinancialRecord>('financial_records');
+      if (seeded) {
+        const sorted = [...seeded].sort((a, b) => a.month.localeCompare(b.month));
+        saveToStorage(RECORDS_KEY, sorted);
+        return sorted;
+      }
+    }
+
+    const sorted = [...cloudData].sort((a, b) => a.month.localeCompare(b.month));
+    saveToStorage(RECORDS_KEY, sorted);
+    return sorted;
+  }
+
+  ensureSeededLocally();
   const records = getFromStorage<FinancialRecord>(RECORDS_KEY);
   records.sort((a, b) => a.month.localeCompare(b.month));
   return records;
@@ -160,7 +200,29 @@ export async function getFinancialRecords(): Promise<FinancialRecord[]> {
 export async function createRecord(
   data: Omit<FinancialRecord, 'id'>
 ): Promise<FinancialRecord> {
-  ensureSeeded();
+  if (isSupabaseConfigured) {
+    const inserted = await supabaseInsert<FinancialRecord>('financial_records', {
+      month: data.month,
+      revenue_tuition: data.revenue_tuition,
+      revenue_cacfp: data.revenue_cacfp,
+      revenue_other: data.revenue_other,
+      expenses_labor: data.expenses_labor,
+      expenses_supplies: data.expenses_supplies,
+      expenses_fixed: data.expenses_fixed,
+      expenses_other: data.expenses_other,
+      notes: data.notes || null,
+    });
+
+    if (inserted) {
+      const records = getFromStorage<FinancialRecord>(RECORDS_KEY);
+      records.push(inserted);
+      saveToStorage(RECORDS_KEY, records);
+      return inserted;
+    }
+  }
+
+  // localStorage fallback
+  ensureSeededLocally();
   const records = getFromStorage<FinancialRecord>(RECORDS_KEY);
   const record: FinancialRecord = { ...data, id: generateId('fin') };
   records.push(record);
@@ -172,7 +234,32 @@ export async function updateRecord(
   id: string,
   updates: Partial<FinancialRecord>
 ): Promise<FinancialRecord | null> {
-  ensureSeeded();
+  if (isSupabaseConfigured) {
+    const updated = await supabaseUpdate<FinancialRecord>('financial_records', id, {
+      month: updates.month,
+      revenue_tuition: updates.revenue_tuition,
+      revenue_cacfp: updates.revenue_cacfp,
+      revenue_other: updates.revenue_other,
+      expenses_labor: updates.expenses_labor,
+      expenses_supplies: updates.expenses_supplies,
+      expenses_fixed: updates.expenses_fixed,
+      expenses_other: updates.expenses_other,
+      notes: updates.notes ?? null,
+    });
+
+    if (updated) {
+      const records = getFromStorage<FinancialRecord>(RECORDS_KEY);
+      const idx = records.findIndex(r => r.id === id);
+      if (idx >= 0) {
+        records[idx] = { ...records[idx], ...updated };
+        saveToStorage(RECORDS_KEY, records);
+      }
+      return updated;
+    }
+  }
+
+  // localStorage fallback
+  ensureSeededLocally();
   const records = getFromStorage<FinancialRecord>(RECORDS_KEY);
   const index = records.findIndex(r => r.id === id);
   if (index === -1) return null;
@@ -182,6 +269,14 @@ export async function updateRecord(
 }
 
 export async function getScenarios(): Promise<RevenueScenario[]> {
+  const cloudData = await supabaseSelect<RevenueScenario>('revenue_scenarios');
+
+  if (cloudData !== null) {
+    const sorted = [...cloudData].sort((a, b) => b.created_at.localeCompare(a.created_at));
+    saveToStorage(SCENARIOS_KEY, sorted);
+    return sorted;
+  }
+
   const scenarios = getFromStorage<RevenueScenario>(SCENARIOS_KEY);
   scenarios.sort((a, b) => b.created_at.localeCompare(a.created_at));
   return scenarios;
@@ -190,11 +285,33 @@ export async function getScenarios(): Promise<RevenueScenario[]> {
 export async function createScenario(
   data: Omit<RevenueScenario, 'id' | 'created_at'>
 ): Promise<RevenueScenario> {
+  const now = new Date().toISOString();
+
+  if (isSupabaseConfigured) {
+    const inserted = await supabaseInsert<RevenueScenario>('revenue_scenarios', {
+      name: data.name,
+      enrollment_change: data.enrollment_change,
+      rate_change: data.rate_change,
+      projected_revenue: data.projected_revenue,
+      projected_expenses: data.projected_expenses,
+      projected_margin: data.projected_margin,
+      created_at: now,
+    });
+
+    if (inserted) {
+      const scenarios = getFromStorage<RevenueScenario>(SCENARIOS_KEY);
+      scenarios.push(inserted);
+      saveToStorage(SCENARIOS_KEY, scenarios);
+      return inserted;
+    }
+  }
+
+  // localStorage fallback
   const scenarios = getFromStorage<RevenueScenario>(SCENARIOS_KEY);
   const scenario: RevenueScenario = {
     ...data,
     id: generateId('scen'),
-    created_at: new Date().toISOString(),
+    created_at: now,
   };
   scenarios.push(scenario);
   saveToStorage(SCENARIOS_KEY, scenarios);
@@ -202,6 +319,16 @@ export async function createScenario(
 }
 
 export async function deleteScenario(id: string): Promise<boolean> {
+  if (isSupabaseConfigured) {
+    const result = await supabaseDelete('revenue_scenarios', id);
+    if (result) {
+      const scenarios = getFromStorage<RevenueScenario>(SCENARIOS_KEY);
+      saveToStorage(SCENARIOS_KEY, scenarios.filter(s => s.id !== id));
+      return true;
+    }
+  }
+
+  // localStorage fallback
   const scenarios = getFromStorage<RevenueScenario>(SCENARIOS_KEY);
   const filtered = scenarios.filter(s => s.id !== id);
   if (filtered.length === scenarios.length) return false;
@@ -248,7 +375,6 @@ export function calculateProjection(
 }
 
 export async function getFinancialHealth(): Promise<FinancialHealth> {
-  ensureSeeded();
   const records = await getFinancialRecords();
   if (records.length === 0) {
     return {

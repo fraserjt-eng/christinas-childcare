@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getCurrentEmployee, seedSampleData } from '@/lib/employee-storage';
 
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
@@ -35,5 +36,9 @@ export default function EmployeeLayout({ children }: { children: React.ReactNode
     );
   }
 
-  return <DashboardLayout isEmployee>{children}</DashboardLayout>;
+  return (
+    <ErrorBoundary>
+      <DashboardLayout isEmployee>{children}</DashboardLayout>
+    </ErrorBoundary>
+  );
 }

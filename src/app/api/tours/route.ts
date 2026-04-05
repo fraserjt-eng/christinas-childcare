@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseReady } from '@/lib/supabase';
 import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';

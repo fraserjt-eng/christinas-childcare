@@ -43,10 +43,19 @@ export default function EmployeeLoginPage() {
     setLoading(true);
     setPinError('');
 
-    await new Promise((r) => setTimeout(r, 500)); // Simulate network delay
-
     const employee = await authenticateByPin(pin);
     if (employee) {
+      // Establish server-side HttpOnly session
+      const res = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: employee.email, role: 'teacher', name: `${employee.first_name} ${employee.last_name}` }),
+      });
+      if (res.status === 429) {
+        setPinError('Too many login attempts. Please wait before trying again.');
+        setLoading(false);
+        return;
+      }
       router.push('/employee');
     } else {
       setPinError('Invalid PIN. Please try again.');
@@ -63,10 +72,19 @@ export default function EmployeeLoginPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    await new Promise((r) => setTimeout(r, 500)); // Simulate network delay
-
     const employee = await authenticateByEmail(email, password);
     if (employee) {
+      // Establish server-side HttpOnly session
+      const res = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: employee.email, role: 'teacher', name: `${employee.first_name} ${employee.last_name}` }),
+      });
+      if (res.status === 429) {
+        setEmailError('Too many login attempts. Please wait before trying again.');
+        setLoading(false);
+        return;
+      }
       router.push('/employee');
     } else {
       setEmailError('Invalid email or password. Use your PIN as password.');
@@ -159,39 +177,41 @@ export default function EmployeeLoginPage() {
             </Tabs>
 
             {/* Demo Credentials */}
-            <div className="mt-8 p-4 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <p className="text-xs font-semibold text-muted-foreground uppercase">
-                  Demo Credentials
-                </p>
-              </div>
-              <div className="grid gap-2 text-sm">
-                {employees.slice(0, 4).map((emp) => (
-                  <div
-                    key={emp.id}
-                    className="flex justify-between items-center p-2 bg-background rounded"
-                  >
-                    <div>
-                      <span className="font-medium">
-                        {emp.first_name} {emp.last_name}
-                      </span>
-                      <span className="text-muted-foreground ml-2 text-xs">
-                        ({emp.job_title})
-                      </span>
-                    </div>
-                    <code className="text-xs bg-muted px-2 py-1 rounded">
-                      PIN: {emp.pin}
-                    </code>
-                  </div>
-                ))}
-                {employees.length > 4 && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    +{employees.length - 4} more employees
+            {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
+              <div className="mt-8 p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">
+                    Demo Credentials
                   </p>
-                )}
+                </div>
+                <div className="grid gap-2 text-sm">
+                  {employees.slice(0, 4).map((emp) => (
+                    <div
+                      key={emp.id}
+                      className="flex justify-between items-center p-2 bg-background rounded"
+                    >
+                      <div>
+                        <span className="font-medium">
+                          {emp.first_name} {emp.last_name}
+                        </span>
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          ({emp.job_title})
+                        </span>
+                      </div>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        PIN: {emp.pin}
+                      </code>
+                    </div>
+                  ))}
+                  {employees.length > 4 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      +{employees.length - 4} more employees
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Other Login Links */}
             <div className="mt-6 flex justify-center gap-4 text-sm text-muted-foreground">

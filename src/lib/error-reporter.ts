@@ -3,12 +3,14 @@
  *
  * Logs errors to the Supabase `error_logs` table when the database is
  * configured. Falls back to console.error when Supabase is not available.
+ * Also forwards errors to Sentry when running in production.
  *
  * Usage:
  *   import { reportError } from '@/lib/error-reporter';
  *   reportError(err, { url: '/admin/food-counts', user_id: userId });
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { getSupabase } from '@/lib/supabase/client';
 
 export interface ErrorContext {
@@ -22,6 +24,13 @@ export interface ErrorContext {
  * console so this never causes a secondary error in the calling code.
  */
 export function reportError(error: Error, context?: ErrorContext): void {
+  // Forward to Sentry in all environments where it is initialized.
+  // Sentry.init has `enabled: process.env.NODE_ENV === 'production'` so
+  // this is a no-op in development unless NEXT_PUBLIC_SENTRY_DSN is set.
+  if (typeof window !== 'undefined') {
+    Sentry.captureException(error instanceof Error ? error : new Error(String(error)));
+  }
+
   const supabase = getSupabase();
 
   if (!supabase) {

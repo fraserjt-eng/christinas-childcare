@@ -263,6 +263,7 @@ export default function EmployeePhotosPage() {
                         src={draft.previewUrl}
                         alt={`Photo ${index + 1}`}
                         className="h-20 w-20 rounded-lg object-cover"
+                        loading="lazy"
                       />
                       <button
                         type="button"

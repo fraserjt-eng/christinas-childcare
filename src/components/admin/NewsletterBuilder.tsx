@@ -51,6 +51,7 @@ import {
 } from '@/lib/newsletter-storage';
 import type { NewsletterSection, NewsletterStatus } from '@/lib/newsletter-storage';
 import { RichTextEditor } from './RichTextEditor';
+import { sanitizeHTML } from '@/lib/sanitize';
 
 type SectionType = NewsletterSection['type'];
 
@@ -179,7 +180,7 @@ function SortableSectionEditor({ section, onChange, onDelete, index, disabled }:
               {disabled ? (
                 <div
                   className="text-sm prose-sm max-w-none p-3 border rounded-lg bg-muted/20"
-                  dangerouslySetInnerHTML={{ __html: section.content_html }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(section.content_html) }}
                 />
               ) : (
                 <RichTextEditor
@@ -234,7 +235,7 @@ function NewsletterPreview({ subject, sections }: PreviewProps) {
                 </h3>
                 <div
                   className="text-sm prose prose-sm max-w-none prose-headings:text-christina-red prose-a:text-christina-blue"
-                  dangerouslySetInnerHTML={{ __html: section.content_html }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(section.content_html) }}
                 />
               </div>
             ))}

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { getCommunications, markAsRead, getReadCounts } from '@/lib/comms-storage';
 import type { Communication, CommunicationType } from '@/lib/comms-storage';
+import { sanitizeHTML } from '@/lib/sanitize';
 
 const DEMO_PARENT_ID = 'demo-parent-1';
 
@@ -199,7 +200,7 @@ export function ParentInbox() {
                     <div className="px-4 pb-4 pt-2 bg-muted/20 border-t">
                       <div
                         className="text-sm prose-sm max-w-none bg-white rounded border p-3"
-                        dangerouslySetInnerHTML={{ __html: comm.body_html }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHTML(comm.body_html) }}
                       />
                     </div>
                   )}

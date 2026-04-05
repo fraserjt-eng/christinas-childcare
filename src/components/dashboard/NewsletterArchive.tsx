@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { getSentNewsletters } from '@/lib/newsletter-storage';
 import type { Newsletter } from '@/lib/newsletter-storage';
+import { sanitizeHTML } from '@/lib/sanitize';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -102,7 +103,7 @@ function ArchiveItem({ newsletter, isExpanded, onToggle }: ArchiveItemProps) {
                   <h4 className="font-semibold text-sm text-christina-red">{section.title}</h4>
                   <div
                     className="text-sm prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: section.content_html }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHTML(section.content_html) }}
                   />
                 </div>
               ))}

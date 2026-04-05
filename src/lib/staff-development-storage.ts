@@ -1,5 +1,17 @@
 // Staff Development Storage Module for Christina's Child Care Center
-// localStorage persistence, designed for Supabase migration
+// Supabase-first with localStorage fallback
+//
+// Training records: synced to 'training_records' table (migration 003)
+//                   employee_id must be a valid UUID to write to Supabase
+// Certifications:   stored in 'app_settings' table under key 'certifications'
+// Dev goals:        stored in 'app_settings' table under key 'dev_goals'
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpsert,
+  isSupabaseConfigured,
+} from '@/lib/supabase/service';
 
 export type CertType =
   | 'cpr_first_aid'
@@ -59,6 +71,10 @@ const TRAINING_KEY = 'christinas_training_records';
 const GOALS_KEY = 'christinas_dev_goals';
 const SEEDED_KEY = 'christinas_development_seeded';
 
+// app_settings keys
+const SETTINGS_KEY_CERTS = 'certifications';
+const SETTINGS_KEY_GOALS = 'dev_goals';
+
 // ============================================================================
 // Generic Storage Helpers
 // ============================================================================
@@ -86,7 +102,45 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUUID(val: string): boolean {
+  return UUID_PATTERN.test(val);
+}
+
+// ============================================================================
+// app_settings sync helpers for certifications and dev goals
+// ============================================================================
+
+async function syncArrayToSettings(settingsKey: string, data: unknown[]): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  try {
+    await supabaseUpsert('app_settings', { key: settingsKey, value: data }, 'key');
+  } catch (err) {
+    console.error(`Failed to sync '${settingsKey}' to app_settings:`, err);
+  }
+}
+
+async function fetchArrayFromSettings<T>(settingsKey: string): Promise<T[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const rows = await supabaseSelect<{ key: string; value: T[] }>('app_settings', {
+      filters: { key: settingsKey },
+      limit: 1,
+    });
+    if (rows && rows.length > 0 && Array.isArray(rows[0].value)) {
+      return rows[0].value;
+    }
+    return null;
+  } catch (err) {
+    console.error(`Failed to fetch '${settingsKey}' from app_settings:`, err);
+    return null;
+  }
+}
+
+// ============================================================================
 // Compute cert status based on expiry date
+// ============================================================================
 export function computeCertStatus(expiryDate: string): CertStatus {
   const today = new Date();
   const expiry = new Date(expiryDate + 'T12:00:00');
@@ -233,8 +287,35 @@ function seedIfNeeded(): void {
 
 // ============================================================================
 // Certification CRUD
+// Certifications are stored in app_settings (no dedicated table)
 // ============================================================================
 
+export async function getCertificationsAsync(filters?: {
+  employee_id?: string;
+  cert_type?: CertType;
+  status?: CertStatus;
+}): Promise<Certification[]> {
+  const cloudData = await fetchArrayFromSettings<Certification>(SETTINGS_KEY_CERTS);
+
+  let certs: Certification[];
+  if (cloudData !== null) {
+    saveToStorage(CERTS_KEY, cloudData);
+    certs = cloudData;
+  } else {
+    seedIfNeeded();
+    certs = getFromStorage<Certification>(CERTS_KEY);
+  }
+
+  if (filters) {
+    if (filters.employee_id) certs = certs.filter(c => c.employee_id === filters.employee_id);
+    if (filters.cert_type) certs = certs.filter(c => c.cert_type === filters.cert_type);
+    if (filters.status) certs = certs.filter(c => c.status === filters.status);
+  }
+
+  return certs;
+}
+
+// Synchronous version for backward compatibility
 export function getCertifications(filters?: {
   employee_id?: string;
   cert_type?: CertType;
@@ -259,7 +340,9 @@ export function createCertification(data: Omit<Certification, 'id' | 'status'>):
     id: generateId(),
     status: computeCertStatus(data.expiry_date),
   };
-  saveToStorage(CERTS_KEY, [...certs, cert]);
+  const updated = [...certs, cert];
+  saveToStorage(CERTS_KEY, updated);
+  syncArrayToSettings(SETTINGS_KEY_CERTS, updated).catch(() => {});
   return cert;
 }
 
@@ -273,6 +356,7 @@ export function updateCertification(id: string, updates: Partial<Omit<Certificat
     status: updates.expiry_date ? computeCertStatus(updates.expiry_date) : certs[idx].status,
   };
   saveToStorage(CERTS_KEY, certs);
+  syncArrayToSettings(SETTINGS_KEY_CERTS, certs).catch(() => {});
   return certs[idx];
 }
 
@@ -287,8 +371,69 @@ export function getExpiringCertifications(daysThreshold: number = 90): Certifica
 
 // ============================================================================
 // Training Records CRUD
+// Synced to 'training_records' Supabase table when employee_id is a UUID.
+// For demo employees (emp-oz, emp-cf, etc.), falls back to app_settings.
 // ============================================================================
 
+// Supabase training_records row shape
+interface TrainingRecordRow {
+  id: string;
+  employee_id: string;
+  training_type: string;
+  title: string;
+  hours: number;
+  completed_date: string;
+  expiry_date: string | null;
+  certificate_url: string | null;
+  verified_by: string | null;
+  created_at: string;
+}
+
+function rowToTrainingRecord(row: TrainingRecordRow, employeeName?: string): TrainingRecord {
+  return {
+    id: row.id,
+    employee_id: row.employee_id,
+    employee_name: employeeName || row.employee_id,
+    training_name: row.title,
+    date: row.completed_date,
+    hours: Number(row.hours),
+    provider: row.verified_by || '',
+    certificate_url: row.certificate_url || undefined,
+  };
+}
+
+export async function getTrainingRecordsAsync(employeeId?: string): Promise<TrainingRecord[]> {
+  // If employeeId is a UUID, try Supabase training_records table
+  if (isSupabaseConfigured && employeeId && isUUID(employeeId)) {
+    const rows = await supabaseSelect<TrainingRecordRow>('training_records', {
+      filters: { employee_id: employeeId },
+    });
+    if (rows !== null) {
+      return rows.map(r => rowToTrainingRecord(r));
+    }
+  } else if (isSupabaseConfigured && !employeeId) {
+    // All records — try Supabase first
+    const rows = await supabaseSelect<TrainingRecordRow>('training_records');
+    if (rows !== null) {
+      const supabaseRecords = rows.map(r => rowToTrainingRecord(r));
+      // Also merge in localStorage demo records (non-UUID employee IDs)
+      seedIfNeeded();
+      const localRecords = getFromStorage<TrainingRecord>(TRAINING_KEY)
+        .filter(r => !isUUID(r.employee_id));
+      const allRecords = [...supabaseRecords, ...localRecords];
+      allRecords.sort((a, b) => b.date.localeCompare(a.date));
+      return allRecords;
+    }
+  }
+
+  // localStorage fallback
+  seedIfNeeded();
+  let records = getFromStorage<TrainingRecord>(TRAINING_KEY);
+  if (employeeId) records = records.filter(r => r.employee_id === employeeId);
+  return records.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+// Synchronous version for backward compatibility
 export function getTrainingRecords(employeeId?: string): TrainingRecord[] {
   seedIfNeeded();
   let records = getFromStorage<TrainingRecord>(TRAINING_KEY);
@@ -300,6 +445,22 @@ export function addTrainingRecord(data: Omit<TrainingRecord, 'id'>): TrainingRec
   const records = getFromStorage<TrainingRecord>(TRAINING_KEY);
   const record: TrainingRecord = { ...data, id: generateId() };
   saveToStorage(TRAINING_KEY, [...records, record]);
+
+  // If employee_id is a UUID, also write to Supabase training_records
+  if (isSupabaseConfigured && isUUID(data.employee_id)) {
+    supabaseInsert('training_records', {
+      employee_id: data.employee_id,
+      training_type: 'other',
+      title: data.training_name,
+      hours: data.hours,
+      completed_date: data.date,
+      certificate_url: data.certificate_url || null,
+      verified_by: data.provider || null,
+    }).catch((err) => {
+      console.error('Failed to write training record to Supabase:', err);
+    });
+  }
+
   return record;
 }
 
@@ -312,8 +473,26 @@ export function getAnnualTrainingHours(employeeId: string, year: number): number
 
 // ============================================================================
 // Development Goals CRUD
+// Goals are stored in app_settings (no dedicated table)
 // ============================================================================
 
+export async function getDevGoalsAsync(employeeId?: string): Promise<DevGoal[]> {
+  const cloudData = await fetchArrayFromSettings<DevGoal>(SETTINGS_KEY_GOALS);
+
+  let goals: DevGoal[];
+  if (cloudData !== null) {
+    saveToStorage(GOALS_KEY, cloudData);
+    goals = cloudData;
+  } else {
+    seedIfNeeded();
+    goals = getFromStorage<DevGoal>(GOALS_KEY);
+  }
+
+  if (employeeId) goals = goals.filter(g => g.employee_id === employeeId);
+  return goals.sort((a, b) => a.target_date.localeCompare(b.target_date));
+}
+
+// Synchronous version for backward compatibility
 export function getDevGoals(employeeId?: string): DevGoal[] {
   seedIfNeeded();
   let goals = getFromStorage<DevGoal>(GOALS_KEY);
@@ -326,7 +505,9 @@ export function addDevGoal(data: Omit<DevGoal, 'id' | 'status'>): DevGoal {
   const today = new Date().toISOString().slice(0, 10);
   const status: DevGoal['status'] = data.target_date < today ? 'overdue' : 'active';
   const goal: DevGoal = { ...data, id: generateId(), status };
-  saveToStorage(GOALS_KEY, [...goals, goal]);
+  const updated = [...goals, goal];
+  saveToStorage(GOALS_KEY, updated);
+  syncArrayToSettings(SETTINGS_KEY_GOALS, updated).catch(() => {});
   return goal;
 }
 
@@ -336,6 +517,7 @@ export function updateDevGoal(id: string, updates: Partial<Omit<DevGoal, 'id'>>)
   if (idx === -1) return null;
   goals[idx] = { ...goals[idx], ...updates };
   saveToStorage(GOALS_KEY, goals);
+  syncArrayToSettings(SETTINGS_KEY_GOALS, goals).catch(() => {});
   return goals[idx];
 }
 

@@ -1,4 +1,7 @@
+export const runtime = 'nodejs';
+
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import {
   remixLesson,
   validateRemixRequest,
@@ -7,6 +10,12 @@ import {
 import { getLesson, saveLesson } from '@/lib/lesson-storage';
 
 export async function POST(request: NextRequest) {
+  const cookieStore = await cookies();
+  const session = cookieStore.get('auth_session');
+  if (!session?.value) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
 

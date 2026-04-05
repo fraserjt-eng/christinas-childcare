@@ -43,6 +43,7 @@ import type {
 } from '@/lib/comms-storage';
 import { getClassrooms } from '@/lib/food-storage';
 import type { Classroom } from '@/types/food';
+import { sanitizeHTML } from '@/lib/sanitize';
 
 type StatusFilter = 'all' | 'draft' | 'scheduled' | 'sent';
 
@@ -297,7 +298,7 @@ function CommRow({ comm, readCount, onDelete }: CommRowProps) {
         <div className="border-t bg-muted/20 p-3 space-y-3">
           <div
             className="text-sm prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: comm.body_html }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHTML(comm.body_html) }}
           />
           <div className="flex items-center gap-2 pt-1">
             <Button

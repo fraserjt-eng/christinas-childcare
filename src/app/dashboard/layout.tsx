@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getCurrentFamily, seedFamilyData } from '@/lib/family-storage';
 
 export default function DashLayout({ children }: { children: React.ReactNode }) {
@@ -34,5 +35,9 @@ export default function DashLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return (
+    <ErrorBoundary>
+      <DashboardLayout>{children}</DashboardLayout>
+    </ErrorBoundary>
+  );
 }

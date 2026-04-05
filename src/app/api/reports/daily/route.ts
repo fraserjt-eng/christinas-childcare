@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 // Daily operations report API route
 // Returns a structured JSON snapshot of the center's operational state for a given date.
 // Because this app is currently localStorage-only, the server-side handler returns

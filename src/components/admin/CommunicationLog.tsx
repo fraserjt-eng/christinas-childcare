@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { getCommunications, getReadCounts } from '@/lib/comms-storage';
 import type { Communication, CommunicationType } from '@/lib/comms-storage';
+import { sanitizeHTML } from '@/lib/sanitize';
 
 const TYPE_LABELS: Record<CommunicationType, string> = {
   announcement: 'Announcement',
@@ -85,7 +86,7 @@ function ExpandedContent({ comm, readCount }: ExpandedRowProps) {
       </div>
       <div
         className="text-sm prose-sm max-w-none bg-white rounded border p-3"
-        dangerouslySetInnerHTML={{ __html: comm.body_html }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHTML(comm.body_html) }}
       />
     </div>
   );

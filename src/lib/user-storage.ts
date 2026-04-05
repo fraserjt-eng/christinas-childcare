@@ -1,3 +1,14 @@
+// User Storage Module for Christina's Child Care Center
+// Supabase-first with localStorage fallback
+// Users and security settings are stored in the app_settings table (migration 007)
+// Audit logs are stored in error_logs table (migration 004)
+
+import {
+  supabaseUpsert,
+  supabaseSelect,
+  isSupabaseConfigured,
+} from '@/lib/supabase/service';
+import { getSupabase } from '@/lib/supabase/client';
 import { UserRole } from '@/types/database';
 
 export interface AppUser {
@@ -39,6 +50,10 @@ export interface AuditLogEntry {
 const USERS_KEY = 'app_users';
 const SECURITY_SETTINGS_KEY = 'security_settings';
 const AUDIT_LOG_KEY = 'audit_log';
+
+// Supabase app_settings keys
+const SETTINGS_KEY_USERS = 'app_users';
+const SETTINGS_KEY_SECURITY = 'security_settings';
 
 // Default security settings
 const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
@@ -122,6 +137,10 @@ const SAMPLE_USERS: AppUser[] = [
   },
 ];
 
+// ============================================================================
+// localStorage helpers (synchronous — user functions are sync by convention)
+// ============================================================================
+
 function getStorageItem<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') return defaultValue;
   try {
@@ -141,7 +160,40 @@ function setStorageItem<T>(key: string, value: T): void {
   }
 }
 
+// ============================================================================
+// Supabase settings sync helpers (fire-and-forget; never block UI)
+// ============================================================================
+
+async function syncSettingToSupabase(key: string, value: unknown): Promise<void> {
+  if (!isSupabaseConfigured) return;
+  try {
+    await supabaseUpsert('app_settings', { key, value }, 'key');
+  } catch (err) {
+    console.error(`Failed to sync setting '${key}' to Supabase:`, err);
+  }
+}
+
+async function fetchSettingFromSupabase<T>(key: string): Promise<T | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const rows = await supabaseSelect<{ key: string; value: T }>('app_settings', {
+      filters: { key },
+      limit: 1,
+    });
+    if (rows && rows.length > 0) return rows[0].value;
+    return null;
+  } catch (err) {
+    console.error(`Failed to fetch setting '${key}' from Supabase:`, err);
+    return null;
+  }
+}
+
+// ============================================================================
 // User Management Functions
+// NOTE: These remain synchronous for backward compatibility with all callers.
+// Supabase sync happens asynchronously (fire-and-forget) after localStorage writes.
+// ============================================================================
+
 export function getUsers(): AppUser[] {
   return getStorageItem<AppUser[]>(USERS_KEY, SAMPLE_USERS);
 }
@@ -166,6 +218,8 @@ export function createUser(userData: Omit<AppUser, 'id' | 'created_at'>): AppUse
   users.push(newUser);
   setStorageItem(USERS_KEY, users);
   addAuditLog('create', 'user', newUser.id, `Created user: ${newUser.email}`);
+  // Async sync to Supabase
+  syncSettingToSupabase(SETTINGS_KEY_USERS, users).catch(() => {});
   return newUser;
 }
 
@@ -178,6 +232,7 @@ export function updateUser(id: string, updates: Partial<AppUser>): AppUser | nul
   users[index] = updatedUser;
   setStorageItem(USERS_KEY, users);
   addAuditLog('update', 'user', id, `Updated user: ${updatedUser.email}`);
+  syncSettingToSupabase(SETTINGS_KEY_USERS, users).catch(() => {});
   return updatedUser;
 }
 
@@ -205,6 +260,7 @@ export function deleteUser(id: string): boolean {
   const filtered = users.filter(u => u.id !== id);
   setStorageItem(USERS_KEY, filtered);
   addAuditLog('delete', 'user', id, `Deleted user: ${user.email}`);
+  syncSettingToSupabase(SETTINGS_KEY_USERS, filtered).catch(() => {});
   return true;
 }
 
@@ -223,7 +279,10 @@ export function searchUsers(query: string): AppUser[] {
   );
 }
 
+// ============================================================================
 // Security Settings Functions
+// ============================================================================
+
 export function getSecuritySettings(): SecuritySettings {
   return getStorageItem<SecuritySettings>(SECURITY_SETTINGS_KEY, DEFAULT_SECURITY_SETTINGS);
 }
@@ -233,6 +292,7 @@ export function updateSecuritySettings(settings: Partial<SecuritySettings>): Sec
   const updated = { ...current, ...settings };
   setStorageItem(SECURITY_SETTINGS_KEY, updated);
   addAuditLog('update', 'security_settings', undefined, 'Updated security settings');
+  syncSettingToSupabase(SETTINGS_KEY_SECURITY, updated).catch(() => {});
   return updated;
 }
 
@@ -256,7 +316,12 @@ export function validatePassword(password: string): { valid: boolean; errors: st
   return { valid: errors.length === 0, errors };
 }
 
+// ============================================================================
 // Audit Log Functions
+// Audit entries are written to Supabase error_logs table when available.
+// localStorage always gets a copy as fallback.
+// ============================================================================
+
 export function getAuditLog(): AuditLogEntry[] {
   return getStorageItem<AuditLogEntry[]>(AUDIT_LOG_KEY, []);
 }
@@ -282,6 +347,19 @@ export function addAuditLog(
   // Keep last 1000 entries
   const updatedLogs = [entry, ...logs].slice(0, 1000);
   setStorageItem(AUDIT_LOG_KEY, updatedLogs);
+
+  // Fire-and-forget write to Supabase error_logs (best-effort audit trail)
+  if (isSupabaseConfigured) {
+    const supabase = getSupabase();
+    if (supabase) {
+      Promise.resolve(supabase.from('error_logs').insert({
+        error_message: `[AUDIT] ${action} ${resource_type}${resource_id ? ` (${resource_id})` : ''}`,
+        url: details || null,
+        user_id: 'admin',
+        created_at: entry.timestamp,
+      })).then(() => {}).catch(() => {});
+    }
+  }
 }
 
 export function searchAuditLog(filters: {
@@ -313,15 +391,35 @@ export function searchAuditLog(filters: {
   });
 }
 
+// ============================================================================
+// Async hydration from Supabase (call once on app init to sync Supabase -> localStorage)
+// ============================================================================
+
+export async function hydrateUsersFromSupabase(): Promise<void> {
+  const remoteUsers = await fetchSettingFromSupabase<AppUser[]>(SETTINGS_KEY_USERS);
+  if (remoteUsers && Array.isArray(remoteUsers) && remoteUsers.length > 0) {
+    setStorageItem(USERS_KEY, remoteUsers);
+  }
+  const remoteSettings = await fetchSettingFromSupabase<SecuritySettings>(SETTINGS_KEY_SECURITY);
+  if (remoteSettings && typeof remoteSettings === 'object') {
+    setStorageItem(SECURITY_SETTINGS_KEY, remoteSettings);
+  }
+}
+
+// ============================================================================
 // Initialize with sample data if empty
+// ============================================================================
 export function seedUserData(): void {
   const existingUsers = getStorageItem<AppUser[] | null>(USERS_KEY, null);
   if (!existingUsers || existingUsers.length === 0) {
     setStorageItem(USERS_KEY, SAMPLE_USERS);
+    syncSettingToSupabase(SETTINGS_KEY_USERS, SAMPLE_USERS).catch(() => {});
   }
 }
 
+// ============================================================================
 // Role definitions for display
+// ============================================================================
 export const ROLE_DEFINITIONS = {
   owner: {
     label: 'Owner',

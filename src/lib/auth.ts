@@ -137,9 +137,12 @@ export async function signOut(): Promise<void> {
     await supabaseAuth.auth.signOut();
   }
 
-  // Clear the auth_session cookie (used when Supabase is not configured)
-  if (typeof window !== 'undefined') {
-    document.cookie = 'auth_session=; Max-Age=0; path=/; SameSite=Lax';
+  // Clear the server-side HttpOnly session cookie via the session API.
+  // document.cookie cannot clear HttpOnly cookies; this must go through the server.
+  try {
+    await fetch('/api/auth/session', { method: 'DELETE' });
+  } catch {
+    // Best effort — the cookie will expire naturally if this fails
   }
 }
 
@@ -165,31 +168,20 @@ export async function getSession(): Promise<AuthSession | null> {
     };
   }
 
-  // No Supabase: read the auth_session cookie set by the login page.
-  // This path only runs in the browser (server-side checks are in middleware).
+  // No Supabase: the auth_session cookie is HttpOnly and cannot be read by client JS.
+  // Session validity is enforced in middleware. Client-side components that need
+  // the current user should call GET /api/auth/session instead.
   if (typeof window === 'undefined') return null;
 
-  // Read cookie value by name
-  const cookieValue = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('auth_session='))
-    ?.split('=')
-    .slice(1)
-    .join('=');
-
-  if (!cookieValue) return null;
-
   try {
-    const session = JSON.parse(decodeURIComponent(cookieValue));
-
-    if (session.expires_at && session.expires_at < Date.now()) {
-      return null;
-    }
-
+    const res = await fetch('/api/auth/session', { method: 'GET' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.user) return null;
     return {
-      user: session.user,
+      user: data.user,
       access_token: 'no-supabase',
-      expires_at: session.expires_at,
+      expires_at: data.expires_at ?? 0,
     };
   } catch {
     return null;

@@ -30,10 +30,19 @@ export default function ParentLoginPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    await new Promise((r) => setTimeout(r, 500));
-
     const result = await authenticateFamily(email, password);
     if (result.family) {
+      // Establish server-side HttpOnly session
+      const res = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role: 'parent', name: result.family.parents.find(p => p.is_primary)?.name || result.family.parents[0]?.name || email }),
+      });
+      if (res.status === 429) {
+        setSignInError('Too many login attempts. Please wait before trying again.');
+        setLoading(false);
+        return;
+      }
       router.push('/dashboard');
     } else if (result.pending) {
       setSignInError('Your account is pending approval. Christina will review and activate your account within 24 hours.');
@@ -165,11 +174,13 @@ export default function ParentLoginPage() {
             </Tabs>
 
             {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-              <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Demo Credentials</p>
-              <p className="text-sm font-mono">Email: parent@demo.com</p>
-              <p className="text-sm font-mono">Password: parent123</p>
-            </div>
+            {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
+              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Demo Credentials</p>
+                <p className="text-sm font-mono">Email: parent@demo.com</p>
+                <p className="text-sm font-mono">Password: parent123</p>
+              </div>
+            )}
 
             {/* Signup Guide */}
             <div className="mt-4 text-center">

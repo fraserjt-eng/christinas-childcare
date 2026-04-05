@@ -39,6 +39,41 @@ const API_RATE_LIMIT = {
   windowMs: 60 * 1000,
 };
 
+/**
+ * Verify an HMAC-signed cookie value in Edge Runtime (Web Crypto API).
+ * The cookie format is: <JSON payload>.<hex signature>
+ */
+async function verifySignedCookieEdge(cookieValue: string): Promise<Record<string, unknown> | null> {
+  const secret = process.env.SESSION_SECRET || 'dev-secret-change-in-production';
+  const lastDot = cookieValue.lastIndexOf('.');
+  if (lastDot === -1) return null;
+
+  const payload = cookieValue.substring(0, lastDot);
+  const signature = cookieValue.substring(lastDot + 1);
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  const expected = Array.from(new Uint8Array(sig))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  if (signature !== expected) return null;
+
+  try {
+    const data = JSON.parse(payload);
+    if (data.expires_at && data.expires_at < Date.now()) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -142,31 +177,25 @@ export async function middleware(request: NextRequest) {
       return redirectToLogin(request, pathname);
     }
 
-    try {
-      const session = JSON.parse(decodeURIComponent(sessionCookie));
+    const session = await verifySignedCookieEdge(decodeURIComponent(sessionCookie));
 
-      // Reject expired sessions
-      if (!session?.expires_at || session.expires_at < Date.now()) {
-        return redirectToLogin(request, pathname);
-      }
-
-      // Enforce role-based access
-      const userRole = (session?.user?.role ?? 'parent') as UserRole;
-
-      for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
-        if (pathname.startsWith(route)) {
-          if (!allowedRoles.includes(userRole)) {
-            return NextResponse.redirect(new URL('/access-denied', request.url));
-          }
-          break;
-        }
-      }
-
-      return NextResponse.next();
-    } catch {
-      // Malformed cookie
+    if (!session) {
       return redirectToLogin(request, pathname);
     }
+
+    // Enforce role-based access
+    const userRole = (session?.user as { role?: string })?.role ?? 'parent' as UserRole;
+
+    for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
+      if (pathname.startsWith(route)) {
+        if (!allowedRoles.includes(userRole as UserRole)) {
+          return NextResponse.redirect(new URL('/access-denied', request.url));
+        }
+        break;
+      }
+    }
+
+    return NextResponse.next();
   }
 }
 
