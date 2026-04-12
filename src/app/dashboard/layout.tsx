@@ -12,14 +12,19 @@ export default function DashLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     async function init() {
-      await seedFamilyData();
-
-      const family = getCurrentFamily();
-      if (!family) {
+      try {
+        await seedFamilyData();
+        const family = getCurrentFamily();
+        if (!family) {
+          router.push('/login');
+          return;
+        }
+      } catch (error) {
+        console.error('Dashboard init failed:', error);
         router.push('/login');
-      } else {
-        setLoading(false);
+        return;
       }
+      setLoading(false);
     }
     init();
   }, [router]);

@@ -95,8 +95,8 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li>5510 W Broadway Ave</li>
               <li>Crystal, MN 55428</li>
-              <li><a href="tel:+17633905870" className="hover:text-white transition-colors">(763) 390-5870</a></li>
-              <li><a href="mailto:info@christinaschildcare.com" className="hover:text-white transition-colors">info@christinaschildcare.com</a></li>
+              <li><a href="tel:+17633905870" className="hover:text-white transition-colors">Crystal: (763) 390-5870</a></li>
+              <li><a href="tel:+15555555555" className="hover:text-white transition-colors">Brooklyn Park: 555-555-5555</a></li>
             </ul>
             <div className="mt-4 text-sm">
               <p className="text-white font-medium">Hours</p>

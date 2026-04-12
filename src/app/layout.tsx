@@ -75,8 +75,7 @@ export default function RootLayout({
               description:
                 "Licensed child care center in Crystal, MN providing play-based education for infants through school age children.",
               url: "https://christinas-childcare.vercel.app",
-              telephone: "+1-763-390-5870",
-              email: "info@christinaschildcare.com",
+              telephone: ["+1-763-390-5870", "+1-555-555-5555"],
               address: {
                 "@type": "PostalAddress",
                 streetAddress: "5510 W Broadway Ave",

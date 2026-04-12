@@ -10,18 +10,18 @@ import {
   DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban, Wallet,
   CreditCard, CalendarDays, UserCog, Briefcase, Package, CalendarRange, CalendarPlus,
   Newspaper, ChevronDown, type LucideIcon,
-  Settings, ListTodo, AlertTriangle, Mail, UserPlus, Presentation, Bell
+  Settings, ListTodo, AlertTriangle, Mail, UserPlus, Presentation, Bell, Brain
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Employee, getEmployeeFullName } from '@/types/employee';
 import { getCurrentEmployee, logout as employeeLogout } from '@/lib/employee-storage';
 import { FamilyAccount } from '@/types/family';
 import { getCurrentFamily, logoutFamily } from '@/lib/family-storage';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { PortalSwitcher } from '@/components/layout/PortalSwitcher';
 import { useRole } from '@/hooks/useRole';
 import { Suspense } from 'react';
 import { useTourLauncher } from '@/hooks/useTourLauncher';
@@ -48,6 +48,7 @@ const parentNav: NavItem[] = [
   { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
   { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
   { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
+  { href: '/training', label: 'Training', icon: GraduationCap },
   { href: '/guide', label: 'Help & Guide', icon: BookOpen },
 ];
 
@@ -57,6 +58,7 @@ const adminNavGroups: NavGroup[] = [
     icon: Home,
     items: [
       { href: '/admin', label: 'Dashboard', icon: Home },
+      { href: '/admin/intelligence', label: 'Intelligence', icon: Brain },
       { href: '/admin/news', label: 'News & Updates', icon: Newspaper },
       { href: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
       { href: '/admin/ratios', label: 'Ratio Monitor', icon: BarChart3 },
@@ -70,6 +72,7 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/staff', label: 'Staff Directory', icon: UserCheck },
       { href: '/admin/staff/knowledge-base', label: 'Knowledge Base', icon: BookOpen },
       { href: '/admin/staff/development', label: 'Staff Development', icon: GraduationCap },
+      { href: '/admin/training', label: 'Training System', icon: Target },
       { href: '/admin/scheduling', label: 'Scheduling', icon: Clock },
       { href: '/admin/schedule-optimizer', label: 'Schedule Optimizer', icon: BarChart3 },
       { href: '/admin/schedule-requests', label: 'Schedule Requests', icon: CalendarPlus },
@@ -128,6 +131,7 @@ const adminNavGroups: NavGroup[] = [
 ];
 
 const employeeNav: NavItem[] = [
+  { href: '/', label: 'Home', icon: Home },
   { href: '/employee', label: 'Clock In/Out', icon: Clock },
   { href: '/employee/meal-count', label: 'Meal Count', icon: UtensilsCrossed },
   { href: '/employee/photos', label: 'Upload Photos', icon: Camera },
@@ -140,7 +144,8 @@ const employeeNav: NavItem[] = [
   { href: '/employee/pay-stubs', label: 'Pay Stubs', icon: CreditCard },
   { href: '/employee/time-off', label: 'Time Off', icon: Calendar },
   { href: '/employee/profile', label: 'My Profile', icon: UserCog },
-  { href: '/employee/training', label: 'Training', icon: Briefcase },
+  { href: '/employee/training', label: 'Certifications', icon: Briefcase },
+  { href: '/training', label: 'Platform Training', icon: Target },
   { href: '/admin/messaging', label: 'Staff Chat', icon: MessageSquare },
   { href: '/guide', label: 'Help & Guide', icon: BookOpen },
 ];
@@ -455,12 +460,9 @@ export function DashboardLayout({ children, isAdmin = false, isEmployee = false 
               />
             </SheetContent>
           </Sheet>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <PortalSwitcher isAdmin={isAdmin} isEmployee={isEmployee} />
             {(isAdmin || isEmployee) && <NotificationBell />}
-            <Badge variant="outline" className="hidden sm:flex gap-1 items-center">
-              <Building2 className="h-3 w-3" />
-              5510 W Broadway Ave, Crystal
-            </Badge>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">

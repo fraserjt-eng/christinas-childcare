@@ -281,10 +281,15 @@ export default function NewsManagementPage() {
   const [editingItem, setEditingItem] = useState<NewsUpdate | null>(null);
 
   async function loadNews() {
-    await seedSampleNews();
-    const news = await getNewsUpdates();
-    setUpdates(news);
-    setLoading(false);
+    try {
+      await seedSampleNews();
+      const news = await getNewsUpdates();
+      setUpdates(news);
+    } catch (error) {
+      console.error('Failed to load news:', error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {

@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Circle,
 } from 'lucide-react';
+import { NextDayPrep } from '@/components/admin/NextDayPrep';
 import {
   getTimeZone,
   getGreeting,
@@ -558,6 +559,11 @@ export default function AdminDashboard() {
               <QuickActionButton key={action.href} action={action} />
             ))}
           </div>
+        </section>
+
+        {/* ── Tomorrow Prep ── */}
+        <section>
+          <NextDayPrep />
         </section>
 
         {/* ── Coming Up ── */}

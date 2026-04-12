@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Menu, Phone, Mail, Calendar } from 'lucide-react';
+import { Menu, Phone, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
@@ -23,8 +23,8 @@ export function Header() {
       <div className="bg-christina-red text-white text-sm py-1">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <a href="tel:+17633905870" className="flex items-center gap-1 hover:underline"><Phone className="h-3 w-3" /> (763) 390-5870</a>
-            <a href="mailto:info@christinaschildcare.com" className="hidden sm:flex items-center gap-1 hover:underline"><Mail className="h-3 w-3" /> info@christinaschildcare.com</a>
+            <a href="tel:+17633905870" className="flex items-center gap-1 hover:underline"><Phone className="h-3 w-3" /> Crystal: (763) 390-5870</a>
+            <a href="tel:+15555555555" className="hidden sm:flex items-center gap-1 hover:underline"><Phone className="h-3 w-3" /> Brooklyn Park: 555-555-5555</a>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/employee-login" className="hover:underline">Staff Portal</Link>

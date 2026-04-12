@@ -8,6 +8,7 @@ export const runtime = 'nodejs';
 // the endpoint is available for future Supabase migration.
 
 import { NextResponse } from 'next/server';
+import { getSupabase } from '@/lib/supabase/client';
 
 export interface DailyReportMeal {
   submitted: boolean;
@@ -119,9 +120,109 @@ export async function GET(request: Request): Promise<NextResponse> {
       );
     }
 
-    // Server-side scaffold. Data is localStorage-only for now.
-    // A future Supabase migration will populate real values here.
     const report = buildEmptyReport(date);
+    const supabase = getSupabase();
+
+    if (supabase) {
+      const errors: string[] = [];
+
+      // Attendance: unique children checked in on this date
+      const { data: attendance } = await supabase
+        .from('attendance')
+        .select('child_id, check_in, check_out')
+        .gte('check_in', `${date}T00:00:00`)
+        .lt('check_in', `${date}T23:59:59`);
+      if (attendance) {
+        const uniqueChildren = new Set(attendance.map((a: { child_id: string }) => a.child_id));
+        report.attendance.children_present = uniqueChildren.size;
+      }
+
+      // Staff on duty: employees with time_entries on this date
+      const { data: timeEntries } = await supabase
+        .from('time_entries')
+        .select('employee_id, clock_in, clock_out')
+        .gte('clock_in', `${date}T00:00:00`)
+        .lt('clock_in', `${date}T23:59:59`);
+      if (timeEntries) {
+        const uniqueStaff = new Set(timeEntries.map((t: { employee_id: string }) => t.employee_id));
+        report.attendance.staff_on_duty = uniqueStaff.size;
+
+        // Clock discrepancies: still clocked in (no clock_out)
+        const stillIn = timeEntries.filter((t: { clock_out: string | null; employee_id: string; clock_in: string }) => !t.clock_out);
+        report.clock_discrepancies.still_clocked_in = stillIn.map((t: { employee_id: string; clock_in: string }) => ({
+          employee_id: t.employee_id,
+          employee_name: 'Staff',
+          date,
+          clock_in: t.clock_in,
+        }));
+      }
+
+      // Meals
+      const { data: meals } = await supabase
+        .from('food_counts')
+        .select('meal_type, count')
+        .eq('recorded_date', date);
+      if (meals) {
+        for (const m of meals as Array<{ meal_type: string; count: number }>) {
+          const key = m.meal_type as keyof typeof report.meals;
+          if (report.meals[key]) {
+            report.meals[key].submitted = true;
+            report.meals[key].child_count = m.count;
+            report.meals[key].on_time = true;
+          }
+        }
+      }
+
+      // Incidents
+      const { data: incidents } = await supabase
+        .from('incident_reports')
+        .select('id, status')
+        .eq('incident_date', date);
+      if (incidents) {
+        report.incidents.open = incidents.filter((i: { status: string }) => i.status !== 'resolved').length;
+        report.incidents.resolved_today = incidents.filter((i: { status: string }) => i.status === 'resolved').length;
+      }
+
+      // Enrollment inquiries
+      const { data: inquiries } = await supabase
+        .from('enrollment_inquiries')
+        .select('id')
+        .gte('created_at', `${date}T00:00:00`)
+        .lt('created_at', `${date}T23:59:59`);
+      if (inquiries) {
+        report.enrollment.new_inquiries = inquiries.length;
+      }
+
+      // Tour requests
+      const { data: tours } = await supabase
+        .from('tour_requests')
+        .select('id')
+        .eq('preferred_date', date);
+      if (tours) {
+        report.enrollment.tour_requests = tours.length;
+      }
+
+      // Expiring certifications (30 day window)
+      const thirtyDaysOut = new Date();
+      thirtyDaysOut.setDate(thirtyDaysOut.getDate() + 30);
+      const { data: certs } = await supabase
+        .from('training_records')
+        .select('employee_id, certification_name, expiry_date')
+        .lte('expiry_date', thirtyDaysOut.toISOString().split('T')[0])
+        .gte('expiry_date', date);
+      if (certs) {
+        report.certifications_expiring_30d = (certs as Array<{ employee_id: string; certification_name: string; expiry_date: string }>).map((c) => ({
+          employee_name: c.employee_id,
+          cert_name: c.certification_name || 'Unknown',
+          expiry_date: c.expiry_date,
+          days_remaining: Math.ceil(
+            (new Date(c.expiry_date).getTime() - new Date(date).getTime()) / 86400000
+          ),
+        }));
+      }
+
+      report.errors = errors;
+    }
 
     return NextResponse.json(report, {
       headers: {
