@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { callClaudeHaiku } from '@/lib/ai/claude-client';
+import { loadAIConfig } from '@/lib/ai-config';
 import { RecommendationDecision } from '@/lib/intelligence/types';
 
 const SYSTEM_PROMPT = `You are analyzing a childcare center owner's decision patterns from an AI recommendation system.
@@ -24,13 +25,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
+  const config = await loadAIConfig();
+  if (!config.apiKey || !config.enabled || !config.features.learning) {
     return NextResponse.json(
-      { error: 'ANTHROPIC_API_KEY not configured' },
-      { status: 500 }
+      { error: 'AI learning is not configured. Set it up in Admin → Settings → AI.' },
+      { status: 503 }
     );
   }
+  const apiKey = config.apiKey.trim();
 
   try {
     const body: { decisions: RecommendationDecision[] } = await request.json();

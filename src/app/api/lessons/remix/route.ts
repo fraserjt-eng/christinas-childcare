@@ -8,6 +8,7 @@ import {
   RemixRequest,
 } from '@/lib/lesson-generator';
 import { getLesson, saveLesson } from '@/lib/lesson-storage';
+import { loadAIConfig } from '@/lib/ai-config';
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
@@ -65,17 +66,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for API key
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
+    // Check for API key via centralized config
+    const config = await loadAIConfig();
+    if (!config.apiKey || !config.enabled || !config.features.lessonBuilder) {
       return NextResponse.json(
         {
           success: false,
-          error: 'ANTHROPIC_API_KEY not configured. Please add it to .env.local',
+          error: 'AI lesson builder is not configured. Set it up in Admin → Settings → AI.',
         },
-        { status: 500 }
+        { status: 503 }
       );
     }
+    const apiKey = config.apiKey;
 
     // Remix lesson
     const lessonData = await remixLesson(remixRequest, apiKey);

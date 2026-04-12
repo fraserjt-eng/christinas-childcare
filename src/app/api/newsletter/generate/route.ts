@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { callClaudeHaiku } from '@/lib/ai/claude-client';
+import { loadAIConfig } from '@/lib/ai-config';
 
 const NEWSLETTER_SYSTEM_PROMPT = `You are an assistant helping write a weekly newsletter for Christina's Child Care Center, a licensed childcare facility in Crystal, MN.
 
@@ -11,13 +12,14 @@ For each section, write 2-3 short paragraphs. Use specific numbers when provided
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
+    const config = await loadAIConfig();
+    if (!config.apiKey || !config.enabled || !config.features.newsletter) {
       return NextResponse.json(
-        { error: 'AI features require ANTHROPIC_API_KEY' },
+        { error: 'AI newsletter generation is not configured. Set it up in Admin → Settings → AI.' },
         { status: 503 }
       );
     }
+    const apiKey = config.apiKey;
 
     const body = await request.json();
     const { attendanceSummary, mealStats, complianceNotes, staffUpdates, dateRange } = body;

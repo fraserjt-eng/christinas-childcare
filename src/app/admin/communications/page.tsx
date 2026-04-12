@@ -239,7 +239,8 @@ function NewsletterForm({
   onMarkSent: (newsletter: Newsletter) => void;
   onCancel: () => void;
 }) {
-  const [showAiMessage, setShowAiMessage] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
   const [form, setForm] = useState<NewsletterFormData>(() => {
     if (initialData) {
       return {
@@ -353,6 +354,53 @@ function NewsletterForm({
       announcements: prev.announcements.map((a, i) => (i === idx ? val : a)),
     }));
 
+  const handleGenerateWithAI = async () => {
+    setAiLoading(true);
+    setAiError('');
+    try {
+      const res = await fetch('/api/newsletter/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dateRange: form.week_of ? `week of ${form.week_of}` : 'this week',
+          attendanceSummary: 'Current attendance data',
+          mealStats: form.menu_summary || 'Standard CACFP-compliant meals',
+          complianceNotes: 'All routine compliance items on track',
+          staffUpdates: 'Staff training and certifications up to date',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(data.error || 'Failed to generate. Check /admin/settings/ai to configure.');
+        setAiLoading(false);
+        return;
+      }
+      const aiSections: Array<{ title: string; content: string }> = data.sections || [];
+      if (aiSections.length === 0) {
+        setAiError('AI returned no sections. Try again or adjust your data.');
+        setAiLoading(false);
+        return;
+      }
+      // Append AI sections to current form
+      setForm((prev) => ({
+        ...prev,
+        sections: [
+          ...prev.sections.filter((s) => s.heading.trim() || s.body.trim()),
+          ...aiSections.map((s) => ({
+            id: generateSectionId(),
+            heading: s.title,
+            body: s.content,
+          })),
+        ],
+      }));
+    } catch (e) {
+      console.error(e);
+      setAiError('Network error while generating.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const buildNewsletter = (status: Newsletter['status']): Newsletter => {
     const now = new Date().toISOString();
     return {
@@ -394,26 +442,28 @@ function NewsletterForm({
 
   return (
     <div className="space-y-5">
-      {/* AI Generation Placeholder */}
-      {showAiMessage && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="h-4 w-4 text-amber-600" />
-            <span className="font-medium text-amber-800">AI Generation</span>
+      {/* AI Error */}
+      {aiError && (
+        <div className="bg-christina-coral/10 border border-christina-coral/30 rounded-lg p-4 text-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-christina-coral" />
+              <span className="font-medium text-christina-coral">{aiError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAiError('')}
+              className="text-christina-coral hover:opacity-70"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <p className="text-amber-700">
-            AI generation requires API key configuration. Once configured, this feature will
-            auto-draft newsletter content based on your center&apos;s recent activities, menu plans,
-            and upcoming events.
-          </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowAiMessage(false)}
-            className="mt-2 text-amber-700"
+          <a
+            href="/admin/settings/ai"
+            className="inline-block mt-2 text-xs text-christina-blue hover:underline"
           >
-            Dismiss
-          </Button>
+            Open AI Settings →
+          </a>
         </div>
       )}
 
@@ -669,11 +719,11 @@ function NewsletterForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => setShowAiMessage(true)}
-          disabled={showAiMessage}
+          onClick={handleGenerateWithAI}
+          disabled={aiLoading}
         >
-          <Sparkles className="h-4 w-4 mr-2" />
-          Generate with AI
+          <Sparkles className={`h-4 w-4 mr-2 ${aiLoading ? 'animate-pulse' : ''}`} />
+          {aiLoading ? 'Generating...' : 'Generate with AI'}
         </Button>
         <div className="flex gap-3">
           <Button type="button" variant="outline" onClick={onCancel}>
