@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { runResearchPass } from '@/lib/intelligence/auto-research';
-import { saveFinding } from '@/lib/intelligence/research-findings-storage';
+import { saveManyFindings } from '@/lib/intelligence/research-findings-storage';
 
 export async function POST(request: Request): Promise<NextResponse> {
   // Admin-only: require auth_session cookie
@@ -25,9 +25,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    // Persist findings
-    for (const finding of result.findings) {
-      await saveFinding(finding);
+    // Persist all findings in a single write to app_settings
+    if (result.findings.length > 0) {
+      await saveManyFindings(result.findings);
     }
 
     return NextResponse.json(

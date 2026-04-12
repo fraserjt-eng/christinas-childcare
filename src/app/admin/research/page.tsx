@@ -99,6 +99,19 @@ export default function ResearchInboxPage() {
         return;
       }
       setLastRunCount(data.count || 0);
+      // Merge server-returned findings directly into local state so they
+      // show up immediately even if the Supabase read path is slow.
+      if (Array.isArray(data.findings) && data.findings.length > 0) {
+        setFindings((prev) => {
+          const byId = new Map(prev.map((f) => [f.id, f]));
+          for (const f of data.findings as ResearchFinding[]) {
+            byId.set(f.id, f);
+          }
+          return Array.from(byId.values()).sort((a, b) =>
+            b.createdAt.localeCompare(a.createdAt)
+          );
+        });
+      }
       await refresh();
     } catch (e) {
       console.error(e);

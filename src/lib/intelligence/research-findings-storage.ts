@@ -22,7 +22,7 @@ export interface ResearchFinding {
 }
 
 const STORAGE_KEY = 'christinas_research_findings';
-const TABLE = 'research_findings';
+const SETTING_KEY = 'research_findings_cache';
 
 function getFromLocal(): ResearchFinding[] {
   if (typeof window === 'undefined') return [];
@@ -44,77 +44,114 @@ function saveToLocal(findings: ResearchFinding[]): void {
   }
 }
 
-export async function getAllFindings(): Promise<ResearchFinding[]> {
+// Read findings from Supabase app_settings (keyed value row).
+// This works on both server and client because it uses the same app_settings
+// table that already has RLS policies and is in production.
+async function readFromAppSettings(): Promise<ResearchFinding[]> {
   const supabase = getSupabase();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from(TABLE)
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
-      if (!error && data) {
-        const mapped: ResearchFinding[] = data.map((row: Record<string, unknown>) => ({
-          id: String(row.id),
-          questionId: String(row.question_id || ''),
-          questionText: String(row.question_text || ''),
-          finding: String(row.finding || ''),
-          evidence: String(row.evidence || ''),
-          frameworkTag: row.framework_tag as FrameworkTag,
-          severity: row.severity as 'info' | 'opportunity' | 'risk',
-          source: row.source as FindingSource,
-          status: row.status as FindingStatus,
-          createdAt: String(row.created_at || ''),
-          actionPlanId: row.action_plan_id ? String(row.action_plan_id) : undefined,
-        }));
-        // Merge with local (local wins on duplicate id)
-        const local = getFromLocal();
-        const localIds = new Set(local.map((l) => l.id));
-        const merged = [...local, ...mapped.filter((m) => !localIds.has(m.id))];
-        return merged.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      }
-    } catch (e) {
-      console.error('Supabase research findings fetch failed:', e);
-    }
+  if (!supabase) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', SETTING_KEY)
+      .maybeSingle();
+
+    if (error || !data?.value) return [];
+    const value = data.value as { findings?: ResearchFinding[] };
+    return value.findings || [];
+  } catch (e) {
+    console.error('app_settings read failed:', e);
+    return [];
   }
-  return getFromLocal();
+}
+
+async function writeToAppSettings(findings: ResearchFinding[]): Promise<boolean> {
+  const supabase = getSupabase();
+  if (!supabase) return false;
+
+  try {
+    const { error } = await supabase.from('app_settings').upsert(
+      {
+        key: SETTING_KEY,
+        value: { findings },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' }
+    );
+    if (error) {
+      console.error('app_settings write error:', error.message);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('app_settings write exception:', e);
+    return false;
+  }
+}
+
+export async function getAllFindings(): Promise<ResearchFinding[]> {
+  // Prefer server-stored findings (app_settings), merge with local cache
+  const cloud = await readFromAppSettings();
+  const local = getFromLocal();
+
+  if (cloud.length > 0) {
+    // Merge local updates (status changes) onto cloud data by id
+    const localById = new Map(local.map((f) => [f.id, f]));
+    const merged = cloud.map((c) => localById.get(c.id) || c);
+    // Include any local-only findings not in cloud
+    const cloudIds = new Set(cloud.map((c) => c.id));
+    const localOnly = local.filter((f) => !cloudIds.has(f.id));
+    return [...merged, ...localOnly].sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt)
+    );
+  }
+
+  return local.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function saveFinding(finding: ResearchFinding): Promise<void> {
-  // Always write local first
-  const local = getFromLocal();
-  const idx = local.findIndex((f) => f.id === finding.id);
+  // Write to localStorage (client only)
+  if (typeof window !== 'undefined') {
+    const local = getFromLocal();
+    const idx = local.findIndex((f) => f.id === finding.id);
+    if (idx >= 0) {
+      local[idx] = finding;
+    } else {
+      local.unshift(finding);
+    }
+    saveToLocal(local);
+  }
+
+  // Write to app_settings (works server-side too)
+  const existing = await readFromAppSettings();
+  const idx = existing.findIndex((f) => f.id === finding.id);
   if (idx >= 0) {
-    local[idx] = finding;
+    existing[idx] = finding;
   } else {
-    local.unshift(finding);
+    existing.unshift(finding);
   }
-  saveToLocal(local);
+  // Cap at 200 findings to keep the JSON row small
+  const trimmed = existing.slice(0, 200);
+  await writeToAppSettings(trimmed);
+}
 
-  // Try Supabase
-  const supabase = getSupabase();
-  if (!supabase) return;
-
-  try {
-    await supabase.from(TABLE).upsert(
-      {
-        id: finding.id,
-        question_id: finding.questionId,
-        question_text: finding.questionText,
-        finding: finding.finding,
-        evidence: finding.evidence,
-        framework_tag: finding.frameworkTag,
-        severity: finding.severity,
-        source: finding.source,
-        status: finding.status,
-        created_at: finding.createdAt,
-        action_plan_id: finding.actionPlanId || null,
-      },
-      { onConflict: 'id' }
-    );
-  } catch (e) {
-    console.error('Failed to save finding to Supabase:', e);
+export async function saveManyFindings(findings: ResearchFinding[]): Promise<void> {
+  if (typeof window !== 'undefined') {
+    const local = getFromLocal();
+    const byId = new Map(local.map((f) => [f.id, f]));
+    for (const f of findings) byId.set(f.id, f);
+    saveToLocal(Array.from(byId.values()));
   }
+
+  const existing = await readFromAppSettings();
+  const byId = new Map(existing.map((f) => [f.id, f]));
+  for (const f of findings) byId.set(f.id, f);
+  const merged = Array.from(byId.values()).sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt)
+  );
+  await writeToAppSettings(merged.slice(0, 200));
 }
 
 export async function updateFindingStatus(
@@ -122,23 +159,22 @@ export async function updateFindingStatus(
   status: FindingStatus,
   actionPlanId?: string
 ): Promise<void> {
-  const local = getFromLocal();
-  const idx = local.findIndex((f) => f.id === id);
-  if (idx >= 0) {
-    local[idx] = { ...local[idx], status, actionPlanId };
-    saveToLocal(local);
+  // Update local cache
+  if (typeof window !== 'undefined') {
+    const local = getFromLocal();
+    const idx = local.findIndex((f) => f.id === id);
+    if (idx >= 0) {
+      local[idx] = { ...local[idx], status, actionPlanId };
+      saveToLocal(local);
+    }
   }
 
-  const supabase = getSupabase();
-  if (!supabase) return;
-
-  try {
-    await supabase
-      .from(TABLE)
-      .update({ status, action_plan_id: actionPlanId || null })
-      .eq('id', id);
-  } catch (e) {
-    console.error('Failed to update finding status:', e);
+  // Update app_settings
+  const existing = await readFromAppSettings();
+  const idx = existing.findIndex((f) => f.id === id);
+  if (idx >= 0) {
+    existing[idx] = { ...existing[idx], status, actionPlanId };
+    await writeToAppSettings(existing);
   }
 }
 
