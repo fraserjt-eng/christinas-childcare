@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -409,7 +408,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -650,7 +649,7 @@ export default function NotificationsPage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }
 

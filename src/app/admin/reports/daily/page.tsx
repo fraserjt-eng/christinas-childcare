@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import {
   Card,
   CardContent,
@@ -418,16 +417,16 @@ export default function DailyReportPage() {
 
   if (!report) {
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="flex items-center justify-center h-64 text-muted-foreground">
           Building report...
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="space-y-6">
 
         {/* Header */}
@@ -654,6 +653,6 @@ export default function DailyReportPage() {
 
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

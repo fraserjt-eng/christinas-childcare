@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -412,11 +411,11 @@ export default function MeetingsPage() {
   // =================================================================
   if (!mounted) {
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="flex items-center justify-center h-64">
           <div className="animate-pulse text-muted-foreground">Loading meetings...</div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -429,7 +428,7 @@ export default function MeetingsPage() {
     const completedActions = meetingActions.filter((a) => a.status === 'completed').length;
 
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-start justify-between gap-4">
@@ -835,7 +834,7 @@ export default function MeetingsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -843,7 +842,7 @@ export default function MeetingsPage() {
   // RENDER: Meeting List View (default)
   // =================================================================
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -1081,6 +1080,6 @@ export default function MeetingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </>
   );
 }

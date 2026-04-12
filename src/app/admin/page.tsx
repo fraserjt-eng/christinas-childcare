@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+// DashboardLayout provided by admin/layout.tsx — do not wrap again here
 import { Badge } from '@/components/ui/badge';
 import {
   Baby,
@@ -393,8 +393,7 @@ export default function AdminDashboard() {
   const showBackupBanner = backupDaysAgo === null || backupDaysAgo > 3;
 
   return (
-    <DashboardLayout isAdmin>
-      <div className="max-w-2xl mx-auto space-y-6 pb-8">
+    <div className="max-w-2xl mx-auto space-y-6 pb-8">
         {/* ── Greeting Header ── */}
         <div className="flex items-start justify-between">
           <div>
@@ -571,6 +570,5 @@ export default function AdminDashboard() {
           <ComingUpSection currentZone={zone} allAlerts={alerts} />
         </section>
       </div>
-    </DashboardLayout>
   );
 }

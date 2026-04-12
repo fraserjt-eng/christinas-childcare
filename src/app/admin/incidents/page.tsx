@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -966,18 +965,18 @@ export default function IncidentsPage() {
 
   if (loading) {
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="container mx-auto p-4 md:p-6">
           <div className="flex items-center justify-center min-h-[400px]">
             <p className="text-muted-foreground">Loading incidents...</p>
           </div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="container mx-auto p-4 md:p-6 space-y-6">
         {/* Training Banner */}
         <div className="bg-[#C62828]/10 border border-[#C62828]/30 rounded-lg p-4 flex items-center justify-between">
@@ -1194,6 +1193,6 @@ export default function IncidentsPage() {
           </>
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }

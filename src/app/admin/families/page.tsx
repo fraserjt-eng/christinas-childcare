@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -862,7 +861,7 @@ export default function FamiliesPage() {
   const toggleSort = () => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
 
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -1170,6 +1169,6 @@ export default function FamiliesPage() {
           onClose={() => setDetailFamily(null)}
         />
       </div>
-    </DashboardLayout>
+    </>
   );
 }

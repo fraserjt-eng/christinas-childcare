@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+// DashboardLayout provided by employee/layout.tsx — do not wrap again here
 import { HomeTile } from '@/components/employee/HomeTile';
 import {
   getCurrentEmployee,
@@ -458,11 +458,11 @@ export default function EmployeeDashboardPage() {
 
   if (!employee) {
     return (
-      <DashboardLayout isEmployee>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-muted-foreground">Loading...</p>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -475,7 +475,7 @@ export default function EmployeeDashboardPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <DashboardLayout isEmployee>
+    <>
       <div className="space-y-6 pb-8">
         {/* ── Greeting + Announcement ─────────────────────────────────── */}
         <div>
@@ -777,6 +777,6 @@ export default function EmployeeDashboardPage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

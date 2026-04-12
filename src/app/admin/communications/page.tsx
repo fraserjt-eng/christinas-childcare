@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -914,18 +913,18 @@ export default function CommunicationsPage() {
 
   if (loading) {
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="container mx-auto p-4 md:p-6">
           <div className="flex items-center justify-center min-h-[400px]">
             <p className="text-muted-foreground">Loading newsletters...</p>
           </div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="container mx-auto p-4 md:p-6 space-y-6">
         {/* Preview Mode */}
         {previewNewsletter ? (
@@ -1061,7 +1060,7 @@ export default function CommunicationsPage() {
           </>
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }
 

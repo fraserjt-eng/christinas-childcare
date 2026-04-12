@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -548,11 +547,11 @@ export default function HROnboardingPage() {
 
   if (!isLoaded) {
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-muted-foreground">Loading HR data...</div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -560,7 +559,7 @@ export default function HROnboardingPage() {
 
   if (viewingTemplate) {
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="container mx-auto p-4 md:p-6 space-y-6">
           <button
             onClick={() => setViewingTemplate(null)}
@@ -633,7 +632,7 @@ export default function HROnboardingPage() {
             </CardContent>
           </Card>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -644,7 +643,7 @@ export default function HROnboardingPage() {
     const next = nextStatus(viewingDocument.status);
 
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="container mx-auto p-4 md:p-6 space-y-6">
           <button
             onClick={() => setViewingDocument(null)}
@@ -799,7 +798,7 @@ export default function HROnboardingPage() {
             </CardContent>
           </Card>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -821,7 +820,7 @@ export default function HROnboardingPage() {
   );
 
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="container mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
@@ -1572,6 +1571,6 @@ export default function HROnboardingPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }

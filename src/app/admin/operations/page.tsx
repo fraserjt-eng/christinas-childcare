@@ -2,13 +2,12 @@
 
 import { OperationsSplitView } from '@/components/admin/OperationsSplitView';
 import { CenterTrends } from '@/components/admin/CenterTrends';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Building2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function OperationsPage() {
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -30,6 +29,6 @@ export default function OperationsPage() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

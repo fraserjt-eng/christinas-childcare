@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TaskKanban } from '@/components/admin/TaskKanban';
 import { TimeBlockSchedule } from '@/components/admin/TimeBlockSchedule';
 import { DelegationTracker } from '@/components/admin/DelegationTracker';
@@ -1134,16 +1133,16 @@ export default function TaskBoardPage() {
 
   if (!isLoaded) {
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout isAdmin>
+    <>
       {/* Page Header */}
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1392,6 +1391,6 @@ export default function TaskBoardPage() {
           }}
         />
       )}
-    </DashboardLayout>
+    </>
   );
 }

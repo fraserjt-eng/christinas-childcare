@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+// DashboardLayout provided by employee/layout.tsx
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -606,16 +606,16 @@ export default function EmployeeTasksPage() {
 
   if (!mounted) {
     return (
-      <DashboardLayout isEmployee>
+      <>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="animate-pulse text-gray-400">Loading tasks...</div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout isEmployee>
+    <>
       <div className="max-w-3xl mx-auto">
         {/* Page header */}
         <div className="mb-6">
@@ -654,7 +654,7 @@ export default function EmployeeTasksPage() {
           ))
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }
 

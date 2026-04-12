@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -219,13 +218,13 @@ export default function AccountabilityAssessmentPage() {
 
   if (!mounted) {
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="max-w-4xl mx-auto animate-pulse">
           <div className="h-8 bg-muted rounded w-64 mb-4" />
           <div className="h-4 bg-muted rounded w-full mb-8" />
           <div className="h-64 bg-muted rounded-lg" />
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -242,7 +241,7 @@ export default function AccountabilityAssessmentPage() {
     );
 
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
             <Button
@@ -407,7 +406,7 @@ export default function AccountabilityAssessmentPage() {
             </Button>
           </div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -417,7 +416,7 @@ export default function AccountabilityAssessmentPage() {
     const domainProgress = `${currentDomainIndex + 1} / ${ACCOUNTABILITY_DOMAINS.length}`;
 
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="max-w-3xl mx-auto">
           {/* Progress Header */}
           <div className="mb-6">
@@ -548,7 +547,7 @@ export default function AccountabilityAssessmentPage() {
             )}
           </div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -562,7 +561,7 @@ export default function AccountabilityAssessmentPage() {
   const previous = sortedAssessments[1];
 
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -808,6 +807,6 @@ export default function AccountabilityAssessmentPage() {
           </Card>
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }

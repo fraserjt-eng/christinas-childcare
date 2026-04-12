@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -876,11 +875,11 @@ export default function MessagingPage() {
 
   if (!mounted) {
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <div className="text-gray-400">Loading messages...</div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -1629,7 +1628,7 @@ export default function MessagingPage() {
   // ─── Main Render ──────────────────────────────────────────────
 
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="flex h-[calc(100vh-4rem)] bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {renderSidebar()}
         {renderMainArea()}
@@ -1638,6 +1637,6 @@ export default function MessagingPage() {
 
       {renderCreateChannelDialog()}
       {renderNewDMDialog()}
-    </DashboardLayout>
+    </>
   );
 }

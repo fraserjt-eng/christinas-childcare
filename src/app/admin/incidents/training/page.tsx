@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -554,7 +553,7 @@ export default function IncidentTrainingPage() {
 
   if (!mounted) {
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="max-w-5xl mx-auto animate-pulse">
           <div className="h-8 bg-muted rounded w-64 mb-4" />
           <div className="h-4 bg-muted rounded w-full mb-8" />
@@ -564,7 +563,7 @@ export default function IncidentTrainingPage() {
             ))}
           </div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -574,7 +573,7 @@ export default function IncidentTrainingPage() {
     const completion = getCompletion(activeModule.id);
 
     return (
-      <DashboardLayout isAdmin>
+      <>
         <div className="max-w-3xl mx-auto">
           {/* Header */}
           <div className="mb-6">
@@ -785,13 +784,13 @@ export default function IncidentTrainingPage() {
             </div>
           </div>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   // ─── Module List View ───────────────────────────────────────────
   return (
-    <DashboardLayout isAdmin>
+    <>
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -912,6 +911,6 @@ export default function IncidentTrainingPage() {
           </p>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }
