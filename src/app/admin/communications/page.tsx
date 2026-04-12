@@ -358,6 +358,11 @@ function NewsletterForm({
     setAiLoading(true);
     setAiError('');
     try {
+      const existingSections = form.sections.map((s) => ({
+        heading: s.heading,
+        body: s.body,
+      }));
+
       const res = await fetch('/api/newsletter/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -367,6 +372,7 @@ function NewsletterForm({
           mealStats: form.menu_summary || 'Standard CACFP-compliant meals',
           complianceNotes: 'All routine compliance items on track',
           staffUpdates: 'Staff training and certifications up to date',
+          existingSections,
         }),
       });
       const data = await res.json();
@@ -381,17 +387,36 @@ function NewsletterForm({
         setAiLoading(false);
         return;
       }
-      // Append AI sections to current form
+
+      // Build a lookup of AI results by normalized title
+      const normalize = (s: string) => s.trim().toLowerCase();
+      const aiByTitle = new Map(
+        aiSections.map((s) => [normalize(s.title), s.content])
+      );
+      const usedTitles = new Set<string>();
+
+      // Fill in empty existing sections by heading match
+      const filledExisting = form.sections.map((section) => {
+        if (section.body.trim()) return section; // keep filled sections untouched
+        const key = normalize(section.heading);
+        if (aiByTitle.has(key)) {
+          usedTitles.add(key);
+          return { ...section, body: aiByTitle.get(key) || '' };
+        }
+        return section;
+      });
+
+      // Any AI sections that didn't match an existing heading get appended
+      const unmatched = aiSections.filter((s) => !usedTitles.has(normalize(s.title)));
+      const appended = unmatched.map((s) => ({
+        id: generateSectionId(),
+        heading: s.title,
+        body: s.content,
+      }));
+
       setForm((prev) => ({
         ...prev,
-        sections: [
-          ...prev.sections.filter((s) => s.heading.trim() || s.body.trim()),
-          ...aiSections.map((s) => ({
-            id: generateSectionId(),
-            heading: s.title,
-            body: s.content,
-          })),
-        ],
+        sections: [...filledExisting, ...appended],
       }));
     } catch (e) {
       console.error(e);
