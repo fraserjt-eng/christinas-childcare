@@ -185,7 +185,12 @@ export async function getFamily(id: string): Promise<FamilyAccount | null> {
 
 export async function getFamilyByEmail(email: string): Promise<FamilyAccount | null> {
   const families = await getFamilies();
-  return families.find((f) => f.email.toLowerCase() === email.toLowerCase()) || null;
+  const found = families.find((f) => f.email.toLowerCase() === email.toLowerCase());
+  if (found) return found;
+
+  // Fallback: check localStorage directly in case Supabase returned empty
+  const localFamilies = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
+  return localFamilies.find((f) => f.email.toLowerCase() === email.toLowerCase()) || null;
 }
 
 export async function getFamilyByPin(pin: string): Promise<FamilyAccount | null> {
@@ -763,13 +768,30 @@ const SEED_FAMILIES: Omit<FamilyAccount, 'id' | 'created_at' | 'updated_at'>[] =
 export async function seedFamilyData(): Promise<{ families: number }> {
   let familyCount = 0;
 
-  const existingFamilies = await getFamilies();
+  // Always ensure localStorage has seed data for fallback auth
+  const localFamilies = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
+  if (localFamilies.length === 0) {
+    const now = new Date().toISOString();
+    const seeded: FamilyAccount[] = SEED_FAMILIES.map((data) => ({
+      ...data,
+      id: generateFamilyId(),
+      created_at: now,
+      updated_at: now,
+    }));
+    saveToStorage(STORAGE_KEYS.families, seeded);
+    familyCount = seeded.length;
+  }
 
-  if (existingFamilies.length === 0) {
-    for (const familyData of SEED_FAMILIES) {
-      await createFamily(familyData);
-      familyCount++;
+  // Also try to seed to Supabase if configured
+  try {
+    const existingFamilies = await getFamilies();
+    if (existingFamilies.length === 0) {
+      for (const familyData of SEED_FAMILIES) {
+        await createFamily(familyData);
+      }
     }
+  } catch (error) {
+    console.error('Supabase family seed failed, localStorage fallback active:', error);
   }
 
   return { families: familyCount };
