@@ -88,8 +88,11 @@ function saveToStorage<T>(key: string, data: T[]): void {
 export async function getEmployees(): Promise<Employee[]> {
   // Try Supabase first; fall back to localStorage if not configured or on error
   const cloudData = await supabaseSelect<Employee>('employees');
-  if (cloudData !== null) return cloudData;
-  return getFromStorage<Employee>(STORAGE_KEYS.employees);
+  if (cloudData !== null && cloudData.length > 0) return cloudData;
+  // If Supabase returns empty or null, use localStorage (needed for demo mode seeded data)
+  const localData = getFromStorage<Employee>(STORAGE_KEYS.employees);
+  if (localData.length > 0) return localData;
+  return cloudData ?? [];
 }
 
 export async function getEmployee(id: string): Promise<Employee | null> {

@@ -1,0 +1,73 @@
+# Christina's Child Care Center - Test Users
+# Simulates morning rush: 1 admin + 3 employees + 5 parents + 5 public + 1 kiosk = 15 concurrent
+
+# Admin (Christina - owner/director)
+- name: christina_admin
+  email: admin@demo.com
+  password: admin123
+  role: admin
+
+# Employees (3 staff members clocking in)
+- name: sarah_teacher
+  email: sarah@christinas.com
+  pin: "1234"
+  role: employee
+
+- name: maria_assistant
+  email: maria@christinas.com
+  pin: "5678"
+  role: employee
+
+- name: james_aide
+  email: james@christinas.com
+  pin: "9012"
+  role: employee
+
+# Parents (5 families dropping off)
+- name: brown_family
+  email: parent@demo.com
+  password: parent123
+  pin: "1234"
+  role: parent
+
+- name: garcia_family
+  email: garcia@christinas.com
+  password: garcia123
+  pin: "5678"
+  role: parent
+
+- name: johnson_family
+  email: johnson@christinas.com
+  password: johnson123
+  role: parent
+
+- name: williams_family
+  email: williams@christinas.com
+  password: williams123
+  role: parent
+
+- name: davis_family
+  email: davis@christinas.com
+  password: davis123
+  role: parent
+
+# Public visitors (5 prospective families browsing)
+- name: prospect_1
+  email: prospect1@example.com
+  role: guest
+
+- name: prospect_2
+  email: prospect2@example.com
+  role: guest
+
+- name: prospect_3
+  email: prospect3@example.com
+  role: guest
+
+- name: prospect_4
+  email: prospect4@example.com
+  role: guest
+
+- name: prospect_5
+  email: prospect5@example.com
+  role: guest

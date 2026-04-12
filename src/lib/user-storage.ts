@@ -421,6 +421,11 @@ export function seedUserData(): void {
 // Role definitions for display
 // ============================================================================
 export const ROLE_DEFINITIONS = {
+  superadmin: {
+    label: 'Superadmin',
+    description: 'System-level access, Google OAuth, all settings',
+    color: 'bg-red-100 text-red-800',
+  },
   owner: {
     label: 'Owner',
     description: 'Full access to all features and settings',

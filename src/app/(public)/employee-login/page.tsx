@@ -49,14 +49,20 @@ export default function EmployeeLoginPage() {
       const res = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: employee.email, role: 'teacher', name: `${employee.first_name} ${employee.last_name}` }),
+        body: JSON.stringify({ email: employee.email, role: employee.role || 'teacher', name: `${employee.first_name} ${employee.last_name}` }),
       });
       if (res.status === 429) {
         setPinError('Too many login attempts. Please wait before trying again.');
         setLoading(false);
         return;
       }
-      router.push('/employee');
+      // Redirect based on role
+      const empRole = employee.role || 'teacher';
+      if (empRole === 'owner' || empRole === 'admin' || empRole === 'superadmin') {
+        router.push('/admin');
+      } else {
+        router.push('/employee');
+      }
     } else {
       setPinError('Invalid PIN. Please try again.');
       setLoading(false);
@@ -78,14 +84,19 @@ export default function EmployeeLoginPage() {
       const res = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: employee.email, role: 'teacher', name: `${employee.first_name} ${employee.last_name}` }),
+        body: JSON.stringify({ email: employee.email, role: employee.role || 'teacher', name: `${employee.first_name} ${employee.last_name}` }),
       });
       if (res.status === 429) {
         setEmailError('Too many login attempts. Please wait before trying again.');
         setLoading(false);
         return;
       }
-      router.push('/employee');
+      const empRole = employee.role || 'teacher';
+      if (empRole === 'owner' || empRole === 'admin' || empRole === 'superadmin') {
+        router.push('/admin');
+      } else {
+        router.push('/employee');
+      }
     } else {
       setEmailError('Invalid email or password. Use your PIN as password.');
       setLoading(false);

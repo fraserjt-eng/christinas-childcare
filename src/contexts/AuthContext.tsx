@@ -29,13 +29,14 @@ const publicRoutes = [
   '/admin-login',
   '/employee-login',
   '/access-denied',
+  '/auth/callback',
 ];
 
 // Route protection config
 const routeProtection: Record<string, UserRole[]> = {
-  '/admin': ['owner', 'admin'],
-  '/employee': ['owner', 'admin', 'teacher'],
-  '/dashboard': ['owner', 'admin', 'teacher', 'parent'],
+  '/admin': ['superadmin', 'owner', 'admin'],
+  '/employee': ['superadmin', 'owner', 'admin', 'teacher'],
+  '/dashboard': ['superadmin', 'owner', 'admin', 'teacher', 'parent'],
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

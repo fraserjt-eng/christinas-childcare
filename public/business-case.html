@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operations Platform — Christina's Child Care Center</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#C62828; --red-hover:#A12020; --red-pale:#FFF5F5; --red-light:#FDECEA;
+  --yellow:#FFD54F; --yellow-dark:#F9A825; --yellow-pale:#FFFDE7;
+  --cream:#f5f0e8; --cream-light:#faf8f5; --cream-mid:#ede8df;
+  --white:#FFFFFF; --border:#e5e0d8; --border-light:#ede8df;
+  --ink:#1a1a1a; --ink-mid:#3a3a3a; --muted:#6b6b6b;
+  --green:#2E7D32; --green-pale:#F1F8F1; --green-light:#E8F5E9;
+  --blue:#1565C0; --blue-pale:#E3F2FD;
+  --amber:#E65100; --amber-pale:#FFF3E0;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Open Sans',sans-serif;background:var(--cream-light);color:var(--ink);line-height:1.65;font-size:14.5px;}
+h1,h2,h3,h4{font-family:'Nunito',sans-serif;}
+
+/* TOPBAR */
+.topbar{background:var(--red);padding:.5rem 3rem;display:flex;align-items:center;justify-content:space-between;font-size:.75rem;color:white;}
+.topbar a{color:white;text-decoration:none;font-weight:600;}
+.topbar a:hover{text-decoration:underline;}
+.logo-row{display:flex;align-items:center;gap:.6rem;}
+
+/* COVER — red, not black */
+.cover{background:var(--red);color:white;position:relative;overflow:hidden;}
+.cover::before{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:rgba(255,255,255,.05);right:-180px;top:-180px;pointer-events:none;}
+.cover::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.04);left:60%;bottom:-100px;pointer-events:none;}
+.cover-inner{padding:3rem 3rem 2.5rem;position:relative;z-index:2;display:grid;grid-template-columns:1.15fr .85fr;gap:3.5rem;align-items:center;}
+.eyebrow{font-size:.62rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--yellow);margin-bottom:.85rem;display:flex;align-items:center;gap:.45rem;}
+.eyebrow::before{content:'';width:18px;height:2px;background:var(--yellow);display:inline-block;}
+.cover-h1{font-family:'Fredoka One',cursive;font-size:2.8rem;line-height:1.1;margin-bottom:.65rem;}
+.cover-sub{font-size:.93rem;color:rgba(255,255,255,.85);line-height:1.65;margin-bottom:1.8rem;font-weight:300;max-width:440px;}
+.cover-btns{display:flex;gap:.6rem;flex-wrap:wrap;}
+.btn-yellow{display:inline-flex;align-items:center;gap:.35rem;background:var(--yellow);color:var(--ink);font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:800;padding:.5rem 1.2rem;text-decoration:none;}
+.btn-white{display:inline-flex;align-items:center;gap:.35rem;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:white;font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:700;padding:.5rem 1.2rem;text-decoration:none;}
+.btn-white:hover{background:rgba(255,255,255,.25);}
+
+/* COVER STAT PANEL */
+.cover-stats{display:flex;flex-direction:column;gap:1px;background:rgba(255,255,255,.15);}
+.cstat{background:rgba(255,255,255,.08);padding:1.1rem 1.3rem;border-bottom:1px solid rgba(255,255,255,.1);}
+.cstat:last-child{border-bottom:none;}
+.cstat-num{font-family:'Fredoka One',cursive;font-size:1.7rem;line-height:1;margin-bottom:.12rem;color:white;}
+.cstat-num.y{color:var(--yellow);}
+.cstat-lbl{font-size:.69rem;color:rgba(255,255,255,.75);line-height:1.3;}
+
+.cover-footer-bar{background:#9B1B1B;padding:.8rem 3rem;display:flex;align-items:center;justify-content:space-between;font-size:.76rem;position:relative;z-index:2;}
+.cover-footer-bar a{color:rgba(255,255,255,.9);font-weight:700;text-decoration:none;}
+.cover-footer-bar p{color:rgba(255,255,255,.7);}
+
+/* NAV */
+.page-nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.98);backdrop-filter:blur(6px);border-bottom:3px solid var(--red);}
+.page-nav-inner{display:flex;overflow-x:auto;max-width:1080px;margin:0 auto;padding:0 2.5rem;}
+.page-nav a{display:block;padding:.65rem .9rem;font-size:.67rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-decoration:none;white-space:nowrap;border-bottom:3px solid transparent;font-family:'Nunito',sans-serif;transition:color .15s,border-color .15s;}
+.page-nav a:hover{color:var(--red);border-bottom-color:var(--red);}
+
+/* MAIN */
+.main{max-width:1080px;margin:0 auto;padding:0 2.5rem;}
+section{padding:3rem 0;border-bottom:1px solid var(--border);}
+section:last-child{border-bottom:none;}
+.sec-eyebrow{font-size:.62rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--red);margin-bottom:.4rem;display:flex;align-items:center;gap:.4rem;}
+.sec-eyebrow::before{content:'';width:16px;height:2px;background:var(--red);display:inline-block;}
+.sec-title{font-family:'Nunito',sans-serif;font-size:1.65rem;font-weight:800;color:var(--ink);line-height:1.2;margin-bottom:.6rem;}
+.sec-lead{font-size:.92rem;color:var(--muted);max-width:660px;line-height:1.7;margin-bottom:1.4rem;font-weight:300;}
+.bar{width:42px;height:3px;background:var(--yellow);margin:.55rem 0 1.2rem;}
+
+/* ── CALLOUT BOXES — no black ── */
+.red-callout{background:var(--cream);border:2px solid var(--red);border-left:6px solid var(--red);padding:1.8rem 2.2rem;margin:1.2rem 0;}
+.red-callout h3{font-family:'Fredoka One',cursive;font-size:1.3rem;color:var(--red);margin-bottom:.45rem;}
+.red-callout p{font-size:.88rem;line-height:1.65;color:var(--ink-mid);}
+
+.yellow-callout{border-left:4px solid var(--yellow-dark);background:var(--yellow-pale);padding:1rem 1.3rem;margin:.9rem 0;}
+.yellow-callout p{font-size:.84rem;color:var(--ink-mid);line-height:1.6;}
+.yellow-callout strong{color:#7B5800;}
+
+.green-callout{border-left:4px solid var(--green);background:var(--green-pale);padding:1rem 1.3rem;margin:.9rem 0;}
+.green-callout p{font-size:.84rem;color:var(--ink-mid);line-height:1.6;}
+.green-callout strong{color:var(--green);}
+
+.red-note{border-left:4px solid var(--red);background:var(--red-pale);padding:1rem 1.3rem;margin:.9rem 0;}
+.red-note p{font-size:.84rem;color:var(--ink-mid);line-height:1.6;}
+.red-note strong{color:var(--red);}
+
+.cream-callout{background:var(--cream);border:1px solid var(--border);padding:1.3rem 1.5rem;margin:1rem 0;}
+.cream-callout h4{font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:800;margin-bottom:.4rem;}
+.cream-callout p{font-size:.82rem;color:var(--muted);line-height:1.55;}
+
+/* ── FINANCIAL SCENARIOS ── */
+.fin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.2rem 0;}
+.fin-card{border:1px solid var(--border);background:var(--white);overflow:hidden;position:relative;}
+.fin-card.rec{outline:2.5px solid var(--green);outline-offset:2px;}
+.fin-top{padding:1.2rem 1.4rem;border-bottom:1px solid var(--border-light);}
+.fin-top.t-none{background:var(--red-light);border-top:4px solid var(--red);}
+.fin-top.t-one{background:var(--cream);border-top:4px solid var(--muted);}
+.fin-top.t-two{background:var(--green-light);border-top:4px solid var(--green);}
+.fin-label{font-size:.6rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-family:'Nunito',sans-serif;margin-bottom:.3rem;}
+.fin-label.red{color:var(--red);}
+.fin-label.gray{color:var(--muted);}
+.fin-label.grn{color:var(--green);}
+.fin-title{font-family:'Nunito',sans-serif;font-size:1.05rem;font-weight:800;margin-bottom:.8rem;}
+.fin-num{font-family:'Fredoka One',cursive;font-size:1.55rem;line-height:1;margin-bottom:.18rem;}
+.fin-num.loss{color:var(--red);}
+.fin-num.gain{color:var(--green);}
+.fin-sub{font-size:.68rem;color:var(--muted);margin-bottom:.7rem;}
+.fin-yr3{font-size:.76rem;color:var(--ink-mid);padding-top:.7rem;border-top:1px solid rgba(0,0,0,.07);}
+.fin-body{padding:1.1rem 1.4rem;}
+.fin-body ul{list-style:none;display:flex;flex-direction:column;gap:.3rem;}
+.fin-body li{font-size:.78rem;color:var(--ink-mid);display:flex;align-items:flex-start;gap:.4rem;line-height:1.4;}
+.fin-body li::before{content:'→';color:var(--red);font-size:.7rem;flex-shrink:0;margin-top:2px;}
+.rec-badge{position:absolute;top:-12px;right:12px;background:var(--green);color:white;font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .6rem;font-family:'Nunito',sans-serif;}
+
+/* ── FINANCIAL TABLES ── */
+.tbl-wrap{overflow-x:auto;margin:1rem 0;}
+table{width:100%;border-collapse:collapse;font-size:.82rem;}
+thead th{text-align:left;font-size:.62rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:.6rem .85rem;border-bottom:2px solid var(--border);background:var(--cream);font-family:'Nunito',sans-serif;}
+tbody tr{border-bottom:1px solid var(--border-light);}
+tbody tr:hover{background:var(--cream-light);}
+tbody tr:last-child{font-weight:700;background:var(--cream);border-top:1px solid var(--border);}
+tbody td{padding:.58rem .85rem;color:var(--ink-mid);vertical-align:top;}
+tbody td:first-child{color:var(--ink);}
+.num{font-family:'Fredoka One',cursive;font-size:.88rem;text-align:right;}
+.pos{color:var(--green);} .neg{color:var(--red);}
+
+/* ── GRIDS ── */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;margin:1rem 0;}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1rem 0;}
+.four-spec{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin:1.2rem 0;}
+
+/* ── WHITE CARD ── */
+.wcard{background:var(--white);border:1px solid var(--border);padding:1.3rem;}
+.wcard h4{font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:800;margin-bottom:.35rem;}
+.wcard p{font-size:.78rem;color:var(--muted);line-height:1.5;}
+.wcard .icon{font-size:1.1rem;margin-bottom:.5rem;display:block;}
+
+/* ── COST LIST ── */
+.cl{list-style:none;}
+.cl li{display:flex;justify-content:space-between;align-items:center;padding:.52rem 0;border-bottom:1px solid var(--border-light);font-size:.82rem;}
+.cl li:last-child{border-bottom:none;}
+.cl .lbl{color:var(--ink-mid);}
+.cl .val{font-family:'Fredoka One',cursive;font-size:.86rem;color:var(--ink);}
+.cl .total .val{color:var(--red);}
+.cl .total{font-weight:700;border-top:2px solid var(--border);padding-top:.7rem;margin-top:.3rem;}
+
+/* ── TRACK INTRO ── */
+.track-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.2rem 0;}
+.track{padding:1.3rem 1.5rem;border:1px solid var(--border);}
+.track.bp{background:var(--red-pale);border-color:rgba(198,40,40,.3);border-top:4px solid var(--red);}
+.track.crystal{background:var(--yellow-pale);border-color:rgba(249,168,37,.3);border-top:4px solid var(--yellow-dark);}
+.track-label{font-size:.6rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-family:'Nunito',sans-serif;margin-bottom:.35rem;}
+.track-label.red{color:var(--red);} .track-label.amber{color:var(--amber);}
+.track-name{font-family:'Fredoka One',cursive;font-size:1.4rem;color:var(--ink);margin-bottom:.4rem;}
+.track-desc{font-size:.8rem;color:var(--muted);line-height:1.5;}
+
+/* ── BP NOW BOX ── */
+.now-banner{background:var(--yellow-pale);border:2px solid var(--yellow-dark);border-left:6px solid var(--yellow-dark);padding:2rem 2.2rem;margin:1.2rem 0;}
+.now-banner h3{font-family:'Fredoka One',cursive;font-size:1.4rem;color:var(--ink);margin-bottom:.5rem;}
+.now-banner p{font-size:.88rem;line-height:1.65;color:var(--ink-mid);}
+.now-why{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin-top:1.2rem;}
+.nw{background:white;border:1px solid var(--border);padding:.9rem 1rem;}
+.nw h5{font-family:'Nunito',sans-serif;font-size:.8rem;font-weight:800;color:var(--red);margin-bottom:.3rem;}
+.nw p{font-size:.74rem;color:var(--muted);line-height:1.45;}
+
+/* ── SETUP STEPS ── */
+.steps{display:flex;flex-direction:column;gap:.5rem;margin:1.2rem 0;}
+.step{display:flex;align-items:flex-start;gap:.9rem;padding:.8rem 1rem;background:var(--white);border:1px solid var(--border);}
+.step-n{width:26px;height:26px;background:var(--red);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:.85rem;flex-shrink:0;margin-top:1px;}
+.step-body h5{font-family:'Nunito',sans-serif;font-size:.84rem;font-weight:800;margin-bottom:.18rem;}
+.step-body p{font-size:.76rem;color:var(--muted);line-height:1.4;}
+.step-t{margin-left:auto;font-family:'Fredoka One',cursive;font-size:.78rem;color:var(--green);white-space:nowrap;padding-left:.5rem;}
+
+/* ── MONTH CARDS ── */
+.mcard{border:1px solid var(--border);background:var(--white);overflow:hidden;margin-bottom:1.2rem;}
+.mcard-header{padding:1.1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-light);}
+.mcard-header.june{background:#DCEEFB;} .mcard-header.july{background:#DEEDDA;}
+.mcard-header.aug{background:#FFFDE0;} .mcard-header.sept{background:#FDEDF4;}
+.mcard-header.oct{background:#FFF0E0;} .mcard-header.nov{background:#F3E8F8;}
+.mcard-header.dec{background:#E0F4FC;} .mcard-header.jan{background:#E8EAFB;}
+.mcard-header.none{background:var(--cream);}
+.mcard-month{font-family:'Fredoka One',cursive;font-size:1.55rem;color:var(--ink);line-height:1;}
+.mcard-tag{font-size:.65rem;font-weight:600;color:var(--muted);margin-top:.2rem;font-family:'Nunito',sans-serif;}
+.mcard-badge{font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:.22rem .6rem;font-family:'Nunito',sans-serif;color:white;}
+.mb-best{background:var(--green);}  .mb-good{background:var(--blue);}
+.mb-fair{background:var(--amber);}  .mb-caution{background:var(--red);}
+.mb-neutral{background:var(--muted);}
+.mcard-body{display:grid;grid-template-columns:repeat(3,1fr);}
+.mcol{padding:1.1rem 1.2rem;border-right:1px solid var(--border-light);}
+.mcol:last-child{border-right:none;}
+.mcol-title{font-size:.62rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;font-family:'Nunito',sans-serif;}
+.mcol ul{list-style:none;display:flex;flex-direction:column;gap:.3rem;}
+.mcol li{font-size:.78rem;color:var(--ink-mid);display:flex;align-items:flex-start;gap:.38rem;line-height:1.4;}
+.mcol li.pro::before{content:'✓';color:var(--green);font-weight:800;font-size:.7rem;flex-shrink:0;margin-top:1px;}
+.mcol li.con::before{content:'—';color:var(--red);font-weight:800;font-size:.72rem;flex-shrink:0;}
+.mcol li.neu::before{content:'·';color:var(--muted);font-weight:800;flex-shrink:0;}
+.mcard-note{padding:.85rem 1.2rem;background:var(--cream-light);border-top:1px solid var(--border-light);font-size:.76rem;color:var(--muted);line-height:1.5;font-style:italic;}
+
+/* ── REPLACE GRID ── */
+.rep-wrap{border:1px solid var(--border);margin:1.2rem 0;}
+.rep-hdr{display:grid;grid-template-columns:1fr 1fr auto;gap:1rem;padding:.55rem .9rem;background:var(--cream);font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:'Nunito',sans-serif;}
+.rep-row{display:grid;grid-template-columns:1fr 1fr auto;gap:1rem;padding:.65rem .9rem;border-top:1px solid var(--border-light);align-items:center;}
+.rep-row:nth-child(even){background:var(--cream-light);}
+.rb4{font-size:.78rem;color:var(--muted);}
+.raf{font-size:.78rem;color:var(--ink);font-weight:500;}
+.rt{font-family:'Fredoka One',cursive;font-size:.78rem;color:var(--green);white-space:nowrap;text-align:right;}
+
+/* ── MATRIX TABLE ── */
+.matrix{width:100%;border-collapse:collapse;font-size:.79rem;}
+.matrix thead th{text-align:left;font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:.55rem .75rem;border-bottom:2px solid var(--border);background:var(--cream);font-family:'Nunito',sans-serif;}
+.matrix tbody td{padding:.52rem .75rem;border-bottom:1px solid var(--border-light);color:var(--ink-mid);vertical-align:middle;}
+.matrix tbody tr:last-child td{background:var(--cream);font-weight:700;border-top:1px solid var(--border);}
+.matrix tbody tr:hover td{background:var(--cream-light);}
+.matrix td:first-child{color:var(--ink);font-weight:500;}
+.g{color:var(--green);font-weight:700;font-size:.72rem;}
+.y{color:var(--amber);font-weight:700;font-size:.72rem;}
+.r{color:var(--red);font-weight:700;font-size:.72rem;}
+
+/* ── SPEC CARD ── */
+.spcard{background:var(--white);padding:1.1rem;text-align:center;}
+.spnum{font-family:'Fredoka One',cursive;font-size:2rem;color:var(--red);line-height:1;margin-bottom:.22rem;}
+.splbl{font-size:.65rem;color:var(--muted);line-height:1.35;font-family:'Nunito',sans-serif;font-weight:600;}
+
+/* ── DECISION CARDS ── */
+.decision-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1.2rem 0;}
+.decision-card{padding:1.5rem;border:1px solid var(--border);background:var(--white);}
+.decision-card.bp{background:var(--red-pale);border-color:rgba(198,40,40,.25);}
+.decision-card .dc-label{font-size:.6rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--red);font-family:'Nunito',sans-serif;margin-bottom:.4rem;}
+.decision-card .dc-q{font-family:'Fredoka One',cursive;font-size:1.3rem;color:var(--ink);margin-bottom:.6rem;}
+.decision-card p{font-size:.8rem;color:var(--muted);line-height:1.55;}
+.decision-card .dc-rec{margin-top:.9rem;font-size:.72rem;font-weight:700;color:var(--green);font-family:'Nunito',sans-serif;}
+
+/* ── CTA ── */
+.cta-section{background:#C62828;color:white;padding:2.5rem;text-align:center;margin:1.2rem 0;border-radius:0;}
+.cta-section .ctag{font-size:.62rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#FFD54F;margin-bottom:.65rem;font-family:'Nunito',sans-serif;}
+.cta-section h2{font-family:'Fredoka One',cursive;font-size:1.85rem;margin-bottom:.85rem;line-height:1.15;color:white;}
+.cta-section p{font-size:.88rem;color:white;max-width:560px;margin:0 auto 1.5rem;line-height:1.7;opacity:.95;}
+.cta-btns{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap;}
+
+/* ── FOOTER ── */
+.footer{background:var(--cream);border-top:2px solid var(--border);padding:1.8rem 3rem;font-size:.7rem;color:var(--muted);}
+.footer-in{max-width:1080px;margin:0 auto;display:flex;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;}
+.footer strong{color:var(--ink);}
+.footer a{color:var(--red);text-decoration:none;}
+
+@media(max-width:800px){
+  .topbar,.cover-footer-bar,.footer{padding-left:1.5rem;padding-right:1.5rem;}
+  .cover-inner{grid-template-columns:1fr;padding:2rem 1.5rem;}
+  .main{padding:0 1.2rem;}
+  .fin-grid,.track-grid,.two,.decision-grid{grid-template-columns:1fr;}
+  .mcard-body{grid-template-columns:1fr;}
+  .mcol{border-right:none;border-top:1px solid var(--border-light);}
+  .now-why{grid-template-columns:1fr;}
+  .four-spec{grid-template-columns:repeat(2,1fr);}
+  .rep-hdr,.rep-row{grid-template-columns:1fr 1fr;} .rt{display:none;}
+  .three{grid-template-columns:1fr;}
+  .risk-grid,.impact-grid,.scenario-grid{grid-template-columns:1fr;}
+  .spec-wrap{grid-template-columns:repeat(2,1fr);}
+  .vs-row,.vc-row{grid-template-columns:2fr 1fr 1fr;}
+  .rphdr,.rprow{grid-template-columns:1fr 1fr;} .rt{display:none;}
+  .strategy-grid{grid-template-columns:1fr;}
+  .phase-card{flex-direction:column;}
+  .summary-grid{grid-template-columns:1fr;}
+}
+
+/* ── BUSINESS CASE CLASSES ── */
+.repgrid{border:1px solid var(--border);margin:1.2rem 0;}
+.rphdr{display:grid;grid-template-columns:1fr 1fr auto;gap:1rem;padding:.55rem .9rem;background:var(--cream);color:var(--muted);font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-family:'Nunito',sans-serif;border-bottom:1px solid var(--border);}
+.rprow{display:grid;grid-template-columns:1fr 1fr auto;gap:1rem;padding:.65rem .9rem;border-bottom:1px solid var(--border-light);align-items:center;}
+.rprow:nth-child(even){background:var(--cream-light);}
+.rprow:last-child{border-bottom:none;}
+.risk-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin:1.2rem 0;}
+.risk-card{background:var(--white);border:1px solid var(--border);padding:1.2rem;}
+.risk-card h4{font-family:'Nunito',sans-serif;font-size:.84rem;font-weight:800;margin-bottom:.6rem;display:flex;align-items:center;gap:.4rem;}
+.risk-card h4 span{font-size:.6rem;padding:.1rem .4rem;font-weight:800;color:white;}
+.risk-card h4 span.high{background:var(--red);}
+.risk-card h4 span.med{background:#E65100;}
+.risk-card h4 span.low{background:var(--green);}
+.risk-card ul{list-style:none;display:flex;flex-direction:column;gap:.28rem;}
+.risk-card li{font-size:.78rem;color:var(--ink-mid);display:flex;align-items:flex-start;gap:.4rem;line-height:1.4;}
+.risk-card li::before{content:'·';color:var(--red);font-weight:800;margin-top:1px;}
+.impact-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin:1.2rem 0;}
+.impact-card{background:var(--white);border:1px solid var(--border);padding:1.3rem;border-left:3px solid var(--green);}
+.impact-card h4{font-family:'Nunito',sans-serif;font-size:.88rem;font-weight:800;margin-bottom:.5rem;color:var(--ink);}
+.impact-card p{font-size:.8rem;color:var(--muted);line-height:1.55;}
+.dark-box{background:var(--ink);color:var(--white);padding:1.8rem 2.2rem;margin:1.3rem 0;}
+.dark-box h3{font-family:'Fredoka One',cursive;font-size:1.3rem;margin-bottom:.5rem;}
+.dark-box p{font-size:.88rem;font-weight:300;opacity:.8;max-width:700px;line-height:1.65;}
+.cta-box{background:var(--red);color:white;padding:2.5rem;text-align:center;margin:1.3rem 0;position:relative;overflow:hidden;}
+.cta-box::before{content:'';position:absolute;top:-80px;right:-80px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.04);}
+.cta-box .ctag{font-size:.62rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--yellow);margin-bottom:.7rem;font-family:'Nunito',sans-serif;}
+.cta-box h2{font-family:'Fredoka One',cursive;font-size:2rem;margin-bottom:.9rem;line-height:1.15;}
+.cta-box p{font-size:.9rem;font-weight:300;opacity:.85;max-width:580px;margin:0 auto 1.6rem;line-height:1.7;}
+.cta-box .cta-btns{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;}
+.btn-yellow{display:inline-flex;align-items:center;gap:.4rem;background:var(--yellow);color:var(--ink);font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;padding:.65rem 1.5rem;text-decoration:none;transition:opacity .15s;}
+.btn-yellow:hover{opacity:.9;}
+.btn-white-outline{display:inline-flex;align-items:center;gap:.4rem;border:2px solid rgba(255,255,255,.5);color:rgba(255,255,255,.9);font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:700;padding:.65rem 1.5rem;text-decoration:none;transition:border-color .15s;}
+.btn-white-outline:hover{border-color:white;}
+.spec-wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin:1.2rem 0;}
+.scenario-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin:1.5rem 0;}
+.scenario-card{background:var(--white);border:1px solid var(--border);padding:1.5rem;position:relative;}
+.scenario-card.recommended{border-color:var(--red);outline:2.5px solid var(--red);outline-offset:2px;}
+.scenario-badge{position:absolute;top:-12px;right:12px;background:var(--red);color:white;font-size:.58rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .6rem;font-family:'Nunito',sans-serif;}
+.scenario-label{font-size:.65rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;font-family:'Nunito',sans-serif;margin-bottom:.5rem;padding:.2rem .5rem;display:inline-block;}
+.scenario-label.a{color:var(--muted);background:var(--cream);}
+.scenario-label.b{color:#1565C0;background:#E3F2FD;}
+.scenario-label.c{color:var(--red);background:var(--red-pale);}
+.scenario-card h3{font-family:'Nunito',sans-serif;font-size:1.05rem;font-weight:800;margin-bottom:.5rem;line-height:1.3;}
+.scenario-card .sc-desc{font-size:.82rem;color:var(--muted);line-height:1.55;margin-bottom:1rem;}
+.sc-metric{display:flex;justify-content:space-between;align-items:baseline;padding:.45rem 0;border-bottom:1px solid var(--border-light);}
+.sc-metric:last-child{border-bottom:none;}
+.sc-metric .label{font-size:.78rem;color:var(--ink-mid);}
+.sc-metric .value{font-family:'Fredoka One',cursive;font-size:.88rem;}
+.sc-metric .value.neg{color:var(--red);}
+.sc-metric .value.pos{color:var(--green);}
+.sc-metric .value.neutral{color:var(--muted);}
+.vs-wrap{border:1px solid var(--border);margin:1.2rem 0;}
+.vs-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:.5rem;padding:.62rem .85rem;border-bottom:1px solid var(--border-light);align-items:center;font-size:.8rem;}
+.vs-row.hdr{background:var(--ink);color:white;font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-family:'Nunito',sans-serif;border-bottom:none;}
+.vs-row:nth-child(even){background:var(--cream-light);}
+.vs-row .feat{color:var(--ink);font-weight:500;}
+.vs-row .neg{color:var(--red);font-weight:600;}
+.vs-row .pos{color:var(--green);font-weight:700;}
+.vs-row .neutral{color:var(--muted);}
+.vs-row .bold-row{font-weight:700;}
+.vs-commercial{border:1px solid var(--border);margin:1.2rem 0;}
+.vc-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:.5rem;padding:.62rem .85rem;border-bottom:1px solid var(--border-light);align-items:center;font-size:.8rem;}
+.vc-row.hdr{background:var(--ink);color:white;font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-family:'Nunito',sans-serif;border-bottom:none;}
+.vc-row:nth-child(even){background:var(--cream-light);}
+.vc-row .ours{color:var(--green);font-weight:700;}
+.vc-row .them{color:var(--muted);}
+.vc-row .no{color:var(--border);}
+.divider{width:42px;height:3px;background:var(--yellow);margin:.65rem 0 1.3rem;}
+.sec-lead{font-size:.92rem;color:var(--muted);max-width:660px;line-height:1.7;margin-bottom:1.6rem;font-weight:300;}
+.green-box{border-left:4px solid var(--green);background:#F1F8F1;padding:1.1rem 1.3rem;margin:1rem 0;}
+.green-box p{font-size:.84rem;color:var(--ink-mid);line-height:1.6;}
+.green-box strong{color:var(--green);}
+.red-box{border-left:4px solid var(--red);background:var(--red-pale);padding:1.1rem 1.3rem;margin:1rem 0;}
+.red-box p{font-size:.84rem;color:var(--ink-mid);line-height:1.6;}
+.red-box strong{color:var(--red);}
+.yellow-box{border-left:4px solid #F9A825;background:#FFFDE7;padding:1.1rem 1.3rem;margin:1rem 0;}
+.yellow-box p{font-size:.84rem;color:var(--ink-mid);line-height:1.6;}
+.yellow-box strong{color:#8B6914;}
+.rfooter{background:var(--ink);color:rgba(255,255,255,.5);padding:1.8rem 3rem;font-size:.7rem;line-height:1.6;}
+.rfooter-in{max-width:1080px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;gap:1.5rem;flex-wrap:wrap;}
+.rfooter strong{color:rgba(255,255,255,.85);}
+.rfooter a{color:var(--yellow);text-decoration:none;}
+
+/* ── ROLLOUT PLANNER CLASSES ── */
+.container{max-width:960px;margin:0 auto;padding:0 20px;}
+.section{padding:48px 0;border-bottom:1px solid rgba(0,0,0,.06);}
+.section:last-of-type{border-bottom:none;}
+.section-label{font-family:'Fredoka One',cursive;font-size:.75rem;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:6px;}
+.section-title{font-size:1.5rem;font-weight:800;margin-bottom:6px;color:var(--ink);}
+.section-desc{color:var(--muted);font-size:.95rem;margin-bottom:28px;max-width:650px;}
+.strategy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;}
+.strategy-card{background:var(--white);border:2px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;}
+.strategy-card:hover{border-color:var(--muted);box-shadow:0 4px 12px rgba(0,0,0,.1);transform:translateY(-2px);}
+.strategy-card.selected{border-color:var(--red);background:#fff5f5;box-shadow:0 0 0 3px rgba(198,40,40,.15),0 4px 12px rgba(0,0,0,.1);}
+.strategy-card .badge{position:absolute;top:12px;right:12px;background:var(--green);color:white;font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.5px;}
+.strategy-card .card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:1.2rem;}
+.strategy-card h3{font-size:1rem;font-weight:700;margin-bottom:6px;}
+.strategy-card p{font-size:.82rem;color:var(--muted);line-height:1.5;}
+.strategy-card .radio-dot{width:18px;height:18px;border:2px solid var(--border);border-radius:50%;margin-top:12px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.strategy-card.selected .radio-dot{border-color:var(--red);}
+.strategy-card.selected .radio-dot::after{content:'';width:10px;height:10px;background:var(--red);border-radius:50%;}
+.location-block{margin-bottom:32px;}
+.location-block h3{font-size:1.05rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.location-block h3 .loc-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.location-block .loc-sub{font-size:.82rem;color:var(--muted);margin-bottom:14px;}
+.timeline-scroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;-webkit-overflow-scrolling:touch;}
+.timeline-scroll::-webkit-scrollbar{height:4px;}
+.timeline-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.month-chip{flex-shrink:0;background:var(--white);border:2px solid var(--border);border-radius:10px;padding:10px 16px;cursor:pointer;text-align:center;transition:all .2s;min-width:100px;}
+.month-chip:hover{border-color:var(--muted);transform:translateY(-1px);}
+.month-chip.selected{border-color:var(--red);background:#fff5f5;box-shadow:0 0 0 3px rgba(198,40,40,.12);}
+.month-chip .chip-month{font-family:'Fredoka One',cursive;font-size:.95rem;}
+.month-chip .chip-year{font-size:.7rem;color:var(--muted);}
+.month-chip .chip-label{font-size:.68rem;color:var(--muted);margin-top:2px;}
+.month-detail{margin-top:16px;background:var(--white);border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08);border-left:4px solid var(--red);animation:fadeSlide .3s ease;}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.month-detail h4{font-size:.95rem;font-weight:700;margin-bottom:12px;}
+.factor-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px;}
+.factor-col h5{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.factor-col.align h5{color:var(--green);}
+.factor-col.risk h5{color:var(--red);}
+.factor-item{display:flex;align-items:flex-start;gap:6px;font-size:.82rem;margin-bottom:6px;line-height:1.45;}
+.factor-item .icon{flex-shrink:0;font-size:.85rem;margin-top:1px;}
+.schedule-note{background:var(--cream);border-radius:8px;padding:12px 14px;font-size:.82rem;color:var(--ink);}
+.schedule-note strong{color:var(--red);}
+.phases-stack{display:flex;flex-direction:column;gap:16px;}
+.phase-card{background:var(--white);border-radius:12px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;gap:20px;align-items:flex-start;transition:box-shadow .2s;}
+.phase-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1);}
+.phase-num{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:1.2rem;color:white;flex-shrink:0;}
+.phase-card:nth-child(1) .phase-num{background:var(--red);}
+.phase-card:nth-child(2) .phase-num{background:#F9A825;color:var(--ink);}
+.phase-card:nth-child(3) .phase-num{background:var(--green);}
+.phase-body h3{font-size:1rem;font-weight:700;margin-bottom:2px;}
+.phase-body .phase-weeks{font-size:.78rem;color:var(--muted);font-weight:600;margin-bottom:8px;}
+.phase-body p{font-size:.88rem;color:#555;}
+.phase-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.phase-tools span{background:var(--cream);border-radius:6px;padding:3px 10px;font-size:.72rem;font-weight:600;color:var(--ink);}
+.summary-card{background:linear-gradient(135deg,var(--ink) 0%,#2d1f1f 100%);border-radius:16px;padding:32px;color:white;box-shadow:0 12px 40px rgba(0,0,0,.15);}
+.summary-card h3{font-family:'Fredoka One',cursive;font-size:1.1rem;color:var(--yellow);margin-bottom:20px;}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+.summary-item .s-label{font-size:.72rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+.summary-item .s-value{font-family:'Nunito',sans-serif;font-size:1.05rem;font-weight:700;margin-top:2px;}
+.summary-item .s-value.pending{color:rgba(255,255,255,.35);font-style:italic;font-weight:400;}
+.timeline-bar{background:rgba(255,255,255,.1);border-radius:8px;height:40px;position:relative;overflow:hidden;display:flex;}
+.timeline-bar .bar-segment{height:100%;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;transition:width .5s ease;position:relative;overflow:hidden;white-space:nowrap;}
+.bar-p1{background:var(--red);}
+.bar-p2{background:#F9A825;color:var(--ink);}
+.bar-p3{background:var(--green);}
+.bar-gap{background:rgba(255,255,255,.05);}
+.timeline-bar-labels{display:flex;justify-content:space-between;margin-top:6px;font-size:.7rem;color:rgba(255,255,255,.4);}
+.rec-card{background:var(--white);border:2px solid var(--green);border-radius:16px;padding:28px;position:relative;overflow:hidden;}
+.rec-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--green),#43a047);}
+.rec-badge-pill{display:inline-flex;align-items:center;gap:6px;background:#e8f5e9;color:var(--green);font-size:.72rem;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px;}
+.rec-card h3{font-size:1.15rem;font-weight:800;margin-bottom:16px;}
+.rec-timeline{display:flex;flex-direction:column;gap:0;margin-bottom:20px;}
+.rec-step{display:flex;align-items:flex-start;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
+.rec-step:last-child{border-bottom:none;}
+.rec-step .step-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',cursive;font-size:.85rem;color:white;flex-shrink:0;}
+.rec-step .step-content h4{font-size:.92rem;font-weight:700;}
+.rec-step .step-content p{font-size:.82rem;color:var(--muted);margin-top:2px;}
+.rec-step .step-content .step-date{font-family:'Fredoka One',cursive;color:var(--red);font-size:.85rem;}
+.rec-why{background:#fdf6e3;border-radius:10px;padding:16px;font-size:.88rem;color:#5d4e37;border-left:4px solid var(--yellow);}
+.rec-why strong{color:var(--ink);}
+.invest-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.invest-card{background:var(--white);border-radius:12px;padding:24px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.invest-card .inv-number{font-family:'Fredoka One',cursive;font-size:1.8rem;margin-bottom:4px;}
+.invest-card .inv-label{font-size:.82rem;color:var(--muted);}
+.invest-card:nth-child(1) .inv-number{color:var(--green);}
+.invest-card:nth-child(2) .inv-number{color:var(--red);}
+.invest-card:nth-child(3) .inv-number{color:var(--green);}
+.hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo-row">
+    <svg width="26" height="26" viewBox="0 0 40 40"><defs><linearGradient id="zG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFE082"/><stop offset="50%" stop-color="#FFD54F"/><stop offset="100%" stop-color="#FFC107"/></linearGradient></defs><circle cx="20" cy="20" r="20" fill="#C62828"/><path d="M12,10 L28,10 Q30,10 29,12 L17,26 L28,26 Q30,26 30,28 Q30,30 28,30 L12,30 Q10,30 11,28 L23,14 L12,14 Q10,14 10,12 Q10,10 12,10 Z" fill="url(#zG)"/></svg>
+    <span style="font-family:'Fredoka One',cursive;font-size:.95rem;">Christina's Child Care Center</span>
+    <span style="opacity:.4;margin:0 .2rem;">·</span>
+    <span style="font-size:.72rem;opacity:.85;">Crystal &amp; Brooklyn Park, MN</span>
+  </div>
+  <div style="display:flex;gap:1.5rem;">
+    <a href="https://christinas-childcare.vercel.app" target="_blank">View Platform ↗</a>
+    <a href="https://flowstate.iaotgroup.co/build" target="_blank">Build &amp; Pricing ↗</a>
+  </div>
+</div>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-inner">
+    <div>
+      <div class="eyebrow">Platform Decision Guide · April 2026</div>
+      <h1 class="cover-h1">What does it cost.<br>When does it go live.</h1>
+      <p class="cover-sub">The platform is built and running. This guide covers the three deployment choices — zero centers, one center, or both — with the full financial picture for each, plus a timing breakdown for Crystal from June through New Year's.</p>
+      <div class="cover-btns">
+        <a href="https://christinas-childcare.vercel.app/guide" class="btn-yellow" target="_blank">Walk Through the Platform →</a>
+        <a href="https://flowstate.iaotgroup.co/build" class="btn-white" target="_blank">FlowState Build &amp; Pricing →</a>
+      </div>
+    </div>
+    <div class="cover-stats">
+      <div class="cstat"><div class="cstat-num y">$1,000</div><div class="cstat-lbl">Annual operating cost — both centers, all-in</div></div>
+      <div class="cstat"><div class="cstat-num">$62K–$112K</div><div class="cstat-lbl">Preventable losses per year doing nothing</div></div>
+      <div class="cstat"><div class="cstat-num y">+$35K–$74.5K</div><div class="cstat-lbl">Net Year 1 savings — both centers active</div></div>
+      <div class="cstat"><div class="cstat-num">8</div><div class="cstat-lbl">Rollout windows for Crystal — June through New Year's</div></div>
+      <div class="cstat"><div class="cstat-num y">$0</div><div class="cstat-lbl">Extra software cost to add Crystal to Brooklyn Park</div></div>
+    </div>
+  </div>
+  <div class="cover-footer-bar">
+    <a href="https://christinas-childcare.vercel.app" target="_blank">christinas-childcare.vercel.app →</a>
+    <p>Built by FlowState · <a href="https://flowstate.iaotgroup.co/build" target="_blank">flowstate.iaotgroup.co/build</a></p>
+    <p>April 6, 2026</p>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="page-nav"><div class="page-nav-inner">
+  <a href="#financials">Financials</a>
+  <a href="#costs">What It Costs</a>
+  <a href="#vs">vs. Commercial</a>
+  <a href="#bp">Brooklyn Park: Now</a>
+  <a href="#crystal">Crystal: Timing</a>
+  <a href="#june">Jun</a><a href="#july">Jul</a><a href="#aug">Aug</a>
+  <a href="#sept">Sep</a><a href="#oct">Oct</a><a href="#nov">Nov</a>
+  <a href="#dec">Dec</a><a href="#jan">Jan</a>
+  <a href="#matrix">Alignment</a>
+  <a href="#decision">Make the Call</a>
+  <a href="#replaces">Replaces</a>
+  <a href="#risk">Risk</a>
+  <a href="#bottom-line">Bottom Line</a>
+  <a href="#sec-strategy">Rollout Planner</a>
+</div></nav>
+
+<div class="main">
+
+<!-- ══ FINANCIALS ══ -->
+<section id="financials">
+  <div class="sec-eyebrow">Financial Overview</div>
+  <h2 class="sec-title">Three choices. Three very different outcomes.</h2>
+  <div class="bar"></div>
+  <p class="sec-lead">The platform costs $1,000/year to operate regardless of whether one or both centers use it. The financial difference between the three choices is almost entirely about what you recover — not what you spend.</p>
+
+  <div class="fin-grid">
+    <!-- NONE -->
+    <div class="fin-card">
+      <div class="fin-top t-none">
+        <div class="fin-label red">Option 1</div>
+        <div class="fin-title">No Deployment</div>
+        <div class="fin-num loss">-$62K to -$112K</div>
+        <div class="fin-sub">Year 1 preventable losses — both centers</div>
+        <div class="fin-yr3">3-year cumulative: <strong style="color:var(--red);">-$186K to -$336K</strong><br>These are invisible costs: revenue missed, time unrecovered, families lost.</div>
+      </div>
+      <div class="fin-body">
+        <ul>
+          <li>CACFP errors continue: $2K–$8K/center/year in missed reimbursements</li>
+          <li>Enrollment leakage continues: $8K–$15K lost per missed enrollment</li>
+          <li>Staff turnover cost continues: $2,500–$5,000 per replacement, 2+/year</li>
+          <li>Owner spends 8–12 hrs/week on tasks the platform automates</li>
+          <li>No cross-site visibility — owner drives between locations for status</li>
+          <li>Manual CACFP binder assembly each month at both sites</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ONE -->
+    <div class="fin-card">
+      <div class="fin-top t-one">
+        <div class="fin-label gray">Option 2</div>
+        <div class="fin-title">Brooklyn Park Only</div>
+        <div class="fin-num gain">+$18.9K to +$43.8K</div>
+        <div class="fin-sub">Net Year 1 savings — Brooklyn Park only</div>
+        <div class="fin-yr3">3-year cumulative: <strong style="color:var(--green);">+$62.6K to +$133.3K</strong><br>Crystal continues on manual processes the entire period.</div>
+      </div>
+      <div class="fin-body">
+        <ul>
+          <li>BP opens with full platform — staff learn one way from day one</li>
+          <li>BP CACFP tracked digitally — compliance from first meal</li>
+          <li>BP enrollment pipeline active — no inquiry leakage at new center</li>
+          <li>Crystal losses continue in parallel — still $31K–$56K/year at risk</li>
+          <li>Cross-site dashboard incomplete — Crystal is a blind spot</li>
+          <li>Two operating cultures develop — harder to unify later</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- TWO -->
+    <div class="fin-card rec">
+      <div class="rec-badge">✦ Recommended</div>
+      <div class="fin-top t-two">
+        <div class="fin-label grn">Option 3</div>
+        <div class="fin-title">Both Centers</div>
+        <div class="fin-num gain">+$35.5K to +$74.5K</div>
+        <div class="fin-sub">Net Year 1 savings — both centers active</div>
+        <div class="fin-yr3">3-year cumulative: <strong style="color:var(--green);">+$110K to +$227K</strong><br>Full cross-site operations from one dashboard.</div>
+      </div>
+      <div class="fin-body">
+        <ul>
+          <li>BP opens on platform. Crystal activates on chosen date (see Section 4)</li>
+          <li>CACFP tracked at both sites — zero manual compliance gaps</li>
+          <li>Cross-site dashboard live — owner sees both centers at once</li>
+          <li>Unified staff training across both locations — same system, same culture</li>
+          <li>Adding Crystal costs $0 in software — same deployment, same database</li>
+          <li>One-time hardware for Crystal: ~$859 (iPad + setup + staff time)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h4 style="font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:1.8rem 0 .75rem;font-family:'Nunito',sans-serif;">Year-by-Year Comparison</h4>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th></th><th class="num">Year 1</th><th class="num">Year 2</th><th class="num">Year 3</th><th class="num">3-Year Total</th></tr></thead>
+      <tbody>
+        <tr><td>No Deployment</td><td class="num neg">-$62K to -$112K</td><td class="num neg">-$62K to -$112K</td><td class="num neg">-$62K to -$112K</td><td class="num neg">-$186K to -$336K</td></tr>
+        <tr><td>Brooklyn Park Only</td><td class="num pos">+$18.9K to +$43.8K</td><td class="num pos">+$21.9K to +$44.8K</td><td class="num pos">+$21.9K to +$44.8K</td><td class="num pos">+$62.6K to +$133.3K</td></tr>
+        <tr><td><strong>Both Centers ✦</strong></td><td class="num pos"><strong>+$35.5K to +$74.5K</strong></td><td class="num pos"><strong>+$37.4K to +$76.4K</strong></td><td class="num pos"><strong>+$37.4K to +$76.4K</strong></td><td class="num pos"><strong>+$110K to +$227K</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="yellow-callout"><p><strong>The "No Deployment" losses don't show up on an expense report.</strong> They are families that enrolled elsewhere, CACFP dollars never claimed, staff hours spent on tasks the platform automates, and owner time that could go to the children, families, and staff instead. They compound every year.</p></div>
+</section>
+
+<!-- ══ COSTS TO RUN ══ -->
+<section id="costs">
+  <div class="sec-eyebrow">Platform Operating Costs</div>
+  <h2 class="sec-title">What you actually pay to keep it running</h2>
+  <div class="bar"></div>
+  <p class="sec-lead">The platform runs on three services. These are the real infrastructure costs — no hidden fees, no per-seat licensing, no transaction cuts. The cost is identical whether one or both centers are active.</p>
+
+  <div class="two">
+    <div>
+      <div class="wcard">
+        <h4>Annual Operating Cost — Both Centers</h4>
+        <ul class="cl">
+          <li><span class="lbl">Vercel Pro — web hosting &amp; CDN</span><span class="val">$240/yr</span></li>
+          <li><span class="lbl">Supabase Pro — database &amp; auth</span><span class="val">$300/yr</span></li>
+          <li><span class="lbl">Anthropic API — AI features</span><span class="val">$60/yr</span></li>
+          <li><span class="lbl">Domain name</span><span class="val">$12/yr</span></li>
+          <li class="total"><span class="lbl">Total annual — one OR both centers</span><span class="val">$1,000/yr</span></li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="wcard">
+        <h4>One-Time Hardware — Per Location</h4>
+        <ul class="cl">
+          <li><span class="lbl">iPad 10th Gen (kiosk check-in)</span><span class="val">$329</span></li>
+          <li><span class="lbl">iPad stand and case</span><span class="val">$50</span></li>
+          <li><span class="lbl">Developer setup time</span><span class="val">~2 hrs</span></li>
+          <li><span class="lbl">Owner data entry (employees, roles, PINs)</span><span class="val">~1 hr</span></li>
+          <li><span class="lbl">Staff training (~10 hrs/person, self-paced)</span><span class="val">~$200/person</span></li>
+          <li class="total"><span class="lbl">Hardware per location</span><span class="val">~$379</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Cost Type</th><th>Year 1</th><th>Year 2</th><th>Year 3</th><th class="num">3-Year Total</th></tr></thead>
+      <tbody>
+        <tr><td>Platform operating (1 or 2 centers)</td><td>$1,000</td><td>$1,000</td><td>$1,000</td><td class="num">$3,000</td></tr>
+        <tr><td>iPads — Brooklyn Park (one-time)</td><td>$379</td><td>—</td><td>—</td><td class="num">$379</td></tr>
+        <tr><td>iPads — Crystal (one-time, if activating)</td><td>$379</td><td>—</td><td>—</td><td class="num">$379</td></tr>
+        <tr><td>Staff training (initial cohort)</td><td>~$480–$640</td><td>New hires only</td><td>New hires only</td><td class="num">Varies</td></tr>
+        <tr><td><strong>Total (both centers, Year 1)</strong></td><td><strong>~$2,258–$2,398</strong></td><td><strong>$1,000</strong></td><td><strong>$1,000</strong></td><td class="num pos"><strong>~$4,258</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="red-note"><p><strong>Note on build investment:</strong> The costs above are operating costs only — what it costs to keep the platform running after it is deployed. The build cost (what was paid to design, develop, and deploy the platform) is a separate one-time investment, scoped and priced by FlowState. See <a href="https://flowstate.iaotgroup.co/build" target="_blank" style="color:var(--red);font-weight:600;">flowstate.iaotgroup.co/build</a> for published pricing tiers and examples.</p></div>
+</section>
+
+<!-- ══ VS COMMERCIAL ══ -->
+<section id="vs">
+  <div class="sec-eyebrow">Platform vs. Commercial Alternatives</div>
+  <h2 class="sec-title">$1,000 vs. $45,600 — per year</h2>
+  <div class="bar"></div>
+  <p class="sec-lead">Brightwheel and Procare are the most widely used commercial childcare platforms. Neither includes AI lesson generation, cross-site intelligence, or a 30-module training system. And both make their real money on payment processing fees.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th style="background:#FFF5F5;color:var(--red);">Christina's Platform</th>
+          <th>Brightwheel</th>
+          <th>Procare</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Annual software cost (2 centers)</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">$1,000</td><td class="neg">$22,800–$45,600+</td><td class="neg">$22,800–$45,600+</td></tr>
+        <tr><td>Payment processing fee</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">$0</td><td>2.9% + $0.30/tx</td><td>2.9% + $0.30/tx</td></tr>
+        <tr><td>Processing cost (40 families, $60K/mo)</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">$0/year</td><td class="neg">$20,880/center/yr</td><td class="neg">$20,880/center/yr</td></tr>
+        <tr><td>AI lesson plan generator</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">✔ Included</td><td style="color:var(--border);">✗ No</td><td style="color:var(--border);">✗ No</td></tr>
+        <tr><td>AI intelligence recommendations</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">✔ Included</td><td style="color:var(--border);">✗ No</td><td style="color:var(--border);">✗ No</td></tr>
+        <tr><td>30-module staff training system</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">✔ Included</td><td style="color:var(--border);">✗ No</td><td>Basic</td></tr>
+        <tr><td>Cross-site operations dashboard</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">✔ Included</td><td>Extra tier</td><td>Extra tier</td></tr>
+        <tr><td>CACFP compliance scoring + auto-alerts</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">✔ Auto-scoring</td><td>Basic tracking</td><td>Basic tracking</td></tr>
+        <tr><td>Enrollment pipeline CRM</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">✔ Full pipeline</td><td>Basic</td><td>Separate ($150/mo)</td></tr>
+        <tr><td>Revenue forecasting</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">✔ Included</td><td style="color:var(--border);">✗ No</td><td style="color:var(--border);">✗ No</td></tr>
+        <tr><td>Built specifically for this center</td><td style="background:#FFF5F5;font-weight:700;color:var(--green);">✔ Fully custom</td><td>Generic</td><td>Generic</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="yellow-callout"><p><strong>The payment processing fee alone makes Brightwheel and Procare uncompetitive for any center above 20 families.</strong> At $60K/month in tuition, 2.9% = $1,740/month = $20,880/year per center — $41,760/year for two centers — on top of the software fee. This platform does not process payments. Your existing method (checks, ACH, Zelle) continues to work.</p></div>
+</section>
+
+<!-- ══ BROOKLYN PARK ══ -->
+<section id="bp">
+  <div class="sec-eyebrow">Brooklyn Park — New Center</div>
+  <h2 class="sec-title">One option: activate at opening.</h2>
+  <div class="bar"></div>
+  <p class="sec-lead">A new center has no legacy system to replace, no existing staff habits to unlearn, and no families expecting a different process. The platform can be the first and only way Brooklyn Park has ever run. That window is open once.</p>
+
+  <div class="track-grid">
+    <div class="track bp">
+      <div class="track-label red">Brooklyn Park</div>
+      <div class="track-name">Activate at Opening</div>
+      <div class="track-desc">New staff learn one system from day one. Families enroll into a portal that already exists. CACFP tracking starts from the first meal. The iPad is at the front desk before the first child walks in. No transition — only adoption.</div>
+    </div>
+    <div class="track crystal">
+      <div class="track-label amber">Crystal</div>
+      <div class="track-name">Choose Your Window</div>
+      <div class="track-desc">Crystal has 6 years of existing operations. Any activation involves a transition. The eight timing windows below — June through New Year's — each have a different operational context, different staff pressures, and different alignment factors.</div>
+    </div>
+  </div>
+
+  <div class="now-banner">
+    <h3>A new center is a one-time opportunity.</h3>
+    <p>When a center opens with the platform in place, there is no migration. No announcement. No explaining a change to families. No staff unlearning old habits. New staff complete 30 training modules before opening day. The kiosk is installed. The parent portal is live. The first CACFP meal count is digital. This version of deployment — pure adoption, no transition — only exists at the beginning.</p>
+    <div class="now-why">
+      <div class="nw"><h5>No habits to overwrite</h5><p>Staff at a new center have nothing to unlearn. The platform becomes the default from the first shift.</p></div>
+      <div class="nw"><h5>Families enroll into the portal</h5><p>Every enrolling family signs up into a center that already has a parent portal. No migration, no "new system" announcement.</p></div>
+      <div class="nw"><h5>Compliance tracking from day one</h5><p>CACFP digital tracking starts at meal one. Clean audit trail from the first day of operation.</p></div>
+    </div>
+  </div>
+
+  <h4 style="font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:1.5rem 0 .75rem;font-family:'Nunito',sans-serif;">Setup sequence — Brooklyn Park</h4>
+  <div class="steps">
+    <div class="step"><div class="step-n">1</div><div class="step-body"><h5>Supabase database — Brooklyn Park instance</h5><p>Developer pushes 4 ready migrations. BP gets its own <code>center_id</code>. Data isolated from Crystal until Crystal activates.</p></div><div class="step-t">30 min</div></div>
+    <div class="step"><div class="step-n">2</div><div class="step-body"><h5>Vercel environment variables</h5><p>5 environment variables configured. Platform points to live database. No code changes needed.</p></div><div class="step-t">15 min</div></div>
+    <div class="step"><div class="step-n">3</div><div class="step-body"><h5>Google OAuth login for owner</h5><p>One-time setup in Supabase dashboard. Owner logs in with Google. No password to manage.</p></div><div class="step-t">30 min</div></div>
+    <div class="step"><div class="step-n">4</div><div class="step-body"><h5>Enter staff data — PINs, roles, contact info</h5><p>Through the admin settings page. Approximately 10 minutes per staff member for initial data entry.</p></div><div class="step-t">~1 hr</div></div>
+    <div class="step"><div class="step-n">5</div><div class="step-body"><h5>Install iPad at front desk kiosk</h5><p>Download browser, bookmark kiosk URL, enable kiosk mode. Staff test check-in and check-out before opening.</p></div><div class="step-t">15 min</div></div>
+    <div class="step"><div class="step-n">6</div><div class="step-body"><h5>Staff completes 30 training modules — self-paced</h5><p>Each module takes 15–20 minutes with interactive knowledge checks. Total: ~10 hours per person over 2 weeks before opening.</p></div><div class="step-t">2 weeks</div></div>
+  </div>
+
+  <div class="green-callout"><p><strong>Total developer time: ~2 hours. Total owner setup time: ~2 hours. Staff training: 2 weeks self-paced.</strong> The platform can be fully operational at Brooklyn Park before the first child is enrolled.</p></div>
+</section>
+
+<!-- ══ CRYSTAL INTRO ══ -->
+<section id="crystal">
+  <div class="sec-eyebrow">Crystal — Existing Center</div>
+  <h2 class="sec-title">Eight windows. Different contexts. Real tradeoffs.</h2>
+  <div class="bar"></div>
+  <p class="sec-lead">Crystal has existing staff, families, and workflows. Every activation window has a different operational reality. The right window is the one where staff stability is highest, director bandwidth is available, and no competing pressure is at its peak. None of the options are perfect. All of them are real.</p>
+
+  <div class="red-callout">
+    <h3>The goal is not the quietest month. It's the most stable one.</h3>
+    <p>Every childcare center has pressure year-round. The question is where the pressure is lowest and the conditions for adoption are highest — new system, minimum disruption, maximum team bandwidth to learn something new and use it well.</p>
+  </div>
+</section>
+
+<!-- ══ JUNE ══ -->
+<section id="june">
+  <div class="sec-eyebrow">Crystal Rollout Option</div>
+  <div class="mcard">
+    <div class="mcard-header june">
+      <div><div class="mcard-month">June 2026</div><div class="mcard-tag">School Year Ends · Summer Begins · Enrollment Transition</div></div>
+      <span class="mcard-badge mb-good">Good Window</span>
+    </div>
+    <div class="mcard-body">
+      <div class="mcol">
+        <div class="mcol-title">Center Context</div>
+        <ul>
+          <li class="neu">School-age children transition to full-day summer care</li>
+          <li class="neu">Families finalizing summer enrollment and schedules</li>
+          <li class="neu">Some staff returning from reduced spring hours</li>
+          <li class="neu">CACFP summer food program begins — different reimbursement structure</li>
+          <li class="neu">End-of-year documentation and renewal paperwork common</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Works in Your Favor</div>
+        <ul>
+          <li class="pro">High parent communication demand — portal value is immediately visible to families</li>
+          <li class="pro">Summer enrollment gives the CRM a real live use case from week one</li>
+          <li class="pro">CACFP program transition is easier to start digital than convert mid-year</li>
+          <li class="pro">No school-year pressure on families — lower emotional stakes for announcing a change</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Creates Friction</div>
+        <ul>
+          <li class="con">Staff returning from reduced hours need routine re-onboarding — platform training adds to that</li>
+          <li class="con">Summer staffing often includes seasonal hires who leave in August — training ROI is shorter</li>
+          <li class="con">Brooklyn Park also opening — director bandwidth split between two centers</li>
+          <li class="con">Active enrollment period means transition announcement competes with enrollment communication</li>
+        </ul>
+      </div>
+    </div>
+    <div class="mcard-note">June activates both centers within weeks of each other if BP opens in May–June. Highest reward, highest demand on the director during the highest-pressure stretch of the expansion.</div>
+  </div>
+</section>
+
+<!-- ══ JULY ══ -->
+<section id="july">
+  <div class="sec-eyebrow">Crystal Rollout Option</div>
+  <div class="mcard">
+    <div class="mcard-header july">
+      <div><div class="mcard-month">July 2026</div><div class="mcard-tag">Summer Stable · Lowest Pressure Month · Post-BP Opening</div></div>
+      <span class="mcard-badge mb-best">Best Window</span>
+    </div>
+    <div class="mcard-body">
+      <div class="mcol">
+        <div class="mcol-title">Center Context</div>
+        <ul>
+          <li class="neu">Summer enrollment confirmed — families settled, no transitions</li>
+          <li class="neu">No school schedule shifts, no age-group moves</li>
+          <li class="neu">CACFP summer food program running at full volume — real compliance data</li>
+          <li class="neu">Brooklyn Park has been open 4–6 weeks — initial chaos has settled</li>
+          <li class="neu">Operationally the calmest month of the year in most MN childcare centers</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Works in Your Favor</div>
+        <ul>
+          <li class="pro">Most stable enrollment and staffing of the year — minimum disruption risk</li>
+          <li class="pro">BP staff already trained — Crystal activates from a tested, refined system</li>
+          <li class="pro">CACFP data entry active — digital tracking has immediate daily value</li>
+          <li class="pro">Director has processed BP opening — bandwidth is recovering</li>
+          <li class="pro">Cross-site dashboard becomes operational — both centers visible at once</li>
+          <li class="pro">Families in summer mode — more receptive to change, less reactive</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Creates Friction</div>
+        <ul>
+          <li class="con">Summer seasonal staff may be leaving in August — training investment has a shorter window</li>
+          <li class="con">Long-term staff may have vacation in July — harder to schedule any group walkthroughs</li>
+          <li class="con">Director still managing BP ramp-up alongside Crystal transition, even if quieter</li>
+        </ul>
+      </div>
+    </div>
+    <div class="mcard-note">July is the operational lull between the BP opening sprint and back-to-school ramp. It is the month childcare directors describe as the one that doesn't feel like a sprint. That is exactly when a system transition has the highest chance of taking hold without compounding friction.</div>
+  </div>
+</section>
+
+<!-- ══ AUGUST ══ -->
+<section id="aug">
+  <div class="sec-eyebrow">Crystal Rollout Option</div>
+  <div class="mcard">
+    <div class="mcard-header aug">
+      <div><div class="mcard-month">August 2026</div><div class="mcard-tag">Back-to-School Prep · Enrollment Rush · Peak Pressure</div></div>
+      <span class="mcard-badge mb-fair">Use Caution</span>
+    </div>
+    <div class="mcard-body">
+      <div class="mcol">
+        <div class="mcol-title">Center Context</div>
+        <ul>
+          <li class="neu">Back-to-school enrollment surge — new families entering, schedules changing</li>
+          <li class="neu">School-age children transitioning back to before/after school care</li>
+          <li class="neu">Staff scheduling complexity at peak — summer staff leaving, school-year staff returning</li>
+          <li class="neu">Highest inquiry volume of the year for most childcare centers</li>
+          <li class="neu">Transportation logistics for school-age children restarting</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Works in Your Favor</div>
+        <ul>
+          <li class="pro">Enrollment pipeline CRM is immediately proven — high inquiry volume shows ROI fast</li>
+          <li class="pro">Schedule optimizer becomes essential with staffing transitions — right tool at right moment</li>
+          <li class="pro">New families onboard into the portal — clean fall cohort start</li>
+          <li class="pro">If BP has been running since June/July, Crystal activates into a refined system</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Creates Friction</div>
+        <ul>
+          <li class="con">Highest operational pressure of the year — adding a transition compounds stress</li>
+          <li class="con">Staff turnover at its peak — training a shifting team is inefficient</li>
+          <li class="con">Enrollment follow-up competes directly with platform training for staff attention</li>
+          <li class="con">Director bandwidth is at its lowest in August — any new variable adds real risk</li>
+        </ul>
+      </div>
+    </div>
+    <div class="mcard-note">August is not impossible — the enrollment CRM advantage is real. But this is the month where adding one more thing most often results in that thing not being done properly. If you choose August, complete all training in July first.</div>
+  </div>
+</section>
+
+<!-- ══ SEPTEMBER ══ -->
+<section id="sept">
+  <div class="sec-eyebrow">Crystal Rollout Option</div>
+  <div class="mcard">
+    <div class="mcard-header sept">
+      <div><div class="mcard-month">September 2026</div><div class="mcard-tag">New School Year · Settled Enrollment · Fall Rhythm</div></div>
+      <span class="mcard-badge mb-good">Good Window</span>
+    </div>
+    <div class="mcard-body">
+      <div class="mcol">
+        <div class="mcol-title">Center Context</div>
+        <ul>
+          <li class="neu">School year underway — school-age care fully operational</li>
+          <li class="neu">Fall enrollment complete — family rosters stable</li>
+          <li class="neu">Staff team is the school-year team — turnover has settled</li>
+          <li class="neu">DCYF licensing inspection season begins — fall is active inspection season in MN</li>
+          <li class="neu">CPR/First Aid cert renewals often cluster here — alert system becomes relevant</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Works in Your Favor</div>
+        <ul>
+          <li class="pro">Stable school-year team — training investment has a full-year payback window</li>
+          <li class="pro">Enrollment is done — no mid-enrollment chaos during the transition</li>
+          <li class="pro">Inspection season makes compliance tools immediately high-value for the team</li>
+          <li class="pro">BP has been running 3–4 months — Crystal activates into a working, tested system</li>
+          <li class="pro">Certification cycle aligns — alert system proves itself quickly</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Creates Friction</div>
+        <ul>
+          <li class="con">Licensing inspections may occur during training — divided staff attention</li>
+          <li class="con">New school-year routines just established — changing workflows again can feel destabilizing</li>
+          <li class="con">Back-to-school parent communication volume is high — portal announcement competes</li>
+        </ul>
+      </div>
+    </div>
+    <div class="mcard-note">September is the second-best window after July. The school-year team is in place, enrollment is done, and the compliance features become immediately relevant during inspection season. Time the training in the first two weeks before new routines fully harden.</div>
+  </div>
+</section>
+
+<!-- ══ OCTOBER ══ -->
+<section id="oct">
+  <div class="sec-eyebrow">Crystal Rollout Option</div>
+  <div class="mcard">
+    <div class="mcard-header oct">
+      <div><div class="mcard-month">October 2026</div><div class="mcard-tag">Peak Licensing Season · CACFP Year · Stable Operations</div></div>
+      <span class="mcard-badge mb-fair">Fair Window</span>
+    </div>
+    <div class="mcard-body">
+      <div class="mcol">
+        <div class="mcol-title">Center Context</div>
+        <ul>
+          <li class="neu">CACFP program year often resets — new claim period beginning</li>
+          <li class="neu">Peak DCYF licensing inspection season in Minnesota</li>
+          <li class="neu">Fall routines fully established — center is in its operational groove</li>
+          <li class="neu">Cert renewals clustering (CPR cycles often from hire date)</li>
+          <li class="neu">Enrollment stable — no major roster changes expected until winter</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Works in Your Favor</div>
+        <ul>
+          <li class="pro">CACFP year reset is a clean moment to start digital tracking from the beginning of the new period</li>
+          <li class="pro">Active inspection season makes compliance features immediately visible in value</li>
+          <li class="pro">Fully settled operations — staff focus is available for training</li>
+          <li class="pro">BP has been running 4–5 months — mature platform for Crystal to adopt</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Creates Friction</div>
+        <ul>
+          <li class="con">Active inspections mean staff may be focused on compliance readiness, not training</li>
+          <li class="con">An inspection during a platform transition is high-stakes — process confusion can surface at a bad moment</li>
+          <li class="con">Holiday season approaching — family portal announcement competes with holiday communications</li>
+        </ul>
+      </div>
+    </div>
+    <div class="mcard-note">October has a real CACFP advantage and compliance features prove themselves fast. The inspection risk is real but manageable — the platform helps with inspection readiness. Just avoid scheduling training during inspection week specifically.</div>
+  </div>
+</section>
+
+<!-- ══ NOVEMBER ══ -->
+<section id="nov">
+  <div class="sec-eyebrow">Crystal Rollout Option</div>
+  <div class="mcard">
+    <div class="mcard-header nov">
+      <div><div class="mcard-month">November 2026</div><div class="mcard-tag">Post-Inspection Calm · Stable · Pre-Holiday</div></div>
+      <span class="mcard-badge mb-good">Good Window</span>
+    </div>
+    <div class="mcard-body">
+      <div class="mcol">
+        <div class="mcol-title">Center Context</div>
+        <ul>
+          <li class="neu">Typically the quietest fall month — no transitions, no major events</li>
+          <li class="neu">Licensing inspections mostly complete — post-inspection calm</li>
+          <li class="neu">Enrollment stable — most families committed through year end</li>
+          <li class="neu">Holiday scheduling begins but not yet active</li>
+          <li class="neu">Staff in full school-year groove — routines established</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Works in Your Favor</div>
+        <ul>
+          <li class="pro">Inspections are past — no compliance audit risk during training period</li>
+          <li class="pro">Stable enrollment and staffing — lowest personnel volatility of fall</li>
+          <li class="pro">Staff in established routine — training adds to, not competes with, operations</li>
+          <li class="pro">Good month for portal launch with families — receptive before holiday communication takes over</li>
+          <li class="pro">BP has been running 5–6 months — Crystal activates into the most refined version</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Creates Friction</div>
+        <ul>
+          <li class="con">Only 6 weeks before December holiday disruptions — training must complete before that window</li>
+          <li class="con">Holiday staffing adjustments begin in late November — schedule optimizer tested during transition</li>
+          <li class="con">Year-end reporting hits in January — December/January is not ideal for early platform questions</li>
+        </ul>
+      </div>
+    </div>
+    <div class="mcard-note">November is underrated. It is the calm between inspection season and holiday chaos — and it sets the system up to handle December scheduling and January reporting with data already in place.</div>
+  </div>
+</section>
+
+<!-- ══ DECEMBER ══ -->
+<section id="dec">
+  <div class="sec-eyebrow">Crystal Rollout Option</div>
+  <div class="mcard">
+    <div class="mcard-header dec">
+      <div><div class="mcard-month">December 2026</div><div class="mcard-tag">Holiday Closures · Complex Scheduling · Year-End</div></div>
+      <span class="mcard-badge mb-caution">Hard Window</span>
+    </div>
+    <div class="mcard-body">
+      <div class="mcol">
+        <div class="mcol-title">Center Context</div>
+        <ul>
+          <li class="neu">Holiday closures and reduced-hour days throughout the month</li>
+          <li class="neu">Scheduling complexity at its highest — varied family holiday schedules</li>
+          <li class="neu">Staff taking PTO — coverage management is demanding</li>
+          <li class="neu">Year-end administrative tasks: payroll, tax documentation, licensing renewals</li>
+          <li class="neu">Enrollment planning for January begins late December</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Works in Your Favor</div>
+        <ul>
+          <li class="pro">Schedule optimizer has immediate value — holiday scheduling is exactly when it helps most</li>
+          <li class="pro">Year-end gives "new system for new year" framing with families and staff</li>
+          <li class="pro">Data entry in December feeds January reporting from day one</li>
+          <li class="pro">If activated in the first week, system is operational before holiday disruption</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Creates Friction</div>
+        <ul>
+          <li class="con">Holiday disruptions mean inconsistent staff attendance during training</li>
+          <li class="con">Director managing year-end admin and holiday logistics simultaneously</li>
+          <li class="con">Families are distracted — portal adoption messaging competes with holiday comms</li>
+          <li class="con">Any platform issues during the holiday period have fewer support resources available</li>
+          <li class="con">Risk of incomplete training if PTO pulls key staff mid-onboarding</li>
+        </ul>
+      </div>
+    </div>
+    <div class="mcard-note">December can work if activated in the first 7 days before holiday disruption begins. A mid-December activation is very hard. If you choose December, the decision must be made by November 15 so preparation happens in November.</div>
+  </div>
+</section>
+
+<!-- ══ JANUARY ══ -->
+<section id="jan">
+  <div class="sec-eyebrow">Crystal Rollout Option</div>
+  <div class="mcard">
+    <div class="mcard-header jan">
+      <div><div class="mcard-month">January 2027</div><div class="mcard-tag">New Year · Clean Start · License Renewals · Budget Reset</div></div>
+      <span class="mcard-badge mb-good">Clean Slate Window</span>
+    </div>
+    <div class="mcard-body">
+      <div class="mcol">
+        <div class="mcol-title">Center Context</div>
+        <ul>
+          <li class="neu">New year — natural psychological reset for staff and families</li>
+          <li class="neu">MN DCYF license renewal often due Q1 — documentation under scrutiny</li>
+          <li class="neu">Staff CPR/First Aid certifications cluster near renewal dates</li>
+          <li class="neu">Winter enrollment inquiries begin — pipeline active for spring</li>
+          <li class="neu">Budget cycle reset — new year financial planning underway</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Works in Your Favor</div>
+        <ul>
+          <li class="pro">"New year, new system" framing is genuinely powerful for staff adoption</li>
+          <li class="pro">License renewal documentation needs are immediate — compliance tools prove value on day one</li>
+          <li class="pro">BP has been operating 7–8 months — Crystal activates into the most tested version of the platform</li>
+          <li class="pro">Budget reset lets the owner evaluate platform cost against the new year budget</li>
+          <li class="pro">Staff psychological fresh start — lower resistance to new systems in January than mid-fall</li>
+        </ul>
+      </div>
+      <div class="mcol">
+        <div class="mcol-title">Creates Friction</div>
+        <ul>
+          <li class="con">7–8 months of Crystal on manual systems while BP runs the platform — two different operating cultures develop</li>
+          <li class="con">CACFP data gap for all of 2026 at Crystal — no comparative annual data</li>
+          <li class="con">License renewal paperwork is due — platform training on top of documentation sprint is heavy</li>
+          <li class="con">Crystal staff may be frustrated watching BP operate on the platform for months</li>
+        </ul>
+      </div>
+    </div>
+    <div class="mcard-note">January is the latest defensible window. It has real strengths — especially license renewal timing and the psychological reset. But it means 8 months of Crystal running manually while Brooklyn Park runs on the platform. The cross-site dashboard is incomplete the entire time.</div>
+  </div>
+</section>
+
+<!-- ══ ALIGNMENT MATRIX ══ -->
+<section id="matrix">
+  <div class="sec-eyebrow">Alignment Matrix</div>
+  <h2 class="sec-title">All eight windows, side by side</h2>
+  <div class="bar"></div>
+  <p class="sec-lead">Every timing option scored against the factors that matter most for a successful Crystal activation. Use this to compare at a glance.</p>
+
+  <div style="overflow-x:auto;">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Factor</th>
+          <th>Jun</th><th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th><th>Jan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Staff stability (school-year team in place)</td><td class="y">Med</td><td class="y">Med</td><td class="r">Low</td><td class="g">High</td><td class="g">High</td><td class="g">High</td><td class="y">Med</td><td class="g">High</td></tr>
+        <tr><td>Director bandwidth available</td><td class="r">Low</td><td class="y">Med</td><td class="r">Low</td><td class="y">Med</td><td class="y">Med</td><td class="g">High</td><td class="r">Low</td><td class="y">Med</td></tr>
+        <tr><td>Enrollment pressure is moderate</td><td class="y">Med</td><td class="g">Low</td><td class="r">Peak</td><td class="y">Med</td><td class="g">Low</td><td class="g">Low</td><td class="g">Low</td><td class="y">Med</td></tr>
+        <tr><td>No active licensing inspection</td><td class="g">Clear</td><td class="g">Clear</td><td class="g">Clear</td><td class="r">Active</td><td class="r">Active</td><td class="g">Clear</td><td class="g">Clear</td><td class="g">Clear</td></tr>
+        <tr><td>No major competing disruption</td><td class="y">Med</td><td class="g">Clear</td><td class="r">High</td><td class="y">Med</td><td class="g">Clear</td><td class="g">Clear</td><td class="r">High</td><td class="y">Med</td></tr>
+        <tr><td>BP already operational (tested system)</td><td class="r">No</td><td class="y">1 mo</td><td class="y">2 mo</td><td class="g">3 mo</td><td class="g">4 mo</td><td class="g">5 mo</td><td class="g">6 mo</td><td class="g">7 mo</td></tr>
+        <tr><td>CACFP value is immediate</td><td class="g">High</td><td class="g">High</td><td class="y">Med</td><td class="y">Med</td><td class="g">High</td><td class="y">Med</td><td class="y">Med</td><td class="g">High</td></tr>
+        <tr><td>Natural reset point for staff and families</td><td class="y">Summer</td><td class="y">Summer</td><td class="y">BTS</td><td class="y">Fall</td><td class="r">No</td><td class="y">Pre-hol</td><td class="r">No</td><td class="g">New Year</td></tr>
+        <tr>
+          <td><strong>Overall</strong></td>
+          <td style="font-family:'Nunito',sans-serif;font-weight:800;color:var(--blue);">Good</td>
+          <td style="font-family:'Nunito',sans-serif;font-weight:800;color:var(--green);">Best</td>
+          <td style="font-family:'Nunito',sans-serif;font-weight:800;color:var(--amber);">Caution</td>
+          <td style="font-family:'Nunito',sans-serif;font-weight:800;color:var(--blue);">Good</td>
+          <td style="font-family:'Nunito',sans-serif;font-weight:800;color:var(--amber);">Fair</td>
+          <td style="font-family:'Nunito',sans-serif;font-weight:800;color:var(--blue);">Good</td>
+          <td style="font-family:'Nunito',sans-serif;font-weight:800;color:var(--red);">Hard</td>
+          <td style="font-family:'Nunito',sans-serif;font-weight:800;color:var(--blue);">Good</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="yellow-callout" style="margin-top:1rem;"><p><strong>The matrix reflects typical MN childcare patterns — not a verdict.</strong> A motivated team with strong director bandwidth can make August work. A depleted November team makes November harder. The owner's read of their own center overrides any chart.</p></div>
+</section>
+
+<!-- ══ MAKE THE CALL ══ -->
+<section id="decision">
+  <div class="sec-eyebrow">Make the Call</div>
+  <h2 class="sec-title">Two decisions. Everything follows from them.</h2>
+  <div class="bar"></div>
+  <p class="sec-lead">One decision for Brooklyn Park. One decision for Crystal. Both have implications for developer scheduling, training timing, and family announcements. Neither locks the other one in permanently — but the Brooklyn Park window is narrower than it looks.</p>
+
+  <div class="decision-grid">
+    <div class="decision-card bp">
+      <div class="dc-label">Decision One — Brooklyn Park</div>
+      <div class="dc-q">Activate at opening?</div>
+      <p>Yes or no. If yes, the developer needs 2 hours before opening week. Staff training begins 2 weeks before opening. Families enroll into a portal that already exists. If no, the center opens on paper and activates the platform at a later date — which means a transition instead of a launch.</p>
+      <div class="dc-rec">Recommendation: Yes. The first-mover window is now.</div>
+    </div>
+    <div class="decision-card" style="background:var(--green-pale);border-color:rgba(46,125,50,.25);border-top:4px solid var(--green);">
+      <div class="dc-label" style="color:var(--green);">Decision Two — Crystal</div>
+      <div class="dc-q">Which window?</div>
+      <p>Pick one month from the options above. Once a date is named, the developer schedules setup time, training gets calendared, and families receive a 2-week heads-up before the portal goes live. A date in writing turns this from a plan into a deployment.</p>
+      <div class="dc-rec">Recommendation: July 2026. Calm, stable, post-BP-launch.</div>
+    </div>
+  </div>
+
+  <div class="red-callout" style="margin-top:1.5rem;">
+    <h3>The platform doesn't need a perfect moment. It needs a date.</h3>
+    <p>Every month in this guide is a workable activation window. The worst outcome is no date on the calendar — not because the platform isn't ready, but because "we should do this" without a specific date is how every good system ends up waiting indefinitely. Pick a window. Name the date. The setup takes 2 hours. The rest is training schedules and a family announcement.</p>
+  </div>
+
+  <div class="cta-section">
+    <div class="ctag">The platform is ready. The decision is yours.</div>
+    <h2>Walk through it. Ask everything.<br>Set the date.</h2>
+    <p>30 minutes with FlowState. See the full platform live, ask every question, and get a formal proposal within 48 hours. Fixed pricing. No hourly surprises.</p>
+    <div class="cta-btns">
+      <a href="https://christinas-childcare.vercel.app/guide" class="btn-yellow" target="_blank">Walk Through the Platform →</a>
+      <a href="https://flowstate.iaotgroup.co/build" class="btn-white" target="_blank">Build &amp; Pricing →</a>
+      <a href="https://calendly.com/iaotgroup/discovery" class="btn-white" target="_blank">Book a 30-Min Call →</a>
+    </div>
+  </div>
+</section>
+
+</div><!-- .main -->
+
+<footer class="footer">
+  <div class="footer-in">
+    <div><strong>Christina's Child Care Center</strong><br>5510 W Broadway Ave, Crystal, MN 55428<br><a href="tel:+17633905870">(763) 390-5870</a> · <a href="mailto:info@christinaschildcare.com">info@christinaschildcare.com</a></div>
+    <div><strong>Built by FlowState</strong><br>Full-stack platforms, operations tools, and websites.<br><a href="https://flowstate.iaotgroup.co/build">flowstate.iaotgroup.co/build</a> · <a href="mailto:fraserjt@gmail.com">fraserjt@gmail.com</a></div>
+    <div><strong>Live Platform</strong><br><a href="https://christinas-childcare.vercel.app">christinas-childcare.vercel.app</a><br>Security: 90/100 · Audited April 2026</div>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- BUSINESS CASE SECTIONS (imported from business-case.html) -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ══ WHAT IT REPLACES ══ -->
+<section id="replaces">
+  <div class="sec-eyebrow">What the Platform Replaces</div>
+  <h2 class="sec-title">Every manual process it eliminates</h2>
+  <div class="divider"></div>
+  <p class="sec-lead">Each tool replaces a manual process. The estimated weekly time savings for the owner is 8–12 hours — time currently spent on tasks the system now handles.</p>
+
+  <div class="repgrid">
+    <div class="rphdr"><span>Manual Process Today</span><span>Platform Replacement</span><span>Time Saved</span></div>
+    <div class="rprow"><span class="rb4">Paper sign-in/out sheets</span><span class="raf">iPad kiosk with PIN entry, real-time attendance</span><span class="rt">15 min/day</span></div>
+    <div class="rprow"><span class="rb4">Hand-written meal count forms</span><span class="raf">Digital meal count with auto-compliance scoring</span><span class="rt">20 min/day</span></div>
+    <div class="rprow"><span class="rb4">Texting parents individually</span><span class="raf">Parent portal with announcements, read receipts</span><span class="rt">30 min/day</span></div>
+    <div class="rprow"><span class="rb4">Whiteboard staff schedule</span><span class="raf">Schedule optimizer with overtime alerts</span><span class="rt">2 hrs/week</span></div>
+    <div class="rprow"><span class="rb4">Sticky-note enrollment tracking</span><span class="raf">CRM pipeline with funnel stages and conversion tracking</span><span class="rt">1 hr/week</span></div>
+    <div class="rprow"><span class="rb4">Paper incident reports</span><span class="raf">Digital forms with audit trail and parent notification</span><span class="rt">30 min/incident</span></div>
+    <div class="rprow"><span class="rb4">Binder of staff certifications</span><span class="raf">Auto-alerts at 90/60/30 days before expiration</span><span class="rt">2 hrs/month</span></div>
+    <div class="rprow"><span class="rb4">Phone calls between sites</span><span class="raf">Cross-site dashboard showing both centers live</span><span class="rt">1 hr/day</span></div>
+    <div class="rprow"><span class="rb4">New hire shadows for 2 weeks</span><span class="raf">30-module training system with knowledge checks</span><span class="rt">40% faster</span></div>
+    <div class="rprow"><span class="rb4">Monthly CACFP compliance binder</span><span class="raf">Automated compliance score with gap report</span><span class="rt">4 hrs/month</span></div>
+    <div class="rprow"><span class="rb4">Handwritten daily reports</span><span class="raf">Digital daily reports with parent portal delivery</span><span class="rt">20 min/day</span></div>
+    <div class="rprow"><span class="rb4">Supply request via text/note</span><span class="raf">Digital supply requests with inventory tracking</span><span class="rt">15 min/day</span></div>
+    <div class="rprow"><span class="rb4">Revenue estimates on napkin</span><span class="raf">Financial forecasting with scenario modeling</span><span class="rt">2 hrs/month</span></div>
+    <div class="rprow"><span class="rb4">Newsletter via email blast</span><span class="raf">Newsletter generator with engagement tracking</span><span class="rt">1 hr/week</span></div>
+  </div>
+
+  <div class="dark-box">
+    <h3>8–12 hours per week. Recovered.</h3>
+    <p>At an owner's effective rate of $25/hr, that is $10,000 to $15,600 per year per center in recovered time. That time goes back to the children, the families, and the staff — or to the work of opening a second location.</p>
+  </div>
+</section>
+
+<!-- ══ FAMILIES ══ -->
+<section id="families">
+  <div class="sec-eyebrow">Impact on Families</div>
+  <h2 class="sec-title">Trust, communication, and transparency</h2>
+  <div class="divider"></div>
+  <p class="sec-lead">Families choosing a childcare center weigh trust, communication, and transparency as heavily as curriculum quality. The platform addresses all three.</p>
+
+  <div class="impact-grid">
+    <div class="impact-card">
+      <h4>Daily Photo Updates</h4>
+      <p>Parents receive photos of their child during the day through the parent portal. Families receiving daily visual updates are significantly less likely to switch providers. For a 40-family center where 2 families leave due to feeling disconnected, that retention is worth $16,000–$30,000 per year.</p>
+    </div>
+    <div class="impact-card">
+      <h4>Self-Service Access</h4>
+      <p>Parents can check attendance, read newsletters, view the calendar, download documents, and message staff without calling or texting. Reduces inbound calls to staff by an estimated 40%, freeing teachers to focus on children.</p>
+    </div>
+    <div class="impact-card">
+      <h4>Digital Progress Reports</h4>
+      <p>Digital progress reports replace paper handouts. Parents access them anytime from their phone. Reports persist across the child's enrollment, creating a developmental record.</p>
+    </div>
+    <div class="impact-card">
+      <h4>Real-Time Attendance</h4>
+      <p>Parents see check-in and check-out times through the portal. For families with multiple authorized pick-up contacts, this creates accountability and peace of mind.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ STAFF ══ -->
+<section id="staff">
+  <div class="sec-eyebrow">Impact on Staff</div>
+  <h2 class="sec-title">Structured onboarding, professional development, agency</h2>
+  <div class="divider"></div>
+  <p class="sec-lead">Childcare staff turnover runs approximately 25% per year — 65% higher than the national median across all occupations. Each replacement costs $2,500–$5,000 in recruiting, training, and lost productivity.</p>
+
+  <div class="impact-grid">
+    <div class="impact-card">
+      <h4>Structured Onboarding</h4>
+      <p>New hires work through 30 training modules covering every aspect of operations. Each module includes interactive activities, knowledge checks, and links to the actual tools. Centers with structured onboarding see 50% lower first-year turnover.</p>
+    </div>
+    <div class="impact-card">
+      <h4>Knowledge Base</h4>
+      <p>When a senior staff member leaves, their institutional knowledge leaves with them. The knowledge base captures procedures, emergency protocols, classroom routines, and vendor contacts in a searchable system.</p>
+    </div>
+    <div class="impact-card">
+      <h4>Professional Development Tracking</h4>
+      <p>Staff see their certification status, training history, and development goals in one place. The system alerts them and supervisors before certifications expire. Staff who feel invested in report higher job satisfaction.</p>
+    </div>
+    <div class="impact-card">
+      <h4>Self-Service Tools</h4>
+      <p>Staff can view schedules, request time off, check pay stubs, and submit supply requests through the employee portal. These reduce the "ask the director" bottleneck and give staff agency over their own information.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ COMPLIANCE ══ -->
+<section id="compliance">
+  <div class="sec-eyebrow">Licensing &amp; Accreditation</div>
+  <h2 class="sec-title">Audit-ready documentation by default</h2>
+  <div class="divider"></div>
+  <p class="sec-lead">Minnesota childcare licensing moved to the Department of Children, Youth, and Families (DCYF) in June 2025. Violations result in fines of $100–$1,000 per violation, correction orders, or suspension.</p>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Licensing Area</th><th>Platform Feature</th><th>What It Prevents</th></tr></thead>
+    <tbody>
+      <tr><td>Staff-child ratios</td><td>Real-time ratio monitor</td><td>Ratio violations (fines, correction orders)</td></tr>
+      <tr><td>Staff qualifications</td><td>Certification tracker with 90/60/30-day alerts</td><td>Expired CPR, First Aid, or background study</td></tr>
+      <tr><td>Attendance records</td><td>iPad kiosk with timestamped entries</td><td>Inaccurate attendance claims</td></tr>
+      <tr><td>CACFP meal documentation</td><td>Automated meal counts with compliance score</td><td>Lost CACFP reimbursement, audit findings</td></tr>
+      <tr><td>Incident reporting</td><td>Digital forms with parent notification tracking</td><td>Unreported or under-documented incidents</td></tr>
+      <tr><td>Health and safety</td><td>Supply inventory with threshold alerts</td><td>Missing first aid supplies, cleaning products</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="green-box"><p><strong>NAEYC accreditation</strong> costs ~$550/year and requires extensive documentation. The platform's export features (CSV, PDF) and built-in record-keeping reduce the documentation burden from weeks of binder assembly to hours of data export.</p></div>
+</section>
+
+<!-- ══ DEPLOYMENT ══ -->
+<section id="deploy">
+  <div class="sec-eyebrow">Deployment Plan</div>
+  <h2 class="sec-title">What it takes to go live</h2>
+  <div class="divider"></div>
+
+  <div class="two">
+    <div class="cost-card">
+      <h4 style="color:var(--red);">Brooklyn Park Setup</h4>
+      <ul class="cl">
+        <li><span class="lbl">Create Supabase database project</span><span class="val">30 min</span></li>
+        <li><span class="lbl">Set Vercel environment variables</span><span class="val">15 min</span></li>
+        <li><span class="lbl">Set up Google OAuth for owner login</span><span class="val">30 min</span></li>
+        <li><span class="lbl">Enter employee data (PINs, roles, contacts)</span><span class="val">1 hr</span></li>
+        <li><span class="lbl">Install iPad at front desk</span><span class="val">15 min</span></li>
+        <li><span class="lbl">Staff completes training modules</span><span class="val">2 weeks</span></li>
+        <li class="total"><span class="lbl">Total setup</span><span class="val">~3 hrs + training</span></li>
+      </ul>
+    </div>
+    <div class="cost-card">
+      <h4 style="color:var(--red);">Adding Crystal (Scenario C)</h4>
+      <ul class="cl">
+        <li><span class="lbl">Enter Crystal employee data</span><span class="val">2 hrs</span></li>
+        <li><span class="lbl">Configure Crystal center ID</span><span class="val">30 min</span></li>
+        <li><span class="lbl">Install iPad at Crystal front desk</span><span class="val">15 min</span></li>
+        <li><span class="lbl">Crystal staff completes training</span><span class="val">2 weeks</span></li>
+        <li class="total"><span class="lbl">Additional setup</span><span class="val">~3 hrs + training</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="dark-box">
+    <h3>No additional software licenses. No additional subscriptions.</h3>
+    <p>The platform serves both centers from the same deployment. Adding Crystal to Scenario B adds roughly 3 hours of developer and owner time. Zero additional monthly operating cost. The $1,000/year covers both centers.</p>
+  </div>
+</section>
+
+<!-- ══ RISK ANALYSIS ══ -->
+<section id="risk">
+  <div class="sec-eyebrow">Risk Analysis</div>
+  <h2 class="sec-title">Risks of not adopting vs. risks of adopting</h2>
+  <div class="divider"></div>
+
+  <div class="risk-grid">
+    <div class="risk-card">
+      <h4>CACFP Revenue Loss <span class="high">HIGH</span></h4>
+      <ul>
+        <li>Manual tracking consistently misses 2-5 days/month</li>
+        <li>Annual impact: $2,000–$16,000 across both sites</li>
+      </ul>
+    </div>
+    <div class="risk-card">
+      <h4>Lost Enrollment <span class="high">HIGH</span></h4>
+      <ul>
+        <li>Inquiry sitting 7+ days without contact enrolls elsewhere</li>
+        <li>Annual impact: $8,000–$30,000 across both sites</li>
+      </ul>
+    </div>
+    <div class="risk-card">
+      <h4>Staff Turnover <span class="high">HIGH</span></h4>
+      <ul>
+        <li>Replacing 2 staff/year at $2,500-5,000 each</li>
+        <li>Annual impact: $5,000–$10,000</li>
+      </ul>
+    </div>
+    <div class="risk-card">
+      <h4>Owner Burnout <span class="high">HIGH</span></h4>
+      <ul>
+        <li>Driving between locations, carrying paperwork, context-switching</li>
+        <li>Impact: Unquantifiable but real</li>
+      </ul>
+    </div>
+    <div class="risk-card">
+      <h4>Licensing Fine <span class="med">MEDIUM</span></h4>
+      <ul>
+        <li>One staff member with lapsed CPR during inspection</li>
+        <li>Impact: $100–$1,000 per violation</li>
+      </ul>
+    </div>
+    <div class="risk-card">
+      <h4>Parent Attrition <span class="med">MEDIUM</span></h4>
+      <ul>
+        <li>1 family leaving due to feeling uninformed</li>
+        <li>Impact: $8,000–$15,000/year per family lost</li>
+      </ul>
+    </div>
+  </div>
+
+  <h4 style="font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:1.8rem 0 .7rem;font-family:'Nunito',sans-serif;">Risks of Adopting</h4>
+
+  <div class="risk-grid">
+    <div class="risk-card">
+      <h4>Staff Resistance <span class="med">MEDIUM</span></h4>
+      <ul>
+        <li>Mitigation: 30-module training system with interactive activities</li>
+        <li>Staff learn at their own pace, not forced into sessions</li>
+      </ul>
+    </div>
+    <div class="risk-card">
+      <h4>Internet Outage <span class="low">LOW</span></h4>
+      <ul>
+        <li>Platform stores data locally and syncs when connection returns</li>
+        <li>Kiosk works offline with dual-write architecture</li>
+      </ul>
+    </div>
+    <div class="risk-card">
+      <h4>Developer Unavailable <span class="low">LOW</span></h4>
+      <ul>
+        <li>Built on standard stack (Next.js, Supabase, TypeScript)</li>
+        <li>Any web developer can maintain it</li>
+      </ul>
+    </div>
+    <div class="risk-card">
+      <h4>Data Loss <span class="low">VERY LOW</span></h4>
+      <ul>
+        <li>Dual-write: cloud database + local browser storage</li>
+        <li>Supabase includes automated daily backups</li>
+      </ul>
+    </div>
+  </div>
+</section>
+<!-- ══ BOTTOM LINE ══ -->
+<section id="bottom-line">
+  <div class="sec-eyebrow">The Bottom Line</div>
+  <h2 class="sec-title">What the owner gets in each scenario</h2>
+  <div class="divider"></div>
+
+  <div class="two" style="margin-bottom:1.5rem;">
+    <div>
+      <div class="red-box">
+        <p><strong>In Scenario A,</strong> the owner runs two centers with paper, texts, and memory. Every morning starts with uncertainty about what happened yesterday at the other building. Every week, 8–12 hours go to tasks a system could handle.</p>
+      </div>
+    </div>
+    <div>
+      <div class="green-box">
+        <p><strong>In Scenario C,</strong> the owner opens one dashboard and sees attendance at both sites, staffing alerts, CACFP compliance scores, enrollment pipeline status, and AI-generated recommendations — all before arriving at either building.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-wrap">
+    <div class="spcard"><div class="spnum">107</div><div class="splbl">Total pages built</div></div>
+    <div class="spcard"><div class="spnum">3</div><div class="splbl">Role-based portals</div></div>
+    <div class="spcard"><div class="spnum">20+</div><div class="splbl">Operational tools</div></div>
+    <div class="spcard"><div class="spnum">30</div><div class="splbl">Training modules</div></div>
+    <div class="spcard"><div class="spnum" style="color:var(--green);">$1,000</div><div class="splbl">Annual operating cost</div></div>
+    <div class="spcard"><div class="spnum" style="color:var(--green);">$5K–$80K</div><div class="splbl">Executive services (negotiated)</div></div>
+    <div class="spcard"><div class="spnum">90</div><div class="splbl">Security score</div></div>
+    <div class="spcard"><div class="spnum" style="color:var(--green);">+$227K</div><div class="splbl">3-year upside (high est.)</div></div>
+  </div>
+
+  <div class="cta-box">
+    <div class="ctag">The platform is built. The decision is yours.</div>
+    <h2>$1,000/year to operate.<br>Executive services negotiated with Dr. Fraser.</h2>
+    <p>The platform operating cost is a fraction of one month of Brightwheel's payment processing fees. A negotiated executive services package ($5K–$80K/year) covers ongoing optimization, strategic advisory, and support. The platform replaces the 8–12 hours per week the owner spends on work that a system can do faster and with fewer errors.</p>
+    <div class="cta-btns">
+      <a href="https://christinas-childcare.vercel.app/guide" class="btn-yellow" target="_blank">Walk Through the Platform →</a>
+      <a href="https://calendly.com/iaotgroup/discovery" class="btn-white-outline" target="_blank">Book a Discovery Call →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- ROLLOUT PLANNER (imported from rollout-planner.html) -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: LOCATION STRATEGY -->
+  <section class="section" id="sec-strategy">
+    <div class="section-label">Step 1</div>
+    <h2 class="section-title">Location Strategy</h2>
+    <p class="section-desc">How should the platform roll out across your two locations? Select an approach.</p>
+    <div class="strategy-grid" id="strategyGrid">
+      <div class="strategy-card" data-strategy="new-first" onclick="selectStrategy(this)">
+        <div class="card-icon" style="background:#fce4ec;">&#127968;</div>
+        <h3>New Center First</h3>
+        <p>Launch at Brooklyn Park with new staff. Build good habits from day one before they know any other way.</p>
+        <div class="radio-dot"></div>
+      </div>
+      <div class="strategy-card" data-strategy="existing-first" onclick="selectStrategy(this)">
+        <div class="card-icon" style="background:#e3f2fd;">&#128204;</div>
+        <h3>Existing Center First</h3>
+        <p>Prove the platform at Crystal where operations are established and staff can give experienced feedback.</p>
+        <div class="radio-dot"></div>
+      </div>
+      <div class="strategy-card" data-strategy="both" onclick="selectStrategy(this)">
+        <div class="card-icon" style="background:#fff3e0;">&#9889;</div>
+        <h3>Both Simultaneously</h3>
+        <p>Full deployment at both sites at once. Highest training intensity but fastest to full operation.</p>
+        <div class="radio-dot"></div>
+      </div>
+      <div class="strategy-card" data-strategy="staggered" onclick="selectStrategy(this)">
+        <span class="badge">Recommended</span>
+        <div class="card-icon" style="background:#e8f5e9;">&#128640;</div>
+        <h3>Staggered Rollout</h3>
+        <p>Brooklyn Park first, Crystal follows 8-12 weeks later. Lower risk, built-in proof of concept.</p>
+        <div class="radio-dot"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: TIMELINE -->
+  <section class="section" id="sec-timeline">
+    <div class="section-label">Step 2</div>
+    <h2 class="section-title">Choose Your Timeline</h2>
+    <p class="section-desc">Select a start month for each location. Click any month to see alignment factors and risks.</p>
+
+    <div class="location-block" id="loc1Block">
+      <h3><span class="loc-dot" style="background:var(--red);"></span> <span id="loc1Name">Location 1</span></h3>
+      <p class="loc-sub" id="loc1Sub">Select a strategy above to set locations</p>
+      <div class="timeline-scroll" id="timeline1"></div>
+      <div id="detail1"></div>
+    </div>
+
+    <div class="location-block" id="loc2Block">
+      <h3><span class="loc-dot" style="background:var(--yellow-dark);"></span> <span id="loc2Name">Location 2</span></h3>
+      <p class="loc-sub" id="loc2Sub">Select a strategy above to set locations</p>
+      <div class="timeline-scroll" id="timeline2"></div>
+      <div id="detail2"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: PHASES -->
+  <section class="section" id="sec-phases">
+    <div class="section-label">Deployment Plan</div>
+    <h2 class="section-title">Three-Phase Rollout</h2>
+    <p class="section-desc">Regardless of timing, each location follows this proven deployment sequence.</p>
+    <div class="phases-stack">
+      <div class="phase-card">
+        <div class="phase-num">1</div>
+        <div class="phase-body">
+          <h3>Admin Portal + Core Operations</h3>
+          <div class="phase-weeks">Weeks 1 &ndash; 3</div>
+          <p>Stand up the operational backbone. Scheduling, attendance tracking, compliance documentation, and licensing management go live first so leadership has full visibility from day one.</p>
+          <div class="phase-tools">
+            <span>Scheduling</span><span>Attendance</span><span>Compliance</span><span>Licensing</span><span>Staff Records</span><span>Admin Dashboard</span>
+          </div>
+        </div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">2</div>
+        <div class="phase-body">
+          <h3>Employee Portal + Training System</h3>
+          <div class="phase-weeks">Weeks 4 &ndash; 6</div>
+          <p>Onboard staff into their own portal. The 30 training modules roll out progressively, daily workflows get digitized, and the team starts building muscle memory with the system.</p>
+          <div class="phase-tools">
+            <span>30 Training Modules</span><span>Staff Onboarding</span><span>Daily Workflows</span><span>Time Tracking</span><span>Internal Messaging</span>
+          </div>
+        </div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">3</div>
+        <div class="phase-body">
+          <h3>Parent Portal + Full Features</h3>
+          <div class="phase-weeks">Weeks 7 &ndash; 10</div>
+          <p>With the team confident, open the parent-facing portal. Parent communication, billing integration, daily reports, and AI-powered features go live to complete the ecosystem.</p>
+          <div class="phase-tools">
+            <span>Parent Portal</span><span>Billing Integration</span><span>Daily Reports</span><span>AI Features</span><span>Photo Sharing</span><span>Messaging</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4: DYNAMIC SUMMARY -->
+  <section class="section" id="sec-summary">
+    <div class="section-label">Your Plan</div>
+    <h2 class="section-title">Dynamic Summary</h2>
+    <p class="section-desc">This updates as you make selections above.</p>
+    <div class="summary-card" id="summaryCard">
+      <h3>&#128203; Rollout Summary</h3>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="s-label">Location 1 Start</div>
+          <div class="s-value pending" id="sumLoc1">Select strategy &amp; month</div>
+        </div>
+        <div class="summary-item">
+          <div class="s-label">Location 2 Start</div>
+          <div class="s-value pending" id="sumLoc2">Select strategy &amp; month</div>
+        </div>
+        <div class="summary-item">
+          <div class="s-label">Full Deployment</div>
+          <div class="s-value pending" id="sumComplete">&#8212;</div>
+        </div>
+        <div class="summary-item">
+          <div class="s-label">Total Training Weeks</div>
+          <div class="s-value pending" id="sumWeeks">&#8212;</div>
+        </div>
+      </div>
+      <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:8px;font-weight:600;">VISUAL TIMELINE</div>
+      <div class="timeline-bar" id="timelineBar">
+        <div class="bar-segment bar-p1" style="width:0%"></div>
+        <div class="bar-segment bar-p2" style="width:0%"></div>
+        <div class="bar-segment bar-p3" style="width:0%"></div>
+      </div>
+      <div class="timeline-bar-labels" id="barLabels">
+        <span>Start</span><span>Completion</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: RECOMMENDED -->
+  <section class="section" id="sec-recommended">
+    <div class="section-label">Our Recommendation</div>
+    <h2 class="section-title">The Recommended Path</h2>
+    <p class="section-desc">Based on your two-location setup and new staff needs, here's what we suggest.</p>
+    <div class="rec-card">
+      <div class="rec-badge">&#9733; Recommended Approach</div>
+      <h3>Staggered Rollout: Brooklyn Park &#8594; Crystal</h3>
+      <div class="rec-timeline">
+        <div class="rec-step">
+          <div class="step-dot" style="background:var(--red);">1</div>
+          <div class="step-content">
+            <div class="step-date">July 2026</div>
+            <h4>Brooklyn Park Goes Live</h4>
+            <p>New staff learn the platform as their first system. No old habits to unlearn. Build fresh operational culture with digital-first workflows before fall enrollment surge.</p>
+          </div>
+        </div>
+        <div class="rec-step">
+          <div class="step-dot" style="background:var(--yellow-dark);color:var(--dark);">2</div>
+          <div class="step-content">
+            <div class="step-date">September 2026</div>
+            <h4>Crystal Follows</h4>
+            <p>Crystal staff see the system working at Brooklyn Park. Real proof, not promises. Staff champions from Brooklyn Park can assist with training at Crystal.</p>
+          </div>
+        </div>
+        <div class="rec-step">
+          <div class="step-dot" style="background:var(--green);">3</div>
+          <div class="step-content">
+            <div class="step-date">November 2026</div>
+            <h4>Full Operation at Both Sites</h4>
+            <p>Both locations fully operational on the platform in time for holiday season and year-end compliance.</p>
+          </div>
+        </div>
+      </div>
+      <div class="rec-why">
+        <strong>Why stagger?</strong> The 2-month gap reduces training load by 50% at any given time, creates internal success stories that motivate Crystal staff, and gives you time to adjust training based on real Brooklyn Park feedback. It also means you never have both locations mid-transition simultaneously.
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6: INVESTMENT -->
+  <section class="section" id="sec-investment">
+    <div class="section-label">Investment Context</div>
+    <h2 class="section-title">What You're Getting</h2>
+    <p class="section-desc">Quick reference on the operating economics.</p>
+    <div class="invest-grid">
+      <div class="invest-card">
+        <div class="inv-number">$1,000</div>
+        <div class="inv-label">Annual Operating Cost<br>(both locations)</div>
+      </div>
+      <div class="invest-card">
+        <div class="inv-number">$2.4K&ndash;$6K</div>
+        <div class="inv-label">What Commercial SaaS<br>Would Cost Per Year</div>
+      </div>
+      <div class="invest-card">
+        <div class="inv-number">$73K&ndash;$211K</div>
+        <div class="inv-label">Estimated 10-Year<br>Savings vs. Alternatives</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <h3>Ready to choose? Let's schedule your deployment planning session.</h3>
+  <p>We'll walk through your selections and build a week-by-week implementation calendar.</p>
+  <p style="margin-top:12px;"><a href="https://flowstate.iaotgroup.co" target="_blank">flowstate.iaotgroup.co</a></p>
+  <p style="font-size:0.82rem;">FlowState / iAoT Group</p>
+  <div class="footer-brand">Built for Ophelia &amp; Stephen Zeogar &middot; Christina's Child Care Center &middot; Crystal &amp; Brooklyn Park, MN</div>
+</footer>
+
+<script>
+// ==================== DATA ====================
+const MONTHS = [
+  { key: 'apr26', label: 'April', year: '2026', sub: 'Immediate', monthIndex: 3, yearNum: 2026 },
+  { key: 'jun26', label: 'June', year: '2026', sub: 'School year end', monthIndex: 5, yearNum: 2026 },
+  { key: 'jul26', label: 'July', year: '2026', sub: 'Mid-summer', monthIndex: 6, yearNum: 2026 },
+  { key: 'aug26', label: 'August', year: '2026', sub: 'Pre-fall prep', monthIndex: 7, yearNum: 2026 },
+  { key: 'sep26', label: 'September', year: '2026', sub: 'New school year', monthIndex: 8, yearNum: 2026 },
+  { key: 'oct26', label: 'October', year: '2026', sub: 'Q4 start', monthIndex: 9, yearNum: 2026 },
+  { key: 'nov26', label: 'November', year: '2026', sub: 'Holiday prep', monthIndex: 10, yearNum: 2026 },
+  { key: 'dec26', label: 'Dec / Jan', year: '2026-27', sub: 'Fresh start', monthIndex: 11, yearNum: 2026 }
+];
+
+const MONTH_DETAILS = {
+  apr26: {
+    align: ['Platform is ready now — zero waiting', 'Lowest enrollment period means lighter workload for training', 'Builds 3+ months of experience before fall surge'],
+    risk: ['Compressed timeline — staff may feel rushed', 'New Brooklyn Park staff may not all be hired yet', 'Leaves no buffer for pre-launch adjustments'],
+    schedule: 'Intensive: 2 training sessions/week for 10 weeks. Full deployment by late June.'
+  },
+  jun26: {
+    align: ['Natural transition point as school year ends', 'Summer programs have flexible scheduling for training', 'Staff availability typically higher'],
+    risk: ['Summer vacations may cause attendance gaps in training', 'School-age enrollment drops can mask parent portal usage', 'Some staff may be seasonal'],
+    schedule: 'Standard: 1-2 sessions/week for 10 weeks. Full deployment by mid-August.'
+  },
+  jul26: {
+    align: ['Lower enrollment = more breathing room for learning', 'New staff at Brooklyn Park can learn this as their first system', '3 months to build confidence before fall enrollment surge'],
+    risk: ['Peak vacation season — some staff may miss sessions', 'Heat and summer fatigue can affect training energy', 'Need to ensure all new hires are onboarded first'],
+    schedule: 'Balanced: 1-2 sessions/week for 10 weeks. Full deployment by mid-September.'
+  },
+  aug26: {
+    align: ['Pre-fall preparation aligns with natural planning rhythm', 'Staff returning from vacations, fresh energy', 'System proven before the busiest enrollment period'],
+    risk: ['Competing with back-to-school preparation demands', 'Short runway before fall enrollment surge', 'Staff attention split between prep and training'],
+    schedule: 'Focused: 2 sessions/week for 10 weeks. Full deployment by mid-October.'
+  },
+  sep26: {
+    align: ['Fresh start energy with new school year', 'Full staff roster typically in place', 'Families expect communication changes at year start'],
+    risk: ['Highest workload period — staff capacity is stretched', 'New enrollments create administrative surge', 'Highest risk of training delays due to daily demands'],
+    schedule: 'Extended: 1 session/week for 12-14 weeks. Full deployment by December.'
+  },
+  oct26: {
+    align: ['Enrollment has stabilized after fall surge', 'Q4 start aligns with business planning cycles', 'Staff have settled into routines, more capacity'],
+    risk: ['Holiday season approaching may fragment training', 'Less natural "fresh start" motivation', 'May feel late if Brooklyn Park has been waiting'],
+    schedule: 'Standard: 1-2 sessions/week for 10 weeks. Full deployment by mid-December.'
+  },
+  nov26: {
+    align: ['Pre-holiday preparation creates urgency for organization', 'Lighter weeks around Thanksgiving for intensive training', 'Sets up clean January operations'],
+    risk: ['Holiday disruptions break training momentum', 'Staff PTO creates attendance challenges', 'Parent portal launch during holidays may see low engagement'],
+    schedule: 'Split: 2 weeks intensive, 2 weeks holiday break, resume January. Full deployment by late January.'
+  },
+  dec26: {
+    align: ['New Year fresh start — strong psychological motivator', 'Tax year / licensing year alignment', 'Families expect new year changes and updates'],
+    risk: ['December holidays delay actual start to January', 'Cold weather may affect attendance', 'Longest wait — platform sits unused for 8+ months'],
+    schedule: 'New Year: Begin January, 1-2 sessions/week for 10 weeks. Full deployment by mid-March 2027.'
+  }
+};
+
+const STRATEGIES = {
+  'new-first': { loc1: 'Brooklyn Park, MN (New)', loc2: 'Crystal, MN (Existing)', loc1short: 'Brooklyn Park', loc2short: 'Crystal' },
+  'existing-first': { loc1: 'Crystal, MN (Existing)', loc2: 'Brooklyn Park, MN (New)', loc1short: 'Crystal', loc2short: 'Brooklyn Park' },
+  'both': { loc1: 'Brooklyn Park, MN', loc2: 'Crystal, MN', loc1short: 'Brooklyn Park', loc2short: 'Crystal', simultaneous: true },
+  'staggered': { loc1: 'Brooklyn Park, MN (First)', loc2: 'Crystal, MN (8-12 weeks later)', loc1short: 'Brooklyn Park', loc2short: 'Crystal' }
+};
+
+// ==================== STATE ====================
+let state = {
+  strategy: null,
+  loc1Month: null,
+  loc2Month: null
+};
+
+// ==================== FUNCTIONS ====================
+function selectStrategy(el) {
+  document.querySelectorAll('.strategy-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  state.strategy = el.dataset.strategy;
+  const s = STRATEGIES[state.strategy];
+  document.getElementById('loc1Name').textContent = s.loc1;
+  document.getElementById('loc1Sub').textContent = s.simultaneous ? 'Select start month (both locations launch together)' : 'Select start month';
+  document.getElementById('loc2Name').textContent = s.loc2;
+  document.getElementById('loc2Sub').textContent = s.simultaneous ? 'Same as Location 1' : 'Select start month';
+  state.loc1Month = null;
+  state.loc2Month = null;
+  document.getElementById('detail1').innerHTML = '';
+  document.getElementById('detail2').innerHTML = '';
+  renderTimelines();
+  updateSummary();
+}
+
+function renderTimelines() {
+  renderTimeline('timeline1', 1);
+  renderTimeline('timeline2', 2);
+}
+
+function renderTimeline(containerId, locNum) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  MONTHS.forEach(m => {
+    const chip = document.createElement('div');
+    chip.className = 'month-chip';
+    chip.dataset.month = m.key;
+    chip.innerHTML = `<div class="chip-month">${m.label}</div><div class="chip-year">${m.year}</div><div class="chip-label">${m.sub}</div>`;
+    chip.onclick = () => selectMonth(locNum, m.key);
+    container.appendChild(chip);
+  });
+}
+
+function selectMonth(locNum, monthKey) {
+  if (locNum === 1) state.loc1Month = monthKey;
+  else state.loc2Month = monthKey;
+
+  if (state.strategy && STRATEGIES[state.strategy].simultaneous && locNum === 1) {
+    state.loc2Month = monthKey;
+    highlightChips('timeline2', monthKey);
+    showDetail(2, monthKey);
+  }
+
+  highlightChips('timeline' + locNum, monthKey);
+  showDetail(locNum, monthKey);
+  updateSummary();
+}
+
+function highlightChips(containerId, monthKey) {
+  document.querySelectorAll(`#${containerId} .month-chip`).forEach(c => {
+    c.classList.toggle('selected', c.dataset.month === monthKey);
+  });
+}
+
+function showDetail(locNum, monthKey) {
+  const d = MONTH_DETAILS[monthKey];
+  const m = MONTHS.find(x => x.key === monthKey);
+  const html = `
+    <div class="month-detail">
+      <h4>${m.label} ${m.year} Launch</h4>
+      <div class="factor-row">
+        <div class="factor-col align">
+          <h5>&#9989; Alignment Factors</h5>
+          ${d.align.map(a => `<div class="factor-item"><span class="icon">&#9989;</span> ${a}</div>`).join('')}
+        </div>
+        <div class="factor-col risk">
+          <h5>&#9888;&#65039; Risk Factors</h5>
+          ${d.risk.map(r => `<div class="factor-item"><span class="icon">&#9888;&#65039;</span> ${r}</div>`).join('')}
+        </div>
+      </div>
+      <div class="schedule-note"><strong>Training Schedule:</strong> ${d.schedule}</div>
+    </div>
+  `;
+  document.getElementById('detail' + locNum).innerHTML = html;
+}
+
+function getMonthLabel(key) {
+  const m = MONTHS.find(x => x.key === key);
+  return m ? m.label + ' ' + m.year : '—';
+}
+
+function getMonthOffset(key) {
+  const m = MONTHS.find(x => x.key === key);
+  if (!m) return 0;
+  return (m.yearNum - 2026) * 12 + m.monthIndex;
+}
+
+function addMonths(key, n) {
+  const m = MONTHS.find(x => x.key === key);
+  if (!m) return '—';
+  let mi = m.monthIndex + n;
+  let yr = m.yearNum;
+  while (mi > 11) { mi -= 12; yr++; }
+  const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return names[mi] + ' ' + yr;
+}
+
+function updateSummary() {
+  const s = state.strategy ? STRATEGIES[state.strategy] : null;
+  const loc1El = document.getElementById('sumLoc1');
+  const loc2El = document.getElementById('sumLoc2');
+  const compEl = document.getElementById('sumComplete');
+  const weeksEl = document.getElementById('sumWeeks');
+
+  if (!s) {
+    loc1El.className = 's-value pending'; loc1El.textContent = 'Select strategy & month';
+    loc2El.className = 's-value pending'; loc2El.textContent = 'Select strategy & month';
+    compEl.className = 's-value pending'; compEl.innerHTML = '—';
+    weeksEl.className = 's-value pending'; weeksEl.innerHTML = '—';
+    updateBar(null, null);
+    return;
+  }
+
+  if (state.loc1Month) {
+    loc1El.className = 's-value';
+    loc1El.textContent = s.loc1short + ' — ' + getMonthLabel(state.loc1Month);
+  } else {
+    loc1El.className = 's-value pending'; loc1El.textContent = 'Select month above';
+  }
+
+  if (state.loc2Month) {
+    loc2El.className = 's-value';
+    loc2El.textContent = s.loc2short + ' — ' + getMonthLabel(state.loc2Month);
+  } else {
+    loc2El.className = 's-value pending'; loc2El.textContent = 'Select month above';
+  }
+
+  if (state.loc1Month && state.loc2Month) {
+    const off1 = getMonthOffset(state.loc1Month);
+    const off2 = getMonthOffset(state.loc2Month);
+    const lastStart = Math.max(off1, off2);
+    const completionOffset = lastStart + 3; // ~10 weeks ≈ 2.5 months round to 3
+    const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    let cMonth = completionOffset % 12;
+    let cYear = 2026 + Math.floor(completionOffset / 12);
+    compEl.className = 's-value';
+    compEl.textContent = names[cMonth] + ' ' + cYear;
+
+    const simultaneous = s.simultaneous || state.loc1Month === state.loc2Month;
+    weeksEl.className = 's-value';
+    weeksEl.textContent = simultaneous ? '10 weeks (parallel)' : '20 weeks (10 per location)';
+
+    updateBar(state.loc1Month, state.loc2Month);
+  } else if (state.loc1Month) {
+    compEl.className = 's-value';
+    compEl.textContent = addMonths(state.loc1Month, 3) + ' (Location 1 only)';
+    weeksEl.className = 's-value'; weeksEl.textContent = '10 weeks (Location 1)';
+    updateBar(state.loc1Month, null);
+  } else {
+    compEl.className = 's-value pending'; compEl.innerHTML = '—';
+    weeksEl.className = 's-value pending'; weeksEl.innerHTML = '—';
+    updateBar(null, null);
+  }
+}
+
+function updateBar(m1, m2) {
+  const bar = document.getElementById('timelineBar');
+  const labels = document.getElementById('barLabels');
+  if (!m1 && !m2) {
+    bar.innerHTML = '<div class="bar-segment" style="width:100%;background:rgba(255,255,255,0.05);font-size:0.75rem;color:rgba(255,255,255,0.25);">Select options above to see timeline</div>';
+    labels.innerHTML = '<span></span><span></span>';
+    return;
+  }
+
+  const off1 = m1 ? getMonthOffset(m1) : null;
+  const off2 = m2 ? getMonthOffset(m2) : null;
+  const earliest = Math.min(...[off1, off2].filter(x => x !== null));
+  const latest = Math.max(...[off1, off2].filter(x => x !== null));
+  const totalSpan = latest - earliest + 4; // include 3 months of phases + 1
+
+  let html = '';
+  if (m1 && m2 && off1 !== off2) {
+    const firstOff = Math.min(off1, off2);
+    const secondOff = Math.max(off1, off2);
+    const gap = secondOff - firstOff;
+    // First location phases
+    const p1w = (3 / totalSpan * 100) / 3;
+    html += `<div class="bar-segment bar-p1" style="width:${p1w}%">P1</div>`;
+    html += `<div class="bar-segment bar-p2" style="width:${p1w}%">P2</div>`;
+    html += `<div class="bar-segment bar-p3" style="width:${p1w}%">P3</div>`;
+    // Gap
+    const gapW = ((gap - 3) / totalSpan * 100);
+    if (gapW > 0) html += `<div class="bar-segment bar-gap" style="width:${gapW}%"></div>`;
+    // Second location
+    html += `<div class="bar-segment bar-p1" style="width:${p1w}%">P1</div>`;
+    html += `<div class="bar-segment bar-p2" style="width:${p1w}%">P2</div>`;
+    html += `<div class="bar-segment bar-p3" style="width:${p1w}%">P3</div>`;
+    labels.innerHTML = `<span>${getMonthLabel(off1 < off2 ? m1 : m2)}</span><span>${addMonths(off1 > off2 ? m1 : m2, 3)}</span>`;
+  } else {
+    // Same month or only one
+    const key = m1 || m2;
+    html += `<div class="bar-segment bar-p1" style="width:33%">Phase 1</div>`;
+    html += `<div class="bar-segment bar-p2" style="width:34%">Phase 2</div>`;
+    html += `<div class="bar-segment bar-p3" style="width:33%">Phase 3</div>`;
+    labels.innerHTML = `<span>${getMonthLabel(key)}</span><span>${addMonths(key, 3)}</span>`;
+  }
+  bar.innerHTML = html;
+}
+
+// ==================== INIT ====================
+renderTimelines();
+
+</div>
+</section>
+
+</div><!-- .main -->
+
+<footer class="footer">
+  <div class="footer-in">
+    <div><strong>Christina's Child Care Center</strong><br>5510 W Broadway Ave, Crystal, MN 55428<br><a href="tel:+17633905870">(763) 390-5870</a> · <a href="mailto:info@christinaschildcare.com">info@christinaschildcare.com</a></div>
+    <div><strong>Built by FlowState</strong><br>Full-stack platforms, operations tools, and websites.<br><a href="https://flowstate.iaotgroup.co/build">flowstate.iaotgroup.co/build</a> · <a href="mailto:fraserjt@gmail.com">fraserjt@gmail.com</a></div>
+    <div><strong>Live Platform</strong><br><a href="https://christinas-childcare.vercel.app">christinas-childcare.vercel.app</a><br>Security: 90/100 · Audited April 2026</div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -256,11 +256,52 @@ export function hasRole(user: AuthUser | null, allowedRoles: UserRole[]): boolea
  * Role hierarchy for permission checks
  */
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
+  superadmin: 5,
   owner: 4,
   admin: 3,
   teacher: 2,
   parent: 1,
 };
+
+// Superadmin emails: hardcoded for security. These users get superadmin role on Google OAuth login.
+export const SUPERADMIN_EMAILS = ['fraserjt@gmail.com'];
+
+/**
+ * Sign in with Google OAuth via Supabase
+ */
+export async function signInWithGoogle(): Promise<AuthResult> {
+  if (!supabaseAuth) {
+    return { success: false, error: 'Supabase is not configured' };
+  }
+
+  try {
+    const { error } = await supabaseAuth.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    // OAuth redirects away from the page, so this return is only hit on error
+    return { success: true };
+  } catch {
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+/**
+ * Determine role for an OAuth user based on their email
+ */
+export function getRoleForEmail(email: string): UserRole {
+  if (SUPERADMIN_EMAILS.includes(email.toLowerCase())) {
+    return 'superadmin';
+  }
+  return 'parent';
+}
 
 /**
  * Check if user has at least the specified role level

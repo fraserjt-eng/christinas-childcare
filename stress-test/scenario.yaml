@@ -1,0 +1,399 @@
+file_version: stressor#0
+
+config:
+  name: "Christina's Child Care Center - Full Stress Test"
+  tag: "full-suite"
+  base_url: "http://localhost:3000"
+  max_errors: 20
+  max_time: 300.0
+  request_timeout: 10.0
+
+context:
+  admin_email: "admin@demo.com"
+  admin_pass: "admin123"
+  parent_email: "parent@demo.com"
+  parent_pass: "parent123"
+  employee_pin: "1234"
+
+sessions:
+  users: $load(users.yaml)
+  count: 15
+  ramp_up_delay: 0.3
+  verify_ssl: false
+
+scenario:
+  - sequence: init
+  - sequence: public_pages
+    repeat: 3
+  - sequence: admin_portal
+    repeat: 2
+  - sequence: employee_portal
+    repeat: 3
+  - sequence: parent_portal
+    repeat: 3
+  - sequence: api_endpoints
+    repeat: 5
+  - sequence: edge_cases
+    repeat: 1
+  - sequence: end
+
+sequences:
+  init:
+    - activity: GetRequest
+      url: /
+      assert_max_time: 3.0
+      monitor: true
+
+  # ═══ PUBLIC PAGES ═══
+  public_pages:
+    - activity: GetRequest
+      url: /
+      assert_max_time: 2.0
+      assert_match: ".*Christina.*"
+      monitor: true
+    - activity: $sleep(0.2, 0.5)
+
+    - activity: GetRequest
+      url: /programs
+      assert_max_time: 2.0
+      monitor: true
+    - activity: $sleep(0.1, 0.3)
+
+    - activity: GetRequest
+      url: /about
+      assert_max_time: 2.0
+      monitor: true
+    - activity: $sleep(0.1, 0.3)
+
+    - activity: GetRequest
+      url: /gallery
+      assert_max_time: 2.0
+      monitor: true
+    - activity: $sleep(0.1, 0.3)
+
+    - activity: GetRequest
+      url: /faq
+      assert_max_time: 2.0
+      monitor: true
+    - activity: $sleep(0.1, 0.3)
+
+    - activity: GetRequest
+      url: /enroll
+      assert_max_time: 2.0
+      monitor: true
+    - activity: $sleep(0.1, 0.3)
+
+    - activity: GetRequest
+      url: /schedule-tour
+      assert_max_time: 2.0
+      monitor: true
+    - activity: $sleep(0.1, 0.3)
+
+    - activity: GetRequest
+      url: /privacy
+      assert_max_time: 2.0
+      monitor: true
+    - activity: $sleep(0.1, 0.3)
+
+    - activity: GetRequest
+      url: /guide
+      assert_max_time: 2.0
+      monitor: true
+    - activity: $sleep(0.1, 0.3)
+
+    - activity: GetRequest
+      url: /scope-sequence
+      assert_max_time: 2.0
+      monitor: true
+    - activity: $sleep(0.1, 0.3)
+
+    - activity: GetRequest
+      url: /training
+      assert_max_time: 2.0
+      monitor: true
+
+  # ═══ ADMIN PORTAL (owner Christina) ═══
+  admin_portal:
+    - activity: GetRequest
+      url: /admin
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.3, 0.5)
+
+    - activity: GetRequest
+      url: /admin/attendance
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/families
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/scheduling
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/food-counts
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/communications
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/incidents
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/reports
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/staff
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/compliance
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/financial
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/budget
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/pipeline
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/ratios
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/lessons
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /admin/settings
+      assert_max_time: 3.0
+      monitor: true
+
+  # ═══ EMPLOYEE PORTAL (3 staff members) ═══
+  employee_portal:
+    - activity: GetRequest
+      url: /employee
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2, 0.5)
+
+    - activity: GetRequest
+      url: /employee/schedule
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /employee/meal-count
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /employee/photos
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /employee/tasks
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /employee/training
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /employee/profile
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /employee/time-off
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /employee/pay-stubs
+      assert_max_time: 3.0
+      monitor: true
+
+  # ═══ PARENT PORTAL (5 parents) ═══
+  parent_portal:
+    - activity: GetRequest
+      url: /dashboard
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.3, 0.8)
+
+    - activity: GetRequest
+      url: /dashboard/photos
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /dashboard/messages
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /dashboard/calendar
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /dashboard/children
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /dashboard/news
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /dashboard/progress
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.2)
+
+    - activity: GetRequest
+      url: /dashboard/documents
+      assert_max_time: 3.0
+      monitor: true
+
+  # ═══ API ENDPOINTS ═══
+  api_endpoints:
+    # Enrollment inquiry (public, rate-limited)
+    - activity: PostRequest
+      url: /api/inquiries
+      json:
+        parentName: "Load Test Parent $(session_id)"
+        email: "loadtest_$(session_id)@example.com"
+        phone: "555-0$(session_id)00"
+        childName: "Test Child"
+        childAge: "3"
+        program: "preschool"
+        startDate: "2026-05-01"
+        message: "Stress test inquiry from session $(session_id)"
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.5)
+
+    # Tour request (public, rate-limited)
+    - activity: PostRequest
+      url: /api/tours
+      json:
+        parentName: "Tour Test $(session_id)"
+        email: "tour_$(session_id)@example.com"
+        phone: "555-0$(session_id)01"
+        childAge: "2"
+        preferredDate: "2026-05-15"
+        preferredTime: "morning"
+      assert_max_time: 3.0
+      monitor: true
+    - activity: $sleep(0.5)
+
+    # Daily reports (read-only scaffold)
+    - activity: GetRequest
+      url: /api/reports/daily?date=2026-04-05
+      assert_max_time: 2.0
+      monitor: true
+
+  # ═══ EDGE CASES ═══
+  edge_cases:
+    # 404 handling
+    - activity: GetRequest
+      url: /this-page-does-not-exist
+      assert_status: 404
+      assert_max_time: 2.0
+      monitor: true
+
+    # Empty form submission
+    - activity: PostRequest
+      url: /api/inquiries
+      json: {}
+      assert_max_time: 3.0
+      monitor: true
+
+    # Oversized content
+    - activity: PostRequest
+      url: /api/inquiries
+      json:
+        parentName: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        email: "test@test.com"
+        message: "Normal message"
+      assert_max_time: 3.0
+      monitor: true
+
+    # XSS attempt in form
+    - activity: PostRequest
+      url: /api/inquiries
+      json:
+        parentName: "<script>alert('xss')</script>"
+        email: "xss@test.com"
+        message: "<img onerror='fetch(\"/api/tours\")' src='x'>"
+      assert_max_time: 3.0
+      monitor: true
+
+    # Kiosk page load
+    - activity: GetRequest
+      url: /kiosk
+      assert_max_time: 3.0
+      monitor: true
+
+  end:
+    - activity: GetRequest
+      url: /
+      monitor: true

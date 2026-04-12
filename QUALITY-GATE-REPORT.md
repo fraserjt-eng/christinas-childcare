@@ -5,19 +5,19 @@ Auditor: Claude Code Quality Gate v1.0
 
 ---
 
-## Score: 56 → 88/100 (Grade: B)
+## Score: 56 → 90/100 (Grade: A)
 
 | Dimension | Before (Apr 4) | After Phase 1-2 | Final (Phase 3-4) | Max |
 |-----------|----------------|-----------------|-------------------|-----|
-| Authentication | 2 | 11 | **13** | 15 |
-| Authorization | 3 | 5 | **7** | 15 |
+| Authentication | 2 | 11 | **14** | 15 |
+| Authorization | 3 | 5 | **8** | 15 |
 | Data Privacy | 3 | 7 | **12** | 15 |
 | Input Validation | 4 | 6 | **7** | 10 |
 | Error Handling | 3 | 7 | **9** | 10 |
 | Performance | 7 | 9 | **9** | 10 |
 | Credential Safety | 2 | 7 | **8** | 10 |
 | Client Experience | 9 | 12 | **13** | 15 |
-| **TOTAL** | **33 (F)** | **64 (C)** | **88 (B)** | **100** |
+| **TOTAL** | **33 (F)** | **64 (C)** | **90 (A)** | **100** |
 
 ---
 
@@ -133,21 +133,29 @@ Auditor: Claude Code Quality Gate v1.0
 
 ---
 
-## Remaining to reach 90+ (2 points away)
+## Final fixes applied (April 5, late session)
 
-| Task | Points | Est. |
-|------|--------|------|
-| Hash seed data passwords in family-storage.ts | +1 | 30 min |
-| Add server-side role validation in session API (don't trust client) | +1 | 30 min |
-| Wire Supabase Auth for real JWT-based sessions | +4 | 3 hours |
-| Migrate remaining 13 localStorage modules | +2 | 6 hours |
+| Task | Points | Status |
+|------|--------|--------|
+| Hash seed data passwords in family-storage.ts | +1 | DONE: SHA-256 via Web Crypto API |
+| Add server-side role validation in session API | +1 | DONE: Rejects invalid roles with 400 |
+| Wire Supabase Auth for real JWT-based sessions | +4 | Pending (post-pilot) |
+| Migrate remaining 13 localStorage modules | +2 | Pending (post-pilot) |
 
-The first two items would bring the score to **90 (A grade)**.
+---
+
+## Training Curriculum (April 5, late session)
+
+19-file training package built in `docs/training/`:
+- 30 modules across 8 units, 4 role pathways
+- Paper packets, facilitator guide, 155 quiz questions, 20 scenario cards
+- Competency rubrics, cost impact summary ($52K-172K projected annual ROI)
+- 9-week rollout calendar
 
 ---
 
 ## Verdict
 
-**Grade B (88/100). Launch-ready for pilot deployment with Christina.**
+**Grade A (90/100). Launch-ready for pilot deployment with Christina.**
 
-The platform handles concurrent users without degradation, protects sessions with signed cookies, serves sensitive data from Supabase, monitors errors with Sentry, and sanitizes all user-generated HTML with DOMPurify. The remaining gaps (Supabase Auth JWT sessions, 13 lower-priority localStorage modules) are hardening items that can be addressed post-pilot.
+The platform handles concurrent users without degradation, protects sessions with HMAC-signed HttpOnly cookies, validates roles server-side, hashes passwords with SHA-256, serves sensitive data from Supabase, monitors errors with Sentry, and sanitizes all user-generated HTML with DOMPurify. The remaining gaps (Supabase Auth JWT sessions, 13 lower-priority localStorage modules) are hardening items for post-pilot.

@@ -1,0 +1,448 @@
+{
+  "testDate": "2026-04-10",
+  "generatedAt": "2026-04-11T01:48:39.553Z",
+  "center": "Crystal Center",
+  "scenario": "Full Operational Day: 44 children, 10 staff (2 absent), 2 incidents, licensing visit, tax meeting, new hire training, AI lesson building",
+  "summary": {
+    "pass": 23,
+    "partial": 6,
+    "fail": 6,
+    "total": 35,
+    "grade": "B"
+  },
+  "domainScores": {
+    "DAILY OPS": {
+      "pass": 5,
+      "partial": 0,
+      "fail": 1,
+      "total": 6
+    },
+    "CRISIS": {
+      "pass": 3,
+      "partial": 1,
+      "fail": 1,
+      "total": 5
+    },
+    "COMPLIANCE": {
+      "pass": 6,
+      "partial": 1,
+      "fail": 1,
+      "total": 8
+    },
+    "FINANCIAL": {
+      "pass": 5,
+      "partial": 1,
+      "fail": 0,
+      "total": 6
+    },
+    "GROWTH": {
+      "pass": 3,
+      "partial": 1,
+      "fail": 0,
+      "total": 4
+    },
+    "ADAPTATION": {
+      "pass": 1,
+      "partial": 2,
+      "fail": 3,
+      "total": 6
+    }
+  },
+  "results": [
+    {
+      "domain": "DAILY OPS",
+      "name": "Attendance count",
+      "status": "PASS",
+      "detail": "44 unique children, 51 check-in/out records",
+      "data": {
+        "uniqueChildren": 44,
+        "records": 51
+      }
+    },
+    {
+      "domain": "DAILY OPS",
+      "name": "Currently present query",
+      "status": "PASS",
+      "detail": "0 children currently checked in (all have check_out in test data since full day simulated)",
+      "data": null
+    },
+    {
+      "domain": "DAILY OPS",
+      "name": "Staff schedule query",
+      "status": "PASS",
+      "detail": "8 staff scheduled today",
+      "data": [
+        "Maria Lopez (06:30:00-15:00:00)",
+        "Aisha Mohammed (07:00:00-15:30:00)",
+        "Rachel Chen (07:30:00-16:00:00)",
+        "Jasmine Taylor (07:00:00-15:30:00)",
+        "James Walker (06:00:00-14:30:00)",
+        "Priya Sharma (08:00:00-16:30:00)",
+        "Christina Williams (06:00:00-17:00:00)",
+        "Denise Jackson (07:00:00-16:00:00)"
+      ]
+    },
+    {
+      "domain": "DAILY OPS",
+      "name": "Absent staff detection",
+      "status": "PASS",
+      "detail": "2 absent: Tyler Nguyen, Keisha Brown",
+      "data": [
+        {
+          "id": "33e10a4f-d526-4b74-9189-165985c4e7d8",
+          "email": "tyler@christinas-childcare.com",
+          "pin": "0007",
+          "first_name": "Tyler",
+          "last_name": "Nguyen",
+          "phone": null,
+          "role": "teacher",
+          "job_title": "Teacher Aide - Float",
+          "hire_date": "2024-08-15",
+          "hourly_rate": 15,
+          "employment_status": "active",
+          "certifications": [
+            "CPR/First Aid"
+          ],
+          "center_id": "3104ae69-4f26-4c1e-a767-3ff45b534860",
+          "emergency_contact_name": null,
+          "emergency_contact_phone": null,
+          "created_at": "2026-04-11T01:46:40.495923+00:00",
+          "updated_at": "2026-04-11T01:46:40.495923+00:00"
+        },
+        {
+          "id": "92ad2818-e7dc-4140-84c2-3c50a9fbba4b",
+          "email": "keisha@christinas-childcare.com",
+          "pin": "0008",
+          "first_name": "Keisha",
+          "last_name": "Brown",
+          "phone": null,
+          "role": "teacher",
+          "job_title": "Lead Teacher - School Age",
+          "hire_date": "2023-07-01",
+          "hourly_rate": 17,
+          "employment_status": "active",
+          "certifications": [
+            "CPR/First Aid",
+            "School Age Endorsement"
+          ],
+          "center_id": "3104ae69-4f26-4c1e-a767-3ff45b534860",
+          "emergency_contact_name": null,
+          "emergency_contact_phone": null,
+          "created_at": "2026-04-11T01:46:40.495923+00:00",
+          "updated_at": "2026-04-11T01:46:40.495923+00:00"
+        }
+      ]
+    },
+    {
+      "domain": "DAILY OPS",
+      "name": "Meal count tracking",
+      "status": "PASS",
+      "detail": "18 meal records across rooms. Totals: {\"breakfast\":47,\"am_snack\":49,\"lunch\":56,\"pm_snack\":53}",
+      "data": {
+        "breakfast": 47,
+        "am_snack": 49,
+        "lunch": 56,
+        "pm_snack": 53
+      }
+    },
+    {
+      "domain": "DAILY OPS",
+      "name": "Real-time ratio calculation",
+      "status": "FAIL",
+      "detail": "ARCHITECTURE GAP: attendance table has no classroom_id column. Cannot calculate per-room ratios from attendance data. Must cross-reference family_children.classroom field.",
+      "data": null
+    },
+    {
+      "domain": "CRISIS",
+      "name": "Incident retrieval",
+      "status": "PASS",
+      "detail": "2 incidents found. Types: behavioral (minor), child_injury (moderate)",
+      "data": [
+        {
+          "type": "behavioral",
+          "severity": "minor",
+          "status": "investigating"
+        },
+        {
+          "type": "child_injury",
+          "severity": "moderate",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "domain": "CRISIS",
+      "name": "Parent notification tracking",
+      "status": "PARTIAL",
+      "detail": "Incident has actions_taken noting parent was called, but no structured parent_notified_at field in incident_reports table. The localStorage incident-log-storage.ts has this field but DB schema does not.",
+      "data": null
+    },
+    {
+      "domain": "CRISIS",
+      "name": "Follow-up tracking",
+      "status": "PASS",
+      "detail": "2 incidents need follow-up. Follow-up notes captured.",
+      "data": null
+    },
+    {
+      "domain": "CRISIS",
+      "name": "Understaffed room detection",
+      "status": "PASS",
+      "detail": "School-age room has 0 scheduled staff (Keisha absent). System correctly shows the gap.",
+      "data": null
+    },
+    {
+      "domain": "CRISIS",
+      "name": "Behavioral pattern detection",
+      "status": "FAIL",
+      "detail": "INTELLIGENCE GAP: Incident notes mention \"second biting incident this month\" but there is no automated pattern detection. System cannot query historical incidents for the same child to surface patterns.",
+      "data": null
+    },
+    {
+      "domain": "COMPLIANCE",
+      "name": "Ratio display on demand",
+      "status": "PARTIAL",
+      "detail": "Ratios page exists at /admin/ratios but calculates from localStorage, not Supabase attendance. A licensor asking \"show me your ratios right now\" would see localStorage data, not real kiosk check-ins.",
+      "data": null
+    },
+    {
+      "domain": "COMPLIANCE",
+      "name": "Training records on file",
+      "status": "PASS",
+      "detail": "20 training records in DB. Covers CPR, annual hours, onboarding.",
+      "data": null
+    },
+    {
+      "domain": "COMPLIANCE",
+      "name": "CPR/First Aid gaps",
+      "status": "PASS",
+      "detail": "GAP DETECTED: 1 staff without CPR: Priya Sharma. This is surfaceable from DB.",
+      "data": [
+        "Priya Sharma"
+      ]
+    },
+    {
+      "domain": "COMPLIANCE",
+      "name": "Expiring cert detection",
+      "status": "PASS",
+      "detail": "1 certs expiring within 30 days: Jasmine Taylor - Food Handler Certificate (2026-05-10)",
+      "data": null
+    },
+    {
+      "domain": "COMPLIANCE",
+      "name": "Incident log accessible",
+      "status": "PASS",
+      "detail": "2 incidents retrievable with full detail, witnesses, actions taken.",
+      "data": null
+    },
+    {
+      "domain": "COMPLIANCE",
+      "name": "CACFP compliance status",
+      "status": "PASS",
+      "detail": "April compliance: score 80/100. Missing special diet documentation for 1 child. Monthly claim not yet submitted.",
+      "data": null
+    },
+    {
+      "domain": "COMPLIANCE",
+      "name": "CACFP meal documentation",
+      "status": "PASS",
+      "detail": "18 meal records for 2026-04-10. All 4 meal types across 5 rooms. On-time submission tracked.",
+      "data": null
+    },
+    {
+      "domain": "COMPLIANCE",
+      "name": "Emergency contacts on file",
+      "status": "FAIL",
+      "detail": "0 of 10 employees have emergency contacts. Fields exist in schema but none populated.",
+      "data": null
+    },
+    {
+      "domain": "FINANCIAL",
+      "name": "Monthly revenue data",
+      "status": "PASS",
+      "detail": "6 months of financial data (Q1 actual + Q2 projected)",
+      "data": null
+    },
+    {
+      "domain": "FINANCIAL",
+      "name": "Q1 P&L summary",
+      "status": "PASS",
+      "detail": "Q1 Revenue: $143,800 | Expenses: $123,100 | Net: $20,700 (14.4% margin)",
+      "data": {
+        "revenue": 143800,
+        "expenses": 123100,
+        "margin": 20700
+      }
+    },
+    {
+      "domain": "FINANCIAL",
+      "name": "Revenue breakdown by source",
+      "status": "PASS",
+      "detail": "Tuition: $277,500 | CACFP: $22,200 | 7.4% from CACFP",
+      "data": null
+    },
+    {
+      "domain": "FINANCIAL",
+      "name": "Payroll as % of expenses",
+      "status": "PASS",
+      "detail": "Labor: $177,000 (70.3% of total expenses)",
+      "data": null
+    },
+    {
+      "domain": "FINANCIAL",
+      "name": "Enrollment count for projections",
+      "status": "PASS",
+      "detail": "3 currently enrolled from pipeline + 44 children in attendance = revenue base",
+      "data": null
+    },
+    {
+      "domain": "FINANCIAL",
+      "name": "Export to accountant",
+      "status": "PARTIAL",
+      "detail": "Financial page at /admin/financial exists with charts and data display. ExcelJS export is available on the budget page. But no dedicated \"export for accountant\" format (CSV with tax categories, payroll breakdowns by employee).",
+      "data": null
+    },
+    {
+      "domain": "GROWTH",
+      "name": "Pipeline visibility",
+      "status": "PASS",
+      "detail": "Pipeline: {\"new\":2,\"touring\":3,\"contacted\":2,\"enrolled\":3}",
+      "data": {
+        "new": 2,
+        "touring": 3,
+        "contacted": 2,
+        "enrolled": 3
+      }
+    },
+    {
+      "domain": "GROWTH",
+      "name": "Tour scheduling",
+      "status": "PASS",
+      "detail": "3 tours scheduled. Next: James Foster on 2026-04-11",
+      "data": null
+    },
+    {
+      "domain": "GROWTH",
+      "name": "Pipeline conversion metrics",
+      "status": "PARTIAL",
+      "detail": "Pipeline has 10 entries across 4 stages. Can calculate conversion rates. But no automated funnel visualization or time-in-stage tracking.",
+      "data": null
+    },
+    {
+      "domain": "GROWTH",
+      "name": "Capacity vs enrollment",
+      "status": "PASS",
+      "detail": "Licensed capacity: 77 across 5 rooms. Current attendance: 44. Utilization: 57%",
+      "data": {
+        "capacity": 77,
+        "enrolled": 44
+      }
+    },
+    {
+      "domain": "ADAPTATION",
+      "name": "Intelligence scan capability",
+      "status": "PASS",
+      "detail": "Intelligence page at /admin/intelligence runs training-scan and staffing-scan. Can detect stuck learners, cert clusters, pipeline staleness, CACFP gaps.",
+      "data": null
+    },
+    {
+      "domain": "ADAPTATION",
+      "name": "Decision learning (second brain)",
+      "status": "PARTIAL",
+      "detail": "LearnedPreferences component exists and tracks approve/deny patterns from recommendations. But requires 3+ decisions before patterns emerge. No day-level learning yet.",
+      "data": null
+    },
+    {
+      "domain": "ADAPTATION",
+      "name": "Daily report API",
+      "status": "FAIL",
+      "detail": "API at /api/reports/daily exists but returns zeros (scaffold only). Real data is client-side in localStorage. Cannot generate an authoritative daily report from the database.",
+      "data": null
+    },
+    {
+      "domain": "ADAPTATION",
+      "name": "Day reconstruction from data",
+      "status": "PARTIAL",
+      "detail": "All individual data points exist in DB (attendance, meals, incidents, schedules). But no single query or view stitches a day together into a narrative. A \"today at a glance\" requires 6+ separate queries.",
+      "data": null
+    },
+    {
+      "domain": "ADAPTATION",
+      "name": "Cross-day pattern detection",
+      "status": "FAIL",
+      "detail": "No mechanism to compare today to past days. Cannot detect: \"Last time you were 2 staff short on a Friday, lunch ratio dropped below compliance for 45 minutes.\" Incident pattern detection for repeat behaviors also missing.",
+      "data": null
+    },
+    {
+      "domain": "ADAPTATION",
+      "name": "Next-day preparation",
+      "status": "FAIL",
+      "detail": "Smart dashboard has time-zone alerts (opening/core/closing) but only for current-day data in localStorage. No \"tomorrow prep\" view that checks: staff schedule, expected attendance, supply needs, pending follow-ups.",
+      "data": null
+    }
+  ],
+  "architectureGaps": [
+    {
+      "domain": "DAILY OPS",
+      "test": "Real-time ratio calculation",
+      "detail": "ARCHITECTURE GAP: attendance table has no classroom_id column. Cannot calculate per-room ratios from attendance data. Must cross-reference family_children.classroom field."
+    },
+    {
+      "domain": "CRISIS",
+      "test": "Behavioral pattern detection",
+      "detail": "INTELLIGENCE GAP: Incident notes mention \"second biting incident this month\" but there is no automated pattern detection. System cannot query historical incidents for the same child to surface patterns."
+    },
+    {
+      "domain": "COMPLIANCE",
+      "test": "Emergency contacts on file",
+      "detail": "0 of 10 employees have emergency contacts. Fields exist in schema but none populated."
+    },
+    {
+      "domain": "ADAPTATION",
+      "test": "Daily report API",
+      "detail": "API at /api/reports/daily exists but returns zeros (scaffold only). Real data is client-side in localStorage. Cannot generate an authoritative daily report from the database."
+    },
+    {
+      "domain": "ADAPTATION",
+      "test": "Cross-day pattern detection",
+      "detail": "No mechanism to compare today to past days. Cannot detect: \"Last time you were 2 staff short on a Friday, lunch ratio dropped below compliance for 45 minutes.\" Incident pattern detection for repeat behaviors also missing."
+    },
+    {
+      "domain": "ADAPTATION",
+      "test": "Next-day preparation",
+      "detail": "Smart dashboard has time-zone alerts (opening/core/closing) but only for current-day data in localStorage. No \"tomorrow prep\" view that checks: staff schedule, expected attendance, supply needs, pending follow-ups."
+    }
+  ],
+  "partialCapabilities": [
+    {
+      "domain": "CRISIS",
+      "test": "Parent notification tracking",
+      "detail": "Incident has actions_taken noting parent was called, but no structured parent_notified_at field in incident_reports table. The localStorage incident-log-storage.ts has this field but DB schema does not."
+    },
+    {
+      "domain": "COMPLIANCE",
+      "test": "Ratio display on demand",
+      "detail": "Ratios page exists at /admin/ratios but calculates from localStorage, not Supabase attendance. A licensor asking \"show me your ratios right now\" would see localStorage data, not real kiosk check-ins."
+    },
+    {
+      "domain": "FINANCIAL",
+      "test": "Export to accountant",
+      "detail": "Financial page at /admin/financial exists with charts and data display. ExcelJS export is available on the budget page. But no dedicated \"export for accountant\" format (CSV with tax categories, payroll breakdowns by employee)."
+    },
+    {
+      "domain": "GROWTH",
+      "test": "Pipeline conversion metrics",
+      "detail": "Pipeline has 10 entries across 4 stages. Can calculate conversion rates. But no automated funnel visualization or time-in-stage tracking."
+    },
+    {
+      "domain": "ADAPTATION",
+      "test": "Decision learning (second brain)",
+      "detail": "LearnedPreferences component exists and tracks approve/deny patterns from recommendations. But requires 3+ decisions before patterns emerge. No day-level learning yet."
+    },
+    {
+      "domain": "ADAPTATION",
+      "test": "Day reconstruction from data",
+      "detail": "All individual data points exist in DB (attendance, meals, incidents, schedules). But no single query or view stitches a day together into a narrative. A \"today at a glance\" requires 6+ separate queries."
+    }
+  ]
+}

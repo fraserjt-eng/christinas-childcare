@@ -1,0 +1,112 @@
+file_version: stressor#0
+
+config:
+  name: "Christina's CC - Morning Rush Spike Test"
+  tag: "spike"
+  base_url: "http://localhost:3000"
+  max_errors: 50
+  max_time: 120.0
+  request_timeout: 15.0
+
+sessions:
+  users: $load(users.yaml)
+  count: 30
+  ramp_up_delay: 0.1
+  verify_ssl: false
+
+# Simulates 8:00-8:30 AM drop-off rush:
+# - 5 parents on phones checking dashboard/photos
+# - 3 employees clocking in at kiosk
+# - Admin viewing attendance in real time
+# - 5 public visitors browsing (Google traffic)
+# - Multiple kiosk check-ins simultaneously
+
+scenario:
+  - sequence: morning_rush
+    repeat: 10
+
+sequences:
+  morning_rush:
+    # Homepage (public visitors arriving from Google)
+    - activity: GetRequest
+      url: /
+      assert_max_time: 5.0
+      monitor: true
+    - activity: $sleep(0.05, 0.2)
+
+    # Kiosk check-in (employees and parents at the door)
+    - activity: GetRequest
+      url: /kiosk
+      assert_max_time: 5.0
+      monitor: true
+    - activity: $sleep(0.05, 0.2)
+
+    # Admin dashboard (Christina checking attendance)
+    - activity: GetRequest
+      url: /admin
+      assert_max_time: 5.0
+      monitor: true
+    - activity: $sleep(0.05, 0.2)
+
+    # Admin attendance (live view during drop-off)
+    - activity: GetRequest
+      url: /admin/attendance
+      assert_max_time: 5.0
+      monitor: true
+    - activity: $sleep(0.05, 0.2)
+
+    # Admin ratios (monitoring ratios during arrivals)
+    - activity: GetRequest
+      url: /admin/ratios
+      assert_max_time: 5.0
+      monitor: true
+    - activity: $sleep(0.05, 0.2)
+
+    # Parent dashboard (parents checking photos from yesterday)
+    - activity: GetRequest
+      url: /dashboard
+      assert_max_time: 5.0
+      monitor: true
+    - activity: $sleep(0.05, 0.2)
+
+    # Parent photos (most popular parent feature)
+    - activity: GetRequest
+      url: /dashboard/photos
+      assert_max_time: 5.0
+      monitor: true
+    - activity: $sleep(0.05, 0.2)
+
+    # Employee dashboard (staff checking today's tasks)
+    - activity: GetRequest
+      url: /employee
+      assert_max_time: 5.0
+      monitor: true
+    - activity: $sleep(0.05, 0.2)
+
+    # Employee meal count (breakfast tracking)
+    - activity: GetRequest
+      url: /employee/meal-count
+      assert_max_time: 5.0
+      monitor: true
+    - activity: $sleep(0.05, 0.2)
+
+    # Programs page (prospective parents)
+    - activity: GetRequest
+      url: /programs
+      assert_max_time: 5.0
+      monitor: true
+    - activity: $sleep(0.05, 0.2)
+
+    # Enrollment form (prospect converting)
+    - activity: PostRequest
+      url: /api/inquiries
+      json:
+        parentName: "Spike Test $(session_id)"
+        email: "spike_$(session_id)@example.com"
+        phone: "555-9999"
+        childName: "Test Child"
+        childAge: "2"
+        program: "toddler"
+        message: "Morning rush spike test"
+      assert_max_time: 5.0
+      monitor: true

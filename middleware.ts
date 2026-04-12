@@ -6,9 +6,9 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 
 // Route protection: maps route prefix to which roles may access it
 const protectedRoutes: Record<string, UserRole[]> = {
-  '/admin': ['owner', 'admin'],
-  '/employee': ['owner', 'admin', 'teacher'],
-  '/dashboard': ['owner', 'admin', 'teacher', 'parent'],
+  '/admin': ['superadmin', 'owner', 'admin'],
+  '/employee': ['superadmin', 'owner', 'admin', 'teacher'],
+  '/dashboard': ['superadmin', 'owner', 'admin', 'teacher', 'parent'],
 };
 
 // Public routes that never require a session check
@@ -27,6 +27,7 @@ const publicRoutes = [
   '/admin-login',
   '/employee-login',
   '/access-denied',
+  '/auth/callback',
   '/_next',
   '/favicon',
   '/images',

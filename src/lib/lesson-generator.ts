@@ -11,6 +11,7 @@ import {
   AGE_GROUP_LABELS,
   DOMAIN_LABELS,
 } from '@/types/curriculum';
+import { WRITING_STANDARDS_SYSTEM_PROMPT } from '@/lib/ai/writing-standards';
 
 // ============================================================================
 // Types
@@ -328,7 +329,7 @@ export async function callClaude(
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
-      system: systemPrompt,
+      system: WRITING_STANDARDS_SYSTEM_PROMPT + '\n\n' + systemPrompt,
       messages: [
         {
           role: 'user',

@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Server-side role validation: only accept known roles
-  const ALLOWED_ROLES = ['admin', 'owner', 'teacher', 'employee', 'parent'];
+  const ALLOWED_ROLES = ['superadmin', 'admin', 'owner', 'teacher', 'employee', 'parent'];
   if (!ALLOWED_ROLES.includes(role)) {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
   }

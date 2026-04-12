@@ -1,347 +1,132 @@
 'use client';
 
-import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Play,
-  BookOpen,
-  Users,
-  Calendar,
-  FileText,
-  BarChart3,
-  Lightbulb,
-  ChevronRight,
-  Clock,
-  GraduationCap,
-  Youtube,
-} from 'lucide-react';
-import { YouTubeEmbed, VideoPlaceholder } from '@/components/YouTubeEmbed';
+import { GraduationCap } from 'lucide-react';
+import { PathStrip } from '@/components/training/PathStrip';
+import { ModuleCard } from '@/components/training/ModuleCard';
+import { useTrainingProgress } from '@/hooks/useTrainingProgress';
+import { TrainingRole } from '@/types/training';
+import { pathwayInfo, getModulesForRole } from '@/lib/training/pathways';
+import { getCurrentEmployee } from '@/lib/employee-storage';
+import { getCurrentFamily } from '@/lib/family-storage';
 
-/**
- * Video tutorial configuration
- * When you upload videos to YouTube (unlisted), add the video ID here
- */
-const videoSections = [
-  {
-    id: 'lesson-builder',
-    title: 'Lesson Builder',
-    description: 'Create AI-powered lesson plans in minutes',
-    icon: Lightbulb,
-    duration: '3:45',
-    scriptId: 'lesson-builder-intro',
-    // Replace with actual YouTube video ID when uploaded
-    // Example: youtubeId: 'dQw4w9WgXcQ',
-    youtubeId: null as string | null,
-    // Fallback to local video if no YouTube ID
-    localVideoPath: '/videos/lesson-builder.mp4',
-  },
-  {
-    id: 'curriculum',
-    title: 'Curriculum Library',
-    description: 'Browse, filter, and remix curriculum content',
-    icon: BookOpen,
-    duration: '4:00',
-    scriptId: 'curriculum-library',
-    youtubeId: null as string | null,
-    localVideoPath: '/videos/curriculum-library.mp4',
-  },
-  {
-    id: 'staff',
-    title: 'Staff Management',
-    description: 'Manage staff profiles, schedules, and certifications',
-    icon: Users,
-    duration: '4:20',
-    scriptId: 'staff-management',
-    youtubeId: null as string | null,
-    localVideoPath: '/videos/staff-management.mp4',
-  },
-  {
-    id: 'attendance',
-    title: 'Attendance & Ratios',
-    description: 'Track daily attendance and maintain compliance',
-    icon: Calendar,
-    duration: '3:30',
-    scriptId: 'attendance-ratios',
-    youtubeId: null as string | null,
-    localVideoPath: '/videos/attendance.mp4',
-  },
-  {
-    id: 'reports',
-    title: 'Reports & Analytics',
-    description: 'Generate insights and compliance reports',
-    icon: BarChart3,
-    duration: '4:00',
-    scriptId: 'reports-analytics',
-    youtubeId: null as string | null,
-    localVideoPath: '/videos/reports.mp4',
-  },
-];
+export default function TrainingHomePage() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [role, setRole] = useState<TrainingRole | null>(null);
+  const [userName, setUserName] = useState<string>('');
 
-const quickStartGuides = [
-  {
-    title: 'New Staff Onboarding',
-    description: 'Essential training for new team members',
-    topics: ['Attendance', 'Communication', 'Safety Protocols'],
-    estimatedTime: '30 min',
-  },
-  {
-    title: 'Lead Teacher Essentials',
-    description: 'Advanced features for classroom leaders',
-    topics: ['Lesson Planning', 'Parent Updates', 'Progress Tracking'],
-    estimatedTime: '45 min',
-  },
-  {
-    title: 'Administrator Guide',
-    description: 'Complete system administration training',
-    topics: ['Staff Management', 'Reports', 'Compliance'],
-    estimatedTime: '60 min',
-  },
-];
+  useEffect(() => {
+    const employee = getCurrentEmployee();
+    if (employee) {
+      setUserId(employee.id);
+      setUserName(employee.first_name || 'there');
+      const jobTitle = (employee.job_title || '').toLowerCase();
+      if (jobTitle.includes('owner') || jobTitle.includes('director')) {
+        setRole('owner');
+      } else if (jobTitle.includes('lead')) {
+        setRole('admin');
+      } else {
+        setRole('teacher');
+      }
+      return;
+    }
 
-export default function TrainingPage() {
+    const family = getCurrentFamily();
+    if (family) {
+      setUserId(family.id);
+      const parentName = family.parents?.[0]?.name?.split(' ')[0];
+      setUserName(parentName || 'there');
+      setRole('parent');
+      return;
+    }
+
+    // Default to teacher if no auth context (demo mode)
+    setUserId('demo-user');
+    setRole('teacher');
+    setUserName('there');
+  }, []);
+
+  const { isLoading, unitProgress, getModuleProgress } = useTrainingProgress(userId, role);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-christina-red" />
+      </div>
+    );
+  }
+
+  const info = role ? pathwayInfo[role] : null;
+  const totalModules = role ? getModulesForRole(role).length : 0;
+  const completedModules = unitProgress.reduce((sum, u) => sum + u.completedModules, 0);
+  const activeUnit = unitProgress.find(u => u.status === 'active');
+  const activeModuleProgress = activeUnit ? getModuleProgress(activeUnit.unit.id) : [];
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Hero Section */}
-      <section className="relative py-16 md:py-24 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl" />
+    <div className="space-y-6 p-4 md:p-6">
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <GraduationCap className="h-5 w-5 text-christina-red" />
+          <p className="text-xs uppercase tracking-widest text-gray-500 font-body">
+            Learning and Development Path
+          </p>
         </div>
-
-        <div className="relative container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <Badge className="mb-4 bg-white/10 text-white border-white/20 hover:bg-white/20">
-              <GraduationCap className="w-3 h-3 mr-1" /> Training Center
+        <h1 className="text-2xl font-heading font-bold text-gray-900">
+          Welcome back, {userName}
+        </h1>
+        {info && (
+          <div className="flex items-center gap-2 mt-1">
+            <Badge variant="outline" className="text-xs">
+              {info.name} pathway
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 tracking-tight">
-              Learn to Use Christina&apos;s
-            </h1>
-            <p className="text-lg md:text-xl text-slate-300 mb-8 leading-relaxed">
-              Video tutorials, interactive guides, and documentation to help you
-              get the most out of our childcare management system.
+            <span className="text-sm text-gray-500 font-body">
+              {totalModules} modules &middot; {completedModules} of {totalModules} complete
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Path Strip */}
+      <PathStrip unitProgress={unitProgress} />
+
+      {/* Active Unit Inline Preview */}
+      {activeUnit && activeModuleProgress.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-heading">
+              Unit {activeUnit.unit.number}: {activeUnit.unit.title}
+            </CardTitle>
+            <p className="text-sm text-gray-500 font-body">
+              {activeUnit.unit.description}
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-white text-slate-900 hover:bg-slate-100">
-                <Play className="w-4 h-4 mr-2" /> Watch Overview
-              </Button>
-              <Button size="lg" variant="outline" className="border-2 border-white text-white bg-transparent hover:bg-white/10" asChild>
-                <Link href="/training/docs">
-                  <FileText className="w-4 h-4 mr-2" /> Browse Documentation
-                </Link>
-              </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {activeModuleProgress.map(mp => (
+                <ModuleCard key={mp.module.id} info={mp} />
+              ))}
             </div>
-          </div>
-        </div>
-      </section>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Quick Start Paths */}
-      <section className="py-16 border-b">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">Quick Start Guides</h2>
-            <p className="text-slate-600 max-w-2xl mx-auto">
-              Curated learning paths based on your role
+      {/* All completed message */}
+      {!activeUnit && completedModules > 0 && completedModules === totalModules && (
+        <Card className="border-christina-green/30 bg-green-50/50">
+          <CardContent className="p-6 text-center">
+            <GraduationCap className="h-12 w-12 text-christina-green mx-auto mb-3" />
+            <h2 className="text-xl font-heading font-bold text-gray-900 mb-1">
+              Training Complete
+            </h2>
+            <p className="text-sm text-gray-600 font-body">
+              You have completed all {totalModules} modules in your pathway. Great work.
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {quickStartGuides.map((guide) => (
-              <Card key={guide.title} className="hover:shadow-lg transition-shadow cursor-pointer group">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg group-hover:text-primary transition-colors">
-                    {guide.title}
-                  </CardTitle>
-                  <CardDescription>{guide.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {guide.topics.map((topic) => (
-                      <Badge key={topic} variant="secondary" className="text-xs">
-                        {topic}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500 flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {guide.estimatedTime}
-                    </span>
-                    <span className="text-primary font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
-                      Start <ChevronRight className="w-4 h-4" />
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Video Tutorials */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 mb-4">
-              <Youtube className="w-6 h-6 text-red-600" />
-              <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Video Tutorials</h2>
-            </div>
-            <p className="text-slate-600 max-w-2xl mx-auto">
-              Professional video guides for every feature - watch at your own pace
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-            {videoSections.map((section) => (
-              <Card key={section.id} className="overflow-hidden">
-                {/* Video Player - YouTube or Local */}
-                {section.youtubeId ? (
-                  <YouTubeEmbed
-                    videoId={section.youtubeId}
-                    title={section.title}
-                    lazyLoad={true}
-                  />
-                ) : section.localVideoPath ? (
-                  <div className="aspect-video bg-slate-900 relative">
-                    <video
-                      className="w-full h-full object-cover"
-                      controls
-                      preload="metadata"
-                      poster={`/videos/${section.id}-poster.jpg`}
-                    >
-                      <source src={section.localVideoPath} type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                ) : (
-                  <VideoPlaceholder
-                    title={section.title}
-                    description="Video coming soon"
-                  />
-                )}
-
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <section.icon className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900">{section.title}</h3>
-                        <p className="text-sm text-slate-500">{section.description}</p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="shrink-0">
-                      <Clock className="w-3 h-3 mr-1" /> {section.duration}
-                    </Badge>
-                  </div>
-                  <div className="mt-3 flex gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/training/scripts#${section.scriptId}`}>
-                        <FileText className="w-3 h-3 mr-1" /> View Script
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Interactive Tours CTA */}
-      <section className="py-16 bg-slate-50">
-        <div className="container mx-auto px-4">
-          <Card className="max-w-3xl mx-auto bg-gradient-to-br from-primary/5 via-transparent to-primary/5 border-primary/20">
-            <CardContent className="p-8 md:p-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-                <Lightbulb className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-3">
-                Interactive In-App Tours
-              </h3>
-              <p className="text-slate-600 mb-6 max-w-lg mx-auto">
-                Learn by doing with our guided tours. Look for the
-                <span className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 bg-primary/10 rounded text-primary font-medium text-sm">
-                  <Play className="w-3 h-3" /> Start Tour
-                </span>
-                button on admin pages.
-              </p>
-              <Button asChild>
-                <Link href="/admin">
-                  Go to Admin Dashboard <ChevronRight className="w-4 h-4 ml-1" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Training Resources Grid */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">Additional Resources</h2>
-            <p className="text-slate-600 max-w-2xl mx-auto">
-              Multiple ways to learn based on your preference
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <Card className="hover:shadow-lg transition-shadow group">
-              <CardContent className="pt-6 text-center">
-                <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="w-6 h-6 text-blue-600" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2">Step-by-Step Guides</h4>
-                <p className="text-sm text-slate-600 mb-4">
-                  Detailed written instructions for every feature with tips and warnings
-                </p>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/training/guides">
-                    Read Guides <ChevronRight className="w-4 h-4 ml-1" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow group">
-              <CardContent className="pt-6 text-center">
-                <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mx-auto mb-4">
-                  <Play className="w-6 h-6 text-purple-600" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2">Video Scripts</h4>
-                <p className="text-sm text-slate-600 mb-4">
-                  Narration scripts for recording your own training videos
-                </p>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/training/scripts">
-                    View Scripts <ChevronRight className="w-4 h-4 ml-1" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow group">
-              <CardContent className="pt-6 text-center">
-                <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-6 h-6 text-green-600" />
-                </div>
-                <h4 className="font-semibold text-slate-900 mb-2">Documentation</h4>
-                <p className="text-sm text-slate-600 mb-4">
-                  Searchable reference docs organized by feature category
-                </p>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/training/docs">
-                    Browse Docs <ChevronRight className="w-4 h-4 ml-1" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-    </main>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
