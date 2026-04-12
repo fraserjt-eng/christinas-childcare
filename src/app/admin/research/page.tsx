@@ -99,20 +99,30 @@ export default function ResearchInboxPage() {
         return;
       }
       setLastRunCount(data.count || 0);
-      // Merge server-returned findings directly into local state so they
-      // show up immediately even if the Supabase read path is slow.
+      // The API response is the source of truth after a run. Persist to
+      // localStorage directly so the findings survive refresh without
+      // depending on Supabase app_settings writes.
       if (Array.isArray(data.findings) && data.findings.length > 0) {
-        setFindings((prev) => {
-          const byId = new Map(prev.map((f) => [f.id, f]));
-          for (const f of data.findings as ResearchFinding[]) {
-            byId.set(f.id, f);
-          }
-          return Array.from(byId.values()).sort((a, b) =>
+        const incoming = data.findings as ResearchFinding[];
+        try {
+          const existing = JSON.parse(
+            localStorage.getItem('christinas_research_findings') || '[]'
+          ) as ResearchFinding[];
+          const byId = new Map(existing.map((f) => [f.id, f]));
+          for (const f of incoming) byId.set(f.id, f);
+          const merged = Array.from(byId.values()).sort((a, b) =>
             b.createdAt.localeCompare(a.createdAt)
           );
-        });
+          localStorage.setItem(
+            'christinas_research_findings',
+            JSON.stringify(merged)
+          );
+          setFindings(merged);
+        } catch (err) {
+          console.error('Failed to persist findings locally:', err);
+          setFindings(incoming);
+        }
       }
-      await refresh();
     } catch (e) {
       console.error(e);
       setRunError('Network error while running research');
