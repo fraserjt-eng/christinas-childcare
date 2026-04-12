@@ -78,6 +78,7 @@ export interface CrossDayAnomaly {
 export interface ActionPlan {
   id: string;
   recommendationId: string;
+  // Core action fields
   action: string;
   assignedTo: string;
   dueDate: string;
@@ -86,6 +87,12 @@ export interface ActionPlan {
   completedAt?: string;
   recheckDate?: string;
   recheckResult?: 'resolved' | 'persists' | 'pending';
+  // Root Cause Analysis (borrowed from MnMTSS Hub CNA pattern)
+  problemStatement?: string;
+  whys?: string[]; // 5 Whys
+  identifiedRootCause?: string;
+  successMeasure?: string;
+  notes?: string;
 }
 
 // Phase 4: Re-check scheduling

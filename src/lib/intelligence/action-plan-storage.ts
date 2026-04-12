@@ -40,21 +40,33 @@ export function getActionPlansByRecommendation(recommendationId: string): Action
   return getActionPlans().filter((p) => p.recommendationId === recommendationId);
 }
 
-export function createActionPlan(
-  recommendationId: string,
-  action: string,
-  assignedTo: string,
-  dueDate: string
-): ActionPlan {
+export interface CreateActionPlanInput {
+  recommendationId: string;
+  action: string;
+  assignedTo: string;
+  dueDate: string;
+  problemStatement?: string;
+  whys?: string[];
+  identifiedRootCause?: string;
+  successMeasure?: string;
+  notes?: string;
+}
+
+export function createActionPlan(input: CreateActionPlanInput): ActionPlan {
   const plans = getActionPlans();
   const plan: ActionPlan = {
     id: `ap_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    recommendationId,
-    action,
-    assignedTo,
-    dueDate,
+    recommendationId: input.recommendationId,
+    action: input.action,
+    assignedTo: input.assignedTo,
+    dueDate: input.dueDate,
     status: 'pending',
     createdAt: new Date().toISOString(),
+    problemStatement: input.problemStatement,
+    whys: input.whys,
+    identifiedRootCause: input.identifiedRootCause,
+    successMeasure: input.successMeasure,
+    notes: input.notes,
   };
   plans.push(plan);
   saveToStorage(STORAGE_KEYS.actionPlans, plans);

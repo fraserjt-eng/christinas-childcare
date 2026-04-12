@@ -513,14 +513,24 @@ export default function IntelligencePage() {
             {actionPlans.map((plan) => (
               <Card key={plan.id}>
                 <CardContent className="py-4">
-                  <div className="flex items-start justify-between">
-                    <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      {plan.identifiedRootCause && (
+                        <p className="text-xs text-christina-blue mb-1 italic">
+                          Root cause: {plan.identifiedRootCause}
+                        </p>
+                      )}
                       <p className="font-semibold text-sm">{plan.action}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Assigned to: {plan.assignedTo} | Due: {new Date(plan.dueDate).toLocaleDateString()}
                       </p>
+                      {plan.successMeasure && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Success measure: {plan.successMeasure}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-shrink-0 flex-wrap items-start">
                       {plan.status === 'pending' && (
                         <Button size="sm" variant="outline" onClick={() => {
                           updateActionPlanStatus(plan.id, 'in_progress');
