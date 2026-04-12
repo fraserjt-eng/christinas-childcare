@@ -15,6 +15,7 @@ import {
   Lightbulb,
   Info,
   ClipboardList,
+  Undo2,
 } from 'lucide-react';
 import {
   getAllFindings,
@@ -133,12 +134,26 @@ export default function ResearchInboxPage() {
 
   async function handleMarkReviewed(id: string) {
     await updateFindingStatus(id, 'reviewed');
-    await refresh();
+    // Also update local cache in place so UI updates immediately
+    setFindings((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, status: 'reviewed' } : f))
+    );
   }
 
   async function handleDismiss(id: string) {
     await updateFindingStatus(id, 'dismissed');
-    await refresh();
+    setFindings((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, status: 'dismissed' } : f))
+    );
+  }
+
+  async function handleMoveToNew(id: string) {
+    await updateFindingStatus(id, 'new');
+    setFindings((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, status: 'new' } : f))
+    );
+    // Jump the user to the New tab so they see the restored finding
+    setStatusFilter('new');
   }
 
   function openActionPlan(finding: ResearchFinding) {
@@ -287,37 +302,62 @@ export default function ResearchInboxPage() {
                   <p className="text-xs text-muted-foreground">
                     Question: {finding.questionText}
                   </p>
-                  {finding.status === 'new' && (
-                    <div className="flex gap-2 flex-wrap pt-2 border-t">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openActionPlan(finding)}
-                      >
-                        <ClipboardList className="h-4 w-4 mr-1" />
-                        Create Action Plan
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleMarkReviewed(finding.id)}
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-1" />
-                        Mark Reviewed
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleDismiss(finding.id)}
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
+                  <div className="flex gap-2 flex-wrap pt-2 border-t">
+                    {finding.status === 'new' ? (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openActionPlan(finding)}
+                        >
+                          <ClipboardList className="h-4 w-4 mr-1" />
+                          Create Action Plan
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleMarkReviewed(finding.id)}
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                          Mark Reviewed
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDismiss(finding.id)}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Dismiss
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleMoveToNew(finding.id)}
+                        >
+                          <Undo2 className="h-4 w-4 mr-1" />
+                          Move back to New
+                        </Button>
+                        {finding.status !== 'acted' && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openActionPlan(finding)}
+                          >
+                            <ClipboardList className="h-4 w-4 mr-1" />
+                            Create Action Plan
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
