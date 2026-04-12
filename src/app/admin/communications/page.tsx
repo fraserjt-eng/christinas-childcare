@@ -367,12 +367,14 @@ function NewsletterForm({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          audience: form.audience,
           dateRange: form.week_of ? `week of ${form.week_of}` : 'this week',
+          existingTitle: form.title,
+          existingSections,
           attendanceSummary: 'Current attendance data',
           mealStats: form.menu_summary || 'Standard CACFP-compliant meals',
           complianceNotes: 'All routine compliance items on track',
           staffUpdates: 'Staff training and certifications up to date',
-          existingSections,
         }),
       });
       const data = await res.json();
@@ -381,23 +383,22 @@ function NewsletterForm({
         setAiLoading(false);
         return;
       }
+
       const aiSections: Array<{ title: string; content: string }> = data.sections || [];
       if (aiSections.length === 0) {
-        setAiError('AI returned no sections. Try again or adjust your data.');
+        setAiError('AI returned no sections. Try again.');
         setAiLoading(false);
         return;
       }
 
-      // Build a lookup of AI results by normalized title
+      // Build a lookup of AI results by normalized title for heading-based matching
       const normalize = (s: string) => s.trim().toLowerCase();
-      const aiByTitle = new Map(
-        aiSections.map((s) => [normalize(s.title), s.content])
-      );
+      const aiByTitle = new Map(aiSections.map((s) => [normalize(s.title), s.content]));
       const usedTitles = new Set<string>();
 
       // Fill in empty existing sections by heading match
       const filledExisting = form.sections.map((section) => {
-        if (section.body.trim()) return section; // keep filled sections untouched
+        if (section.body.trim()) return section;
         const key = normalize(section.heading);
         if (aiByTitle.has(key)) {
           usedTitles.add(key);
@@ -414,10 +415,72 @@ function NewsletterForm({
         body: s.content,
       }));
 
-      setForm((prev) => ({
-        ...prev,
-        sections: [...filledExisting, ...appended],
-      }));
+      setForm((prev) => {
+        const next: NewsletterFormData = {
+          ...prev,
+          title: prev.title.trim() || data.title || prev.title,
+          sections: [...filledExisting, ...appended],
+        };
+
+        // Parent-specific fields
+        if (prev.audience === 'parent') {
+          if (!prev.menu_summary.trim() && data.menu_summary) {
+            next.menu_summary = data.menu_summary;
+          }
+          if (
+            Array.isArray(data.classroom_highlights) &&
+            prev.classroom_highlights.every((h) => !h.trim())
+          ) {
+            next.classroom_highlights = data.classroom_highlights.filter(
+              (h: unknown): h is string => typeof h === 'string' && h.trim().length > 0
+            );
+            if (next.classroom_highlights.length === 0) next.classroom_highlights = [''];
+          }
+          if (
+            Array.isArray(data.upcoming_events) &&
+            prev.upcoming_events.every((e) => !e.title.trim())
+          ) {
+            next.upcoming_events = data.upcoming_events
+              .filter(
+                (e: unknown): e is { title: string; date: string } =>
+                  typeof e === 'object' &&
+                  e !== null &&
+                  typeof (e as { title?: unknown }).title === 'string'
+              )
+              .map((e: { title: string; date: string }) => ({ title: e.title, date: e.date || '' }));
+            if (next.upcoming_events.length === 0) {
+              next.upcoming_events = [{ title: '', date: '' }];
+            }
+          }
+        }
+
+        // Staff-specific fields
+        if (prev.audience === 'staff') {
+          if (!prev.teaching_focus.trim() && data.teaching_focus) {
+            next.teaching_focus = data.teaching_focus;
+          }
+          if (
+            Array.isArray(data.policy_reminders) &&
+            prev.policy_reminders.every((r) => !r.trim())
+          ) {
+            next.policy_reminders = data.policy_reminders.filter(
+              (r: unknown): r is string => typeof r === 'string' && r.trim().length > 0
+            );
+            if (next.policy_reminders.length === 0) next.policy_reminders = [''];
+          }
+          if (
+            Array.isArray(data.announcements) &&
+            prev.announcements.every((a) => !a.trim())
+          ) {
+            next.announcements = data.announcements.filter(
+              (a: unknown): a is string => typeof a === 'string' && a.trim().length > 0
+            );
+            if (next.announcements.length === 0) next.announcements = [''];
+          }
+        }
+
+        return next;
+      });
     } catch (e) {
       console.error(e);
       setAiError('Network error while generating.');
