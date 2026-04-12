@@ -32,10 +32,13 @@ export default function ParentLoginPage() {
 
     // Demo mode bypass: skip family lookup entirely for known demo accounts
     const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-    const isDemoLogin = demoMode && (
-      (email === 'parent@demo.com' && password === 'parent123') ||
-      (email === 'garcia@demo.com' && password === 'garcia123')
-    );
+    const knownAccounts: Record<string, { password: string; name: string }> = {
+      'parent@demo.com': { password: 'parent123', name: 'Sarah Brown' },
+      'garcia@demo.com': { password: 'garcia123', name: 'Maria Garcia' },
+      'fraserjt@gmail.com': { password: 'password', name: 'J Fraser' },
+    };
+    const known = knownAccounts[email.toLowerCase()];
+    const isDemoLogin = demoMode && known && known.password === password;
 
     if (isDemoLogin) {
       const res = await fetch('/api/auth/session', {
@@ -44,7 +47,7 @@ export default function ParentLoginPage() {
         body: JSON.stringify({
           email,
           role: 'parent',
-          name: email === 'parent@demo.com' ? 'Sarah Brown' : 'Maria Garcia',
+          name: known.name,
         }),
       });
       if (res.status === 429) {

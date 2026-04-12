@@ -772,6 +772,40 @@ const SEED_FAMILIES: Omit<FamilyAccount, 'id' | 'created_at' | 'updated_at'>[] =
     family_bio: 'Bilingual family - Sofia speaks both English and Spanish!',
     address: '567 Maple Ave, Crystal, MN 55428',
   },
+  {
+    email: 'fraserjt@gmail.com',
+    password_hash: '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
+    status: 'active',
+    pin: '9876',
+    parents: [
+      {
+        id: 'par_fraser_1',
+        name: 'J Fraser',
+        phone: '',
+        email: 'fraserjt@gmail.com',
+        relationship: 'father',
+        is_primary: true,
+      },
+    ],
+    children: [
+      {
+        id: 'child_fraser_1',
+        name: 'Voynee Fraser',
+        date_of_birth: '',
+        classroom: '',
+        allergies: [],
+        emergency_contacts: [],
+      },
+      {
+        id: 'child_fraser_2',
+        name: 'Joshua-James Fraser',
+        date_of_birth: '',
+        classroom: '',
+        allergies: [],
+        emergency_contacts: [],
+      },
+    ],
+  },
 ];
 
 export async function seedFamilyData(): Promise<{ families: number }> {
