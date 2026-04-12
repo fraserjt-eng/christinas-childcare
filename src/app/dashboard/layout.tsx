@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { NotificationPopupWrapper } from '@/components/NotificationPopupWrapper';
 import { getCurrentFamily, seedFamilyData } from '@/lib/family-storage';
 
 export default function DashLayout({ children }: { children: React.ReactNode }) {
@@ -42,7 +43,10 @@ export default function DashLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <ErrorBoundary>
-      <DashboardLayout>{children}</DashboardLayout>
+      <DashboardLayout>
+        <NotificationPopupWrapper audience="parents" />
+        {children}
+      </DashboardLayout>
     </ErrorBoundary>
   );
 }
