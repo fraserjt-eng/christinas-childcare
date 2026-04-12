@@ -11,7 +11,7 @@ import { MessageCircle, Send, ArrowLeft } from 'lucide-react'
 interface Message { id: string; sender: string; content: string; timestamp: string; isMe: boolean }
 interface Conversation { id: string; name: string; initials: string; role: string; lastMessage: string; timestamp: string; unread: boolean; messages: Message[] }
 
-const conversations: Conversation[] = [
+const initialConversations: Conversation[] = [
   {
     id: "1", name: "Ophelia Zeogar", initials: "OZ", role: "Director",
     lastMessage: "Exciting news about our Spring Family Event!", timestamp: "10:30 AM", unread: true,
@@ -42,9 +42,32 @@ const conversations: Conversation[] = [
 ]
 
 export default function MessagesPage() {
+  const [conversations, setConversations] = useState<Conversation[]>(initialConversations)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [replyText, setReplyText] = useState("")
   const selected = conversations.find((c) => c.id === selectedId)
+
+  function handleSend() {
+    const text = replyText.trim()
+    if (!text || !selectedId) return
+    const now = new Date()
+    const timestamp = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    const newMessage: Message = {
+      id: `${selectedId}-${Date.now()}`,
+      sender: 'You',
+      content: text,
+      timestamp,
+      isMe: true,
+    }
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === selectedId
+          ? { ...c, messages: [...c.messages, newMessage], lastMessage: text, timestamp, unread: false }
+          : c
+      )
+    )
+    setReplyText("")
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-4">
@@ -95,8 +118,21 @@ export default function MessagesPage() {
                 </div>))}
             </CardContent>
             <div className="border-t p-4"><div className="flex gap-2">
-              <Input placeholder="Type a message..." value={replyText} onChange={(e) => setReplyText(e.target.value)} className="flex-1" />
-              <Button className="bg-christina-red hover:bg-christina-red/90"><Send className="h-4 w-4" /></Button>
+              <Input
+                placeholder="Type a message..."
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                onClick={handleSend}
+                disabled={!replyText.trim()}
+                className="bg-christina-red hover:bg-christina-red/90"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
             </div></div>
           </Card>
         ) : (
