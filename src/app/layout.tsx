@@ -70,43 +70,97 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "ChildCare",
-              name: "Christina's Child Care Center",
-              description:
-                "Licensed child care center in Crystal, MN providing play-based education for infants through school age children.",
-              url: "https://christinas-childcare.vercel.app",
-              telephone: ["+1-763-390-5870", "+1-555-555-5555"],
-              address: {
-                "@type": "PostalAddress",
-                streetAddress: "5510 W Broadway Ave",
-                addressLocality: "Crystal",
-                addressRegion: "MN",
-                postalCode: "55428",
-                addressCountry: "US",
-              },
-              geo: {
-                "@type": "GeoCoordinates",
-                latitude: 45.0322,
-                longitude: -93.3603,
-              },
-              openingHoursSpecification: {
-                "@type": "OpeningHoursSpecification",
-                dayOfWeek: [
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                  "Friday",
-                ],
-                opens: "06:30",
-                closes: "18:00",
-              },
-              priceRange: "$$",
-              aggregateRating: {
-                "@type": "AggregateRating",
-                ratingValue: "5",
-                reviewCount: "47",
-              },
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  "@id": "https://christinas-childcare.vercel.app/#organization",
+                  name: "Christina's Child Care Center",
+                  url: "https://christinas-childcare.vercel.app",
+                  description:
+                    "Licensed child care center serving Crystal and Brooklyn Park, MN. Play-based education for infants through school age children.",
+                  logo: "https://christinas-childcare.vercel.app/og-image.png",
+                  sameAs: [],
+                },
+                {
+                  "@type": ["ChildCare", "LocalBusiness"],
+                  "@id": "https://christinas-childcare.vercel.app/locations/crystal#location",
+                  name: "Christina's Child Care Center — Crystal",
+                  description:
+                    "Licensed child care center in Crystal, MN providing play-based education for infants through school age children.",
+                  url: "https://christinas-childcare.vercel.app/locations/crystal",
+                  telephone: "+1-763-390-5870",
+                  address: {
+                    "@type": "PostalAddress",
+                    streetAddress: "5510 W Broadway Ave",
+                    addressLocality: "Crystal",
+                    addressRegion: "MN",
+                    postalCode: "55428",
+                    addressCountry: "US",
+                  },
+                  geo: {
+                    "@type": "GeoCoordinates",
+                    latitude: 45.0322,
+                    longitude: -93.3603,
+                  },
+                  openingHoursSpecification: [
+                    {
+                      "@type": "OpeningHoursSpecification",
+                      dayOfWeek: [
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                      ],
+                      opens: "06:30",
+                      closes: "18:00",
+                    },
+                  ],
+                  priceRange: "$$",
+                  parentOrganization: {
+                    "@id": "https://christinas-childcare.vercel.app/#organization",
+                  },
+                  aggregateRating: {
+                    "@type": "AggregateRating",
+                    ratingValue: "5",
+                    reviewCount: "47",
+                  },
+                },
+                {
+                  "@type": ["ChildCare", "LocalBusiness"],
+                  "@id": "https://christinas-childcare.vercel.app/locations/brooklyn-park#location",
+                  name: "Christina's Child Care Center — Brooklyn Park",
+                  description:
+                    "Licensed child care center in Brooklyn Park, MN providing play-based education for infants through school age children.",
+                  url: "https://christinas-childcare.vercel.app/locations/brooklyn-park",
+                  telephone: "+1-555-555-5555",
+                  address: {
+                    "@type": "PostalAddress",
+                    addressLocality: "Brooklyn Park",
+                    addressRegion: "MN",
+                    postalCode: "55428",
+                    addressCountry: "US",
+                  },
+                  openingHoursSpecification: [
+                    {
+                      "@type": "OpeningHoursSpecification",
+                      dayOfWeek: [
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                      ],
+                      opens: "06:30",
+                      closes: "18:00",
+                    },
+                  ],
+                  priceRange: "$$",
+                  parentOrganization: {
+                    "@id": "https://christinas-childcare.vercel.app/#organization",
+                  },
+                },
+              ],
             }),
           }}
         />

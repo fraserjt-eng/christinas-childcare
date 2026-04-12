@@ -176,8 +176,35 @@ const stats = [
 ];
 
 export default function HomePage() {
+  // Review schema for testimonials — lets AI search engines cite individual reviews
+  const reviewsSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: testimonials.map((t, idx) => ({
+      '@type': 'Review',
+      position: idx + 1,
+      reviewBody: t.quote,
+      author: {
+        '@type': 'Person',
+        name: t.name,
+      },
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: '5',
+        bestRating: '5',
+      },
+      itemReviewed: {
+        '@id': 'https://christinas-childcare.vercel.app/#organization',
+      },
+    })),
+  };
+
   return (
     <main className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(reviewsSchema) }}
+      />
       {/* Seasonal Banner */}
       <SeasonalBanner />
 

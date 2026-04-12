@@ -209,8 +209,28 @@ function FAQCategorySection({ category, index }: { category: FAQCategory; index:
 }
 
 export default function FAQPage() {
+  // Build FAQPage JSON-LD from the existing faqCategories data for AI search citation
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqCategories.flatMap((cat) =>
+      cat.questions.map((q) => ({
+        '@type': 'Question',
+        name: q.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: q.answer,
+        },
+      }))
+    ),
+  };
+
   return (
     <div className="py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <div className="max-w-4xl mx-auto px-4">
         {/* Header */}
         <ScrollFadeIn direction="up" duration={600}>

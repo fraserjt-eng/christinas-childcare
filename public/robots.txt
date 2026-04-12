@@ -1,8 +1,80 @@
+# Default rules for all crawlers
 User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /employee/
 Disallow: /dashboard/
 Disallow: /api/
+Disallow: /kiosk/
+
+# Explicit opt-in for AI search crawlers. We want Christina's cited when
+# families ask AI search for childcare in Crystal or Brooklyn Park, MN.
+
+User-agent: GPTBot
+Allow: /
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /kiosk/
+Crawl-delay: 1
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /kiosk/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /kiosk/
+Crawl-delay: 1
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /kiosk/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /kiosk/
+Crawl-delay: 1
+
+User-agent: CCBot
+Allow: /
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /kiosk/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /kiosk/
+
+User-agent: Googlebot-Extended
+Allow: /
+Disallow: /admin/
+Disallow: /employee/
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /kiosk/
 
 Sitemap: https://christinas-childcare.vercel.app/sitemap.xml

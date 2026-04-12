@@ -1,25 +1,27 @@
-# Christina's Child Care Center: Licensed Family Child Care in Crystal, Minnesota
+# Christina's Child Care Center: Licensed Childcare in Crystal and Brooklyn Park, Minnesota
 
-> Licensed family child care serving infants through school-age children in Crystal, MN since 2020. Owner-operated by Christina with 20+ years of childcare experience. Low staff-to-child ratios, play-based curriculum, free transportation for enrolled families, and daily parent communication through a secure portal. Background-checked, CPR-certified staff. Minnesota DHS Licensed.
+> Licensed childcare serving infants through school-age children at two Minnesota locations: Crystal (5510 W Broadway Ave, 55428) and Brooklyn Park (55428). Owner-operated with 20+ years of childcare experience. Low staff-to-child ratios, play-based curriculum, free transportation for enrolled families, and daily parent communication through a secure portal. Background-checked, CPR-certified staff. Minnesota DHS Licensed.
 
-## Programs and tuition
+## Locations
 
-- Infant Care (6 weeks to 12 months): 1:4 staff-to-child ratio, $375/week. Individualized care plans, tummy time, sensory exploration, daily photo updates.
-- Toddler Program (1 to 3 years): 1:5 ratio, $325/week. Language development, social skills, outdoor play, art and music activities.
-- Preschool (3 to 5 years): 1:8 ratio, $285/week. Kindergarten readiness, early literacy, math concepts, creative expression.
-- School Age (5 to 12 years): 1:12 ratio, $185/week. Before and after school care, homework support, enrichment activities, summer programming.
+- **Crystal, MN**: 5510 W Broadway Ave, Crystal, MN 55428. Phone (763) 390-5870.
+- **Brooklyn Park, MN**: Brooklyn Park, MN 55428. Phone (555) 555-5555.
+
+Both locations operate Monday through Friday, 6:30 AM to 6:00 PM. Same team, same philosophy, same licensed curriculum at both sites.
+
+## Programs and ratios
+
+- Infant Care (6 weeks to 15 months): 1:4 staff-to-child ratio. Individualized care plans, tummy time, sensory exploration, daily photo updates.
+- Toddler Program (15 months to 3 years): 1:7 ratio. Language development, social skills, outdoor play, art and music activities.
+- Preschool (3 to 5 years): 1:10 ratio. Kindergarten readiness, early literacy, math concepts, creative expression.
+- School Age (5 to 12 years): 1:12 ratio. Before and after school care, homework support, enrichment activities, summer programming.
 
 Sibling discounts available. County childcare assistance accepted (Hennepin County).
 
-## Location and hours
-
-5510 W Broadway Ave, Crystal, MN 55428
-Monday through Friday, 6:30 AM to 6:00 PM
-Phone: (763) 555-0123
-
 ## What makes this program different
 
-- Free transportation for enrolled families (a differentiator most centers do not offer)
+- Two locations serving Crystal and Brooklyn Park MN families
+- Free transportation for enrolled families (differentiator most centers do not offer)
 - Staff-to-child ratios lower than Minnesota state requirements
 - Daily photo sharing through a secure parent portal
 - Owner on-site every day (not a franchise or corporate chain)
@@ -28,17 +30,33 @@ Phone: (763) 555-0123
 - CACFP participant (USDA Child and Adult Care Food Program): nutritious meals and snacks included
 - Play-based curriculum aligned to Minnesota Early Learning Standards
 
+## Platform intelligence
+
+Christina's Child Care Center operates on a custom platform that uses AI to support operations. An auto-researcher scans operational data nightly and surfaces non-obvious insights (CACFP optimization, staffing patterns, behavioral trends, enrollment funnel drag, training drift). The platform closes the loop on issues through structured action plans and re-checks, not just tracking. This is the first childcare platform that researches itself rather than only recording.
+
 ## Enrollment
 
-Tour scheduling and enrollment inquiries accepted online at christinas-childcare.vercel.app/enroll or by phone. Typical enrollment process: inquiry, scheduled tour, enrollment paperwork, start date coordination. Waitlist maintained when programs are at capacity.
+Tour scheduling and enrollment inquiries accepted online at https://christinas-childcare.vercel.app/enroll or by phone. Typical enrollment process: inquiry, scheduled tour, enrollment paperwork, start date coordination. Waitlist maintained when programs are at capacity.
 
 ## Licensing and compliance
 
-Minnesota Department of Human Services licensed family child care provider. Annual inspections. All staff complete required training hours. Incident reporting and safety protocols follow state childcare licensing standards.
+Minnesota Department of Human Services licensed childcare provider. Annual inspections. All staff complete required training hours. Incident reporting and safety protocols follow state childcare licensing standards.
 
 ## Technology
 
-Parent portal with secure login for viewing daily photos, newsletters, messages, and child progress. Employee portal for staff scheduling, meal counts, and training. Administrative tools for attendance, billing, compliance tracking, and reporting.
+Parent portal with secure login for viewing daily photos, newsletters, messages, and child progress. Employee portal for staff scheduling, meal counts, clock-in, and training. Administrative tools for attendance, billing, compliance tracking, intelligence recommendations, and a research inbox where an auto-researcher surfaces operational insights.
+
+## Pages
+
+- https://christinas-childcare.vercel.app
+- https://christinas-childcare.vercel.app/locations
+- https://christinas-childcare.vercel.app/locations/crystal
+- https://christinas-childcare.vercel.app/locations/brooklyn-park
+- https://christinas-childcare.vercel.app/about
+- https://christinas-childcare.vercel.app/programs
+- https://christinas-childcare.vercel.app/faq
+- https://christinas-childcare.vercel.app/enroll
+- https://christinas-childcare.vercel.app/schedule-tour
 
 ## Web property
 

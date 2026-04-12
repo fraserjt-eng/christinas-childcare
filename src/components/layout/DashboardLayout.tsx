@@ -109,6 +109,7 @@ const adminNavGroups: NavGroup[] = [
     items: [
       { href: '/admin/messaging', label: 'Staff Chat', icon: MessageSquare },
       { href: '/admin/parent-messages', label: 'Parent Messages', icon: Mail },
+      { href: '/admin/research', label: 'Research Inbox', icon: Brain },
       { href: '/admin/communications', label: 'Newsletters', icon: Mail },
       { href: '/admin/communications/photos', label: 'Photo Review', icon: Camera },
       { href: '/admin/notifications', label: 'Notifications', icon: Bell },

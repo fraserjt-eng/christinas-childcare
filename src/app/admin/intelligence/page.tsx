@@ -265,6 +265,12 @@ export default function IntelligencePage() {
               Last scan: {lastScan}
             </span>
           )}
+          <Button asChild variant="outline" size="sm">
+            <a href="/admin/research">
+              <Brain className="h-4 w-4 mr-2" />
+              Research Inbox
+            </a>
+          </Button>
           <Button
             variant="outline"
             size="sm"

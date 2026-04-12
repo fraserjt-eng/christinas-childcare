@@ -123,8 +123,29 @@ const staff = [
 ];
 
 export default function AboutPage() {
+  // Person + Organization schema for staff entity recognition in AI search
+  const personSchema = {
+    '@context': 'https://schema.org',
+    '@graph': staff.map((member) => ({
+      '@type': 'Person',
+      name: member.name,
+      jobTitle: member.role,
+      description: member.bio,
+      hasCredential: member.credentials,
+      worksFor: {
+        '@type': 'Organization',
+        '@id': 'https://christinas-childcare.vercel.app/#organization',
+        name: "Christina's Child Care Center",
+      },
+    })),
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
+      />
       {/* Page Hero */}
       <section className="relative bg-gradient-to-br from-[#C62828] via-[#c44536] to-[#C62828] py-24 md:py-32 overflow-hidden">
         {/* Decorative background elements */}
