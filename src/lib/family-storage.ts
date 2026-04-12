@@ -171,11 +171,20 @@ async function fetchFamiliesFromSupabase(): Promise<FamilyAccount[] | null> {
 
 export async function getFamilies(): Promise<FamilyAccount[]> {
   const cloudData = await fetchFamiliesFromSupabase();
-  if (cloudData !== null) {
-    saveToStorage(STORAGE_KEYS.families, cloudData);
-    return cloudData;
+  const localData = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
+
+  // Merge cloud + local by email (local wins on conflict, preserves demo seed)
+  if (cloudData !== null && cloudData.length > 0) {
+    const cloudEmails = new Set(cloudData.map((f) => f.email.toLowerCase()));
+    const localOnly = localData.filter((f) => !cloudEmails.has(f.email.toLowerCase()));
+    const merged = [...cloudData, ...localOnly];
+    saveToStorage(STORAGE_KEYS.families, merged);
+    return merged;
   }
-  return getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
+
+  // Cloud returned null (not configured / error) or empty -- use localStorage directly
+  // Do NOT overwrite localStorage with empty cloud results
+  return localData;
 }
 
 export async function getFamily(id: string): Promise<FamilyAccount | null> {
@@ -767,19 +776,28 @@ const SEED_FAMILIES: Omit<FamilyAccount, 'id' | 'created_at' | 'updated_at'>[] =
 
 export async function seedFamilyData(): Promise<{ families: number }> {
   let familyCount = 0;
+  const now = new Date().toISOString();
 
-  // Always ensure localStorage has seed data for fallback auth
+  // Ensure every SEED_FAMILIES entry exists in localStorage by email.
+  // This handles: empty storage, stale storage, partial storage, wrong-version data.
   const localFamilies = getFromStorage<FamilyAccount>(STORAGE_KEYS.families);
-  if (localFamilies.length === 0) {
-    const now = new Date().toISOString();
-    const seeded: FamilyAccount[] = SEED_FAMILIES.map((data) => ({
-      ...data,
-      id: generateFamilyId(),
-      created_at: now,
-      updated_at: now,
-    }));
-    saveToStorage(STORAGE_KEYS.families, seeded);
-    familyCount = seeded.length;
+  const existingEmails = new Set(localFamilies.map((f) => f.email.toLowerCase()));
+
+  const merged = [...localFamilies];
+  for (const seedData of SEED_FAMILIES) {
+    if (!existingEmails.has(seedData.email.toLowerCase())) {
+      merged.push({
+        ...seedData,
+        id: generateFamilyId(),
+        created_at: now,
+        updated_at: now,
+      });
+      familyCount++;
+    }
+  }
+
+  if (familyCount > 0) {
+    saveToStorage(STORAGE_KEYS.families, merged);
   }
 
   // Also try to seed to Supabase if configured
