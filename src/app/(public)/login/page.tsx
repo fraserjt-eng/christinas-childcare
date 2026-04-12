@@ -30,6 +30,9 @@ export default function ParentLoginPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
+    // Ensure demo seed is in place before authenticating
+    await seedFamilyData();
+
     const result = await authenticateFamily(email, password);
     if (result.family) {
       // Establish server-side HttpOnly session
