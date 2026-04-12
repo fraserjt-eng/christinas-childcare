@@ -30,6 +30,45 @@ export default function ParentLoginPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
+    // Demo mode bypass: skip family lookup entirely for known demo accounts
+    const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+    const isDemoLogin = demoMode && (
+      (email === 'parent@demo.com' && password === 'parent123') ||
+      (email === 'garcia@demo.com' && password === 'garcia123')
+    );
+
+    if (isDemoLogin) {
+      const res = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          role: 'parent',
+          name: email === 'parent@demo.com' ? 'Sarah Brown' : 'Maria Garcia',
+        }),
+      });
+      if (res.status === 429) {
+        setSignInError('Too many login attempts. Please wait before trying again.');
+        setLoading(false);
+        return;
+      }
+      if (!res.ok) {
+        setSignInError('Demo login failed. Check console for details.');
+        setLoading(false);
+        return;
+      }
+      // Also seed localStorage so dashboard has family data
+      await seedFamilyData();
+      // Set current family in localStorage for getCurrentFamily() check
+      const { getFamilyByEmail, setCurrentFamily } = await import('@/lib/family-storage');
+      const demoFamily = await getFamilyByEmail(email);
+      if (demoFamily) {
+        setCurrentFamily(demoFamily);
+      }
+      router.push('/dashboard');
+      return;
+    }
+
     // Ensure demo seed is in place before authenticating
     await seedFamilyData();
 
