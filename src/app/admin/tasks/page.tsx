@@ -5,6 +5,7 @@ import { TaskKanban } from '@/components/admin/TaskKanban';
 import { TimeBlockSchedule } from '@/components/admin/TimeBlockSchedule';
 import { DelegationTracker } from '@/components/admin/DelegationTracker';
 import { TimeInsights } from '@/components/admin/TimeInsights';
+import { QuickAddTaskSheet, QuickTaskData } from '@/components/admin/QuickAddTaskSheet';
 import {
   Task,
   TaskStatus,
@@ -974,7 +975,13 @@ export default function TaskBoardPage() {
   const [driftAlerts, setDriftAlerts] = useState<DriftAlert[]>([]);
   const [activeTab, setActiveTab] = useState<'board' | 'delegation' | 'kanban' | 'timeline' | 'insights'>('board');
   const [showForm, setShowForm] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  // AI task insights state
+  const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
+  const [aiInsightsError, setAiInsightsError] = useState('');
+  const [aiInsights, setAiInsights] = useState<{ patterns: string[]; rebalance: string } | null>(null);
   const [filterStaff, setFilterStaff] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [isLoaded, setIsLoaded] = useState(false);
@@ -1367,6 +1374,98 @@ export default function TaskBoardPage() {
       {/* Insights View */}
       {activeTab === 'insights' && (
         <div className="space-y-6">
+          {/* AI Insights Card */}
+          <div className="rounded-xl border-2 border-christina-blue/30 bg-christina-blue/5 p-4">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <h2 className="text-base font-semibold flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-christina-blue" />
+                  AI Pattern Analysis
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Claude scans your current task board for non-obvious patterns and a workload rebalance suggestion.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  setAiInsightsLoading(true);
+                  setAiInsightsError('');
+                  try {
+                    const res = await fetch('/api/ai/tasks/insights', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        tasks: tasks.map((t) => ({
+                          id: t.id,
+                          title: t.title,
+                          status: t.status,
+                          priority: t.priority,
+                          assigned_to: t.assigned_to,
+                          is_overdue: t.status !== 'done' && t.due_date
+                            ? new Date(t.due_date) < new Date()
+                            : false,
+                        })),
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) {
+                      setAiInsightsError(data.error || 'Analysis failed');
+                    } else {
+                      setAiInsights({ patterns: data.patterns || [], rebalance: data.rebalance || '' });
+                    }
+                  } catch {
+                    setAiInsightsError('Network error during analysis');
+                  } finally {
+                    setAiInsightsLoading(false);
+                  }
+                }}
+                disabled={aiInsightsLoading || tasks.length === 0}
+                className="px-4 py-2 rounded-full bg-christina-blue text-white text-sm font-medium hover:bg-christina-blue/90 disabled:opacity-50 flex items-center gap-2"
+              >
+                {aiInsightsLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <BarChart3 className="h-4 w-4" />
+                    Generate Insights
+                  </>
+                )}
+              </button>
+            </div>
+            {aiInsightsError && (
+              <p className="mt-3 text-sm text-christina-coral">{aiInsightsError}</p>
+            )}
+            {aiInsights && (
+              <div className="mt-4 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">
+                    Patterns
+                  </p>
+                  <ul className="space-y-1.5">
+                    {aiInsights.patterns.map((p, i) => (
+                      <li key={i} className="text-sm flex gap-2">
+                        <span className="text-christina-blue">•</span>
+                        <span>{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {aiInsights.rebalance && (
+                  <div className="pt-3 border-t border-christina-blue/20">
+                    <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">
+                      Suggested Rebalance
+                    </p>
+                    <p className="text-sm font-medium">{aiInsights.rebalance}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div>
             <h2 className="text-base font-semibold mb-1">Delegation Tracker</h2>
             <p className="text-sm text-muted-foreground mb-4">Delegation score and staff workload distribution.</p>
@@ -1391,6 +1490,39 @@ export default function TaskBoardPage() {
           }}
         />
       )}
+
+      {/* Mobile Floating Action Button — opens QuickAddTaskSheet */}
+      <button
+        type="button"
+        onClick={() => setShowQuickAdd(true)}
+        aria-label="Quick add task"
+        className="fixed bottom-6 right-6 z-40 h-14 w-14 rounded-full bg-christina-red text-white shadow-lg hover:bg-christina-red/90 active:scale-95 transition-all flex items-center justify-center lg:hidden"
+      >
+        <Plus className="h-7 w-7" />
+      </button>
+
+      {/* Quick Add Task Sheet (mobile voice-to-text) */}
+      <QuickAddTaskSheet
+        open={showQuickAdd}
+        onOpenChange={setShowQuickAdd}
+        staffOptions={STAFF_MEMBERS}
+        onSave={(data: QuickTaskData) => {
+          const firstCategory = CATEGORIES_WITH_IDS[0];
+          const firstTimeBlock = TIME_BLOCKS_WITH_IDS[0];
+          handleSaveTask({
+            title: data.title,
+            done_standard: data.done_standard,
+            category_id: firstCategory?.id || '',
+            time_block_id: firstTimeBlock?.id || '',
+            assigned_to: data.assigned_to,
+            priority: data.priority,
+            recurrence: 'once',
+            is_nap_time_task: false,
+            estimated_minutes: '',
+            notes: '',
+          });
+        }}
+      />
     </>
   );
 }

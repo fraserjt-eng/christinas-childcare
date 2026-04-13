@@ -14,6 +14,26 @@ export type NotificationType =
   | 'drift_alert'
   | 'system';
 
+export type UrgencyTier =
+  | 'urgent_0_24h'
+  | 'important_24_48h'
+  | 'upcoming_48h_1wk'
+  | 'informational';
+
+export const URGENCY_TIER_LABELS: Record<UrgencyTier, string> = {
+  urgent_0_24h: 'Urgent (0-24h)',
+  important_24_48h: 'Important (24-48h)',
+  upcoming_48h_1wk: 'Upcoming (48h-1wk)',
+  informational: 'Informational',
+};
+
+export const URGENCY_TIER_ORDER: UrgencyTier[] = [
+  'urgent_0_24h',
+  'important_24_48h',
+  'upcoming_48h_1wk',
+  'informational',
+];
+
 export interface AppNotification {
   id: string;
   type: NotificationType;
@@ -23,7 +43,31 @@ export interface AppNotification {
   sender_name?: string;
   is_read: boolean;
   created_at: string;
+  urgency_tier?: UrgencyTier;
 }
+
+export interface TierDeliveryPrefs {
+  text: boolean;
+  email: boolean;
+  in_app: boolean;
+}
+
+export interface AdminNotificationPrefs {
+  tiers: Record<UrgencyTier, TierDeliveryPrefs>;
+  quiet_hours_start?: string; // HH:MM
+  quiet_hours_end?: string;
+}
+
+export const DEFAULT_ADMIN_NOTIFICATION_PREFS: AdminNotificationPrefs = {
+  tiers: {
+    urgent_0_24h: { text: true, email: true, in_app: true },
+    important_24_48h: { text: false, email: true, in_app: true },
+    upcoming_48h_1wk: { text: false, email: false, in_app: true },
+    informational: { text: false, email: false, in_app: true },
+  },
+  quiet_hours_start: '21:00',
+  quiet_hours_end: '06:30',
+};
 
 export interface NotificationPreferences {
   task_notifications: boolean;

@@ -7,6 +7,7 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
+  useDroppable,
   useSensor,
   useSensors,
   closestCorners,
@@ -73,6 +74,73 @@ const PRIORITY_CONFIG: Record<TaskPriority, { label: string; className: string; 
   normal: { label: 'Normal', className: 'text-gray-400',   icon: <Minus className="h-3 w-3" /> },
   low:    { label: 'Low',    className: 'text-gray-300',   icon: <ArrowDown className="h-3 w-3" /> },
 };
+
+// ─── Audio + haptic feedback helpers ────────────────────────────────
+// Synthesized via Web Audio API. No external sound files.
+
+let sharedAudioContext: AudioContext | null = null;
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  if (sharedAudioContext) return sharedAudioContext;
+  try {
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return null;
+    sharedAudioContext = new Ctx();
+    return sharedAudioContext;
+  } catch {
+    return null;
+  }
+}
+
+function playTone(frequency: number, durationMs: number, type: OscillatorType = 'sine'): void {
+  if (typeof window === 'undefined') return;
+  // Respect user preference to disable sounds
+  try {
+    if (localStorage.getItem('christinas_kanban_sound') === 'off') return;
+  } catch {
+    // ignore
+  }
+
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = frequency;
+    gain.gain.value = 0.08;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    // Short fade-out to avoid clicks
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000);
+    osc.stop(ctx.currentTime + durationMs / 1000);
+  } catch (e) {
+    console.debug('Audio tone failed:', e);
+  }
+}
+
+function playLift(): void {
+  playTone(180, 40, 'sine');
+}
+
+function playDrop(): void {
+  playTone(440, 50, 'triangle');
+}
+
+function vibrate(pattern: number | number[]): void {
+  if (typeof navigator === 'undefined') return;
+  if ('vibrate' in navigator) {
+    try {
+      navigator.vibrate(pattern);
+    } catch {
+      // ignore
+    }
+  }
+}
 
 function formatMinutes(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
@@ -215,8 +283,16 @@ function KanbanColumn({
     done:        <CheckCircle2 className="h-4 w-4" />,
   };
 
+  // Make the whole column a droppable target so dropping on empty space works
+  const { setNodeRef, isOver } = useDroppable({ id: columnKey });
+
   return (
-    <div className={`flex flex-col rounded-xl border-2 ${borderColor} bg-muted/30 min-h-[400px]`}>
+    <div
+      ref={setNodeRef}
+      className={`flex flex-col rounded-xl border-2 ${borderColor} bg-muted/30 min-h-[400px] transition-all duration-200 ${
+        isOver ? 'ring-4 ring-christina-red/60 scale-[1.01] bg-christina-red/5' : ''
+      }`}
+    >
       {/* Column header */}
       <div className={`flex items-center justify-between px-4 py-3 rounded-t-xl ${headerColor}`}>
         <div className="flex items-center gap-2 font-semibold text-sm">
@@ -236,8 +312,14 @@ function KanbanColumn({
           ))}
         </SortableContext>
         {tasks.length === 0 && (
-          <div className="flex items-center justify-center h-16 rounded-lg border-2 border-dashed border-muted-foreground/20">
-            <p className="text-xs text-muted-foreground">Drop tasks here</p>
+          <div
+            className={`flex items-center justify-center h-16 rounded-lg border-2 border-dashed transition-colors ${
+              isOver ? 'border-christina-red bg-christina-red/10' : 'border-muted-foreground/20'
+            }`}
+          >
+            <p className="text-xs text-muted-foreground">
+              {isOver ? 'Release to drop here' : 'Drop tasks here'}
+            </p>
           </div>
         )}
       </div>
@@ -323,6 +405,9 @@ export function TaskKanban() {
   const handleDragStart = (event: DragStartEvent) => {
     const task = tasks.find((t) => t.id === event.active.id);
     setActiveTask(task ?? null);
+    // Lift feedback: short tone + brief vibrate
+    playLift();
+    vibrate(10);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -347,6 +432,13 @@ export function TaskKanban() {
     }
 
     if (!targetStatus) return;
+
+    // Only play confirm feedback if the card actually changed column
+    const sourceTask = tasks.find((t) => t.id === activeId);
+    if (sourceTask && sourceTask.status !== targetStatus) {
+      playDrop();
+      vibrate(30);
+    }
 
     const updated = tasks.map((t) => {
       if (t.id !== activeId) return t;

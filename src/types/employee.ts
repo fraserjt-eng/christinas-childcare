@@ -7,6 +7,17 @@ import { UserRole } from './database';
 // Employee Types
 // ============================================================================
 
+export interface EmployeePermissions {
+  canEditSchedules?: boolean;
+  canApproveTimeOff?: boolean;
+  canPostPhotos?: boolean;
+  canAccessFinancials?: boolean;
+  canManageFamilies?: boolean;
+  canAccessIntelligence?: boolean;
+  canManageStaff?: boolean;
+  canManageSubs?: boolean;
+}
+
 export interface Employee {
   id: string;
   email: string;
@@ -27,6 +38,12 @@ export interface Employee {
   date_of_birth?: string;
   created_at: string;
   updated_at: string;
+  // Profile + access fields (added v8)
+  permissions?: EmployeePermissions;
+  pageAccess?: string[]; // whitelist of route prefixes; empty/undefined = role default
+  profileImage?: string;
+  startDate?: string;
+  bio?: string;
 }
 
 export type EmployeeCreate = Omit<Employee, 'id' | 'created_at' | 'updated_at'>;

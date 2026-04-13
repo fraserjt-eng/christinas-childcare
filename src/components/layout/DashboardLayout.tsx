@@ -63,6 +63,7 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
       { href: '/admin/ratios', label: 'Ratio Monitor', icon: BarChart3 },
       { href: '/admin/food-counts', label: 'Food Counts', icon: UtensilsCrossed },
+      { href: '/admin/subs', label: 'Subs', icon: UserPlus },
     ],
   },
   {
@@ -70,7 +71,7 @@ const adminNavGroups: NavGroup[] = [
     icon: Users,
     items: [
       { href: '/admin/staff', label: 'Staff Directory', icon: UserCheck },
-      { href: '/admin/staff/knowledge-base', label: 'Knowledge Base', icon: BookOpen },
+      { href: '/admin/staff/knowledge-base', label: 'Org Operations', icon: BookOpen },
       { href: '/admin/staff/development', label: 'Staff Development', icon: GraduationCap },
       { href: '/admin/training', label: 'Training System', icon: Target },
       { href: '/admin/scheduling', label: 'Scheduling', icon: Clock },

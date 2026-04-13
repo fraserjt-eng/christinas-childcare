@@ -2,6 +2,7 @@
 // localStorage for demo mode, designed for Supabase migration
 
 export type KnowledgeCategory =
+  | 'strategic_foundation'
   | 'daily_procedures'
   | 'emergency_protocols'
   | 'classroom_routines'
@@ -11,6 +12,7 @@ export type KnowledgeCategory =
   | 'equipment_instructions';
 
 export const CATEGORY_LABELS: Record<KnowledgeCategory, string> = {
+  strategic_foundation: 'Strategic Foundation',
   daily_procedures: 'Daily Procedures',
   emergency_protocols: 'Emergency Protocols',
   classroom_routines: 'Classroom Routines',
@@ -19,6 +21,28 @@ export const CATEGORY_LABELS: Record<KnowledgeCategory, string> = {
   vendor_contacts: 'Vendor Contacts',
   equipment_instructions: 'Equipment Instructions',
 };
+
+export const CATEGORY_DESCRIPTIONS: Record<KnowledgeCategory, string> = {
+  strategic_foundation: 'Mission, vision, values, and the philosophy that shapes how we run',
+  daily_procedures: 'The routines that keep the day running without drift',
+  emergency_protocols: 'What we do when things go sideways — fast',
+  classroom_routines: 'Age-specific rhythms for infants, toddlers, preschool, school age',
+  parent_templates: 'Pre-written communications that sound like us, not corporate',
+  compliance_checklists: 'State, licensing, CACFP — what must be true and when',
+  vendor_contacts: 'Who to call and for what',
+  equipment_instructions: 'How the building works',
+};
+
+export const CATEGORY_ORDER: KnowledgeCategory[] = [
+  'strategic_foundation',
+  'daily_procedures',
+  'classroom_routines',
+  'emergency_protocols',
+  'compliance_checklists',
+  'parent_templates',
+  'vendor_contacts',
+  'equipment_instructions',
+];
 
 export interface KnowledgeEntry {
   id: string;
@@ -79,7 +103,66 @@ function seedIfEmpty(): void {
   if (existing.length > 0) return;
 
   const now = new Date().toISOString();
+  const strategicSeed: KnowledgeEntry[] = [
+    {
+      id: 'kb_strategic_mission',
+      title: 'Mission — Who we are and why we exist',
+      category: 'strategic_foundation',
+      content_html: '<h2>Mission</h2><p>Placeholder. This is where the center\'s reason for being gets written in plain language. Not a slogan. Not a wall decal. The one sentence every staff member can repeat and every family can feel.</p><p><em>(To be finalized in summer strategic planning.)</em></p>',
+      author_name: 'Leadership',
+      status: 'draft',
+      is_onboarding_required: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: 'kb_strategic_vision',
+      title: 'Vision — Where we\'re going',
+      category: 'strategic_foundation',
+      content_html: '<h2>Vision</h2><p>Placeholder. The picture of what this center looks like in five years. Specific enough to steer decisions, ambitious enough to pull the work forward.</p><p><em>(To be finalized in summer strategic planning.)</em></p>',
+      author_name: 'Leadership',
+      status: 'draft',
+      is_onboarding_required: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: 'kb_strategic_values',
+      title: 'Values — What we commit to',
+      category: 'strategic_foundation',
+      content_html: '<h2>Values</h2><p>Placeholder. Four or five commitments we make to children, families, staff, and each other. Short enough to memorize. Sharp enough to hold ourselves to.</p><p><em>(To be finalized in summer strategic planning.)</em></p>',
+      author_name: 'Leadership',
+      status: 'draft',
+      is_onboarding_required: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: 'kb_strategic_philosophy',
+      title: 'Operations Philosophy — How we run (High Warmth + High Structure)',
+      category: 'strategic_foundation',
+      content_html: '<h2>Operations Philosophy</h2><p>High warmth and high structure, together, not as a tradeoff. Kids feel loved and know what comes next. Staff feel supported and know what\'s expected. Families trust us because they can see the system working.</p><p><em>(To be finalized in summer strategic planning.)</em></p>',
+      author_name: 'Leadership',
+      status: 'draft',
+      is_onboarding_required: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: 'kb_strategic_drift',
+      title: 'Drift Prevention — Systems that hold the line',
+      category: 'strategic_foundation',
+      content_html: '<h2>Drift Prevention</h2><p>Drift is what happens when standards slip one small step at a time. This page names the systems we use to catch drift before it becomes normal: weekly walk-throughs, monthly review of the operations handbook, staff check-ins that surface friction early.</p><p><em>(To be finalized in summer strategic planning.)</em></p>',
+      author_name: 'Leadership',
+      status: 'draft',
+      is_onboarding_required: true,
+      created_at: now,
+      updated_at: now,
+    },
+  ];
+
   const seed: KnowledgeEntry[] = [
+    ...strategicSeed,
     {
       id: 'kb_seed_1',
       title: 'Morning Opening Checklist',

@@ -11,6 +11,7 @@ import { createEntry, CATEGORY_LABELS, type KnowledgeCategory } from '@/lib/know
 import { CheckCircle2, Lightbulb, Plus } from 'lucide-react';
 
 const CATEGORY_COLORS: Record<KnowledgeCategory, string> = {
+  strategic_foundation: 'bg-christina-red/10 text-christina-red',
   daily_procedures: 'bg-blue-100 text-blue-800',
   emergency_protocols: 'bg-red-100 text-red-800',
   classroom_routines: 'bg-green-100 text-green-800',

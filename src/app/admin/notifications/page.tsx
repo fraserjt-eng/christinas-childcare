@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { NotificationTierPrefs } from '@/components/admin/NotificationTierPrefs';
 import {
   Bell,
   BellOff,
@@ -435,6 +436,9 @@ export default function NotificationsPage() {
             </Button>
           </div>
         </div>
+
+        {/* Urgency Tier Preferences */}
+        {showPrefs && <NotificationTierPrefs />}
 
         {/* Preferences Panel */}
         {showPrefs && (
