@@ -1,5 +1,8 @@
 // Center-wide announcements from admin to all users (parents, staff, admins).
-// localStorage-backed. Each announcement tracks per-user dismissal.
+// Dual-write to Supabase + localStorage. Sync API preserved for existing callers;
+// cloud sync happens in background via fire-and-forget promises.
+
+import { createDualWrite } from '@/lib/supabase/dual-write';
 
 export interface CenterAnnouncement {
   id: string;
@@ -14,7 +17,23 @@ export interface CenterAnnouncement {
 const STORAGE_KEY = 'christinas_center_announcements';
 const DISMISSED_KEY = 'christinas_dismissed_announcements';
 
-function getAll(): CenterAnnouncement[] {
+const store = createDualWrite<CenterAnnouncement>({
+  table: 'center_announcements',
+  localKey: STORAGE_KEY,
+});
+
+// Kick cloud hydration once per session. dual-write.getAll() merges cloud into
+// the localStorage cache, so subsequent sync reads see the merged set.
+let hydrated = false;
+function hydrateOnce(): void {
+  if (hydrated || typeof window === 'undefined') return;
+  hydrated = true;
+  void store.getAll().catch(() => {
+    /* background sync */
+  });
+}
+
+function getAllLocal(): CenterAnnouncement[] {
   if (typeof window === 'undefined') return [];
   try {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -23,15 +42,6 @@ function getAll(): CenterAnnouncement[] {
     // ignore
   }
   return [];
-}
-
-function saveAll(items: CenterAnnouncement[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch (e) {
-    console.error('Failed to save announcements:', e);
-  }
 }
 
 function getDismissed(userKey: string): string[] {
@@ -76,16 +86,17 @@ const SEED: CenterAnnouncement[] = [
 ];
 
 export function seedAnnouncements(): void {
-  const existing = getAll();
+  hydrateOnce();
+  const existing = getAllLocal();
   if (existing.length > 0) return;
-  saveAll(SEED);
+  void store.saveMany(SEED);
 }
 
 export function getAnnouncementsForAudience(
   audience: 'parents' | 'staff' | 'admin'
 ): CenterAnnouncement[] {
   seedAnnouncements();
-  return getAll().filter((a) => {
+  return getAllLocal().filter((a) => {
     if (a.audience === 'all') return true;
     if (audience === 'parents') return a.audience === 'parents';
     if (audience === 'staff' || audience === 'admin') return a.audience === 'staff';
@@ -124,6 +135,6 @@ export function createAnnouncement(
     id: `ann-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     postedAt: new Date().toISOString(),
   };
-  saveAll([...getAll(), announcement]);
+  void store.save(announcement);
   return announcement;
 }

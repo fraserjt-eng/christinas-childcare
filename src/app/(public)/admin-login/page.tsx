@@ -23,48 +23,21 @@ export default function AdminLoginPage() {
     const password = formData.get('password') as string;
 
     try {
-      // Try Supabase first if configured
       const { signIn, isSupabaseConfigured } = await import('@/lib/auth');
-      if (isSupabaseConfigured) {
-        const result = await signIn(email, password);
-        if (result.success) {
-          router.push('/admin');
-          return;
-        }
-        // If Supabase fails, fall through to demo mode check below
-      }
-
-      // Demo mode: validate demo credentials and create server-side session
-      const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-      const validCredentials = isDemoMode
-        ? email === 'admin@demo.com' && password === 'admin123'
-        : false;
-
-      if (!validCredentials) {
-        setError(isDemoMode ? 'Invalid credentials. Use test login below.' : 'Invalid credentials.');
+      if (!isSupabaseConfigured) {
+        setError('Authentication service not configured. Please contact the director.');
         setLoading(false);
         return;
       }
 
-      const res = await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, role: 'admin', name: 'Admin' }),
-      });
-
-      if (res.status === 429) {
-        setError('Too many login attempts. Please wait before trying again.');
-        setLoading(false);
-        return;
-      }
-
-      const data = await res.json();
-      if (data.success) {
+      const result = await signIn(email, password);
+      if (result.success) {
         router.push('/admin');
-      } else {
-        setError(data.error || 'Login failed.');
-        setLoading(false);
+        return;
       }
+
+      setError(result.error || 'Invalid credentials. Try Sign in with Google instead.');
+      setLoading(false);
     } catch {
       setError('Connection error. Please try again.');
       setLoading(false);
@@ -126,13 +99,6 @@ export default function AdminLoginPage() {
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
-            {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
-              <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Test Credentials</p>
-                <p className="text-sm font-mono">Email: admin@demo.com</p>
-                <p className="text-sm font-mono">Password: admin123</p>
-              </div>
-            )}
             <div className="mt-4 text-center text-sm text-muted-foreground">
               <Link href="/login" className="text-christina-blue hover:underline">← Parent login</Link>
             </div>

@@ -1,5 +1,7 @@
 // Newsletter Storage Module for Christina's Child Care Center
-// localStorage for demo mode, designed for Supabase migration
+// Dual-write: Supabase + localStorage via createDualWrite.
+
+import { createDualWrite } from '@/lib/supabase/dual-write';
 
 export type NewsletterStatus = 'draft' | 'scheduled' | 'sent';
 
@@ -42,35 +44,20 @@ export const SECTION_TYPE_LABELS: Record<string, string> = {
 
 const NEWSLETTERS_KEY = 'christinas_newsletters';
 
-function getFromStorage<T>(key: string): T[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveToStorage<T>(key: string, data: T[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (error) {
-    console.error(`Error saving ${key}:`, error);
-  }
-}
+const store = createDualWrite<Newsletter>({
+  table: 'newsletters',
+  localKey: NEWSLETTERS_KEY,
+});
 
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Normalize newsletters from localStorage (handles both old and new data formats)
+// Normalize newsletters (handles both old and new data formats)
 function normalizeNewsletter(raw: Record<string, unknown>): Newsletter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const n = raw as any;
 
-  // Map content_sections (old format) to sections (new format) if needed
   let sections = n.sections || [];
   if ((!sections || sections.length === 0) && n.content_sections && n.content_sections.length > 0) {
     sections = n.content_sections.map((cs: { id: string; heading: string; body: string; sort_order?: number }) => ({
@@ -95,11 +82,11 @@ function normalizeNewsletter(raw: Record<string, unknown>): Newsletter {
 export async function getNewsletters(filters?: {
   status?: NewsletterStatus;
 }): Promise<Newsletter[]> {
-  const raw = getFromStorage<Record<string, unknown>>(NEWSLETTERS_KEY);
-  let newsletters = raw.map(normalizeNewsletter);
+  const raw = await store.getAll();
+  let newsletters = raw.map((n) => normalizeNewsletter(n as unknown as Record<string, unknown>));
 
   if (filters?.status) {
-    newsletters = newsletters.filter(n => n.status === filters.status);
+    newsletters = newsletters.filter((n) => n.status === filters.status);
   }
 
   newsletters.sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -107,25 +94,22 @@ export async function getNewsletters(filters?: {
 }
 
 export async function getNewsletter(id: string): Promise<Newsletter | null> {
-  const newsletters = getFromStorage<Newsletter>(NEWSLETTERS_KEY);
-  return newsletters.find(n => n.id === id) || null;
+  const raw = await store.getById(id);
+  if (!raw) return null;
+  return normalizeNewsletter(raw as unknown as Record<string, unknown>);
 }
 
 export async function createNewsletter(
   data: Omit<Newsletter, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Newsletter> {
-  const newsletters = getFromStorage<Newsletter>(NEWSLETTERS_KEY);
   const now = new Date().toISOString();
-
   const newsletter: Newsletter = {
     ...data,
     id: generateId('news'),
     created_at: now,
     updated_at: now,
   };
-
-  newsletters.push(newsletter);
-  saveToStorage(NEWSLETTERS_KEY, newsletters);
+  await store.save(newsletter);
   return newsletter;
 }
 
@@ -133,27 +117,25 @@ export async function updateNewsletter(
   id: string,
   updates: Partial<Newsletter>
 ): Promise<Newsletter | null> {
-  const newsletters = getFromStorage<Newsletter>(NEWSLETTERS_KEY);
-  const index = newsletters.findIndex(n => n.id === id);
-  if (index === -1) return null;
+  const existing = await getNewsletter(id);
+  if (!existing) return null;
 
-  newsletters[index] = {
-    ...newsletters[index],
+  const merged: Newsletter = {
+    ...existing,
     ...updates,
-    id: newsletters[index].id,
-    created_at: newsletters[index].created_at,
+    id: existing.id,
+    created_at: existing.created_at,
     updated_at: new Date().toISOString(),
   };
 
-  saveToStorage(NEWSLETTERS_KEY, newsletters);
-  return newsletters[index];
+  await store.save(merged);
+  return merged;
 }
 
 export async function deleteNewsletter(id: string): Promise<boolean> {
-  const newsletters = getFromStorage<Newsletter>(NEWSLETTERS_KEY);
-  const filtered = newsletters.filter(n => n.id !== id);
-  if (filtered.length === newsletters.length) return false;
-  saveToStorage(NEWSLETTERS_KEY, filtered);
+  const existing = await store.getById(id);
+  if (!existing) return false;
+  await store.remove(id);
   return true;
 }
 
@@ -164,7 +146,6 @@ export async function sendNewsletter(id: string): Promise<Newsletter | null> {
   });
 }
 
-// Get sent newsletters for parent archive
 export async function getSentNewsletters(): Promise<Newsletter[]> {
   return getNewsletters({ status: 'sent' });
 }

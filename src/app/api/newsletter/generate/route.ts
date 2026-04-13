@@ -3,6 +3,8 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { callClaudeHaiku } from '@/lib/ai/claude-client';
 import { loadAIConfig } from '@/lib/ai-config';
+import { checkAIRateLimit, rateLimitedResponse } from '@/lib/ai-rate-limit';
+import { checkDailyQuota, recordTokenUsage, estimateTokens } from '@/lib/ai-usage-storage';
 
 const NEWSLETTER_SYSTEM_PROMPT = `You write warm, professional newsletters for Christina's Child Care Center in Crystal, MN.
 
@@ -113,6 +115,23 @@ Return ONLY this JSON shape:
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    // Rate limit check
+    const rateCheck = checkAIRateLimit(request, 'newsletter');
+    if (!rateCheck.success) {
+      return rateLimitedResponse(rateCheck) as unknown as NextResponse;
+    }
+
+    // Daily quota check
+    const quota = await checkDailyQuota();
+    if (!quota.ok) {
+      return NextResponse.json(
+        {
+          error: `Daily AI token cap reached (${quota.used} / ${quota.cap}). Try again tomorrow or raise the cap in Admin → Settings → AI.`,
+        },
+        { status: 503 }
+      );
+    }
+
     const config = await loadAIConfig();
     if (!config.apiKey || !config.enabled || !config.features.newsletter) {
       return NextResponse.json(
@@ -134,6 +153,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       apiKey,
       2000
     );
+
+    // Record token usage (estimate since callClaudeHaiku doesn't return usage metadata)
+    const estimated = estimateTokens(userPrompt, response);
+    await recordTokenUsage('newsletter', Math.floor(estimated * 0.6), Math.floor(estimated * 0.4));
 
     // Extract the first JSON object from the response
     const jsonMatch = response.match(/\{[\s\S]*\}/);

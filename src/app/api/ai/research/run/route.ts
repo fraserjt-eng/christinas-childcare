@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { runResearchPass } from '@/lib/intelligence/auto-research';
 import { saveManyFindings } from '@/lib/intelligence/research-findings-storage';
+import { checkAIRateLimit, rateLimitedResponse } from '@/lib/ai-rate-limit';
+import { checkDailyQuota, recordTokenUsage, estimateTokens } from '@/lib/ai-usage-storage';
 
 export async function POST(request: Request): Promise<NextResponse> {
   // Admin-only: require auth_session cookie
@@ -11,6 +13,23 @@ export async function POST(request: Request): Promise<NextResponse> {
   const session = cookieStore.get('auth_session');
   if (!session?.value) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limit check
+  const rateCheck = checkAIRateLimit(request, 'research');
+  if (!rateCheck.success) {
+    return rateLimitedResponse(rateCheck) as unknown as NextResponse;
+  }
+
+  // Daily quota check
+  const quota = await checkDailyQuota();
+  if (!quota.ok) {
+    return NextResponse.json(
+      {
+        error: `Daily AI token cap reached (${quota.used} / ${quota.cap}). Try again tomorrow or raise the cap in Admin → Settings → AI.`,
+      },
+      { status: 503 }
+    );
   }
 
   try {
@@ -29,6 +48,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (result.findings.length > 0) {
       await saveManyFindings(result.findings);
     }
+
+    // Record best-effort token usage estimate based on findings payload
+    const findingsText = JSON.stringify(result.findings);
+    const estimated = estimateTokens(JSON.stringify(questionIds || []), findingsText);
+    await recordTokenUsage('research', Math.floor(estimated * 0.6), Math.floor(estimated * 0.4));
 
     return NextResponse.json(
       {

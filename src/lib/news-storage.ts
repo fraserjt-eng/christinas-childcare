@@ -1,34 +1,15 @@
 // News Storage Module for Christina's Child Care Center
-// Uses localStorage for persistence, designed for easy Supabase migration
+// Dual-write: Supabase + localStorage fallback via createDualWrite.
 
 import { NewsUpdate, NewsUpdateCreate, generateNewsId } from '@/types/news';
+import { createDualWrite } from '@/lib/supabase/dual-write';
 
-// Storage key
 const STORAGE_KEY = 'christinas_news_updates';
 
-// ============================================================================
-// Generic Storage Helpers
-// ============================================================================
-
-function getFromStorage(): NewsUpdate[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error('Error reading news from storage:', error);
-    return [];
-  }
-}
-
-function saveToStorage(data: NewsUpdate[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (error) {
-    console.error('Error saving news to storage:', error);
-  }
-}
+const store = createDualWrite<NewsUpdate>({
+  table: 'news_updates',
+  localKey: STORAGE_KEY,
+});
 
 // ============================================================================
 // News CRUD Operations
@@ -40,7 +21,7 @@ export async function getNewsUpdates(filters?: {
   type?: NewsUpdate['type'];
   limit?: number;
 }): Promise<NewsUpdate[]> {
-  let updates = getFromStorage();
+  let updates = await store.getAll();
 
   if (filters) {
     if (filters.is_published !== undefined) {
@@ -54,8 +35,9 @@ export async function getNewsUpdates(filters?: {
     }
   }
 
-  // Sort by published_at descending (newest first)
-  updates.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
+  updates.sort(
+    (a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+  );
 
   if (filters?.limit) {
     updates = updates.slice(0, filters.limit);
@@ -65,23 +47,18 @@ export async function getNewsUpdates(filters?: {
 }
 
 export async function getNewsUpdate(id: string): Promise<NewsUpdate | null> {
-  const updates = getFromStorage();
-  return updates.find((u) => u.id === id) || null;
+  return store.getById(id);
 }
 
 export async function createNewsUpdate(data: NewsUpdateCreate): Promise<NewsUpdate> {
-  const updates = getFromStorage();
   const now = new Date().toISOString();
-
   const newUpdate: NewsUpdate = {
     ...data,
     id: generateNewsId(),
     created_at: now,
     updated_at: now,
   };
-
-  updates.push(newUpdate);
-  saveToStorage(updates);
+  await store.save(newUpdate);
   return newUpdate;
 }
 
@@ -89,46 +66,37 @@ export async function updateNewsUpdate(
   id: string,
   data: Partial<NewsUpdate>
 ): Promise<NewsUpdate | null> {
-  const updates = getFromStorage();
-  const index = updates.findIndex((u) => u.id === id);
-
-  if (index === -1) return null;
+  const existing = await store.getById(id);
+  if (!existing) return null;
 
   const updatedNews: NewsUpdate = {
-    ...updates[index],
+    ...existing,
     ...data,
-    id: updates[index].id,
-    created_at: updates[index].created_at,
+    id: existing.id,
+    created_at: existing.created_at,
     updated_at: new Date().toISOString(),
   };
 
-  updates[index] = updatedNews;
-  saveToStorage(updates);
+  await store.save(updatedNews);
   return updatedNews;
 }
 
 export async function deleteNewsUpdate(id: string): Promise<boolean> {
-  const updates = getFromStorage();
-  const index = updates.findIndex((u) => u.id === id);
-
-  if (index === -1) return false;
-
-  updates.splice(index, 1);
-  saveToStorage(updates);
+  const existing = await store.getById(id);
+  if (!existing) return false;
+  await store.remove(id);
   return true;
 }
 
 export async function togglePublished(id: string): Promise<NewsUpdate | null> {
   const update = await getNewsUpdate(id);
   if (!update) return null;
-
   return updateNewsUpdate(id, { is_published: !update.is_published });
 }
 
 export async function toggleFeatured(id: string): Promise<NewsUpdate | null> {
   const update = await getNewsUpdate(id);
   if (!update) return null;
-
   return updateNewsUpdate(id, { is_featured: !update.is_featured });
 }
 
@@ -138,25 +106,11 @@ export async function toggleFeatured(id: string): Promise<NewsUpdate | null> {
 
 const SAMPLE_NEWS: NewsUpdateCreate[] = [
   // Sample news is empty by default - admin will add real content
-  // Uncomment below for testing:
-  /*
-  {
-    type: 'announcement',
-    title: 'Welcome to Christina\'s Child Care Center',
-    content: 'We are excited to share news and updates with our families through this new section!',
-    is_published: true,
-    is_featured: true,
-    published_at: new Date().toISOString(),
-    author: 'Christina Fraser',
-  },
-  */
 ];
 
 export async function seedSampleNews(): Promise<number> {
-  const existing = getFromStorage();
-  if (existing.length > 0) {
-    return 0;
-  }
+  const existing = await store.getAll();
+  if (existing.length > 0) return 0;
 
   let count = 0;
   for (const news of SAMPLE_NEWS) {
@@ -167,7 +121,5 @@ export async function seedSampleNews(): Promise<number> {
 }
 
 export async function clearAllNews(): Promise<void> {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(STORAGE_KEY);
-  }
+  await store.clear();
 }

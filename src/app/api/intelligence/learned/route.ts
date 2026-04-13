@@ -5,6 +5,8 @@ import { cookies } from 'next/headers';
 import { callClaudeHaiku } from '@/lib/ai/claude-client';
 import { loadAIConfig } from '@/lib/ai-config';
 import { RecommendationDecision } from '@/lib/intelligence/types';
+import { checkAIRateLimit, rateLimitedResponse } from '@/lib/ai-rate-limit';
+import { checkDailyQuota, recordTokenUsage, estimateTokens } from '@/lib/ai-usage-storage';
 
 const SYSTEM_PROMPT = `You are analyzing a childcare center owner's decision patterns from an AI recommendation system.
 
@@ -23,6 +25,23 @@ export async function POST(request: NextRequest) {
   const session = cookieStore.get('auth_session');
   if (!session?.value) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limit check
+  const rateCheck = checkAIRateLimit(request as unknown as Request, 'learning');
+  if (!rateCheck.success) {
+    return rateLimitedResponse(rateCheck) as unknown as NextResponse;
+  }
+
+  // Daily quota check
+  const quota = await checkDailyQuota();
+  if (!quota.ok) {
+    return NextResponse.json(
+      {
+        error: `Daily AI token cap reached (${quota.used} / ${quota.cap}). Try again tomorrow or raise the cap in Admin → Settings → AI.`,
+      },
+      { status: 503 }
+    );
   }
 
   const config = await loadAIConfig();
@@ -57,6 +76,9 @@ export async function POST(request: NextRequest) {
     const userPrompt = `Here are the owner's decisions from the recommendation system:\n\n${decisionLines.join('\n')}\n\nTotal decisions: ${decisions.length} (${decisions.filter((d) => d.decision === 'approved').length} approved, ${decisions.filter((d) => d.decision === 'denied').length} denied)\n\nAnalyze their patterns.`;
 
     const response = await callClaudeHaiku(SYSTEM_PROMPT, userPrompt, apiKey);
+
+    const estimated = estimateTokens(userPrompt, response);
+    await recordTokenUsage('learning', Math.floor(estimated * 0.6), Math.floor(estimated * 0.4));
 
     let cleaned = response.trim();
     if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);

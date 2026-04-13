@@ -60,6 +60,7 @@ export default function ResearchInboxPage() {
   const [findings, setFindings] = useState<ResearchFinding[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [runningExternal, setRunningExternal] = useState(false);
   const [runError, setRunError] = useState('');
   const [lastRunCount, setLastRunCount] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('new');
@@ -83,12 +84,12 @@ export default function ResearchInboxPage() {
     refresh();
   }, [refresh]);
 
-  async function handleRunNow() {
-    setRunning(true);
+  async function runResearchEndpoint(endpoint: string, setRunningFlag: (v: boolean) => void) {
+    setRunningFlag(true);
     setRunError('');
     setLastRunCount(null);
     try {
-      const res = await fetch('/api/ai/research/run', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -96,7 +97,7 @@ export default function ResearchInboxPage() {
       const data = await res.json();
       if (!res.ok) {
         setRunError(data.error || 'Research run failed');
-        setRunning(false);
+        setRunningFlag(false);
         return;
       }
       setLastRunCount(data.count || 0);
@@ -128,8 +129,16 @@ export default function ResearchInboxPage() {
       console.error(e);
       setRunError('Network error while running research');
     } finally {
-      setRunning(false);
+      setRunningFlag(false);
     }
+  }
+
+  async function handleRunNow() {
+    await runResearchEndpoint('/api/ai/research/run', setRunning);
+  }
+
+  async function handleRunExternal() {
+    await runResearchEndpoint('/api/ai/research/external', setRunningExternal);
   }
 
   async function handleMarkReviewed(id: string) {
@@ -198,11 +207,20 @@ export default function ResearchInboxPage() {
         <Button
           type="button"
           onClick={handleRunNow}
-          disabled={running}
+          disabled={running || runningExternal}
           className="bg-christina-red hover:bg-christina-red/90"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${running ? 'animate-spin' : ''}`} />
-          {running ? 'Researching...' : 'Run Research Now'}
+          {running ? 'Researching...' : 'Run Internal'}
+        </Button>
+        <Button
+          type="button"
+          onClick={handleRunExternal}
+          disabled={running || runningExternal}
+          variant="outline"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${runningExternal ? 'animate-spin' : ''}`} />
+          {runningExternal ? 'Scanning web...' : 'Run External'}
         </Button>
       </div>
 
@@ -279,6 +297,11 @@ export default function ResearchInboxPage() {
                       <Badge variant="outline" className="text-xs">
                         {FRAMEWORK_LABELS[finding.frameworkTag] || finding.frameworkTag}
                       </Badge>
+                      {finding.source === 'external' && (
+                        <Badge className="bg-christina-blue/10 text-christina-blue border-0 text-xs">
+                          External
+                        </Badge>
+                      )}
                       {finding.status !== 'new' && (
                         <Badge variant="secondary" className="text-xs capitalize">
                           {finding.status}

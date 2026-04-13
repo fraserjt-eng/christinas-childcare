@@ -55,6 +55,13 @@ const FEATURE_LABELS: Record<keyof AIStatus['features'], { label: string; descri
   },
 };
 
+interface UsageInfo {
+  usedToday: number;
+  cap: number;
+  remaining: number;
+  overQuota: boolean;
+}
+
 export default function AISettingsPage() {
   const [status, setStatus] = useState<AIStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,6 +71,9 @@ export default function AISettingsPage() {
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [newCap, setNewCap] = useState('');
+  const [savingCap, setSavingCap] = useState(false);
   const [features, setFeatures] = useState<AIStatus['features']>({
     newsletter: true,
     lessonBuilder: true,
@@ -76,12 +86,19 @@ export default function AISettingsPage() {
   const loadStatus = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/ai/config');
-      if (res.ok) {
-        const data = await res.json();
+      const [configRes, usageRes] = await Promise.all([
+        fetch('/api/ai/config'),
+        fetch('/api/ai/usage'),
+      ]);
+      if (configRes.ok) {
+        const data = await configRes.json();
         setStatus(data);
         setFeatures(data.features);
         setEnabled(data.enabled);
+      }
+      if (usageRes.ok) {
+        const data = await usageRes.json();
+        setUsage(data);
       }
     } catch (e) {
       console.error('Failed to load AI status:', e);
@@ -89,6 +106,36 @@ export default function AISettingsPage() {
       setLoading(false);
     }
   }, []);
+
+  async function handleSaveCap() {
+    const capNum = Number(newCap);
+    if (!Number.isFinite(capNum) || capNum < 1000) {
+      setSaveMessage('Cap must be at least 1000');
+      setTimeout(() => setSaveMessage(''), 3000);
+      return;
+    }
+    setSavingCap(true);
+    try {
+      const res = await fetch('/api/ai/usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cap: capNum }),
+      });
+      if (res.ok) {
+        setSaveMessage('Daily cap updated');
+        setNewCap('');
+        await loadStatus();
+      } else {
+        const data = await res.json();
+        setSaveMessage(data.error || 'Failed to save cap');
+      }
+    } catch {
+      setSaveMessage('Network error while saving cap');
+    } finally {
+      setSavingCap(false);
+      setTimeout(() => setSaveMessage(''), 3000);
+    }
+  }
 
   useEffect(() => {
     loadStatus();
@@ -198,6 +245,76 @@ export default function AISettingsPage() {
           </CardContent>
         )}
       </Card>
+
+      {/* Daily Usage + Cap */}
+      {usage && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Daily Usage</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Used today</span>
+                <span className="font-mono font-medium">
+                  {usage.usedToday.toLocaleString()} tokens
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Cap</span>
+                <span className="font-mono">{usage.cap.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Remaining</span>
+                <span
+                  className={`font-mono font-medium ${
+                    usage.overQuota ? 'text-christina-coral' : 'text-christina-green'
+                  }`}
+                >
+                  {usage.remaining.toLocaleString()}
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div
+                  className={
+                    usage.overQuota
+                      ? 'h-full bg-christina-coral'
+                      : 'h-full bg-christina-blue'
+                  }
+                  style={{
+                    width: `${Math.min(100, Math.round((usage.usedToday / usage.cap) * 100))}%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="space-y-2 pt-2 border-t">
+              <Label htmlFor="dailyCap">Update daily token cap</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="dailyCap"
+                  type="number"
+                  min={1000}
+                  step={1000}
+                  value={newCap}
+                  onChange={(e) => setNewCap(e.target.value)}
+                  placeholder={String(usage.cap)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSaveCap}
+                  disabled={savingCap || !newCap}
+                >
+                  {savingCap ? 'Saving...' : 'Update Cap'}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Minimum 1,000. Claude Haiku input tokens cost ~$0.00025 per 1K.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* API Key */}
       <Card>

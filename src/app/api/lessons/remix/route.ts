@@ -9,12 +9,31 @@ import {
 } from '@/lib/lesson-generator';
 import { getLesson, saveLesson } from '@/lib/lesson-storage';
 import { loadAIConfig } from '@/lib/ai-config';
+import { checkAIRateLimit, rateLimitedResponse } from '@/lib/ai-rate-limit';
+import { checkDailyQuota, recordTokenUsage, estimateTokens } from '@/lib/ai-usage-storage';
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
   const session = cookieStore.get('auth_session');
   if (!session?.value) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limit check
+  const rateCheck = checkAIRateLimit(request as unknown as Request, 'lessons');
+  if (!rateCheck.success) {
+    return rateLimitedResponse(rateCheck) as unknown as NextResponse;
+  }
+
+  // Daily quota check
+  const quota = await checkDailyQuota();
+  if (!quota.ok) {
+    return NextResponse.json(
+      {
+        error: `Daily AI token cap reached (${quota.used} / ${quota.cap}). Try again tomorrow or raise the cap in Admin → Settings → AI.`,
+      },
+      { status: 503 }
+    );
   }
 
   try {
@@ -81,6 +100,12 @@ export async function POST(request: NextRequest) {
 
     // Remix lesson
     const lessonData = await remixLesson(remixRequest, apiKey);
+
+    // Record best-effort token usage
+    const promptApprox = JSON.stringify(remixRequest);
+    const outputApprox = JSON.stringify(lessonData);
+    const estimated = estimateTokens(promptApprox, outputApprox);
+    await recordTokenUsage('lessons', Math.floor(estimated * 0.6), Math.floor(estimated * 0.4));
 
     // Optionally save to storage
     let savedLesson = null;

@@ -5,6 +5,8 @@ import { cookies } from 'next/headers';
 import { callClaudeHaiku } from '@/lib/ai/claude-client';
 import { loadAIConfig } from '@/lib/ai-config';
 import { TrainingDigestItem, StaffingAlert, RecommendationDecision } from '@/lib/intelligence/types';
+import { checkAIRateLimit, rateLimitedResponse } from '@/lib/ai-rate-limit';
+import { checkDailyQuota, recordTokenUsage, estimateTokens } from '@/lib/ai-usage-storage';
 
 interface RequestBody {
   trainingItems: TrainingDigestItem[];
@@ -55,6 +57,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Rate limit check
+  const rateCheck = checkAIRateLimit(request as unknown as Request, 'recommendations');
+  if (!rateCheck.success) {
+    return rateLimitedResponse(rateCheck) as unknown as NextResponse;
+  }
+
+  // Daily quota check
+  const quota = await checkDailyQuota();
+  if (!quota.ok) {
+    return NextResponse.json(
+      {
+        error: `Daily AI token cap reached (${quota.used} / ${quota.cap}). Try again tomorrow or raise the cap in Admin → Settings → AI.`,
+      },
+      { status: 503 }
+    );
+  }
+
   const config = await loadAIConfig();
   if (!config.apiKey || !config.enabled || !config.features.intelligence) {
     return NextResponse.json(
@@ -101,6 +120,9 @@ Today's date: ${new Date().toISOString().split('T')[0]}
 Generate actionable recommendations.`;
 
     const response = await callClaudeHaiku(SYSTEM_PROMPT, userPrompt, apiKey);
+
+    const estimated = estimateTokens(userPrompt, response);
+    await recordTokenUsage('recommendations', Math.floor(estimated * 0.6), Math.floor(estimated * 0.4));
 
     // Parse JSON, stripping markdown fences if present
     let cleaned = response.trim();

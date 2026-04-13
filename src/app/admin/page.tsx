@@ -329,6 +329,20 @@ export default function AdminDashboard() {
     setSnapshot(getTodaySnapshot());
     setActions(getQuickActions(currentZone));
 
+    // Subscribe to realtime attendance changes so the dashboard updates
+    // live when a child checks in or out at the kiosk.
+    let unsubscribe: (() => void) | undefined;
+    (async () => {
+      const { subscribeToTable } = await import('@/lib/supabase/realtime');
+      unsubscribe = subscribeToTable('attendance', () => {
+        fetchAttendance();
+      });
+    })();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+
     // Request browser notification permission so Christina receives
     // push alerts when new enrollment inquiries arrive.
     requestNotificationPermission().then((granted) => {

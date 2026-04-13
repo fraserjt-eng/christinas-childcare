@@ -1,6 +1,8 @@
 // Parent Messages Storage
-// Shared between parent portal and admin portal via localStorage.
-// Demo-safe: seeds 3 conversations on first load.
+// Dual-write: Supabase (table: parent_conversations) + localStorage.
+// Sync API preserved; cloud writes fire-and-forget, cloud reads hydrate once.
+
+import { createDualWrite } from '@/lib/supabase/dual-write';
 
 export interface ParentMessage {
   id: string;
@@ -28,11 +30,25 @@ export interface ParentConversation {
 
 const STORAGE_KEY = 'christinas_parent_messages';
 
+const store = createDualWrite<ParentConversation>({
+  table: 'parent_conversations',
+  localKey: STORAGE_KEY,
+});
+
+let hydrated = false;
+function hydrateOnce(): void {
+  if (hydrated || typeof window === 'undefined') return;
+  hydrated = true;
+  void store.getAll().catch(() => {
+    /* background sync */
+  });
+}
+
 function now(): string {
   return new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
-function getAll(): ParentConversation[] {
+function getAllLocal(): ParentConversation[] {
   if (typeof window === 'undefined') return [];
   try {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -43,13 +59,19 @@ function getAll(): ParentConversation[] {
   return [];
 }
 
-function saveAll(conversations: ParentConversation[]): void {
+function saveLocal(conversations: ParentConversation[]): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
   } catch (e) {
     console.error('Failed to save parent messages:', e);
   }
+}
+
+function persist(conversation: ParentConversation): void {
+  // Local save is already performed by caller (via saveLocal of full list).
+  // Mirror to cloud.
+  void store.save(conversation);
 }
 
 const SEED_CONVERSATIONS: Omit<ParentConversation, 'parentEmail' | 'parentName' | 'parentInitials'>[] = [
@@ -132,7 +154,8 @@ const SEED_CONVERSATIONS: Omit<ParentConversation, 'parentEmail' | 'parentName' 
 ];
 
 export function seedParentConversations(parentEmail: string, parentName: string): void {
-  const all = getAll();
+  hydrateOnce();
+  const all = getAllLocal();
   const hasParent = all.some((c) => c.parentEmail === parentEmail);
   if (hasParent) return;
 
@@ -152,15 +175,18 @@ export function seedParentConversations(parentEmail: string, parentName: string)
     messages: c.messages.map((m) => ({ ...m, id: `${m.id}-${parentEmail}` })),
   }));
 
-  saveAll([...all, ...seeded]);
+  saveLocal([...all, ...seeded]);
+  void store.saveMany(seeded);
 }
 
 export function getConversationsForParent(parentEmail: string): ParentConversation[] {
-  return getAll().filter((c) => c.parentEmail === parentEmail);
+  hydrateOnce();
+  return getAllLocal().filter((c) => c.parentEmail === parentEmail);
 }
 
 export function getAllConversations(): ParentConversation[] {
-  return getAll();
+  hydrateOnce();
+  return getAllLocal();
 }
 
 export function sendMessageFromParent(
@@ -168,7 +194,7 @@ export function sendMessageFromParent(
   content: string,
   parentName: string
 ): void {
-  const all = getAll();
+  const all = getAllLocal();
   const idx = all.findIndex((c) => c.id === conversationId);
   if (idx === -1) return;
 
@@ -190,7 +216,8 @@ export function sendMessageFromParent(
     unreadForAdmin: true,
   };
 
-  saveAll(all);
+  saveLocal(all);
+  persist(all[idx]);
 }
 
 export function sendMessageFromAdmin(
@@ -198,7 +225,7 @@ export function sendMessageFromAdmin(
   content: string,
   staffName: string
 ): void {
-  const all = getAll();
+  const all = getAllLocal();
   const idx = all.findIndex((c) => c.id === conversationId);
   if (idx === -1) return;
 
@@ -220,11 +247,12 @@ export function sendMessageFromAdmin(
     unreadForParent: true,
   };
 
-  saveAll(all);
+  saveLocal(all);
+  persist(all[idx]);
 }
 
 export function markReadForParent(conversationId: string): void {
-  const all = getAll();
+  const all = getAllLocal();
   const idx = all.findIndex((c) => c.id === conversationId);
   if (idx === -1) return;
 
@@ -236,11 +264,12 @@ export function markReadForParent(conversationId: string): void {
     ),
   };
 
-  saveAll(all);
+  saveLocal(all);
+  persist(all[idx]);
 }
 
 export function markReadForAdmin(conversationId: string): void {
-  const all = getAll();
+  const all = getAllLocal();
   const idx = all.findIndex((c) => c.id === conversationId);
   if (idx === -1) return;
 
@@ -252,13 +281,14 @@ export function markReadForAdmin(conversationId: string): void {
     ),
   };
 
-  saveAll(all);
+  saveLocal(all);
+  persist(all[idx]);
 }
 
 export function getUnreadCountForParent(parentEmail: string): number {
-  return getAll().filter((c) => c.parentEmail === parentEmail && c.unreadForParent).length;
+  return getAllLocal().filter((c) => c.parentEmail === parentEmail && c.unreadForParent).length;
 }
 
 export function getUnreadCountForAdmin(): number {
-  return getAll().filter((c) => c.unreadForAdmin).length;
+  return getAllLocal().filter((c) => c.unreadForAdmin).length;
 }
