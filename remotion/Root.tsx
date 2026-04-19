@@ -20,11 +20,16 @@ import { ComplianceVideo } from './compositions/ComplianceVideo';
 import { CommunicationVideo } from './compositions/CommunicationVideo';
 import { StaffDevelopmentVideo } from './compositions/StaffDevelopmentVideo';
 import { BusinessIntelligenceVideo } from './compositions/BusinessIntelligenceVideo';
+import { PlatformReelV1 } from './compositions/PlatformReelV1';
 
 // Video settings
 const FPS = 30;
 const WIDTH = 1920;
 const HEIGHT = 1080;
+
+// 9:16 reel settings
+const REEL_WIDTH = 1080;
+const REEL_HEIGHT = 1920;
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -251,6 +256,22 @@ export const RemotionRoot: React.FC = () => {
             pageTransitions: [],
           },
         }}
+      />
+
+      {/* ============================================
+          PLATFORM REEL V1 — 9:16 B2B ad for daycare owners.
+          20 seconds, 600 frames at 30fps.
+          Renders today as text-only. Illustrations drop in at
+          video-studio/projects/christinas-childcare/platform-reel/illustrations/
+          ============================================ */}
+      <Composition
+        id="PlatformReelV1"
+        component={PlatformReelV1}
+        durationInFrames={600}
+        fps={FPS}
+        width={REEL_WIDTH}
+        height={REEL_HEIGHT}
+        defaultProps={{}}
       />
     </>
   );
