@@ -21,6 +21,7 @@ import { CommunicationVideo } from './compositions/CommunicationVideo';
 import { StaffDevelopmentVideo } from './compositions/StaffDevelopmentVideo';
 import { BusinessIntelligenceVideo } from './compositions/BusinessIntelligenceVideo';
 import { PlatformReelV1 } from './compositions/PlatformReelV1';
+import { PlatformReelV3 } from './compositions/PlatformReelV3';
 
 // Video settings
 const FPS = 30;
@@ -267,7 +268,23 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="PlatformReelV1"
         component={PlatformReelV1}
-        durationInFrames={600}
+        durationInFrames={1050}
+        fps={FPS}
+        width={REEL_WIDTH}
+        height={REEL_HEIGHT}
+        defaultProps={{}}
+      />
+
+      {/* ============================================
+          PLATFORM REEL V3 — cinematic documentary cut.
+          60 seconds. 1800 frames at 30fps. 1080x1920.
+          Real before/after screenshots, real product footage,
+          real photos, ElevenLabs narration, layered ambient score.
+          ============================================ */}
+      <Composition
+        id="PlatformReelV3"
+        component={PlatformReelV3}
+        durationInFrames={1800}
         fps={FPS}
         width={REEL_WIDTH}
         height={REEL_HEIGHT}
