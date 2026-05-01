@@ -33,6 +33,12 @@ import {
 } from '@/lib/schedule-optimizer-storage';
 import { getEmployees } from '@/lib/employee-storage';
 import type { Employee } from '@/types/employee';
+import {
+  playLiftSound,
+  playDropSound,
+  vibrateLift,
+  vibrateDrop,
+} from '@/lib/audio/dragSound';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -411,13 +417,22 @@ export default function DragScheduleBoard() {
   const handleDragStart = (event: DragStartEvent) => {
     if (event.active.data.current?.type === 'preset') {
       setActiveDragPreset(event.active.data.current.preset as PresetShift);
+      playLiftSound();
+      vibrateLift();
     }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    const wasDragging = activeDragPreset !== null;
     setActiveDragPreset(null);
     const { over, active } = event;
-    if (!over || active.data.current?.type !== 'preset') return;
+    if (!over || active.data.current?.type !== 'preset') {
+      // Drag cancelled (released over nothing). Soft "backward" cue.
+      if (wasDragging) {
+        playDropSound('backward');
+      }
+      return;
+    }
 
     const preset = active.data.current.preset as PresetShift;
     const { employeeId, date } = over.data.current as { employeeId: string; date: string };
@@ -434,6 +449,9 @@ export default function DragScheduleBoard() {
       end_time: preset.end,
       is_overtime: weeklyApprox > 40,
     });
+    // Successful add: triumphant forward drop.
+    playDropSound('forward');
+    vibrateDrop();
     loadShifts();
   };
 

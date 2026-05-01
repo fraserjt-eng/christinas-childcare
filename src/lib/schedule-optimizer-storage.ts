@@ -121,7 +121,7 @@ function buildSeedShifts(): ScheduleShift[] {
     { id: 'emp-sk', name: 'Sarah Kim', center: 'brooklyn_park' as const, rate: 20, room: 'rm-preschool-bp' },
     { id: 'emp-dc', name: 'David Chen', center: 'brooklyn_park' as const, rate: 18, room: 'rm-school-age-bp' },
     { id: 'emp-lj', name: 'Lisa Johnson', center: 'brooklyn_park' as const, rate: 17, room: 'rm-toddlers-bp' },
-    { id: 'emp-sz', name: 'Stephen Zeogar', center: 'crystal' as const, rate: 25, room: undefined },
+    { id: 'emp-sz', name: 'Stephen Zeogar', center: 'crystal' as const, rate: 25, room: 'rm-preschool' },
   ];
 
   const shifts: ScheduleShift[] = [];
@@ -336,6 +336,9 @@ export interface RatioComplianceResult {
 }
 
 export function getRatioCompliance(date: string): RatioComplianceResult[] {
+  // Self-heal: any legacy shift missing a classroom_id gets backfilled from
+  // the employee's seed-defined room before we count.
+  backfillShiftClassrooms();
   const shifts = getShifts({ date });
 
   // Simulated enrolled counts (in production these come from attendance)
@@ -349,10 +352,19 @@ export function getRatioCompliance(date: string): RatioComplianceResult[] {
   };
 
   return CLASSROOMS.map(classroom => {
-    const staffCount = shifts.filter(s => s.classroom_id === classroom.classroom_id).length;
+    // Count UNIQUE staff in the room, not shifts. Same person on two shifts
+    // is still one body in the room for ratio compliance purposes.
+    const staffInRoom = new Set(
+      shifts
+        .filter(s => s.classroom_id === classroom.classroom_id)
+        .map(s => s.employee_id)
+    );
+    const staffCount = staffInRoom.size;
     const enrolled = enrolledCounts[classroom.classroom_id] || 0;
     const req = RATIO_REQUIREMENTS[classroom.age_group];
-    const requiredStaff = Math.ceil(enrolled / req.children);
+    // Honor both the per-classroom min_staff floor and the age-ratio requirement.
+    const ratioRequired = Math.ceil(enrolled / req.children);
+    const requiredStaff = Math.max(classroom.min_staff, ratioRequired);
 
     return {
       classroom,
@@ -363,6 +375,32 @@ export function getRatioCompliance(date: string): RatioComplianceResult[] {
       ratio_string: staffCount > 0 ? `1:${Math.round(enrolled / staffCount)}` : 'No staff',
     };
   });
+}
+
+// One-time backfill: classroom_id became required for ratio compliance.
+// Older seeded shifts may have undefined classroom_id; fall back to the
+// employee's currently configured room.
+export function backfillShiftClassrooms(): number {
+  if (typeof window === 'undefined') return 0;
+  const shifts = getFromStorage<ScheduleShift>(SHIFTS_KEY);
+  // Build lookup from current seed staff data
+  const seedStaff = buildSeedShifts();
+  const employeeRoom = new Map<string, string | undefined>();
+  for (const s of seedStaff) {
+    if (!employeeRoom.has(s.employee_id) && s.classroom_id) {
+      employeeRoom.set(s.employee_id, s.classroom_id);
+    }
+  }
+  let updated = 0;
+  const next = shifts.map(s => {
+    if (s.classroom_id) return s;
+    const room = employeeRoom.get(s.employee_id);
+    if (!room) return s;
+    updated += 1;
+    return { ...s, classroom_id: room };
+  });
+  if (updated > 0) saveToStorage(SHIFTS_KEY, next);
+  return updated;
 }
 
 // ============================================================================

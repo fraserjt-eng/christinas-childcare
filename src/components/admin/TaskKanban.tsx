@@ -44,8 +44,28 @@ import {
   Moon,
 } from 'lucide-react';
 import { Task, TaskStatus, TaskPriority } from '@/types/tasks';
+import {
+  playLiftSound,
+  playDropSound,
+  vibrateLift,
+  vibrateDrop,
+  type DropDirection,
+} from '@/lib/audio/dragSound';
 
 const STORAGE_KEY = 'christinas_tasks';
+
+// Status order for direction-aware drop sound. Forward = toward "done".
+const TASK_STATUS_ORDER: Record<string, number> = {
+  today: 0,
+  in_progress: 1,
+  done: 2,
+};
+
+function getTaskDirection(from: string, to: string): DropDirection {
+  return (TASK_STATUS_ORDER[to] ?? 0) >= (TASK_STATUS_ORDER[from] ?? 0)
+    ? 'forward'
+    : 'backward';
+}
 
 const KANBAN_COLUMNS: { key: TaskStatus; label: string; color: string; headerColor: string }[] = [
   { key: 'today',       label: 'To Do',       color: 'border-blue-200',   headerColor: 'bg-blue-50 text-blue-700' },
@@ -74,73 +94,6 @@ const PRIORITY_CONFIG: Record<TaskPriority, { label: string; className: string; 
   normal: { label: 'Normal', className: 'text-gray-400',   icon: <Minus className="h-3 w-3" /> },
   low:    { label: 'Low',    className: 'text-gray-300',   icon: <ArrowDown className="h-3 w-3" /> },
 };
-
-// ─── Audio + haptic feedback helpers ────────────────────────────────
-// Synthesized via Web Audio API. No external sound files.
-
-let sharedAudioContext: AudioContext | null = null;
-function getAudioContext(): AudioContext | null {
-  if (typeof window === 'undefined') return null;
-  if (sharedAudioContext) return sharedAudioContext;
-  try {
-    const Ctx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctx) return null;
-    sharedAudioContext = new Ctx();
-    return sharedAudioContext;
-  } catch {
-    return null;
-  }
-}
-
-function playTone(frequency: number, durationMs: number, type: OscillatorType = 'sine'): void {
-  if (typeof window === 'undefined') return;
-  // Respect user preference to disable sounds
-  try {
-    if (localStorage.getItem('christinas_kanban_sound') === 'off') return;
-  } catch {
-    // ignore
-  }
-
-  const ctx = getAudioContext();
-  if (!ctx) return;
-
-  try {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = type;
-    osc.frequency.value = frequency;
-    gain.gain.value = 0.08;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    // Short fade-out to avoid clicks
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + durationMs / 1000);
-    osc.stop(ctx.currentTime + durationMs / 1000);
-  } catch (e) {
-    console.debug('Audio tone failed:', e);
-  }
-}
-
-function playLift(): void {
-  playTone(180, 40, 'sine');
-}
-
-function playDrop(): void {
-  playTone(440, 50, 'triangle');
-}
-
-function vibrate(pattern: number | number[]): void {
-  if (typeof navigator === 'undefined') return;
-  if ('vibrate' in navigator) {
-    try {
-      navigator.vibrate(pattern);
-    } catch {
-      // ignore
-    }
-  }
-}
 
 function formatMinutes(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;
@@ -405,9 +358,8 @@ export function TaskKanban() {
   const handleDragStart = (event: DragStartEvent) => {
     const task = tasks.find((t) => t.id === event.active.id);
     setActiveTask(task ?? null);
-    // Lift feedback: short tone + brief vibrate
-    playLift();
-    vibrate(10);
+    playLiftSound();
+    vibrateLift();
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -433,11 +385,12 @@ export function TaskKanban() {
 
     if (!targetStatus) return;
 
-    // Only play confirm feedback if the card actually changed column
+    // Only play confirm feedback if the card actually changed column.
+    // Direction matters: forward (toward done) vs backward (back to todo).
     const sourceTask = tasks.find((t) => t.id === activeId);
     if (sourceTask && sourceTask.status !== targetStatus) {
-      playDrop();
-      vibrate(30);
+      playDropSound(getTaskDirection(sourceTask.status, targetStatus));
+      vibrateDrop();
     }
 
     const updated = tasks.map((t) => {

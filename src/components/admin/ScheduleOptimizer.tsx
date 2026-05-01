@@ -24,6 +24,7 @@ import {
   updateShift,
   deleteShift,
   getRatioCompliance,
+  backfillShiftClassrooms,
   CENTER_LABELS,
   type ScheduleShift,
   type RatioComplianceResult,
@@ -283,7 +284,12 @@ function RatioRow({ compliance }: { compliance: RatioComplianceResult[] }) {
 
 export function ScheduleOptimizer() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    // Backfill classroom_id on any pre-existing seed shifts so ratio
+    // compliance reflects real coverage instead of zero across rooms.
+    backfillShiftClassrooms();
+    setMounted(true);
+  }, []);
 
   const [weekOffset, setWeekOffset] = useState(0);
   const [shifts, setShifts] = useState<ScheduleShift[]>([]);
