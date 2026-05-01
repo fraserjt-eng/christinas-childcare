@@ -22,6 +22,7 @@ import { StaffDevelopmentVideo } from './compositions/StaffDevelopmentVideo';
 import { BusinessIntelligenceVideo } from './compositions/BusinessIntelligenceVideo';
 import { PlatformReelV1 } from './compositions/PlatformReelV1';
 import { PlatformReelV3 } from './compositions/PlatformReelV3';
+import { OpenNowAd30s, OpenNowAd15s } from './compositions/OpenNowAd';
 
 // Video settings
 const FPS = 30;
@@ -285,6 +286,32 @@ export const RemotionRoot: React.FC = () => {
         id="PlatformReelV3"
         component={PlatformReelV3}
         durationInFrames={1800}
+        fps={FPS}
+        width={REEL_WIDTH}
+        height={REEL_HEIGHT}
+        defaultProps={{}}
+      />
+
+      {/* ============================================
+          OPEN NOW AD — 9:16 paid-social ad.
+          30s primary (900 frames) + 15s short cut (450 frames).
+          Avatar talking-head from Arcads, real photos from
+          /public/platform-reel/, three-pillar + locations + CTA
+          overlays match the printed flyer.
+          ============================================ */}
+      <Composition
+        id="OpenNowAd30s"
+        component={OpenNowAd30s}
+        durationInFrames={900}
+        fps={FPS}
+        width={REEL_WIDTH}
+        height={REEL_HEIGHT}
+        defaultProps={{}}
+      />
+      <Composition
+        id="OpenNowAd15s"
+        component={OpenNowAd15s}
+        durationInFrames={450}
         fps={FPS}
         width={REEL_WIDTH}
         height={REEL_HEIGHT}
