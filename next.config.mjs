@@ -15,6 +15,11 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      { source: '/business-case', destination: '/business-case.html' },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {
