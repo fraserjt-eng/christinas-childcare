@@ -30,6 +30,17 @@ export interface Newsletter {
   audience?: 'parent' | 'staff';
   week_of?: string;
   content_sections?: { id: string; heading: string; body: string; sort_order?: number }[];
+  // Bulk send + analytics (added by migration 016).
+  recipient_count?: number;
+  open_count?: number;
+  click_count?: number;
+  bounce_count?: number;
+  unsubscribe_count?: number;
+  resend_message_ids?: string[];
+  from_name?: string;
+  from_email?: string;
+  dispatch_lock?: string | null;
+  last_error?: string | null;
 }
 
 export const SECTION_TYPE_LABELS: Record<string, string> = {
