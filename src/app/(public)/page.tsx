@@ -6,6 +6,7 @@ import { useRef, useState, useEffect } from 'react';
 import { ParallaxHero } from '@/components/features/ParallaxHero';
 import { ScrollFadeIn, ScrollFadeInStagger } from '@/components/features/ScrollFadeIn';
 import { SeasonalBanner } from '@/components/features/SeasonalBanner';
+import { KioskBanner } from '@/components/features/KioskBanner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -207,6 +208,9 @@ export default function HomePage() {
       />
       {/* Seasonal Banner */}
       <SeasonalBanner />
+
+      {/* Kiosk quick-access (sits under the seasonal "Summer Registration" banner) */}
+      <KioskBanner />
 
       {/* Parallax Hero */}
       <ParallaxHero />
