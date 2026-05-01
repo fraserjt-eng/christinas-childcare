@@ -167,6 +167,10 @@ export interface Lesson {
   theme?: string;
   notes?: string;
 
+  // ECIPS alignment: indicator codes the lesson hits (e.g. "LLC.2.yp.1").
+  // Populated by the AI generator and editable by teachers.
+  ecipsIndicators?: string[];
+
   // Remix tracking
   remixedFrom?: string;
 }

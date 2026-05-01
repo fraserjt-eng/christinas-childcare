@@ -21,6 +21,7 @@ import { generateLessonPDF } from '@/lib/pdf/lesson-pdf';
 import { generateActivityCards } from '@/lib/pdf/activity-cards';
 import { generateParentLetter } from '@/lib/pdf/parent-letter';
 import { generateAssessmentChecklist } from '@/lib/pdf/assessment-checklist';
+import { EcipsAlignment } from '@/components/curriculum/EcipsAlignment';
 
 interface LessonDetailDialogProps {
   lesson: Lesson | null;
@@ -75,6 +76,13 @@ export function LessonDetailDialog({ lesson, open, onOpenChange }: LessonDetailD
             ))}
           </ul>
         </div>
+
+        {/* ECIPS standards alignment */}
+        {lesson.ecipsIndicators && lesson.ecipsIndicators.length > 0 && (
+          <div className="mt-3">
+            <EcipsAlignment codes={lesson.ecipsIndicators} />
+          </div>
+        )}
 
         {/* Materials */}
         <div>

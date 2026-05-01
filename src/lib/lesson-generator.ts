@@ -12,6 +12,11 @@ import {
   DOMAIN_LABELS,
 } from '@/types/curriculum';
 import { WRITING_STANDARDS_SYSTEM_PROMPT } from '@/lib/ai/writing-standards';
+import {
+  MN_ECIPS,
+  ECIPS_AGE_BANDS,
+  getIndicatorsForAgeGroup,
+} from '@/data/standards/mn-ecips';
 
 // ============================================================================
 // Types
@@ -92,10 +97,41 @@ For school-age children (5+ years):
 // Prompt Templates
 // ============================================================================
 
+function formatEcipsCatalog(ageGroup: AgeGroup): string {
+  // Send only indicators for the relevant age bands so the model has the
+  // shortest plausible reference list. Group by domain → component for
+  // legibility.
+  const ageBands = ECIPS_AGE_BANDS.filter((b) => b.ageGroup === ageGroup).map(
+    (b) => b.code
+  );
+  const lines: string[] = [];
+  for (const domain of MN_ECIPS) {
+    const compsWithMatches = domain.components
+      .map((c) => ({
+        ...c,
+        indicators: c.indicators.filter((i) => ageBands.includes(i.ageBand)),
+      }))
+      .filter((c) => c.indicators.length > 0);
+    if (compsWithMatches.length === 0) continue;
+    lines.push(`\n[${domain.code}] ${domain.name}`);
+    for (const comp of compsWithMatches) {
+      lines.push(`  ${domain.code}.${comp.number} ${comp.name}`);
+      for (const ind of comp.indicators) {
+        lines.push(`    - ${ind.code}: ${ind.description}`);
+      }
+    }
+  }
+  return lines.join('\n');
+}
+
 function buildGenerationPrompt(request: GenerateRequest): string {
   const ageGuideline = AGE_GUIDELINES[request.ageGroup];
   const ageLabel = AGE_GROUP_LABELS[request.ageGroup];
   const domainLabel = DOMAIN_LABELS[request.domain];
+  const ecipsCatalog = formatEcipsCatalog(request.ageGroup);
+  const ecipsCodes = getIndicatorsForAgeGroup(request.ageGroup)
+    .map((i) => i.code)
+    .join(', ');
 
   return `You are an expert early childhood educator creating lesson plans for Christina's Child Care Center.
 
@@ -113,6 +149,13 @@ Create exactly 5 segments in this order:
 
 The total duration across all segments must equal ${request.duration} minutes.
 
+MINNESOTA ECIPS ALIGNMENT (REQUIRED):
+This lesson must align to Minnesota Early Childhood Indicators of Progress for the chosen age group. Pick the 3-6 indicators that this lesson genuinely targets. Do not invent codes. Choose only from the indicator codes listed below. Return them in the "ecipsIndicators" field as an array of exact codes (for example: ["LLC.2.yp.1","SED.4.yp.1"]).
+
+Available indicator codes for ${ageLabel}: ${ecipsCodes}
+
+Indicator catalog (code: description):${ecipsCatalog}
+
 ${request.additionalContext ? `Additional context: ${request.additionalContext}` : ''}
 
 Return ONLY valid JSON matching this exact structure (no markdown, no explanation):
@@ -121,6 +164,7 @@ Return ONLY valid JSON matching this exact structure (no markdown, no explanatio
   "objectives": ["Learning objective 1", "Learning objective 2", "Learning objective 3"],
   "materials": ["Material 1", "Material 2", "Material 3"],
   "theme": "Optional theme or unit connection",
+  "ecipsIndicators": ["DOMAIN.COMP.AGE.SEQ", "..."],
   "segments": [
     {
       "segment": "INTRO",
@@ -240,6 +284,7 @@ function parseGeneratedLesson(
     objectives: string[];
     materials: string[];
     theme?: string;
+    ecipsIndicators?: string[];
     segments: LessonSegmentItem[];
     tags: string[];
   };
@@ -306,8 +351,24 @@ function parseGeneratedLesson(
     isFavorite: false,
     tags: parsed.tags || [],
     theme: parsed.theme,
+    ecipsIndicators: validateEcipsCodes(parsed.ecipsIndicators ?? [], ageGroup),
     remixedFrom: isRemix ? (request as RemixRequest).baseLesson.id : undefined,
   };
+}
+
+function validateEcipsCodes(codes: string[], ageGroup: AgeGroup): string[] {
+  const validBands = new Set(
+    ECIPS_AGE_BANDS.filter((b) => b.ageGroup === ageGroup).map((b) => b.code)
+  );
+  const knownCodes = new Set(getIndicatorsForAgeGroup(ageGroup).map((i) => i.code));
+  // Accept only codes that exist AND match the age group's bands.
+  return codes
+    .filter((c) => typeof c === 'string')
+    .filter((c) => knownCodes.has(c))
+    .filter((c) => {
+      const band = c.split('.')[2];
+      return validBands.has(band as typeof ECIPS_AGE_BANDS[number]['code']);
+    });
 }
 
 // ============================================================================
@@ -327,8 +388,12 @@ export async function callClaude(
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
+      // Opus 4.7 — Christina's lesson plans get the strongest reasoning model so
+      // ECIPS alignment, age-band differentiation, and 5-segment structure all
+      // hold together in one pass. Cost is logged per call by the API route's
+      // apiGuard wrapper so /admin/costs reflects the spend.
+      model: 'claude-opus-4-7',
+      max_tokens: 6000,
       system: WRITING_STANDARDS_SYSTEM_PROMPT + '\n\n' + systemPrompt,
       messages: [
         {
