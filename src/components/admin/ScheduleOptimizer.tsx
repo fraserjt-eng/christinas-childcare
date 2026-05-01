@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -304,18 +304,26 @@ export function ScheduleOptimizer() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [centerFilter, setCenterFilter] = useState<'all' | 'crystal' | 'brooklyn_park'>('all');
 
-  const monday = getMondayOfWeek(weekOffset);
-  const weekDates = [0, 1, 2, 3, 4].map(d => dateStr(monday, d));
+  // Stabilize the Date reference: getMondayOfWeek() returns a NEW Date object
+  // on every render, which made `loadData`'s [monday] dep unstable, which made
+  // the useEffect below fire on every render → setShifts/setCompliance →
+  // re-render → infinite loop (React error #185). Pin to weekOffset (a
+  // primitive) so the memo only recomputes when the week actually changes.
+  const monday = useMemo(() => getMondayOfWeek(weekOffset), [weekOffset]);
+  const mondayKey = useMemo(() => monday.toISOString().slice(0, 10), [monday]);
+  const weekDates = useMemo(
+    () => [0, 1, 2, 3, 4].map((d) => dateStr(monday, d)),
+    [monday]
+  );
 
   const loadData = useCallback(() => {
-    const weekStart = monday.toISOString().slice(0, 10);
-    const loaded = getShifts({ week_start: weekStart });
+    const loaded = getShifts({ week_start: mondayKey });
     setShifts(loaded);
 
     // Use today for ratio compliance display
     const today = new Date().toISOString().slice(0, 10);
     setCompliance(getRatioCompliance(today));
-  }, [monday]);
+  }, [mondayKey]);
 
   useEffect(() => {
     loadData();
