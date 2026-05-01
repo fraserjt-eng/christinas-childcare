@@ -452,6 +452,119 @@ Always respond with valid JSON only. No markdown formatting, no explanations - j
 }
 
 // ============================================================================
+// Single-Segment Regeneration (used by Refine + Align tab)
+// ============================================================================
+
+export interface RegenerateSegmentRequest {
+  lesson: Lesson;
+  segmentIndex: number; // 0-4
+  adjustmentNotes: string;
+}
+
+function buildRegenerateSegmentPrompt(req: RegenerateSegmentRequest): string {
+  const { lesson, segmentIndex, adjustmentNotes } = req;
+  const targetSegment = lesson.segments[segmentIndex];
+  if (!targetSegment) throw new Error('Invalid segmentIndex');
+
+  const ageGuideline = AGE_GUIDELINES[lesson.ageGroup];
+  const ageLabel = AGE_GROUP_LABELS[lesson.ageGroup];
+  const domainLabel = DOMAIN_LABELS[lesson.domain];
+  const segmentLabel = SEGMENT_LABELS[targetSegment.segment];
+
+  const otherSegments = lesson.segments
+    .map((s, i) =>
+      i === segmentIndex
+        ? `[THIS IS THE ${SEGMENT_LABELS[s.segment]} SEGMENT — REGENERATE]`
+        : `${SEGMENT_LABELS[s.segment]} (${s.duration} min): ${s.description}`
+    )
+    .join('\n');
+
+  return `You are an expert early childhood educator refining ONE segment of an existing lesson plan for Christina's Child Care Center.
+
+Lesson context:
+- Title: "${lesson.title}"
+- Age group: ${ageLabel}
+- Domain: ${domainLabel}
+- Total duration: ${lesson.duration} minutes
+- Theme: ${lesson.theme || 'none'}
+- Objectives: ${lesson.objectives.join(', ')}
+
+${ageGuideline}
+
+Full segment outline (do not regenerate the others):
+${otherSegments}
+
+You are regenerating ONLY the ${segmentLabel} segment. Keep its position and segment label.
+
+Current ${segmentLabel} segment to revise:
+- Title: ${targetSegment.title}
+- Duration: ${targetSegment.duration} min
+- Description: ${targetSegment.description}
+- Teacher actions: ${targetSegment.teacherActions}
+- Child actions: ${targetSegment.childActions}
+- Materials: ${targetSegment.materials.join(', ')}
+
+Teacher's adjustment notes (apply these):
+"${adjustmentNotes}"
+
+Keep the segment duration the same unless the adjustment notes specifically require a change. Preserve coherence with the surrounding segments.
+
+Return ONLY valid JSON for the SINGLE regenerated segment (no markdown, no explanation):
+{
+  "segment": "${targetSegment.segment}",
+  "title": "Updated segment title",
+  "duration": ${targetSegment.duration},
+  "description": "Updated description",
+  "teacherActions": "Updated teacher actions reflecting the adjustment notes",
+  "childActions": "Updated child actions",
+  "materials": ["Updated", "materials"],
+  "adaptations": {
+    "simplify": "How to simplify",
+    "extend": "How to extend"
+  },
+  "assessmentOpportunity": "What to observe (optional)"
+}`;
+}
+
+export async function regenerateSegment(
+  req: RegenerateSegmentRequest,
+  apiKey: string
+): Promise<LessonSegmentItem> {
+  if (!req.adjustmentNotes || req.adjustmentNotes.trim().length < 3) {
+    throw new Error('Adjustment notes must be at least 3 characters.');
+  }
+  if (req.segmentIndex < 0 || req.segmentIndex >= req.lesson.segments.length) {
+    throw new Error('Invalid segmentIndex.');
+  }
+
+  const systemPrompt = `You are an expert early childhood educator refining a single lesson segment.
+Always respond with valid JSON only. No markdown, no explanation, just the JSON object.`;
+  const userPrompt = buildRegenerateSegmentPrompt(req);
+
+  const raw = await callClaude(systemPrompt, userPrompt, apiKey);
+  const cleaned = repairJSON(raw);
+
+  let parsed: LessonSegmentItem;
+  try {
+    parsed = JSON.parse(cleaned) as LessonSegmentItem;
+  } catch (e) {
+    console.error('Segment regenerate JSON parse error:', e);
+    throw new Error('Failed to parse regenerated segment. Try again.');
+  }
+
+  // Hard-pin the segment label so the model can't reorder.
+  const original = req.lesson.segments[req.segmentIndex];
+  return {
+    ...parsed,
+    segment: original.segment,
+    title: parsed.title || original.title,
+    duration: typeof parsed.duration === 'number' ? parsed.duration : original.duration,
+    materials: Array.isArray(parsed.materials) ? parsed.materials : [],
+    adaptations: parsed.adaptations || { simplify: '', extend: '' },
+  };
+}
+
+// ============================================================================
 // Validation Helpers
 // ============================================================================
 

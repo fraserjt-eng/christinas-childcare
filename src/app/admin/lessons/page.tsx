@@ -33,12 +33,18 @@ import {
   Loader2,
   AlertCircle,
   ExternalLink,
+  Award,
+  X,
 } from 'lucide-react';
 
 import { LessonCard } from '@/components/lessons/LessonCard';
 import { LessonForm } from '@/components/lessons/LessonForm';
 import { LessonDisplay } from '@/components/lessons/LessonDisplay';
 import { RemixModal } from '@/components/lessons/RemixModal';
+import { StandardsBrowser } from '@/components/lessons/StandardsBrowser';
+import { SegmentRefinePanel } from '@/components/lessons/SegmentRefinePanel';
+import { getIndicatorMeta } from '@/data/standards/mn-ecips';
+import type { LessonSegmentItem } from '@/types/curriculum';
 
 import {
   Lesson,
@@ -86,7 +92,13 @@ export default function LessonBuilderPage() {
   const [filterAge, setFilterAge] = useState<AgeGroup | 'all'>('all');
   const [filterDomain, setFilterDomain] = useState<LearningDomain | 'all'>('all');
   const [filterFavorites, setFilterFavorites] = useState(false);
+  const [filterEcipsCode, setFilterEcipsCode] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'title' | 'duration'>('newest');
+
+  // Segment refinement state (Refine + Align flow)
+  const [refineOpen, setRefineOpen] = useState(false);
+  const [refineLesson, setRefineLesson] = useState<Lesson | null>(null);
+  const [refineSegmentIndex, setRefineSegmentIndex] = useState<number | null>(null);
 
   // Loading/Error states
   const [isLoading, setIsLoading] = useState(true);
@@ -114,7 +126,13 @@ export default function LessonBuilderPage() {
       };
 
       const data = await getLessons(filters);
-      setLessons(data);
+      // ECIPS filter is applied client-side because lesson-storage doesn't
+      // know about indicators yet; once lessons live in Supabase the filter
+      // can move to a SQL JOIN against lesson_ecips_alignments.
+      const ecipsFiltered = filterEcipsCode
+        ? data.filter((l) => l.ecipsIndicators?.includes(filterEcipsCode))
+        : data;
+      setLessons(ecipsFiltered);
 
       const analyticsData = await getAnalytics();
       setAnalytics(analyticsData);
@@ -124,7 +142,7 @@ export default function LessonBuilderPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, filterAge, filterDomain, filterFavorites, sortBy]);
+  }, [searchQuery, filterAge, filterDomain, filterFavorites, filterEcipsCode, sortBy]);
 
   useEffect(() => {
     loadLessons();
@@ -335,6 +353,37 @@ export default function LessonBuilderPage() {
     setViewMode('list');
   };
 
+  // Segment refinement handlers
+  const handleSegmentRefineRequest = (segmentIndex: number) => {
+    if (!selectedLesson) return;
+    setRefineLesson(selectedLesson);
+    setRefineSegmentIndex(segmentIndex);
+    setRefineOpen(true);
+  };
+
+  const handleSegmentRefineApplied = async (newSegment: LessonSegmentItem) => {
+    if (!refineLesson || refineSegmentIndex === null) return;
+    const newSegments = refineLesson.segments.map((s, i) =>
+      i === refineSegmentIndex ? newSegment : s
+    );
+    try {
+      const updated = await updateLesson(refineLesson.id, { segments: newSegments });
+      if (updated) {
+        setSelectedLesson(updated);
+        await loadLessons();
+      }
+    } catch (err) {
+      console.error('Error applying refined segment:', err);
+      setError('Segment regenerated but failed to save. Try again.');
+    }
+  };
+
+  // Standards tab → library tab routing
+  const handleIndicatorClick = (code: string) => {
+    setFilterEcipsCode(code);
+    setTab('library');
+  };
+
   // Render view mode
   if (viewMode === 'view' && selectedLesson) {
     return (
@@ -350,6 +399,14 @@ export default function LessonBuilderPage() {
           onDelete={() => handleDeleteClick(selectedLesson)}
           onToggleFavorite={() => handleToggleFavorite(selectedLesson)}
           onDownloadPDF={handleDownloadPDF}
+          onSegmentRefine={handleSegmentRefineRequest}
+        />
+        <SegmentRefinePanel
+          lesson={refineLesson}
+          segmentIndex={refineSegmentIndex}
+          open={refineOpen}
+          onClose={() => setRefineOpen(false)}
+          onApplied={handleSegmentRefineApplied}
         />
       </div>
     );
@@ -395,6 +452,9 @@ export default function LessonBuilderPage() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="standards" className="gap-1">
+            <Award className="h-3 w-3" /> Standards
+          </TabsTrigger>
           <TabsTrigger value="remix" className="gap-1">
             <Shuffle className="h-3 w-3" /> Remix
           </TabsTrigger>
@@ -429,6 +489,31 @@ export default function LessonBuilderPage() {
 
         {/* Library */}
         <TabsContent value="library" className="space-y-4">
+          {/* Active ECIPS filter chip */}
+          {filterEcipsCode && (() => {
+            const meta = getIndicatorMeta(filterEcipsCode);
+            if (!meta) return null;
+            return (
+              <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
+                <Award className="h-4 w-4 text-amber-700 shrink-0" />
+                <span className="text-amber-900">
+                  Showing lessons aligned to{' '}
+                  <span className="font-mono font-semibold">{filterEcipsCode}</span>
+                  : <span className="italic">{meta.indicator.description}</span>
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto text-amber-700 hover:bg-amber-100 h-7"
+                  onClick={() => setFilterEcipsCode(null)}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear
+                </Button>
+              </div>
+            );
+          })()}
+
           {/* Filters */}
           <Card>
             <CardContent className="p-4">
@@ -545,6 +630,14 @@ export default function LessonBuilderPage() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Standards Browser */}
+        <TabsContent value="standards">
+          <StandardsBrowser
+            lessons={lessons}
+            onIndicatorClick={handleIndicatorClick}
+          />
         </TabsContent>
 
         {/* Remix Tab */}

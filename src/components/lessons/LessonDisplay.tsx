@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EcipsAlignment } from '@/components/curriculum/EcipsAlignment';
 import {
   Clock,
   Target,
@@ -40,14 +41,18 @@ interface LessonDisplayProps {
   onDelete?: () => void;
   onToggleFavorite?: () => void;
   onDownloadPDF?: (type: 'lesson' | 'activity-cards' | 'parent-letter' | 'assessment') => void;
+  /** When provided, each segment shows a Refine button that calls back with the index. */
+  onSegmentRefine?: (segmentIndex: number) => void;
 }
 
 function SegmentCard({
   segment,
   index,
+  onRefine,
 }: {
   segment: LessonSegmentItem;
   index: number;
+  onRefine?: (segmentIndex: number) => void;
 }) {
   const [expanded, setExpanded] = useState(index === 0);
   const segmentColor = getSegmentColor(segment.segment);
@@ -71,11 +76,26 @@ function SegmentCard({
             </p>
           </div>
         </div>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        )}
+        <div className="flex items-center gap-2">
+          {onRefine && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRefine(index);
+              }}
+              className="text-xs font-medium px-2 py-1 rounded bg-christina-red/10 text-christina-red hover:bg-christina-red hover:text-white transition-colors"
+              title="Regenerate this segment with AI"
+            >
+              Refine
+            </button>
+          )}
+          {expanded ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </div>
       </button>
 
       {expanded && (
@@ -143,6 +163,9 @@ function SegmentCard({
   );
 }
 
+// onSegmentRefine is forwarded to SegmentCard. Keeping the props signature
+// stable so the live ChevronDown chevron / chevron is still rendered before
+// the Refine button replaces it on the next session's UX rebuild.
 export function LessonDisplay({
   lesson,
   onEdit,
@@ -150,6 +173,7 @@ export function LessonDisplay({
   onDelete,
   onToggleFavorite,
   onDownloadPDF,
+  onSegmentRefine,
 }: LessonDisplayProps) {
   const ageLabel = AGE_GROUP_LABELS[lesson.ageGroup];
   const domainLabel = DOMAIN_LABELS[lesson.domain];
@@ -270,6 +294,10 @@ export function LessonDisplay({
             </CardContent>
           </Card>
 
+          {lesson.ecipsIndicators && lesson.ecipsIndicators.length > 0 && (
+            <EcipsAlignment codes={lesson.ecipsIndicators} />
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -321,6 +349,7 @@ export function LessonDisplay({
               key={index}
               segment={segment}
               index={index}
+              onRefine={onSegmentRefine}
             />
           ))}
         </TabsContent>
