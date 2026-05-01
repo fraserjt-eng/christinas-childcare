@@ -80,10 +80,13 @@ export function ParallaxHero() {
 
   return (
     <>
-      {/* Hero Section */}
+      {/* Hero Section.
+          items-start + top padding anchors the content right under the
+          banners (Seasonal + Kiosk) instead of vertical-centering, which
+          was producing a big empty band above the eyebrow text. */}
       <section
         ref={heroRef}
-        className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#fafafa] to-[#f5f0e8]"
+        className="relative min-h-screen flex items-start justify-center overflow-hidden bg-gradient-to-b from-[#fafafa] to-[#f5f0e8] pt-12 sm:pt-16 md:pt-20 pb-24"
       >
         {/* Subtle animated background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -157,9 +160,9 @@ export function ParallaxHero() {
 
           {/* Main headline - Red */}
           <h1
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light tracking-tight leading-[1.1] mb-10"
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-light tracking-tight leading-[1.1] mb-6 sm:mb-8"
             style={{
-              opacity: Math.max(0, 1 - scrollY / 400),
+              opacity: Math.max(0, 1 - scrollY / 600),
               transform: `translateY(${scrollY * 0.4}px)`,
             }}
           >
@@ -168,11 +171,14 @@ export function ParallaxHero() {
             <span className="font-normal text-[#C62828]">Child Care Center</span>
           </h1>
 
-          {/* CTA buttons */}
+          {/* CTA buttons.
+              Slower fade (scrollY/700 instead of /300) so Schedule a Tour
+              and Our Programs stay visible while scrolling past the
+              Seasonal + Kiosk banners. */}
           <div
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12"
             style={{
-              opacity: Math.max(0, 1 - scrollY / 300),
+              opacity: Math.max(0, 1 - scrollY / 700),
               transform: `translateY(${scrollY * 0.3}px)`,
             }}
           >
