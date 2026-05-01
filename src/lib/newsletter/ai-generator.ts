@@ -5,6 +5,7 @@
 // the existing communications page or, later, the block editor.
 
 import { WRITING_STANDARDS_SYSTEM_PROMPT } from '@/lib/ai/writing-standards';
+import { callClaudeWithFallback } from '@/lib/ai/model-fallback';
 import { getCenterActivitySnapshot } from '@/lib/newsletter/center-activity';
 import type { Newsletter, NewsletterSection } from '@/lib/newsletter-storage';
 
@@ -84,31 +85,19 @@ Return ONLY valid JSON in this exact shape:
   ]
 }`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-opus-4-7',
-      max_tokens: 4000,
-      system: WRITING_STANDARDS_SYSTEM_PROMPT + '\n\n' + systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
+  const result = await callClaudeWithFallback({
+    apiKey,
+    systemPrompt: WRITING_STANDARDS_SYSTEM_PROMPT + '\n\n' + systemPrompt,
+    userPrompt,
+    maxTokens: 4000,
   });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Claude API error (${response.status}): ${text.slice(0, 300)}`);
+  if (result.modelUsed !== 'claude-opus-4-7') {
+    console.warn(
+      `Newsletter drafted with fallback model ${result.modelUsed}; Opus 4.7 was unavailable.`,
+      result.attempts
+    );
   }
-
-  const body = (await response.json()) as {
-    content?: Array<{ text?: string }>;
-  };
-  const raw = body.content?.[0]?.text;
-  if (!raw) throw new Error('Empty response from Claude.');
+  const raw = result.text;
 
   let cleaned = raw.trim();
   if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);

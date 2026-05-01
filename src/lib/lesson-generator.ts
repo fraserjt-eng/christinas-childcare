@@ -12,6 +12,7 @@ import {
   DOMAIN_LABELS,
 } from '@/types/curriculum';
 import { WRITING_STANDARDS_SYSTEM_PROMPT } from '@/lib/ai/writing-standards';
+import { callClaudeWithFallback } from '@/lib/ai/model-fallback';
 import {
   MN_ECIPS,
   ECIPS_AGE_BANDS,
@@ -380,43 +381,22 @@ export async function callClaude(
   userPrompt: string,
   apiKey: string
 ): Promise<string> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      // Opus 4.7 — Christina's lesson plans get the strongest reasoning model so
-      // ECIPS alignment, age-band differentiation, and 5-segment structure all
-      // hold together in one pass. Cost is logged per call by the API route's
-      // apiGuard wrapper so /admin/costs reflects the spend.
-      model: 'claude-opus-4-7',
-      max_tokens: 6000,
-      system: WRITING_STANDARDS_SYSTEM_PROMPT + '\n\n' + systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-    }),
+  // Try Opus 4.7 first for best ECIPS alignment, but fall back through Sonnet
+  // and Haiku tiers so a Haiku-only key still produces lessons. The wrapper
+  // surfaces the real per-model error if all attempts fail.
+  const result = await callClaudeWithFallback({
+    apiKey,
+    systemPrompt: WRITING_STANDARDS_SYSTEM_PROMPT + '\n\n' + systemPrompt,
+    userPrompt,
+    maxTokens: 6000,
   });
-
-  if (!response.ok) {
-    const error = await response.text();
-    console.error('Claude API error:', error);
-    throw new Error(`Claude API error: ${response.status}`);
+  if (result.modelUsed !== 'claude-opus-4-7') {
+    console.warn(
+      `Lesson generated with fallback model ${result.modelUsed}; Opus 4.7 was unavailable.`,
+      result.attempts
+    );
   }
-
-  const data = await response.json();
-
-  if (!data.content || data.content.length === 0) {
-    throw new Error('Empty response from Claude');
-  }
-
-  return data.content[0].text;
+  return result.text;
 }
 
 // ============================================================================

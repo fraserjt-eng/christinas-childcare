@@ -336,9 +336,6 @@ export interface RatioComplianceResult {
 }
 
 export function getRatioCompliance(date: string): RatioComplianceResult[] {
-  // Self-heal: any legacy shift missing a classroom_id gets backfilled from
-  // the employee's seed-defined room before we count.
-  backfillShiftClassrooms();
   const shifts = getShifts({ date });
 
   // Simulated enrolled counts (in production these come from attendance)
@@ -378,29 +375,38 @@ export function getRatioCompliance(date: string): RatioComplianceResult[] {
 }
 
 // One-time backfill: classroom_id became required for ratio compliance.
-// Older seeded shifts may have undefined classroom_id; fall back to the
-// employee's currently configured room.
+// Older seeded shifts may have undefined classroom_id; fall back to a
+// hardcoded employee→room map. Defensively wrapped so a corrupt storage
+// row never crashes the optimizer page.
+const EMPLOYEE_ROOM_FALLBACK: Record<string, string> = {
+  'emp-oz': 'rm-infants',
+  'emp-cf': 'rm-preschool',
+  'emp-ms': 'rm-infants',
+  'emp-jr': 'rm-toddlers',
+  'emp-sk': 'rm-preschool-bp',
+  'emp-dc': 'rm-school-age-bp',
+  'emp-lj': 'rm-toddlers-bp',
+  'emp-sz': 'rm-preschool',
+};
+
 export function backfillShiftClassrooms(): number {
   if (typeof window === 'undefined') return 0;
-  const shifts = getFromStorage<ScheduleShift>(SHIFTS_KEY);
-  // Build lookup from current seed staff data
-  const seedStaff = buildSeedShifts();
-  const employeeRoom = new Map<string, string | undefined>();
-  for (const s of seedStaff) {
-    if (!employeeRoom.has(s.employee_id) && s.classroom_id) {
-      employeeRoom.set(s.employee_id, s.classroom_id);
-    }
+  try {
+    const shifts = getFromStorage<ScheduleShift>(SHIFTS_KEY);
+    let updated = 0;
+    const next = shifts.map(s => {
+      if (s.classroom_id) return s;
+      const room = EMPLOYEE_ROOM_FALLBACK[s.employee_id];
+      if (!room) return s;
+      updated += 1;
+      return { ...s, classroom_id: room };
+    });
+    if (updated > 0) saveToStorage(SHIFTS_KEY, next);
+    return updated;
+  } catch (err) {
+    console.warn('backfillShiftClassrooms failed (non-fatal):', err);
+    return 0;
   }
-  let updated = 0;
-  const next = shifts.map(s => {
-    if (s.classroom_id) return s;
-    const room = employeeRoom.get(s.employee_id);
-    if (!room) return s;
-    updated += 1;
-    return { ...s, classroom_id: room };
-  });
-  if (updated > 0) saveToStorage(SHIFTS_KEY, next);
-  return updated;
 }
 
 // ============================================================================
