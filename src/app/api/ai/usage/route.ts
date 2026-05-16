@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { requireSession } from '@/lib/require-auth';
 import { checkDailyQuota, getDailyCap, setDailyCap } from '@/lib/ai-usage-storage';
 
 // GET: Return today's usage + configured cap
@@ -25,9 +25,8 @@ export async function GET(): Promise<NextResponse> {
 
 // POST: Update the daily cap (admin only)
 export async function POST(request: Request): Promise<NextResponse> {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) {
+  const session = await requireSession();
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

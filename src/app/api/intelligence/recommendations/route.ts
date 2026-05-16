@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { requireSession } from '@/lib/require-auth';
 import { callClaudeHaiku } from '@/lib/ai/claude-client';
 import { loadAIConfig } from '@/lib/ai-config';
 import { TrainingDigestItem, StaffingAlert, RecommendationDecision } from '@/lib/intelligence/types';
@@ -51,9 +51,8 @@ function prioritizeItems<T extends { severity: string }>(items: T[], max: number
 }
 
 export async function POST(request: NextRequest) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) {
+  const session = await requireSession();
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

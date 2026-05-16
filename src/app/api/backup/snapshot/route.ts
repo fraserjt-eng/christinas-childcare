@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { BACKUP_TABLES } from '@/lib/backup/tables';
 import { buildTimestampFilename, type SnapshotEnvelopeV2 } from '@/lib/backup/envelope';
@@ -33,9 +33,8 @@ function badConfig(reason: string) {
 // client, upload as JSON to Storage, write a metadata row.
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) return unauthorized();
+  const session = await requireSession();
+  if (!session) return unauthorized();
 
   const supabase = getServerSupabase();
   if (!supabase) {
@@ -161,9 +160,8 @@ export async function POST(req: NextRequest) {
 // List all snapshots, newest first, joined with their metadata rows.
 
 export async function GET() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) return unauthorized();
+  const session = await requireSession();
+  if (!session) return unauthorized();
 
   const supabase = getServerSupabase();
   if (!supabase) {

@@ -6,10 +6,11 @@
 
 import { createHmac } from 'crypto';
 
+// Fail closed in production: the dev fallback is only used outside production.
 const SECRET =
   process.env.NEWSLETTER_TOKEN_SECRET ||
   process.env.SESSION_SECRET ||
-  'dev-secret-change-in-production';
+  (process.env.NODE_ENV === 'production' ? '' : 'dev-secret-change-in-production');
 
 interface UnsubscribePayload {
   sid: string;          // subscriber id
@@ -27,6 +28,9 @@ function b64urlDecode(str: string): Buffer {
 }
 
 function sign(payload: string): string {
+  if (!SECRET) {
+    throw new Error('NEWSLETTER_TOKEN_SECRET or SESSION_SECRET must be set in production');
+  }
   return createHmac('sha256', SECRET).update(payload).digest('hex');
 }
 
@@ -43,6 +47,7 @@ export function buildUnsubscribeToken(subscriberId: string, newsletterId?: strin
 }
 
 export function verifyUnsubscribeToken(token: string): UnsubscribePayload | null {
+  if (!SECRET) return null;
   const dot = token.lastIndexOf('.');
   if (dot === -1) return null;
   const encoded = token.substring(0, dot);

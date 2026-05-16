@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { requireSession } from '@/lib/require-auth';
 import { callClaudeHaiku } from '@/lib/ai/claude-client';
 import { loadAIConfig } from '@/lib/ai-config';
 import { checkAIRateLimit, rateLimitedResponse } from '@/lib/ai-rate-limit';
@@ -28,9 +28,8 @@ interface TaskSummary {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) {
+  const session = await requireSession();
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 300; // give bulk sends up to 5 min on Vercel Pro
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { requireSession } from '@/lib/require-auth';
 import { getNewsletter } from '@/lib/newsletter-storage';
 import { bulkSendNewsletter } from '@/lib/newsletter/bulk-send';
 
@@ -12,9 +12,8 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) {
+  const session = await requireSession();
+  if (!session) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 

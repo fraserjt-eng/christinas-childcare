@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import {
   isV2,
@@ -59,9 +59,8 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) return unauthorized();
+  const session = await requireSession();
+  if (!session) return unauthorized();
 
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
@@ -80,9 +79,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) return unauthorized();
+  const session = await requireSession();
+  if (!session) return unauthorized();
 
   const supabase = getServerSupabase();
   if (!supabase) {
@@ -145,9 +143,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) return unauthorized();
+  const session = await requireSession();
+  if (!session) return unauthorized();
 
   const { id } = await params;
   const decodedId = decodeURIComponent(id);

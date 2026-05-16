@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { requireSession } from '@/lib/require-auth';
 import { regenerateSegment } from '@/lib/lesson-generator';
 import { loadAIConfig } from '@/lib/ai-config';
 import { checkAIRateLimit, rateLimitedResponse } from '@/lib/ai-rate-limit';
@@ -17,9 +17,8 @@ import type { Lesson } from '@/types/curriculum';
 // Returns: { success: true, segment: LessonSegmentItem }
 
 export async function POST(request: NextRequest) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) {
+  const session = await requireSession();
+  if (!session) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 

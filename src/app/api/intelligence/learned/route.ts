@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { requireSession } from '@/lib/require-auth';
 import { callClaudeHaiku } from '@/lib/ai/claude-client';
 import { loadAIConfig } from '@/lib/ai-config';
 import { RecommendationDecision } from '@/lib/intelligence/types';
@@ -21,9 +21,8 @@ Return ONLY the JSON object. No markdown. No commentary.
 If there are fewer than 3 decisions, return: {"preferences": [], "avoids": [], "summary": "Not enough decisions yet to identify patterns. Keep approving and denying recommendations to teach the system."}`;
 
 export async function POST(request: NextRequest) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) {
+  const session = await requireSession();
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

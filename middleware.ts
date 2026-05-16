@@ -45,7 +45,13 @@ const API_RATE_LIMIT = {
  * The cookie format is: <JSON payload>.<hex signature>
  */
 async function verifySignedCookieEdge(cookieValue: string): Promise<Record<string, unknown> | null> {
-  const secret = process.env.SESSION_SECRET || 'dev-secret-change-in-production';
+  // Fail closed in production: no SESSION_SECRET means deny, not sign with a
+  // publicly known key. Returning null makes the caller treat the request as
+  // unauthenticated and redirect to login.
+  const secret =
+    process.env.SESSION_SECRET ||
+    (process.env.NODE_ENV === 'production' ? '' : 'dev-secret-change-in-production');
+  if (!secret) return null;
   const lastDot = cookieValue.lastIndexOf('.');
   if (lastDot === -1) return null;
 

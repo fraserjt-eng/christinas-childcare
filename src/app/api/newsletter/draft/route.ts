@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { requireSession } from '@/lib/require-auth';
 import {
   generateNewsletterDraft,
   type NewsletterGenerateRequest,
@@ -24,9 +24,8 @@ import {
 // and grounds the draft in real recent center activity.
 
 export async function POST(request: NextRequest) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get('auth_session');
-  if (!session?.value) {
+  const session = await requireSession();
+  if (!session) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
 

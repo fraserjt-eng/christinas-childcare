@@ -5,14 +5,23 @@
 
 import { createHmac } from 'crypto';
 
-const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret-change-in-production';
+// Fail closed in production: the dev fallback is only used outside production.
+// If SESSION_SECRET is unset in production, signing throws and verification
+// denies, instead of silently signing with a publicly known key.
+const SESSION_SECRET =
+  process.env.SESSION_SECRET ||
+  (process.env.NODE_ENV === 'production' ? '' : 'dev-secret-change-in-production');
 export const SESSION_MAX_AGE = 8 * 60 * 60; // 8 hours in seconds
 
 export function signPayload(payload: string): string {
+  if (!SESSION_SECRET) {
+    throw new Error('SESSION_SECRET must be set in production');
+  }
   return createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
 }
 
 export function verifySignedCookie(cookieValue: string): Record<string, unknown> | null {
+  if (!SESSION_SECRET) return null;
   const lastDot = cookieValue.lastIndexOf('.');
   if (lastDot === -1) return null;
 
