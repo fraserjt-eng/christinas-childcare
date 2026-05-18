@@ -288,12 +288,12 @@ export default function AdminDashboard() {
   const [zone, setZone] = useState<TimeZone>('core');
   const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
   const [snapshot, setSnapshot] = useState<TodaySnapshot>({
-    childrenPresent: 52,
-    totalEnrolled: 65,
-    staffOnDuty: 7,
-    totalStaff: 8,
+    childrenPresent: 0,
+    totalEnrolled: 0,
+    staffOnDuty: 0,
+    totalStaff: 0,
     ratioCompliant: true,
-    mealsServed: 186,
+    mealsServed: 0,
     tasksComplete: 0,
     totalTasks: 0,
   });
@@ -304,7 +304,21 @@ export default function AdminDashboard() {
     setZone(currentZone);
     setAlerts(getDashboardAlerts());
 
-    // Fetch live attendance from Supabase
+    // Real task counts from the task board (localStorage is the task store).
+    const taskSnap = getTodaySnapshot();
+    setSnapshot((prev) => ({
+      ...prev,
+      tasksComplete: taskSnap.tasksComplete,
+      totalTasks: taskSnap.totalTasks,
+    }));
+
+    // Conservative, honest ratio: never falsely reassure. Uses the strictest
+    // Minnesota ratio (infant 1:4) against real numbers. The authoritative
+    // per-room view is /admin/ratios.
+    const ratioOk = (children: number, staff: number) =>
+      children === 0 ? true : staff >= Math.ceil(children / 4);
+
+    // Children present right now: real, not-checked-out attendance.
     async function fetchAttendance() {
       try {
         const { supabase } = await import('@/lib/supabase');
@@ -319,14 +333,54 @@ export default function AdminDashboard() {
             ...prev,
             childrenPresent: checkedIn,
             totalEnrolled: Math.max(prev.totalEnrolled, checkedIn),
+            ratioCompliant: ratioOk(checkedIn, prev.staffOnDuty),
           }));
         }
       } catch {
-        // Supabase not available, keep defaults
+        // Supabase not available, keep last known values
       }
     }
+
+    // Staff on duty + total active staff: real, from the spine.
+    async function fetchFloor() {
+      try {
+        const r = await fetch('/api/pulse/floor', { cache: 'no-store' });
+        if (!r.ok) return;
+        const f = await r.json();
+        const staff =
+          typeof f.staffOnDuty === 'number' ? f.staffOnDuty : 0;
+        setSnapshot((prev) => ({
+          ...prev,
+          staffOnDuty: staff,
+          totalStaff:
+            typeof f.totalActiveStaff === 'number' && f.totalActiveStaff > 0
+              ? f.totalActiveStaff
+              : prev.totalStaff,
+          ratioCompliant: ratioOk(prev.childrenPresent, staff),
+        }));
+      } catch {
+        // pulse unavailable, keep last known values
+      }
+    }
+
+    // Meals served today: real, from the daily report (food_counts).
+    async function fetchMeals() {
+      try {
+        const r = await fetch('/api/reports/daily', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        const meals = d?.meals || {};
+        const served = (['breakfast', 'am_snack', 'lunch', 'pm_snack'] as const)
+          .reduce((s, k) => s + (meals[k]?.child_count || 0), 0);
+        setSnapshot((prev) => ({ ...prev, mealsServed: served }));
+      } catch {
+        // report unavailable, keep last known values
+      }
+    }
+
     fetchAttendance();
-    setSnapshot(getTodaySnapshot());
+    fetchFloor();
+    fetchMeals();
     setActions(getQuickActions(currentZone));
 
     // Subscribe to realtime attendance changes so the dashboard updates

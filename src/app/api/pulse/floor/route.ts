@@ -78,6 +78,12 @@ export async function GET() {
     }
   }
 
+  // Total active staff = the honest denominator ("N of M on duty").
+  const { count: totalActiveStaff } = await supabase
+    .from('employees')
+    .select('id', { count: 'exact', head: true })
+    .eq('employment_status', 'active');
+
   const staff = ids.map((id) => {
     const v = byEmployee.get(id)!;
     return {
@@ -102,6 +108,7 @@ export async function GET() {
     {
       date,
       staffOnDuty: staff.length,
+      totalActiveStaff: totalActiveStaff ?? 0,
       roomAssignmentTracked: unassigned === 0 && staff.length > 0,
       unassigned,
       byClassroom,
