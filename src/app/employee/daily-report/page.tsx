@@ -67,6 +67,7 @@ export default function StaffDailyReportPage() {
   const [amount, setAmount] = useState('');
   const [napStart, setNapStart] = useState('');
   const [napEnd, setNapEnd] = useState('');
+  const [photoData, setPhotoData] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [todayEntries, setTodayEntries] = useState<Entry[]>([]);
@@ -134,6 +135,7 @@ export default function StaffDailyReportPage() {
           type,
           detail,
           occurred_at: new Date().toISOString(),
+          ...(type === 'photo' && photoData ? { photo_data: photoData } : {}),
         }),
       });
       if (r.ok) {
@@ -142,6 +144,7 @@ export default function StaffDailyReportPage() {
         setAmount('');
         setNapStart('');
         setNapEnd('');
+        setPhotoData('');
         await loadToday();
         setTimeout(() => setSaved(false), 2500);
       }
@@ -273,6 +276,41 @@ export default function StaffDailyReportPage() {
             </div>
           )}
 
+          {type === 'photo' && (
+            <div>
+              <Label htmlFor="photo" className="text-sm">
+                Photo
+              </Label>
+              <input
+                id="photo"
+                type="file"
+                accept="image/*"
+                className="mt-1 block w-full text-sm"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) {
+                    setPhotoData('');
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = () =>
+                    setPhotoData(
+                      typeof reader.result === 'string' ? reader.result : ''
+                    );
+                  reader.readAsDataURL(file);
+                }}
+              />
+              {photoData && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoData}
+                  alt="Selected"
+                  className="mt-2 h-32 rounded-md object-cover border"
+                />
+              )}
+            </div>
+          )}
+
           <div>
             <Label htmlFor="note" className="text-sm">
               Note {type === 'incident' ? '(what happened, what you did)' : ''}
@@ -290,7 +328,9 @@ export default function StaffDailyReportPage() {
           <div className="flex items-center gap-3">
             <Button
               onClick={submit}
-              disabled={!childId || saving}
+              disabled={
+                !childId || saving || (type === 'photo' && !photoData)
+              }
               className="bg-christina-red gap-2"
             >
               {saving ? (

@@ -239,6 +239,15 @@ export default function DailyReportsPage() {
                                 ? e.detail.note
                                 : ''}
                             </span>
+                            {e.type === 'photo' &&
+                              typeof e.detail?.photo_url === 'string' && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={e.detail.photo_url as string}
+                                  alt="Logged"
+                                  className="h-10 w-10 rounded object-cover border flex-shrink-0"
+                                />
+                              )}
                           </div>
                         ))}
                         {child.entries.length > 5 && (

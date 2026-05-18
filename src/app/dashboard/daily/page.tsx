@@ -272,6 +272,15 @@ export default function ParentDailyReportPage() {
                           {text}
                         </p>
                       )}
+                      {e.type === 'photo' &&
+                        typeof e.detail?.photo_url === 'string' && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={e.detail.photo_url as string}
+                            alt="From your child's day"
+                            className="mt-2 rounded-lg max-h-64 w-auto border"
+                          />
+                        )}
                     </div>
                   </div>
                 );

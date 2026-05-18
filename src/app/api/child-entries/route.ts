@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
     detail?: Record<string, unknown>;
     occurred_at?: string;
     classroom_id?: string;
+    photo_data?: string;
   };
   try {
     body = await request.json();
@@ -126,13 +127,45 @@ export async function POST(request: NextRequest) {
   const occurredAt = body.occurred_at || new Date().toISOString();
   const date = occurredAt.split('T')[0];
 
+  const detail: Record<string, unknown> =
+    body.detail && typeof body.detail === 'object' ? { ...body.detail } : {};
+
+  // A photo for THIS child goes straight onto their report (Tadpoles model).
+  // Upload to the existing child_photos bucket via service role; store the
+  // public URL on the entry. Also tag the child on daily_photos for the
+  // classroom gallery so the two stay consistent.
+  if (type === 'photo' && typeof body.photo_data === 'string' && body.photo_data.startsWith('data:')) {
+    try {
+      const base64 = body.photo_data.split(',')[1] || '';
+      const buffer = Buffer.from(base64, 'base64');
+      const path = `daily-report/${childId}/${Date.now()}.jpg`;
+      const { error: upErr } = await supabase.storage
+        .from('child_photos')
+        .upload(path, buffer, { contentType: 'image/jpeg', upsert: false });
+      if (!upErr) {
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from('child_photos').getPublicUrl(path);
+        detail.photo_url = publicUrl;
+        await supabase.from('daily_photos').insert({
+          classroom_id: body.classroom_id || null,
+          photo_url: publicUrl,
+          caption: typeof detail.note === 'string' ? detail.note : null,
+          child_ids: [childId],
+        });
+      }
+    } catch {
+      /* if the upload fails the note still saves; staff can retry the photo */
+    }
+  }
+
   const { data: created, error } = await supabase
     .from('child_daily_entries')
     .insert({
       child_id: childId,
       date,
       type,
-      detail: body.detail && typeof body.detail === 'object' ? body.detail : {},
+      detail,
       occurred_at: occurredAt,
       recorded_by: employee?.id ?? null,
       classroom_id: body.classroom_id || null,
