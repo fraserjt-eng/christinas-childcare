@@ -204,3 +204,61 @@ export async function POST(request: NextRequest) {
     childCount: childRows.length,
   });
 }
+
+// Permanently delete a family (their kiosk PIN stops working immediately):
+// the family row plus its parents, children, attendance, and messages.
+// ?id=<family uuid>
+export async function DELETE(request: NextRequest) {
+  const session = await requireSession('admin');
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const id = (new URL(request.url).searchParams.get('id') || '').trim();
+  if (!id) {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 });
+  }
+
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
+  }
+
+  const { data: fam } = await supabase
+    .from('families')
+    .select('id, email')
+    .eq('id', id)
+    .maybeSingle();
+  if (!fam) {
+    return NextResponse.json({ error: 'Family not found' }, { status: 404 });
+  }
+
+  // Clear attendance for this family's children before the cascade removes
+  // the child rows (attendance has no FK, so it would orphan otherwise).
+  const { data: kids } = await supabase
+    .from('family_children')
+    .select('id')
+    .eq('family_id', id);
+  const childIds = (kids || []).map((k) => k.id);
+  if (childIds.length > 0) {
+    await supabase.from('attendance').delete().in('child_id', childIds);
+  }
+
+  if (fam.email) {
+    await supabase
+      .from('parent_messages')
+      .delete()
+      .ilike('parent_email', fam.email);
+  }
+
+  // family_parents + family_children cascade on the families delete.
+  const { error } = await supabase.from('families').delete().eq('id', id);
+  if (error) {
+    return NextResponse.json(
+      { error: 'Could not delete the family' },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}

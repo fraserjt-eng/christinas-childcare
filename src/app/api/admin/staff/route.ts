@@ -143,3 +143,38 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ ok: true, id: created.id, role });
 }
+
+// Permanently delete a staff member (their PIN stops working immediately).
+// ?email=<staff email>
+export async function DELETE(request: NextRequest) {
+  const session = await requireSession('admin');
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const email = (new URL(request.url).searchParams.get('email') || '')
+    .toLowerCase()
+    .trim();
+  if (!email) {
+    return NextResponse.json({ error: 'email is required' }, { status: 400 });
+  }
+
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
+  }
+
+  const { error } = await supabase
+    .from('employees')
+    .delete()
+    .ilike('email', email);
+
+  if (error) {
+    return NextResponse.json(
+      { error: 'Could not delete the staff member' },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}

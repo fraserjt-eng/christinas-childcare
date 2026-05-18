@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/table';
 import {
   Users, Plus, Search, MoreHorizontal, ArrowLeft,
-  Pencil, UserX, UserCheck, KeyRound, Mail, RefreshCw,
+  Pencil, UserX, UserCheck, KeyRound, Mail, RefreshCw, Trash2,
 } from 'lucide-react';
 import {
   AppUser,
@@ -49,6 +49,7 @@ import {
   updateUser,
   deactivateUser,
   activateUser,
+  deleteUser,
   ROLE_DEFINITIONS,
   purgeDemoUsers,
 } from '@/lib/user-storage';
@@ -689,6 +690,50 @@ export default function UsersPage() {
     refreshUsers();
   };
 
+  // Permanent delete. Families and staff live in the database, so this calls
+  // the server; staff also get removed from the local list.
+  const handleDeleteUser = async (user: DirectoryRow) => {
+    const label = user.isFamily
+      ? `the ${user.first_name} ${user.last_name} family and their children`
+      : `${user.first_name} ${user.last_name}`;
+    if (
+      !window.confirm(
+        `Permanently delete ${label}? This cannot be undone. Their PIN stops working immediately.`
+      )
+    ) {
+      return;
+    }
+    try {
+      if (user.isFamily) {
+        const familyId = user.id.replace(/^family-/, '');
+        const r = await fetch(
+          `/api/admin/family?id=${encodeURIComponent(familyId)}`,
+          { method: 'DELETE' }
+        );
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          setFormError(d.error || 'Could not delete the family.');
+          return;
+        }
+      } else {
+        const r = await fetch(
+          `/api/admin/staff?email=${encodeURIComponent(user.email)}`,
+          { method: 'DELETE' }
+        );
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          setFormError(d.error || 'Could not delete the staff member.');
+          return;
+        }
+        deleteUser(user.id);
+      }
+      refreshUsers();
+      loadFamilies();
+    } catch {
+      setFormError('Connection error. Please try again.');
+    }
+  };
+
   const openEditDialog = (user: AppUser) => {
     setEditingUser(user);
     setFormData({
@@ -1089,6 +1134,13 @@ export default function UsersPage() {
                                 </DropdownMenuItem>
                               </>
                             )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteUser(user)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" /> Delete permanently
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
