@@ -195,8 +195,45 @@ async function fetchSettingFromSupabase<T>(key: string): Promise<T | null> {
 // Supabase sync happens asynchronously (fire-and-forget) after localStorage writes.
 // ============================================================================
 
+// Demo identities that must never appear in a real User Management list.
+const DEMO_USER_IDS = new Set([
+  'user-1', 'user-2', 'user-3', 'user-4', 'user-5', 'user-6',
+]);
+const DEMO_USER_EMAILS = new Set([
+  'christina@childcare.com',
+  'admin@demo.com',
+  'maria.johnson@childcare.com',
+  'sarah.williams@childcare.com',
+  'parent@demo.com',
+  'jennifer.lee@email.com',
+]);
+
 export function getUsers(): AppUser[] {
-  return getStorageItem<AppUser[]>(USERS_KEY, SAMPLE_USERS);
+  // No demo fallback in production: an empty store shows an empty list, not
+  // the sample accounts. SAMPLE_USERS only seeds when demo mode is on.
+  return getStorageItem<AppUser[]>(
+    USERS_KEY,
+    isDemoSeedEnabled() ? SAMPLE_USERS : []
+  );
+}
+
+/**
+ * Remove any cached demo/sample accounts from this browser and the cloud copy.
+ * Safe: only removes the known sample identities; real users are kept.
+ * Called by User Management on load so a previously-seeded browser comes clean.
+ */
+export function purgeDemoUsers(): void {
+  if (typeof window === 'undefined') return;
+  const users = getStorageItem<AppUser[]>(USERS_KEY, []);
+  const cleaned = users.filter(
+    (u) =>
+      !DEMO_USER_IDS.has(u.id) &&
+      !DEMO_USER_EMAILS.has((u.email || '').toLowerCase())
+  );
+  if (cleaned.length !== users.length) {
+    setStorageItem(USERS_KEY, cleaned);
+    syncSettingToSupabase(SETTINGS_KEY_USERS, cleaned).catch(() => {});
+  }
 }
 
 export function getUserById(id: string): AppUser | undefined {

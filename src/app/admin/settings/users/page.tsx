@@ -50,7 +50,7 @@ import {
   deactivateUser,
   activateUser,
   ROLE_DEFINITIONS,
-  seedUserData,
+  purgeDemoUsers,
 } from '@/lib/user-storage';
 import { createEmployee, getEmployees } from '@/lib/employee-storage';
 import { UserRole } from '@/types/database';
@@ -179,7 +179,7 @@ export default function UsersPage() {
   });
 
   useEffect(() => {
-    seedUserData();
+    purgeDemoUsers();
     setUsers(getUsers());
     // Load existing PINs for collision detection
     getEmployees().then((emps) => {
