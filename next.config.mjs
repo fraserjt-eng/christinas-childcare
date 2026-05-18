@@ -19,7 +19,7 @@ const nextConfig = {
     return [
       { source: '/business-case', destination: '/business-case.html' },
       { source: '/pathways', destination: '/pathways.html' },
-      { source: '/guide', destination: '/guide.html' },
+      { source: '/staff-guide', destination: '/staff-guide.html' },
     ];
   },
 };
