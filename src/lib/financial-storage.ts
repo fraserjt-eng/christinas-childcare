@@ -8,6 +8,7 @@ import {
   supabaseDelete,
   isSupabaseConfigured,
 } from '@/lib/supabase/service';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 export interface FinancialRecord {
   id: string;
@@ -148,6 +149,8 @@ function generateId(prefix: string): string {
 
 function ensureSeededLocally(): void {
   if (typeof window === 'undefined') return;
+  // Never fabricate financial history in production. Real records or empty.
+  if (!isDemoSeedEnabled()) return;
   const existing = getFromStorage<FinancialRecord>(RECORDS_KEY);
   if (existing.length === 0) {
     const seeded = SEED_RECORDS.map(r => ({
@@ -162,8 +165,9 @@ export async function getFinancialRecords(): Promise<FinancialRecord[]> {
   const cloudData = await supabaseSelect<FinancialRecord>('financial_records');
 
   if (cloudData !== null) {
-    // Seed Supabase if empty
-    if (cloudData.length === 0) {
+    // Seed Supabase only in a demo environment. Production stays real or
+    // empty; the budget reads real labor from the spine, not fabricated rows.
+    if (cloudData.length === 0 && isDemoSeedEnabled()) {
       for (const r of SEED_RECORDS) {
         await supabaseInsert<FinancialRecord>('financial_records', {
           month: r.month,

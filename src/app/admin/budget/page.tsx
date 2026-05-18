@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -30,10 +30,9 @@ import {
 } from 'lucide-react';
 
 
-// Site definitions
+// Site definitions — Christina's operates one center (Crystal, MN).
 const sites = [
   { id: 'crystal', name: 'Crystal Location' },
-  { id: 'brooklyn-park', name: 'Brooklyn Park Location' },
 ];
 
 // Budget categories with icons
@@ -77,10 +76,10 @@ interface BudgetRow {
   dec: MonthData;
 }
 
-// Generate realistic sample data for a site
-function generateSiteData(siteId: string): BudgetRow[] {
-  const baseMultiplier = siteId === 'crystal' ? 1.0 : 0.9;
-
+// Planned-budget starting template the owner edits. Actuals are NEVER
+// fabricated here: Payroll actuals come from the real time spine
+// (/api/pulse/labor); other categories stay 0 until a real source exists.
+function generateSiteData(): BudgetRow[] {
   const categoryBudgets: Record<string, number> = {
     payroll: 25000,
     rent: 8000,
@@ -95,42 +94,22 @@ function generateSiteData(siteId: string): BudgetRow[] {
   };
 
   return budgetCategories.map(cat => {
-    const baseBudget = Math.round(categoryBudgets[cat.id] * baseMultiplier);
-    const row: BudgetRow = {
+    const baseBudget = categoryBudgets[cat.id];
+    const empty = (): MonthData => ({ budget: baseBudget, actual: 0 });
+    return {
       categoryId: cat.id,
       category: cat.name,
-      jan: { budget: baseBudget, actual: 0 },
-      feb: { budget: baseBudget, actual: 0 },
-      mar: { budget: baseBudget, actual: 0 },
-      apr: { budget: baseBudget, actual: 0 },
-      may: { budget: baseBudget, actual: 0 },
-      jun: { budget: baseBudget, actual: 0 },
-      jul: { budget: baseBudget, actual: 0 },
-      aug: { budget: baseBudget, actual: 0 },
-      sep: { budget: baseBudget, actual: 0 },
-      oct: { budget: baseBudget, actual: 0 },
-      nov: { budget: baseBudget, actual: 0 },
-      dec: { budget: baseBudget, actual: 0 },
+      jan: empty(), feb: empty(), mar: empty(), apr: empty(),
+      may: empty(), jun: empty(), jul: empty(), aug: empty(),
+      sep: empty(), oct: empty(), nov: empty(), dec: empty(),
     };
-
-    // Generate realistic actual amounts (some variance from budget)
-    months.forEach((month, idx) => {
-      // Only populate actuals for months that have passed (assuming current month is around month 6)
-      if (idx < 6) {
-        const variance = 0.85 + Math.random() * 0.3; // 85% to 115% of budget
-        row[month].actual = Math.round(baseBudget * variance);
-      }
-    });
-
-    return row;
   });
 }
 
-// Initial data for all sites
+// Initial data (real center only).
 function generateInitialData(): Record<string, BudgetRow[]> {
   return {
-    crystal: generateSiteData('crystal'),
-    'brooklyn-park': generateSiteData('brooklyn-park'),
+    crystal: generateSiteData(),
   };
 }
 
@@ -138,6 +117,42 @@ export default function BudgetPage() {
   const [selectedSite, setSelectedSite] = useState('crystal');
   const [budgetData, setBudgetData] = useState<Record<string, BudgetRow[]>>(generateInitialData);
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Real Payroll actuals from the time spine (clocked hours x pay rate),
+  // by calendar month. Other categories stay 0 until they have a real
+  // source. Nothing here is fabricated.
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/pulse/labor', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        const byMonth: Record<string, number> = d.byMonth || {};
+        const year = new Date().getFullYear();
+        setBudgetData((prev) => {
+          const next: Record<string, BudgetRow[]> = {};
+          for (const site of Object.keys(prev)) {
+            next[site] = prev[site].map((row) => {
+              if (row.categoryId !== 'payroll') return row;
+              const updated: BudgetRow = { ...row };
+              months.forEach((m, idx) => {
+                const key = `${year}-${String(idx + 1).padStart(2, '0')}`;
+                const real = byMonth[key];
+                updated[m] = {
+                  ...updated[m],
+                  actual: real ? Math.round(real) : 0,
+                };
+              });
+              return updated;
+            });
+          }
+          return next;
+        });
+      } catch {
+        // labor pulse unavailable; actuals stay 0, never fabricated
+      }
+    })();
+  }, []);
 
   const currentSiteData = budgetData[selectedSite];
 
@@ -345,7 +360,7 @@ export default function BudgetPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Budget Management</h1>
-          <p className="text-muted-foreground">Track and manage budgets across all locations</p>
+          <p className="text-muted-foreground">Plan your budget; Payroll actuals come from real clocked hours</p>
         </div>
         <div className="flex items-center gap-3">
           <Select value={selectedSite} onValueChange={setSelectedSite}>

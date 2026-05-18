@@ -304,6 +304,68 @@ export default function AdminDashboard() {
     setZone(currentZone);
     setAlerts(getDashboardAlerts());
 
+    // Real operational alerts from the spine, appended to the task/drift ones.
+    async function fetchSpineAlerts() {
+      const extra: DashboardAlert[] = [];
+      try {
+        const lr = await fetch('/api/pulse/labor', { cache: 'no-store' });
+        if (lr.ok) {
+          const ld = await lr.json();
+          const stale: Array<{ employee_name: string }> = Array.isArray(
+            ld.staleOpen
+          )
+            ? ld.staleOpen
+            : [];
+          if (stale.length > 0) {
+            const names = stale
+              .slice(0, 3)
+              .map((s) => s.employee_name)
+              .join(', ');
+            extra.push({
+              id: 'spine_stale_clockin',
+              type: 'staffing',
+              severity: 'warning',
+              title: `${stale.length} staff still clocked in from a prior day`,
+              description: `${names}${
+                stale.length > 3 ? '…' : ''
+              }. Fix the time entry so payroll and hours are right.`,
+              linkTo: '/admin/payroll',
+              zoneRelevance: ['opening', 'core', 'closing'],
+            });
+          }
+        }
+      } catch {
+        /* labor pulse unavailable */
+      }
+      try {
+        const fr = await fetch('/api/pulse/floor', { cache: 'no-store' });
+        if (fr.ok) {
+          const fd = await fr.json();
+          if (fd.staffOnDuty === 0) {
+            extra.push({
+              id: 'spine_no_staff',
+              type: 'staffing',
+              severity: 'urgent',
+              title: 'No staff clocked in',
+              description:
+                'Nobody is clocked in on the spine right now. If the center is open, have staff clock in so ratios and hours track.',
+              linkTo: '/admin/ratios',
+              zoneRelevance: ['opening', 'core', 'closing'],
+            });
+          }
+        }
+      } catch {
+        /* floor pulse unavailable */
+      }
+      if (extra.length > 0) {
+        setAlerts((prev) => {
+          const ids = new Set(prev.map((a) => a.id));
+          return [...prev, ...extra.filter((a) => !ids.has(a.id))];
+        });
+      }
+    }
+    fetchSpineAlerts();
+
     // Real task counts from the task board (localStorage is the task store).
     const taskSnap = getTodaySnapshot();
     setSnapshot((prev) => ({

@@ -16,8 +16,6 @@ import {
   Cell,
 } from 'recharts';
 import {
-  getLaborCost,
-  getOvertimeAlerts,
   type LaborCostDay,
   type EmployeeCostSummary,
   type OvertimeAlert,
@@ -94,7 +92,7 @@ function EmployeeCostRow({ emp }: { emp: EmployeeCostSummary }) {
     <div className="flex items-center gap-3 py-2 border-b last:border-b-0">
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-800 truncate">{emp.employee_name}</p>
-        <p className="text-xs text-gray-500">{emp.total_hours.toFixed(1)}h scheduled</p>
+        <p className="text-xs text-gray-500">{emp.total_hours.toFixed(1)}h worked</p>
       </div>
       <div className="text-right">
         <p className="text-sm font-bold text-gray-800">{formatCurrency(emp.total_cost)}</p>
@@ -122,19 +120,44 @@ export function LaborCostProjection() {
   const monday = getMondayOfWeek(weekOffset);
   const mondayStr = monday.toISOString().slice(0, 10);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     const start = mondayStr;
     const endDate = new Date(mondayStr + 'T12:00:00');
     endDate.setDate(endDate.getDate() + 4);
     const end = endDate.toISOString().slice(0, 10);
 
-    const data = getLaborCost(start, end);
-    setDailyCosts(data.daily);
-    setEmployeeCosts(data.by_employee);
-    setTotalCost(data.total_cost);
-    setTotalHours(data.total_hours);
+    const clear = () => {
+      setDailyCosts([]);
+      setEmployeeCosts([]);
+      setTotalCost(0);
+      setTotalHours(0);
+      setOvertimeAlerts([]);
+    };
 
-    setOvertimeAlerts(getOvertimeAlerts(start));
+    try {
+      // Real clocked hours from the spine, not scheduled shifts.
+      const r = await fetch(
+        `/api/pulse/labor?start=${start}&end=${end}`,
+        { cache: 'no-store' }
+      );
+      if (!r.ok) {
+        clear();
+        return;
+      }
+      const data = await r.json();
+      setDailyCosts((data.daily || []) as LaborCostDay[]);
+      setEmployeeCosts(
+        (data.by_employee || []).map((e: EmployeeCostSummary) => ({
+          ...e,
+          daily_hours: {},
+        }))
+      );
+      setTotalCost(data.total_cost || 0);
+      setTotalHours(data.total_hours || 0);
+      setOvertimeAlerts((data.overtime || []) as OvertimeAlert[]);
+    } catch {
+      clear();
+    }
   }, [mondayStr]);
 
   useEffect(() => {
@@ -270,7 +293,7 @@ export function LaborCostProjection() {
           </CardHeader>
           <CardContent className="pt-0 max-h-64 overflow-y-auto">
             {employeeCosts.length === 0 ? (
-              <p className="text-sm text-gray-400 py-3 text-center">No shifts scheduled this week.</p>
+              <p className="text-sm text-gray-400 py-3 text-center">No clocked hours this week.</p>
             ) : (
               employeeCosts.map(emp => (
                 <EmployeeCostRow key={emp.employee_id} emp={emp} />
