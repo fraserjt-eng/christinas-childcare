@@ -40,6 +40,7 @@ interface NavGroup {
 const parentNav: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/dashboard/children', label: 'My Children', icon: Users },
+  { href: '/dashboard/daily', label: "Daily Report", icon: ClipboardList },
   { href: '/dashboard/progress', label: 'Progress Reports', icon: BarChart3 },
   { href: '/dashboard/photos', label: 'Photo Gallery', icon: Camera },
   { href: '/dashboard/news', label: 'Newsletter', icon: Newspaper },
@@ -137,6 +138,7 @@ const adminNavGroups: NavGroup[] = [
 const employeeNav: NavItem[] = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/employee', label: 'Clock In/Out', icon: Clock },
+  { href: '/employee/daily-report', label: 'Daily Report', icon: ClipboardList },
   { href: '/employee/meal-count', label: 'Meal Count', icon: UtensilsCrossed },
   { href: '/employee/photos', label: 'Upload Photos', icon: Camera },
   { href: '/employee/nap-tasks', label: 'Nap Time Tasks', icon: Clock },
