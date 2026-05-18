@@ -157,6 +157,27 @@ export default function UsersPage() {
   >(null);
   const [copied, setCopied] = useState(false);
 
+  // ── Add Family state ───────────────────────
+  const [isAddFamilyOpen, setIsAddFamilyOpen] = useState(false);
+  const [familyBusy, setFamilyBusy] = useState(false);
+  const [familyError, setFamilyError] = useState<string | null>(null);
+  const [familyResult, setFamilyResult] = useState<
+    { pin: string; childCount: number; email: string } | null
+  >(null);
+  const [familyForm, setFamilyForm] = useState<{
+    email: string;
+    parentName: string;
+    parentPhone: string;
+    pin: string;
+    children: { name: string; date_of_birth: string; classroom: string }[];
+  }>({
+    email: '',
+    parentName: '',
+    parentPhone: '',
+    pin: '',
+    children: [{ name: '', date_of_birth: '', classroom: '' }],
+  });
+
   useEffect(() => {
     seedUserData();
     setUsers(getUsers());
@@ -211,6 +232,63 @@ export default function UsersPage() {
       setCopied(true);
     } catch {
       setCopied(false);
+    }
+  };
+
+  // ── Add Family (creates live family + children + kiosk PIN) ──
+  const resetFamilyForm = () =>
+    setFamilyForm({
+      email: '',
+      parentName: '',
+      parentPhone: '',
+      pin: '',
+      children: [{ name: '', date_of_birth: '', classroom: '' }],
+    });
+
+  const submitFamily = async () => {
+    setFamilyError(null);
+    if (!familyForm.email || !familyForm.parentName) {
+      setFamilyError('Family email and parent/guardian name are required.');
+      return;
+    }
+    if (!familyForm.children.some((c) => c.name.trim())) {
+      setFamilyError('Add at least one child.');
+      return;
+    }
+    if (familyForm.pin && !/^\d{4}$/.test(familyForm.pin)) {
+      setFamilyError('PIN must be exactly 4 digits, or leave it blank to auto-generate.');
+      return;
+    }
+    setFamilyBusy(true);
+    try {
+      const r = await fetch('/api/admin/family', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: familyForm.email,
+          parentName: familyForm.parentName,
+          parentPhone: familyForm.parentPhone,
+          pin: familyForm.pin || undefined,
+          children: familyForm.children.filter((c) => c.name.trim()),
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setFamilyError(data.error || 'Could not create the family.');
+        setFamilyBusy(false);
+        return;
+      }
+      setIsAddFamilyOpen(false);
+      setFamilyResult({
+        pin: data.pin,
+        childCount: data.childCount,
+        email: familyForm.email,
+      });
+      resetFamilyForm();
+    } catch {
+      setFamilyError('Connection error. Please try again.');
+    } finally {
+      setFamilyBusy(false);
     }
   };
 
@@ -607,6 +685,191 @@ export default function UsersPage() {
             </div>
             <div className="flex gap-2 shrink-0">
               <EmployeeBulkUpload onImportComplete={refreshUsers} />
+
+              {/* Add Family — creates a live family + children + kiosk PIN */}
+              <Dialog
+                open={isAddFamilyOpen}
+                onOpenChange={(o) => {
+                  setIsAddFamilyOpen(o);
+                  if (!o) setFamilyError(null);
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="border-christina-blue text-christina-blue hover:bg-christina-blue/10">
+                    <Plus className="h-4 w-4 mr-2" /> Add Family
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add Family</DialogTitle>
+                    <DialogDescription>
+                      Creates the family in the live database with a 4-digit kiosk
+                      PIN. The family can sign in and out at the kiosk right away.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    {familyError && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                        {familyError}
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label>Family email *</Label>
+                      <Input
+                        type="email"
+                        value={familyForm.email}
+                        onChange={(e) =>
+                          setFamilyForm({ ...familyForm, email: e.target.value })
+                        }
+                        placeholder="family@email.com"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Parent / guardian *</Label>
+                        <Input
+                          value={familyForm.parentName}
+                          onChange={(e) =>
+                            setFamilyForm({ ...familyForm, parentName: e.target.value })
+                          }
+                          placeholder="Jane Smith"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Phone</Label>
+                        <Input
+                          type="tel"
+                          value={familyForm.parentPhone}
+                          onChange={(e) =>
+                            setFamilyForm({ ...familyForm, parentPhone: e.target.value })
+                          }
+                          placeholder="(763) 555-0100"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Kiosk PIN (leave blank to auto-generate)</Label>
+                      <Input
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={familyForm.pin}
+                        onChange={(e) =>
+                          setFamilyForm({
+                            ...familyForm,
+                            pin: e.target.value.replace(/\D/g, ''),
+                          })
+                        }
+                        placeholder="Auto"
+                        className="font-mono tracking-widest w-32"
+                      />
+                    </div>
+                    <div className="pt-2 border-t">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                        Children
+                      </p>
+                      <div className="space-y-3">
+                        {familyForm.children.map((child, idx) => (
+                          <div
+                            key={idx}
+                            className="grid grid-cols-12 gap-2 items-end"
+                          >
+                            <div className="col-span-5 space-y-1">
+                              <Label className="text-xs">Name *</Label>
+                              <Input
+                                value={child.name}
+                                onChange={(e) => {
+                                  const next = [...familyForm.children];
+                                  next[idx] = { ...child, name: e.target.value };
+                                  setFamilyForm({ ...familyForm, children: next });
+                                }}
+                                placeholder="Child name"
+                              />
+                            </div>
+                            <div className="col-span-3 space-y-1">
+                              <Label className="text-xs">Birthdate</Label>
+                              <Input
+                                type="date"
+                                value={child.date_of_birth}
+                                onChange={(e) => {
+                                  const next = [...familyForm.children];
+                                  next[idx] = {
+                                    ...child,
+                                    date_of_birth: e.target.value,
+                                  };
+                                  setFamilyForm({ ...familyForm, children: next });
+                                }}
+                              />
+                            </div>
+                            <div className="col-span-3 space-y-1">
+                              <Label className="text-xs">Classroom</Label>
+                              <Input
+                                value={child.classroom}
+                                onChange={(e) => {
+                                  const next = [...familyForm.children];
+                                  next[idx] = { ...child, classroom: e.target.value };
+                                  setFamilyForm({ ...familyForm, children: next });
+                                }}
+                                placeholder="toddler"
+                              />
+                            </div>
+                            <div className="col-span-1">
+                              {familyForm.children.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setFamilyForm({
+                                      ...familyForm,
+                                      children: familyForm.children.filter(
+                                        (_, i) => i !== idx
+                                      ),
+                                    })
+                                  }
+                                  className="text-xs text-red-600 hover:underline pb-2"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() =>
+                          setFamilyForm({
+                            ...familyForm,
+                            children: [
+                              ...familyForm.children,
+                              { name: '', date_of_birth: '', classroom: '' },
+                            ],
+                          })
+                        }
+                      >
+                        <Plus className="h-3 w-3 mr-1" /> Add another child
+                      </Button>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsAddFamilyOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={submitFamily}
+                      disabled={familyBusy}
+                      className="bg-christina-blue hover:bg-christina-blue/90"
+                    >
+                      {familyBusy ? 'Creating...' : 'Create Family'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-christina-red hover:bg-christina-red/90">
