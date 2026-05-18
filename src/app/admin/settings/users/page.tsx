@@ -1062,6 +1062,41 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Family result — shows the kiosk PIN */}
+      <Dialog
+        open={!!familyResult}
+        onOpenChange={(o) => !o && setFamilyResult(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Family added</DialogTitle>
+            <DialogDescription>{familyResult?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-center">
+            <p className="text-sm text-muted-foreground">
+              {familyResult?.childCount}{' '}
+              {familyResult?.childCount === 1 ? 'child' : 'children'} added. They
+              can sign in and out at the kiosk now with this PIN:
+            </p>
+            <div className="text-4xl font-mono font-bold tracking-[0.3em] text-christina-red py-3">
+              {familyResult?.pin}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Write this down for the family. You can see it again later in the
+              family record.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              className="bg-christina-red hover:bg-christina-red/90"
+              onClick={() => setFamilyResult(null)}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
