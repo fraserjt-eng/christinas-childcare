@@ -39,9 +39,13 @@ const publicRoutes = [
   '/fonts',
 ];
 
-// Rate limit config for public API routes: 5 requests per minute per IP
+// Backstop limit for UNAUTHENTICATED public API routes only (e.g. the
+// password login endpoint). Session-gated operational routes are exempt
+// below: they are on shared room iPads where one IP is many staff, and the
+// in-route requireSession is the real control. 5/min was crippling that
+// real workflow (frozen Daily Report, vanishing roster, duplicate logs).
 const API_RATE_LIMIT = {
-  maxRequests: 5,
+  maxRequests: 30,
   windowMs: 60 * 1000,
 };
 
@@ -102,13 +106,22 @@ export async function middleware(request: NextRequest) {
 
   // Apply rate limiting to all /api/* routes
   if (pathname.startsWith('/api/')) {
-    // The kiosk loads several calls per family; the blanket 5/min limit would
-    // break it. /api/kiosk enforces its own (tighter on PIN, looser overall).
-    // Staff PIN login also self-limits loosely; the global 5/min lock was
-    // blocking legitimate sign-ins, so exempt it here too.
+    // Exempt routes that are either self-limiting or session-gated. The
+    // operational app routes (employee/parent/admin/reports/pulse and the
+    // per-child entry + staff roster) all enforce requireSession in-route,
+    // so the session is the control, not the IP. On a shared room iPad one
+    // IP is the whole team; an IP cap there breaks normal use (the Daily
+    // Report freeze, vanishing roster, and duplicate entries were all this).
     if (
       pathname.startsWith('/api/kiosk') ||
-      pathname.startsWith('/api/auth/staff-pin')
+      pathname.startsWith('/api/auth/staff-pin') ||
+      pathname.startsWith('/api/employee/') ||
+      pathname.startsWith('/api/parent/') ||
+      pathname.startsWith('/api/staff/') ||
+      pathname.startsWith('/api/admin/') ||
+      pathname.startsWith('/api/child-entries') ||
+      pathname.startsWith('/api/reports/') ||
+      pathname.startsWith('/api/pulse/')
     ) {
       return NextResponse.next();
     }

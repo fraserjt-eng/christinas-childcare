@@ -129,33 +129,73 @@ export async function POST(request: NextRequest) {
 
   const detail: Record<string, unknown> =
     body.detail && typeof body.detail === 'object' ? { ...body.detail } : {};
+  const noteText = typeof detail.note === 'string' ? detail.note : '';
+
+  // Idempotency: if the same staff just logged the same thing for the same
+  // child seconds ago (double tap, or a retry after a flaky network), return
+  // that entry instead of creating a duplicate. This is what produced the
+  // "three reports for the same child" problem.
+  {
+    const since = new Date(Date.now() - 20000).toISOString();
+    const { data: recent } = await supabase
+      .from('child_daily_entries')
+      .select('id, child_id, date, type, detail, occurred_at, recorded_by, classroom_id, created_at')
+      .eq('child_id', childId)
+      .eq('type', type)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    const dup = (recent ?? []).find(
+      (r) =>
+        ((r.detail as Record<string, unknown>)?.note ?? '') === noteText
+    );
+    if (dup) {
+      return NextResponse.json({ ok: true, entry: dup, deduped: true });
+    }
+  }
 
   // A photo for THIS child goes straight onto their report (Tadpoles model).
-  // Upload to the existing child_photos bucket via service role; store the
-  // public URL on the entry. Also tag the child on daily_photos for the
-  // classroom gallery so the two stay consistent.
+  // Upload to the public child_photos bucket via service role; store the
+  // public URL on the entry. If a photo was attached but the upload fails,
+  // fail the whole request (no ghost photo entry the parent can never see).
   if (type === 'photo' && typeof body.photo_data === 'string' && body.photo_data.startsWith('data:')) {
     try {
-      const base64 = body.photo_data.split(',')[1] || '';
+      const commaIdx = body.photo_data.indexOf(',');
+      const meta = body.photo_data.slice(5, commaIdx); // after "data:"
+      const contentType = (meta.split(';')[0] || 'image/jpeg').trim();
+      const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+      const base64 = body.photo_data.slice(commaIdx + 1);
       const buffer = Buffer.from(base64, 'base64');
-      const path = `daily-report/${childId}/${Date.now()}.jpg`;
+      const path = `daily-report/${childId}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from('child_photos')
-        .upload(path, buffer, { contentType: 'image/jpeg', upsert: false });
-      if (!upErr) {
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from('child_photos').getPublicUrl(path);
-        detail.photo_url = publicUrl;
+        .upload(path, buffer, { contentType, upsert: false });
+      if (upErr) {
+        return NextResponse.json(
+          { error: 'The photo could not be uploaded. Try again.' },
+          { status: 502 }
+        );
+      }
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('child_photos').getPublicUrl(path);
+      detail.photo_url = publicUrl;
+      // Secondary: classroom gallery. Best-effort; never blocks the report.
+      try {
         await supabase.from('daily_photos').insert({
           classroom_id: body.classroom_id || null,
           photo_url: publicUrl,
-          caption: typeof detail.note === 'string' ? detail.note : null,
+          caption: noteText || null,
           child_ids: [childId],
         });
+      } catch {
+        /* gallery sync is non-critical */
       }
     } catch {
-      /* if the upload fails the note still saves; staff can retry the photo */
+      return NextResponse.json(
+        { error: 'The photo could not be uploaded. Try again.' },
+        { status: 502 }
+      );
     }
   }
 

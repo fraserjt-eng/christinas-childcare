@@ -72,22 +72,31 @@ export default function StaffDailyReportPage() {
   const [saved, setSaved] = useState(false);
   const [todayEntries, setTodayEntries] = useState<Entry[]>([]);
   const [loadingRoster, setLoadingRoster] = useState(true);
+  const [error, setError] = useState('');
+  const [rosterError, setRosterError] = useState(false);
+
+  const loadRoster = useCallback(async () => {
+    setLoadingRoster(true);
+    setRosterError(false);
+    try {
+      const r = await fetch('/api/staff/children', { cache: 'no-store' });
+      if (r.ok) {
+        const d = await r.json();
+        setChildren(d.children || []);
+        if (!d.children || d.children.length === 0) setRosterError(true);
+      } else {
+        setRosterError(true);
+      }
+    } catch {
+      setRosterError(true);
+    } finally {
+      setLoadingRoster(false);
+    }
+  }, []);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const r = await fetch('/api/staff/children', { cache: 'no-store' });
-        if (r.ok) {
-          const d = await r.json();
-          setChildren(d.children || []);
-        }
-      } catch {
-        /* leave empty */
-      } finally {
-        setLoadingRoster(false);
-      }
-    })();
-  }, []);
+    loadRoster();
+  }, [loadRoster]);
 
   const loadToday = useCallback(async () => {
     if (!childId) {
@@ -119,6 +128,7 @@ export default function StaffDailyReportPage() {
     if (!childId || saving) return;
     setSaving(true);
     setSaved(false);
+    setError('');
     const detail: Record<string, string> = {};
     if (note.trim()) detail.note = note.trim();
     if (type === 'meal' && amount.trim()) detail.amount = amount.trim();
@@ -147,9 +157,16 @@ export default function StaffDailyReportPage() {
         setPhotoData('');
         await loadToday();
         setTimeout(() => setSaved(false), 2500);
+      } else {
+        const d = await r.json().catch(() => ({}));
+        if (r.status === 401) {
+          setError('Your session ended. Enter your PIN again, then log it.');
+        } else {
+          setError(d.error || 'Could not save. Try again.');
+        }
       }
     } catch {
-      /* surfaced by the unchanged form (staff can retry) */
+      setError('Network problem. It did not save. Try again.');
     } finally {
       setSaving(false);
     }
@@ -188,25 +205,43 @@ export default function StaffDailyReportPage() {
                 <Loader2 className="h-4 w-4 animate-spin" /> Loading roster…
               </div>
             ) : (
-              <select
-                id="child"
-                value={childId}
-                onChange={(e) => setChildId(e.target.value)}
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">Select a child…</option>
-                {Object.keys(grouped)
-                  .sort()
-                  .map((room) => (
-                    <optgroup key={room} label={room}>
-                      {grouped[room].map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-              </select>
+              <>
+                <select
+                  id="child"
+                  value={childId}
+                  onChange={(e) => setChildId(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Select a child…</option>
+                  {Object.keys(grouped)
+                    .sort()
+                    .map((room) => (
+                      <optgroup key={room} label={room}>
+                        {grouped[room].map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                </select>
+                {rosterError && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <p className="text-xs text-christina-coral">
+                      The roster did not load.
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={loadRoster}
+                      className="text-xs"
+                    >
+                      Reload
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -346,6 +381,9 @@ export default function StaffDailyReportPage() {
               </span>
             )}
           </div>
+          {error && (
+            <p className="text-sm text-christina-coral mt-1">{error}</p>
+          )}
         </CardContent>
       </Card>
 
