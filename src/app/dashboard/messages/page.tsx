@@ -22,6 +22,15 @@ export default function MessagesPage() {
   const [replyText, setReplyText] = useState('');
   const [parentEmail, setParentEmail] = useState<string>('');
   const [parentName, setParentName] = useState<string>('Parent');
+  const [centerMessages, setCenterMessages] = useState<
+    {
+      id: string;
+      subject: string;
+      body: string;
+      from_name: string;
+      created_at: string;
+    }[]
+  >([]);
 
   const refresh = useCallback((email: string) => {
     setConversations(getConversationsForParent(email));
@@ -37,6 +46,15 @@ export default function MessagesPage() {
     seedParentConversations(email, name);
     refresh(email);
   }, [refresh]);
+
+  // Direct messages from the center (server-backed; uses the signed-in
+  // session, so it works regardless of this device's local data).
+  useEffect(() => {
+    fetch('/api/parent/messages')
+      .then((r) => (r.ok ? r.json() : { messages: [] }))
+      .then((d) => setCenterMessages(d.messages || []))
+      .catch(() => {});
+  }, []);
 
   const selected = conversations.find((c) => c.id === selectedId);
 
@@ -63,6 +81,41 @@ export default function MessagesPage() {
           <p className="text-muted-foreground">Communication with staff</p>
         </div>
       </div>
+
+      {centerMessages.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              Messages from Christina&rsquo;s Child Care Center
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {centerMessages.map((m) => (
+              <div
+                key={m.id}
+                className="rounded-lg border border-[#e5e0d8] p-4 bg-white"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold">{m.subject}</p>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                    {new Date(m.created_at).toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+                <p className="text-sm mt-2 whitespace-pre-wrap">{m.body}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  From {m.from_name}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid md:grid-cols-[350px_1fr] gap-4 min-h-[600px]">
         <Card className={selected ? 'hidden md:block' : ''}>
           <CardHeader>
