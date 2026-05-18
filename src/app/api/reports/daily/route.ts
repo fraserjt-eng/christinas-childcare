@@ -126,23 +126,27 @@ export async function GET(request: Request): Promise<NextResponse> {
     if (supabase) {
       const errors: string[] = [];
 
-      // Attendance: unique children checked in on this date
+      // Attendance: unique children present on this date. Filter by the
+      // `date` column so this agrees with /admin/ratios, the owner
+      // dashboard, /admin/attendance, and /api/pulse/floor (all use `date`).
+      // Filtering by the check_in timestamp would diverge at the UTC day
+      // boundary for an evening check-in.
       const { data: attendance } = await supabase
         .from('attendance')
         .select('child_id, check_in, check_out')
-        .gte('check_in', `${date}T00:00:00`)
-        .lt('check_in', `${date}T23:59:59`);
+        .eq('date', date);
       if (attendance) {
         const uniqueChildren = new Set(attendance.map((a: { child_id: string }) => a.child_id));
         report.attendance.children_present = uniqueChildren.size;
       }
 
-      // Staff on duty: employees with time_entries on this date
+      // Staff on duty: employees with time_entries on this date. Same
+      // reasoning — filter by `date` so staff_on_duty here matches
+      // /api/pulse/floor and the ratio monitor.
       const { data: timeEntries } = await supabase
         .from('time_entries')
         .select('employee_id, clock_in, clock_out')
-        .gte('clock_in', `${date}T00:00:00`)
-        .lt('clock_in', `${date}T23:59:59`);
+        .eq('date', date);
       if (timeEntries) {
         const uniqueStaff = new Set(timeEntries.map((t: { employee_id: string }) => t.employee_id));
         report.attendance.staff_on_duty = uniqueStaff.size;
