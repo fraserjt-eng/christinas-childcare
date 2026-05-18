@@ -8,10 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-  getCurrentEmployee,
   updateEmployee,
   setCurrentEmployee,
 } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import { Employee, formatCurrency } from '@/types/employee';
 import {
   User,
@@ -41,14 +41,17 @@ export default function EmployeeProfilePage() {
   const [confirmPin, setConfirmPin] = useState('');
 
   useEffect(() => {
-    const emp = getCurrentEmployee();
-    setEmployee(emp);
-    if (emp) {
-      setPhone(emp.phone || '');
-      setAddress(emp.address || '');
-      setEmergencyName(emp.emergency_contact_name || '');
-      setEmergencyPhone(emp.emergency_contact_phone || '');
-    }
+    (async () => {
+      const session = await getSessionEmployee();
+      const emp = session as unknown as Employee | null;
+      setEmployee(emp);
+      if (emp) {
+        setPhone(emp.phone || '');
+        setAddress(emp.address || '');
+        setEmergencyName(emp.emergency_contact_name || '');
+        setEmergencyPhone(emp.emergency_contact_phone || '');
+      }
+    })();
   }, []);
 
   const handleSaveProfile = async () => {

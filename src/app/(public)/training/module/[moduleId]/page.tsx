@@ -21,7 +21,7 @@ import { getPracticeTasksForModule } from '@/lib/training/practice-tasks';
 import { getModuleContent } from '@/lib/training/content';
 import { ActivityStepper } from '@/components/training/activities/ActivityStepper';
 import { markSectionComplete } from '@/lib/training/training-storage';
-import { getCurrentEmployee } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import { getCurrentFamily } from '@/lib/family-storage';
 import { sanitizeHTML } from '@/lib/sanitize';
 
@@ -41,23 +41,25 @@ export default function ModulePage() {
   const moduleContent = useMemo(() => getModuleContent(moduleId), [moduleId]);
 
   useEffect(() => {
-    const employee = getCurrentEmployee();
-    if (employee) {
-      setUserId(employee.id);
-      const jobTitle = (employee.job_title || '').toLowerCase();
-      if (jobTitle.includes('owner') || jobTitle.includes('director')) setRole('owner');
-      else if (jobTitle.includes('lead')) setRole('admin');
-      else setRole('teacher');
-      return;
-    }
-    const family = getCurrentFamily();
-    if (family) {
-      setUserId(family.id);
-      setRole('parent');
-      return;
-    }
-    setUserId('demo-user');
-    setRole('teacher');
+    (async () => {
+      const employee = await getSessionEmployee();
+      if (employee) {
+        setUserId(employee.id);
+        const jobTitle = (employee.job_title || '').toLowerCase();
+        if (jobTitle.includes('owner') || jobTitle.includes('director')) setRole('owner');
+        else if (jobTitle.includes('lead')) setRole('admin');
+        else setRole('teacher');
+        return;
+      }
+      const family = getCurrentFamily();
+      if (family) {
+        setUserId(family.id);
+        setRole('parent');
+        return;
+      }
+      setUserId('demo-user');
+      setRole('teacher');
+    })();
   }, []);
 
   const { isLoading, refresh, getModuleProgress } = useTrainingProgress(userId, role);

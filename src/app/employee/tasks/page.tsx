@@ -10,6 +10,7 @@ import {
   Flag, HelpCircle, Flame, ArrowUp, ArrowDown, Minus
 } from 'lucide-react';
 import { Task, DEFAULT_TIME_BLOCKS } from '@/types/tasks';
+import { getSessionEmployee } from '@/lib/session-employee';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -32,7 +33,6 @@ interface TimeBlockGroup {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const TASKS_KEY = 'christinas_tasks';
-const EMPLOYEE_KEY = 'christinas_current_employee';
 const NOTIFICATIONS_KEY = 'christinas_employee_notifications';
 
 const SEED_NOTIFICATIONS: EmployeeNotification[] = [
@@ -127,9 +127,9 @@ function saveNotifications(notifications: EmployeeNotification[]): void {
   localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
 }
 
-function getCurrentEmployeeName(): string {
-  if (typeof window === 'undefined') return 'Sarah Johnson';
-  return localStorage.getItem(EMPLOYEE_KEY) || 'Sarah Johnson';
+async function getCurrentEmployeeName(): Promise<string> {
+  const me = await getSessionEmployee();
+  return me ? me.full_name : 'Sarah Johnson';
 }
 
 // ─── Components ──────────────────────────────────────────────────────────────
@@ -515,9 +515,11 @@ export default function EmployeeTasksPage() {
 
   useEffect(() => {
     setMounted(true);
-    setEmployeeName(getCurrentEmployeeName());
     setTasks(getStoredTasks());
     setNotifications(getStoredNotifications());
+    (async () => {
+      setEmployeeName(await getCurrentEmployeeName());
+    })();
   }, []);
 
   const myTasks = tasks.filter(

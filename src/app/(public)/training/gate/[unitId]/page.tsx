@@ -13,7 +13,7 @@ import { getUnitById } from '@/lib/training/units';
 import { getCompetenciesForUnit } from '@/lib/training/competencies';
 import { saveGateAssessment } from '@/lib/training/training-storage';
 import { isGatePassed } from '@/lib/training/training-helpers';
-import { getCurrentEmployee } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import { getCurrentFamily } from '@/lib/family-storage';
 
 export default function GatePage() {
@@ -27,23 +27,25 @@ export default function GatePage() {
   const competencies = useMemo(() => getCompetenciesForUnit(unitId), [unitId]);
 
   useEffect(() => {
-    const employee = getCurrentEmployee();
-    if (employee) {
-      setUserId(employee.id);
-      const jobTitle = (employee.job_title || '').toLowerCase();
-      if (jobTitle.includes('owner') || jobTitle.includes('director')) setRole('owner');
-      else if (jobTitle.includes('lead')) setRole('admin');
-      else setRole('teacher');
-      return;
-    }
-    const family = getCurrentFamily();
-    if (family) {
-      setUserId(family.id);
-      setRole('parent');
-      return;
-    }
-    setUserId('demo-user');
-    setRole('teacher');
+    (async () => {
+      const employee = await getSessionEmployee();
+      if (employee) {
+        setUserId(employee.id);
+        const jobTitle = (employee.job_title || '').toLowerCase();
+        if (jobTitle.includes('owner') || jobTitle.includes('director')) setRole('owner');
+        else if (jobTitle.includes('lead')) setRole('admin');
+        else setRole('teacher');
+        return;
+      }
+      const family = getCurrentFamily();
+      if (family) {
+        setUserId(family.id);
+        setRole('parent');
+        return;
+      }
+      setUserId('demo-user');
+      setRole('teacher');
+    })();
   }, []);
 
   const { isLoading, gateAssessments, refresh } = useTrainingProgress(userId, role);

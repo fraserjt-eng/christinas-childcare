@@ -13,7 +13,7 @@ import { CarryoverStrip } from '@/components/training/CarryoverStrip';
 import { useTrainingProgress } from '@/hooks/useTrainingProgress';
 import { TrainingRole } from '@/types/training';
 import { getUnitById } from '@/lib/training/units';
-import { getCurrentEmployee } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import { getCurrentFamily } from '@/lib/family-storage';
 
 export default function UnitHubPage() {
@@ -26,27 +26,29 @@ export default function UnitHubPage() {
   const unit = useMemo(() => getUnitById(unitId), [unitId]);
 
   useEffect(() => {
-    const employee = getCurrentEmployee();
-    if (employee) {
-      setUserId(employee.id);
-      const jobTitle = (employee.job_title || '').toLowerCase();
-      if (jobTitle.includes('owner') || jobTitle.includes('director')) {
-        setRole('owner');
-      } else if (jobTitle.includes('lead')) {
-        setRole('admin');
-      } else {
-        setRole('teacher');
+    (async () => {
+      const employee = await getSessionEmployee();
+      if (employee) {
+        setUserId(employee.id);
+        const jobTitle = (employee.job_title || '').toLowerCase();
+        if (jobTitle.includes('owner') || jobTitle.includes('director')) {
+          setRole('owner');
+        } else if (jobTitle.includes('lead')) {
+          setRole('admin');
+        } else {
+          setRole('teacher');
+        }
+        return;
       }
-      return;
-    }
-    const family = getCurrentFamily();
-    if (family) {
-      setUserId(family.id);
-      setRole('parent');
-      return;
-    }
-    setUserId('demo-user');
-    setRole('teacher');
+      const family = getCurrentFamily();
+      if (family) {
+        setUserId(family.id);
+        setRole('parent');
+        return;
+      }
+      setUserId('demo-user');
+      setRole('teacher');
+    })();
   }, []);
 
   const { isLoading, unitProgress, getModuleProgress } = useTrainingProgress(userId, role);

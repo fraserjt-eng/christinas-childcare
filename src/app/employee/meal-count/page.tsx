@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { getClassrooms, getFoodCounts, upsertFoodCount } from '@/lib/food-storage';
 import { getCurrentMealWindow } from '@/lib/food-storage';
-import { getCurrentEmployee } from '@/lib/employee-storage';
+import { useCurrentEmployee } from '@/lib/use-current-employee';
 import { Classroom, MealType, MEAL_TYPE_LABELS } from '@/types/food';
 
 type StepState = 'select-classroom' | 'count' | 'done';
@@ -35,7 +35,7 @@ export default function EmployeeMealCountPage() {
   const [mealWindow, setMealWindow] = useState<{ mealType: MealType; isActive: boolean; minutesUntilDeadline: number } | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
-  const employee = typeof window !== 'undefined' ? getCurrentEmployee() : null;
+  const { employee } = useCurrentEmployee();
 
   useEffect(() => {
     async function load() {

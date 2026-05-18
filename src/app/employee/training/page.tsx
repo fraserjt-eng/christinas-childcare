@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
-  getCurrentEmployee,
   getTrainingModules,
   getEmployeeTraining,
 } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import {
   Employee,
   TrainingModule,
@@ -33,8 +33,8 @@ export default function EmployeeTrainingPage() {
 
   useEffect(() => {
     async function loadData() {
-      const emp = getCurrentEmployee();
-      setEmployee(emp);
+      const emp = await getSessionEmployee();
+      setEmployee(emp as unknown as Employee | null);
 
       const mods = await getTrainingModules();
       setModules(mods);

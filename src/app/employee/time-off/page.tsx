@@ -14,10 +14,10 @@ import {
 } from '@/components/ui/table';
 import { TimeOffRequestForm } from '@/components/employee/TimeOffRequestForm';
 import {
-  getCurrentEmployee,
   getTimeOffRequests,
   createTimeOffRequest,
 } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import { Employee, TimeOffRequest, TimeOffRequestCreate } from '@/types/employee';
 import { Calendar, Plus, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
@@ -29,8 +29,8 @@ export default function EmployeeTimeOffPage() {
 
   useEffect(() => {
     async function loadData() {
-      const emp = getCurrentEmployee();
-      setEmployee(emp);
+      const emp = await getSessionEmployee();
+      setEmployee(emp as unknown as Employee | null);
 
       if (emp) {
         const reqs = await getTimeOffRequests({ employee_id: emp.id });

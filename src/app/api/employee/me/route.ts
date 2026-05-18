@@ -29,7 +29,7 @@ export async function GET() {
     const { data } = await supabase
       .from('employees')
       .select(
-        'id, first_name, last_name, email, role, job_title, pin, employment_status, center_id'
+        'id, first_name, last_name, email, role, job_title, pin, employment_status, center_id, phone, address, emergency_contact_name, emergency_contact_phone'
       )
       .eq('id', session.user.id)
       .maybeSingle();
@@ -39,7 +39,7 @@ export async function GET() {
     const { data } = await supabase
       .from('employees')
       .select(
-        'id, first_name, last_name, email, role, job_title, pin, employment_status, center_id'
+        'id, first_name, last_name, email, role, job_title, pin, employment_status, center_id, phone, address, emergency_contact_name, emergency_contact_phone'
       )
       .ilike('email', session.user.email)
       .maybeSingle();

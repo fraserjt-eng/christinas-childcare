@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Calendar, Clock, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Employee, ScheduleRequest } from '@/types/employee';
-import { getCurrentEmployee, getScheduleRequests } from '@/lib/employee-storage';
+import { getScheduleRequests } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import { ScheduleRequestForm } from '@/components/scheduling/ScheduleRequestForm';
 
 export default function ScheduleRequestPage() {
@@ -18,12 +19,12 @@ export default function ScheduleRequestPage() {
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
-    const emp = getCurrentEmployee();
+    const emp = await getSessionEmployee();
     if (!emp) {
       router.push('/employee-login');
       return;
     }
-    setEmployee(emp);
+    setEmployee(emp as unknown as Employee | null);
 
     const requests = await getScheduleRequests({ employee_id: emp.id });
     setMyRequests(requests);

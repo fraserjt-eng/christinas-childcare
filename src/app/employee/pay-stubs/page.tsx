@@ -18,9 +18,9 @@ import {
 } from '@/components/ui/dialog';
 import { PayStubCard } from '@/components/employee/PayStubCard';
 import {
-  getCurrentEmployee,
   getPayStubs,
 } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import { Employee, PayStub, formatCurrency } from '@/types/employee';
 import { CreditCard, TrendingUp, DollarSign, FileText } from 'lucide-react';
 
@@ -34,8 +34,8 @@ export default function EmployeePayStubsPage() {
 
   useEffect(() => {
     async function loadData() {
-      const emp = getCurrentEmployee();
-      setEmployee(emp);
+      const emp = await getSessionEmployee();
+      setEmployee(emp as unknown as Employee | null);
 
       if (emp) {
         const stubs = await getPayStubs({ employee_id: emp.id });

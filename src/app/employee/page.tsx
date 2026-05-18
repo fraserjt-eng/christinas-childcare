@@ -5,9 +5,7 @@ import Link from 'next/link';
 import { useSessionUser, firstNameFrom } from '@/lib/use-session-user';
 // DashboardLayout provided by employee/layout.tsx — do not wrap again here
 import { HomeTile } from '@/components/employee/HomeTile';
-import {
-  getCurrentEmployee,
-} from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import { Employee, TimeEntry, EmployeeTraining, TrainingModule, formatHours } from '@/types/employee';
 import { Task, DEFAULT_TIME_BLOCKS } from '@/types/tasks';
 import { NewsUpdate } from '@/types/news';
@@ -246,8 +244,8 @@ export default function EmployeeDashboardPage() {
 
   useEffect(() => {
     async function loadData() {
-      const emp = getCurrentEmployee();
-      setEmployee(emp);
+      const emp = await getSessionEmployee();
+      setEmployee(emp as unknown as Employee | null);
 
       if (!emp) return;
 

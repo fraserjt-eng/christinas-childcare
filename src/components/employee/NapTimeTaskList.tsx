@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Moon, Clock, Play, CheckCircle2, Timer } from 'lucide-react';
-import { getCurrentEmployee } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import type { Task } from '@/types/tasks';
 
 const TASKS_KEY = 'christinas_tasks';
@@ -74,10 +74,10 @@ export function NapTimeTaskList() {
   const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
   const [currentEmployeeName, setCurrentEmployeeName] = useState<string | null>(null);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setTasks(getTasks());
     setStartedMap(getStartedMap());
-    const emp = getCurrentEmployee();
+    const emp = await getSessionEmployee();
     if (emp) {
       setCurrentEmployeeId(emp.id);
       setCurrentEmployeeName(`${emp.first_name} ${emp.last_name}`);

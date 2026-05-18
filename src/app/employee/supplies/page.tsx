@@ -1,10 +1,10 @@
 'use client';
 
 import { SupplyRequestForm } from '@/components/employee/SupplyRequest';
-import { getCurrentEmployee } from '@/lib/employee-storage';
+import { useCurrentEmployee } from '@/lib/use-current-employee';
 
 export default function EmployeeSuppliesPage() {
-  const employee = getCurrentEmployee();
+  const { employee } = useCurrentEmployee();
   const staffName = employee ? `${employee.first_name} ${employee.last_name}` : 'Staff Member';
 
   return (

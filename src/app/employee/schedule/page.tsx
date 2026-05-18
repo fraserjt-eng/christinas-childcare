@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  getCurrentEmployee,
   getScheduleEntries,
 } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import { Employee, ScheduleEntry, formatTime } from '@/types/employee';
 import { Calendar, ChevronLeft, ChevronRight, Clock, CalendarPlus } from 'lucide-react';
 import Link from 'next/link';
@@ -25,8 +25,8 @@ export default function EmployeeSchedulePage() {
 
   useEffect(() => {
     async function loadData() {
-      const emp = getCurrentEmployee();
-      setEmployee(emp);
+      const emp = await getSessionEmployee();
+      setEmployee(emp as unknown as Employee | null);
 
       if (emp) {
         const weekEnd = new Date(currentWeekStart);
