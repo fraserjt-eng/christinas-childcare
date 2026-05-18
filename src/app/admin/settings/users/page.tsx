@@ -102,6 +102,10 @@ function StatusBadge({ status }: { status: AppUser['status'] }) {
 // Form type
 // ──────────────────────────────────────────────
 
+// A row in the User Management table: a stored staff AppUser, or a live
+// Supabase family mapped onto the same shape with extra display fields.
+type DirectoryRow = AppUser & { familyDetail?: string; isFamily?: boolean };
+
 interface UserFormData {
   // Portal access fields
   first_name: string;
@@ -344,6 +348,9 @@ function UserFormFields({
 
 export default function UsersPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
+  // Live families from Supabase (the list otherwise only shows browser-stored
+  // staff, so families added via Add Family never appeared).
+  const [familyRows, setFamilyRows] = useState<DirectoryRow[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<AppUser['status'] | 'all'>('all');
@@ -380,9 +387,49 @@ export default function UsersPage() {
     children: [{ name: '', date_of_birth: '', classroom: '' }],
   });
 
+  const loadFamilies = async () => {
+    try {
+      const r = await fetch('/api/admin/family');
+      if (!r.ok) return;
+      const data = await r.json();
+      const rows = (data.families || []).map(
+        (f: {
+          id: string;
+          email: string;
+          status: string;
+          pin: string | null;
+          created_at: string;
+          parentName: string;
+          phone: string;
+          children: string[];
+        }) => {
+          const parts = (f.parentName || f.email).trim().split(' ');
+          return {
+            id: `family-${f.id}`,
+            email: f.email,
+            first_name: parts[0] || 'Family',
+            last_name: parts.slice(1).join(' '),
+            role: 'parent' as UserRole,
+            status: (f.status as AppUser['status']) || 'active',
+            phone: f.phone || '',
+            created_at: f.created_at,
+            isFamily: true,
+            familyDetail:
+              `Kiosk PIN ${f.pin ?? '----'}` +
+              (f.children.length ? ` · ${f.children.join(', ')}` : ''),
+          };
+        }
+      );
+      setFamilyRows(rows);
+    } catch {
+      /* non-fatal: list still shows staff */
+    }
+  };
+
   useEffect(() => {
     purgeDemoUsers();
     setUsers(getUsers());
+    loadFamilies();
     // Load existing PINs for collision detection
     getEmployees().then((emps) => {
       setUsedPins(new Set(emps.map((e) => e.pin)));
@@ -487,6 +534,7 @@ export default function UsersPage() {
         email: familyForm.email,
       });
       resetFamilyForm();
+      loadFamilies();
     } catch {
       setFamilyError('Connection error. Please try again.');
     } finally {
@@ -513,7 +561,8 @@ export default function UsersPage() {
 
   // ── Filter ─────────────────────────────────
 
-  const filteredUsers = users.filter(user => {
+  const allRows: DirectoryRow[] = [...users, ...familyRows];
+  const filteredUsers = allRows.filter(user => {
     const matchesSearch =
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -949,8 +998,20 @@ export default function UsersPage() {
                     <TableRow key={user.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{user.first_name} {user.last_name}</p>
+                          <p className="font-medium">
+                            {user.first_name} {user.last_name}
+                            {user.isFamily && (
+                              <span className="ml-2 text-xs font-normal text-christina-blue">
+                                Family
+                              </span>
+                            )}
+                          </p>
                           <p className="text-sm text-muted-foreground">{user.email}</p>
+                          {user.familyDetail && (
+                            <p className="text-xs text-muted-foreground">
+                              {user.familyDetail}
+                            </p>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -970,9 +1031,11 @@ export default function UsersPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditDialog(user)}>
-                              <Pencil className="h-4 w-4 mr-2" /> Edit User
-                            </DropdownMenuItem>
+                            {!user.isFamily && (
+                              <DropdownMenuItem onClick={() => openEditDialog(user)}>
+                                <Pencil className="h-4 w-4 mr-2" /> Edit User
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               disabled={inviteBusy === user.id}
                               onSelect={(e) => {
@@ -985,27 +1048,33 @@ export default function UsersPage() {
                                 ? 'Preparing link...'
                                 : 'Email account setup link'}
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={inviteBusy === user.id}
-                              onSelect={(e) => {
-                                e.preventDefault();
-                                handleInvite(user);
-                              }}
-                            >
-                              <KeyRound className="h-4 w-4 mr-2" /> Send password reset link
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
-                              {user.status === 'active' ? (
-                                <>
-                                  <UserX className="h-4 w-4 mr-2" /> Deactivate
-                                </>
-                              ) : (
-                                <>
-                                  <UserCheck className="h-4 w-4 mr-2" /> Activate
-                                </>
-                              )}
-                            </DropdownMenuItem>
+                            {!user.isFamily && (
+                              <DropdownMenuItem
+                                disabled={inviteBusy === user.id}
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  handleInvite(user);
+                                }}
+                              >
+                                <KeyRound className="h-4 w-4 mr-2" /> Send password reset link
+                              </DropdownMenuItem>
+                            )}
+                            {!user.isFamily && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
+                                  {user.status === 'active' ? (
+                                    <>
+                                      <UserX className="h-4 w-4 mr-2" /> Deactivate
+                                    </>
+                                  ) : (
+                                    <>
+                                      <UserCheck className="h-4 w-4 mr-2" /> Activate
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -1016,7 +1085,7 @@ export default function UsersPage() {
             </Table>
           </div>
           <p className="text-sm text-muted-foreground mt-4">
-            Showing {filteredUsers.length} of {users.length} users
+            Showing {filteredUsers.length} of {allRows.length} (staff and families)
           </p>
         </CardContent>
       </Card>

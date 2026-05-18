@@ -29,6 +29,56 @@ async function uniquePin(
   return null;
 }
 
+// List live families for User Management (admin only). The list page reads
+// browser storage for staff; families live in Supabase, so without this they
+// never appear even though they work at the kiosk.
+export async function GET() {
+  const session = await requireSession('admin');
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
+  }
+
+  // Fetch broad, join in JS (PostgREST .in() can silently drop rows).
+  const { data: fams } = await supabase
+    .from('families')
+    .select('id, email, status, pin, created_at')
+    .limit(5000);
+  const { data: parents } = await supabase
+    .from('family_parents')
+    .select('family_id, name, phone, is_primary')
+    .limit(5000);
+  const { data: kids } = await supabase
+    .from('family_children')
+    .select('family_id, name')
+    .limit(5000);
+
+  const families = (fams || [])
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    .map((f) => {
+      const ps = (parents || []).filter((p) => p.family_id === f.id);
+      const primary = ps.find((p) => p.is_primary) || ps[0];
+      const childNames = (kids || [])
+        .filter((k) => k.family_id === f.id)
+        .map((k) => k.name);
+      return {
+        id: f.id,
+        email: f.email,
+        status: f.status,
+        pin: f.pin,
+        created_at: f.created_at,
+        parentName: primary?.name || '',
+        phone: primary?.phone || '',
+        children: childNames,
+      };
+    });
+
+  return NextResponse.json({ families });
+}
+
 export async function POST(request: NextRequest) {
   const session = await requireSession('admin');
   if (!session) {
