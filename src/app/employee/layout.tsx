@@ -5,25 +5,37 @@ import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NotificationPopupWrapper } from '@/components/NotificationPopupWrapper';
-import { getCurrentEmployee, seedSampleData } from '@/lib/employee-storage';
 
+// Gate on the real signed session cookie (already verified by middleware),
+// NOT browser localStorage. The old localStorage check bounced every staff
+// member on a fresh device (the iPad) back to the login even after a correct
+// PIN, because the login only sets the server cookie.
 export default function EmployeeLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     async function init() {
-      // Ensure sample data is seeded
-      await seedSampleData();
-
-      const employee = getCurrentEmployee();
-      if (!employee) {
+      try {
+        const res = await fetch('/api/auth/session');
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.user) {
+            setLoading(false);
+            return;
+          }
+        }
         router.push('/employee-login');
-      } else {
-        setLoading(false);
+      } catch {
+        if (!cancelled) router.push('/employee-login');
       }
     }
     init();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   if (loading) {

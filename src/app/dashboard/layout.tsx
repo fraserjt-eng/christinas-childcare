@@ -5,29 +5,36 @@ import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { NotificationPopupWrapper } from '@/components/NotificationPopupWrapper';
-import { getCurrentFamily, seedFamilyData } from '@/lib/family-storage';
 
+// Gate on the real signed session cookie (already verified by middleware),
+// NOT browser localStorage. The old localStorage check bounced parents on a
+// fresh device back to /login even after a correct sign-in.
 export default function DashLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     async function init() {
       try {
-        await seedFamilyData();
-        const family = getCurrentFamily();
-        if (!family) {
-          router.push('/login');
-          return;
+        const res = await fetch('/api/auth/session');
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.user) {
+            setLoading(false);
+            return;
+          }
         }
-      } catch (error) {
-        console.error('Dashboard init failed:', error);
         router.push('/login');
-        return;
+      } catch {
+        if (!cancelled) router.push('/login');
       }
-      setLoading(false);
     }
     init();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   if (loading) {
