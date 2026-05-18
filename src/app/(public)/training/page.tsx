@@ -9,7 +9,7 @@ import { ModuleCard } from '@/components/training/ModuleCard';
 import { useTrainingProgress } from '@/hooks/useTrainingProgress';
 import { TrainingRole } from '@/types/training';
 import { pathwayInfo, getModulesForRole } from '@/lib/training/pathways';
-import { getCurrentEmployee } from '@/lib/employee-storage';
+import { getSessionEmployee } from '@/lib/session-employee';
 import { getCurrentFamily } from '@/lib/family-storage';
 
 export default function TrainingHomePage() {
@@ -18,7 +18,8 @@ export default function TrainingHomePage() {
   const [userName, setUserName] = useState<string>('');
 
   useEffect(() => {
-    const employee = getCurrentEmployee();
+    (async () => {
+    const employee = await getSessionEmployee();
     if (employee) {
       setUserId(employee.id);
       setUserName(employee.first_name || 'there');
@@ -46,6 +47,7 @@ export default function TrainingHomePage() {
     setUserId('demo-user');
     setRole('teacher');
     setUserName('there');
+    })();
   }, []);
 
   const { isLoading, unitProgress, getModuleProgress } = useTrainingProgress(userId, role);
