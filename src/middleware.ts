@@ -104,7 +104,12 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/')) {
     // The kiosk loads several calls per family; the blanket 5/min limit would
     // break it. /api/kiosk enforces its own (tighter on PIN, looser overall).
-    if (pathname.startsWith('/api/kiosk')) {
+    // Staff PIN login also self-limits loosely; the global 5/min lock was
+    // blocking legitimate sign-ins, so exempt it here too.
+    if (
+      pathname.startsWith('/api/kiosk') ||
+      pathname.startsWith('/api/auth/staff-pin')
+    ) {
       return NextResponse.next();
     }
 

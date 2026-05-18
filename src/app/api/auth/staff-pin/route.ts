@@ -15,18 +15,22 @@ import { mintSessionResponse } from '@/lib/mint-session';
  * that record. The client never sends a role.
  */
 export async function POST(request: NextRequest) {
+  // Loose backstop only. A trusted on-site center mistypes PINs and the owner
+  // tests repeatedly; the old 5/15min lock blocked legitimate use. This cap is
+  // high enough that a person never hits it, while still stopping a runaway
+  // script from enumerating every 4-digit PIN.
   const clientId = getClientIdentifier(request);
   const rateResult = checkRateLimit(`staff-pin:${clientId}`, {
-    maxRequests: 5,
+    maxRequests: 100,
     windowMs: 15 * 60 * 1000,
   });
 
   if (!rateResult.success) {
     return NextResponse.json(
-      { error: 'Too many attempts. Please wait before trying again.' },
+      { error: 'Too many attempts. Please wait a minute and try again.' },
       {
         status: 429,
-        headers: { 'Retry-After': rateResult.retryAfterSeconds?.toString() ?? '900' },
+        headers: { 'Retry-After': rateResult.retryAfterSeconds?.toString() ?? '60' },
       }
     );
   }
