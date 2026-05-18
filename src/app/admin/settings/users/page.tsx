@@ -137,6 +137,208 @@ const emptyFormData: UserFormData = {
 };
 
 // ──────────────────────────────────────────────
+// User form (module-scope: defining this inside UsersPage remounted it on
+// every keystroke, so inputs lost focus and you could not type)
+// ──────────────────────────────────────────────
+
+function UserFormFields({
+  formData,
+  setFormData,
+  formError,
+  isEdit = false,
+  onGeneratePin,
+}: {
+  formData: UserFormData;
+  setFormData: (d: UserFormData) => void;
+  formError: string | null;
+  isEdit?: boolean;
+  onGeneratePin: () => void;
+}) {
+  return (
+    <div className="space-y-4 py-4">
+      {formError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {formError}
+        </div>
+      )}
+
+      {/* Name */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="first_name">First Name *</Label>
+          <Input
+            id="first_name"
+            value={formData.first_name}
+            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+            placeholder="Jane"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="last_name">Last Name *</Label>
+          <Input
+            id="last_name"
+            value={formData.last_name}
+            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+            placeholder="Smith"
+          />
+        </div>
+      </div>
+
+      {/* Email */}
+      <div className="space-y-2">
+        <Label htmlFor="email">Email Address *</Label>
+        <Input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          placeholder="jsmith@christinaschildcare.com"
+        />
+      </div>
+
+      {/* Phone */}
+      <div className="space-y-2">
+        <Label htmlFor="phone">Phone Number</Label>
+        <Input
+          id="phone"
+          type="tel"
+          value={formData.phone}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          placeholder="(763) 555-0100"
+        />
+      </div>
+
+      {/* Role */}
+      <div className="space-y-2">
+        <Label htmlFor="role">Role *</Label>
+        <Select
+          value={formData.role}
+          onValueChange={(value: UserRole) => setFormData({ ...formData, role: value })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a role" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(ROLE_DEFINITIONS).map(([role, def]) => (
+              <SelectItem key={role} value={role}>
+                <div className="flex flex-col">
+                  <span>{def.label}</span>
+                  <span className="text-xs text-muted-foreground">{def.description}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Separator: HR fields (shown for both add and edit) */}
+      <div className="pt-2 border-t">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+          Employee Details
+        </p>
+
+        {/* PIN */}
+        <div className="space-y-2 mb-4">
+          <Label htmlFor="pin">Clock-In PIN {!isEdit && '(4-6 digits)'}</Label>
+          <div className="flex gap-2">
+            <Input
+              id="pin"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={formData.pin}
+              onChange={(e) =>
+                setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '') })
+              }
+              placeholder={isEdit ? 'Leave blank to keep current PIN' : 'Auto-generated if blank'}
+              className="font-mono tracking-widest"
+            />
+            {!isEdit && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onGeneratePin}
+                className="shrink-0"
+                title="Generate a random PIN not already in use"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Employees use this PIN to clock in at{' '}
+            <span className="font-medium">/employee-login</span>.
+          </p>
+        </div>
+
+        {/* Job Title */}
+        <div className="space-y-2 mb-4">
+          <Label htmlFor="job_title">Job Title</Label>
+          <Input
+            id="job_title"
+            value={formData.job_title}
+            onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+            placeholder="Lead Teacher"
+          />
+        </div>
+
+        {/* Hourly Rate + Hire Date */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="space-y-2">
+            <Label htmlFor="hourly_rate">Hourly Rate ($)</Label>
+            <Input
+              id="hourly_rate"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.hourly_rate}
+              onChange={(e) => setFormData({ ...formData, hourly_rate: e.target.value })}
+              placeholder="18.50"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="hire_date">Hire Date</Label>
+            <Input
+              id="hire_date"
+              type="date"
+              value={formData.hire_date}
+              onChange={(e) => setFormData({ ...formData, hire_date: e.target.value })}
+            />
+          </div>
+        </div>
+
+        {/* Emergency Contact */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="ec_name">Emergency Contact Name</Label>
+            <Input
+              id="ec_name"
+              value={formData.emergency_contact_name}
+              onChange={(e) =>
+                setFormData({ ...formData, emergency_contact_name: e.target.value })
+              }
+              placeholder="John Smith"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ec_phone">Emergency Contact Phone</Label>
+            <Input
+              id="ec_phone"
+              type="tel"
+              value={formData.emergency_contact_phone}
+              onChange={(e) =>
+                setFormData({ ...formData, emergency_contact_phone: e.target.value })
+              }
+              placeholder="(763) 555-0199"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────
 // Page
 // ──────────────────────────────────────────────
 
@@ -445,188 +647,8 @@ export default function UsersPage() {
 
   // ── Form content ───────────────────────────
 
-  const UserFormContent = ({ isEdit = false }: { isEdit?: boolean }) => (
-    <div className="space-y-4 py-4">
-      {formError && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          {formError}
-        </div>
-      )}
-
-      {/* Name */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="first_name">First Name *</Label>
-          <Input
-            id="first_name"
-            value={formData.first_name}
-            onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-            placeholder="Jane"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="last_name">Last Name *</Label>
-          <Input
-            id="last_name"
-            value={formData.last_name}
-            onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-            placeholder="Smith"
-          />
-        </div>
-      </div>
-
-      {/* Email */}
-      <div className="space-y-2">
-        <Label htmlFor="email">Email Address *</Label>
-        <Input
-          id="email"
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          placeholder="jsmith@christinaschildcare.com"
-        />
-      </div>
-
-      {/* Phone */}
-      <div className="space-y-2">
-        <Label htmlFor="phone">Phone Number</Label>
-        <Input
-          id="phone"
-          type="tel"
-          value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-          placeholder="(763) 555-0100"
-        />
-      </div>
-
-      {/* Role */}
-      <div className="space-y-2">
-        <Label htmlFor="role">Role *</Label>
-        <Select
-          value={formData.role}
-          onValueChange={(value: UserRole) => setFormData({ ...formData, role: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select a role" />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(ROLE_DEFINITIONS).map(([role, def]) => (
-              <SelectItem key={role} value={role}>
-                <div className="flex flex-col">
-                  <span>{def.label}</span>
-                  <span className="text-xs text-muted-foreground">{def.description}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Separator: HR fields (shown for both add and edit) */}
-      <div className="pt-2 border-t">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Employee Details
-        </p>
-
-        {/* PIN */}
-        <div className="space-y-2 mb-4">
-          <Label htmlFor="pin">Clock-In PIN {!isEdit && '(4-6 digits)'}</Label>
-          <div className="flex gap-2">
-            <Input
-              id="pin"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={formData.pin}
-              onChange={(e) =>
-                setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '') })
-              }
-              placeholder={isEdit ? 'Leave blank to keep current PIN' : 'Auto-generated if blank'}
-              className="font-mono tracking-widest"
-            />
-            {!isEdit && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleGeneratePin}
-                className="shrink-0"
-                title="Generate a random PIN not already in use"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Employees use this PIN to clock in at{' '}
-            <span className="font-medium">/employee-login</span>.
-          </p>
-        </div>
-
-        {/* Job Title */}
-        <div className="space-y-2 mb-4">
-          <Label htmlFor="job_title">Job Title</Label>
-          <Input
-            id="job_title"
-            value={formData.job_title}
-            onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-            placeholder="Lead Teacher"
-          />
-        </div>
-
-        {/* Hourly Rate + Hire Date */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="space-y-2">
-            <Label htmlFor="hourly_rate">Hourly Rate ($)</Label>
-            <Input
-              id="hourly_rate"
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.hourly_rate}
-              onChange={(e) => setFormData({ ...formData, hourly_rate: e.target.value })}
-              placeholder="18.50"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="hire_date">Hire Date</Label>
-            <Input
-              id="hire_date"
-              type="date"
-              value={formData.hire_date}
-              onChange={(e) => setFormData({ ...formData, hire_date: e.target.value })}
-            />
-          </div>
-        </div>
-
-        {/* Emergency Contact */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="ec_name">Emergency Contact Name</Label>
-            <Input
-              id="ec_name"
-              value={formData.emergency_contact_name}
-              onChange={(e) =>
-                setFormData({ ...formData, emergency_contact_name: e.target.value })
-              }
-              placeholder="John Smith"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ec_phone">Emergency Contact Phone</Label>
-            <Input
-              id="ec_phone"
-              type="tel"
-              value={formData.emergency_contact_phone}
-              onChange={(e) =>
-                setFormData({ ...formData, emergency_contact_phone: e.target.value })
-              }
-              placeholder="(763) 555-0199"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  // UserFormContent was here. It is now the module-scope <UserFormFields />
+  // so it does not remount on every keystroke (that bug blocked typing).
 
   return (
     <div className="space-y-6">
@@ -884,7 +906,12 @@ export default function UsersPage() {
                       at the same time so they can clock in immediately.
                     </DialogDescription>
                   </DialogHeader>
-                  <UserFormContent />
+                  <UserFormFields
+                    formData={formData}
+                    setFormData={setFormData}
+                    formError={formError}
+                    onGeneratePin={handleGeneratePin}
+                  />
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                       Cancel
@@ -1003,7 +1030,13 @@ export default function UsersPage() {
               Update user information and role assignment.
             </DialogDescription>
           </DialogHeader>
-          <UserFormContent isEdit />
+          <UserFormFields
+            formData={formData}
+            setFormData={setFormData}
+            formError={formError}
+            isEdit
+            onGeneratePin={handleGeneratePin}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
