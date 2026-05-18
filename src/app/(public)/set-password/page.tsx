@@ -25,12 +25,24 @@ export default function SetPasswordPage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('verifying');
   const [error, setError] = useState('');
+  const [token, setToken] = useState<string | null>(null);
+  const [doneMsg, setDoneMsg] = useState<{ kind: string; loginPath: string } | null>(null);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   useEffect(() => {
     async function verify() {
+      // Our own signed setup link (admin-issued). No Supabase needed; the
+      // signed token is the proof. Show the form right away.
+      const urlEarly = new URL(window.location.href);
+      const ourToken = urlEarly.searchParams.get('token');
+      if (ourToken) {
+        setToken(ourToken);
+        setPhase('ready');
+        return;
+      }
+
       if (!supabaseUrl || !supabaseKey) {
         setPhase('invalid');
         setError('Authentication is not configured.');
@@ -90,6 +102,32 @@ export default function SetPasswordPage() {
 
     setPhase('saving');
 
+    // Our signed-token flow: sets the password where it is actually checked
+    // (families.password_hash for parents). No Supabase session involved.
+    if (token) {
+      try {
+        const r = await fetch('/api/auth/set-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, password }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.ok) {
+          setError(d.error || 'Could not set the password.');
+          setPhase('ready');
+          return;
+        }
+        setDoneMsg({
+          kind: d.kind || 'parent',
+          loginPath: d.loginPath || '/login',
+        });
+      } catch {
+        setError('Connection error. Please try again.');
+        setPhase('ready');
+      }
+      return;
+    }
+
     try {
       const supabase = createClient(supabaseUrl!, supabaseKey!);
       const { error: updErr } = await supabase.auth.updateUser({ password });
@@ -143,7 +181,23 @@ export default function SetPasswordPage() {
               </div>
             )}
 
-            {(phase === 'ready' || phase === 'saving') && (
+            {doneMsg && (
+              <div className="text-center py-6 space-y-4">
+                <p className="text-sm">
+                  Your password is set. {doneMsg.kind === 'parent'
+                    ? 'Sign in with your email and this password to see your child’s daily report.'
+                    : 'You can now sign in.'}
+                </p>
+                <Button
+                  className="w-full bg-christina-red hover:bg-christina-red/90"
+                  onClick={() => router.push(doneMsg.loginPath)}
+                >
+                  Go to sign in
+                </Button>
+              </div>
+            )}
+
+            {!doneMsg && (phase === 'ready' || phase === 'saving') && (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="password">New password</Label>

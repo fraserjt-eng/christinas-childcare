@@ -2,19 +2,23 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
-import { getServerSupabase } from '@/lib/supabase/server';
+import { signPayload } from '@/lib/session';
 
 /**
- * Admin-only: create (or recover) a Supabase Auth account for a staff/parent
- * the admin added in User Management, and produce a "set your password" link.
+ * Admin-only: produce a "set your password" link for a staff/parent the admin
+ * added in User Management.
  *
- * Security: gated by requireSession('admin') so only an authenticated admin
- * can trigger it. The role is NOT set here; it is derived at sign-in time from
- * the employees / family_parents tables by lookupInviteServer. This route only
- * proves identity ownership via the email link.
+ * This does NOT use Supabase's hosted invite/recovery flow. That flow rewrote
+ * redirect_to to the project Site URL (localhost) and, for parents, set the
+ * wrong password store entirely (parents authenticate against
+ * families.password_hash, not Supabase Auth). Instead we mint our own
+ * short-lived signed token and point at our own /set-password page on this
+ * origin. No email is sent: the admin copies the link and gives it to the
+ * person directly (also avoids any mail to real family addresses).
  *
- * Returns a copyable action link always (reliable even if email delivery is
- * rate-limited), and attempts to send the Supabase email as well.
+ * Security: gated by requireSession('admin'); the token only proves "this
+ * email may set a password", signed with SESSION_SECRET, 7-day expiry. The
+ * role is still derived at sign-in from employees / family tables.
  */
 export async function POST(request: NextRequest) {
   const session = await requireSession('admin');
@@ -34,60 +38,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'A valid email is required' }, { status: 400 });
   }
 
-  const supabase = getServerSupabase();
-  if (!supabase) {
-    return NextResponse.json({ error: 'Auth unavailable' }, { status: 503 });
+  let token: string;
+  try {
+    const payload = {
+      email,
+      purpose: 'setpw',
+      exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    };
+    const b64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    token = `${b64}.${signPayload(b64)}`;
+  } catch {
+    return NextResponse.json(
+      { error: 'Server not configured for setup links (SESSION_SECRET).' },
+      { status: 503 }
+    );
   }
 
   const origin = new URL(request.url).origin;
-  const redirectTo = `${origin}/set-password`;
+  const link = `${origin}/set-password?token=${encodeURIComponent(token)}`;
 
-  // Does a Supabase Auth user already exist for this email?
-  let userExists = false;
-  try {
-    const { data: list } = await supabase.auth.admin.listUsers();
-    userExists = !!list?.users?.some(
-      (u) => u.email?.toLowerCase() === email
-    );
-  } catch {
-    // If listing fails, fall through and let generateLink decide.
-  }
-
-  let emailed = false;
-
-  // Best-effort: send the Supabase email (invite for new, recovery for existing).
-  try {
-    if (!userExists) {
-      const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
-        redirectTo,
-      });
-      emailed = !error;
-    }
-  } catch {
-    emailed = false;
-  }
-
-  // Always produce a copyable link as the reliable path.
-  let link = '';
-  try {
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: userExists ? 'recovery' : 'invite',
-      email,
-      options: { redirectTo },
-    });
-    if (!error) {
-      link = data?.properties?.action_link ?? '';
-    }
-  } catch {
-    link = '';
-  }
-
-  if (!link && !emailed) {
-    return NextResponse.json(
-      { error: 'Could not create a setup link. Check Supabase Auth URL configuration.' },
-      { status: 502 }
-    );
-  }
-
-  return NextResponse.json({ ok: true, emailed, link, userExists });
+  return NextResponse.json({ ok: true, link, emailed: false });
 }
