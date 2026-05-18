@@ -16,10 +16,9 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { Employee, getEmployeeFullName } from '@/types/employee';
-import { getCurrentEmployee, logout as employeeLogout } from '@/lib/employee-storage';
-import { FamilyAccount } from '@/types/family';
-import { getCurrentFamily, logoutFamily } from '@/lib/family-storage';
+import { logout as employeeLogout } from '@/lib/employee-storage';
+import { logoutFamily } from '@/lib/family-storage';
+import { useSessionUser, initialsFrom, roleLabel, type SessionUser } from '@/lib/use-session-user';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { PortalSwitcher } from '@/components/layout/PortalSwitcher';
 import { useRole } from '@/hooks/useRole';
@@ -315,33 +314,18 @@ function RoleFilteredAdminNav() {
 function SidebarContent({
   isAdmin,
   isEmployee,
-  employee,
-  family,
+  sessionUser,
   onLogout
 }: {
   isAdmin: boolean;
   isEmployee?: boolean;
-  employee?: Employee | null;
-  family?: FamilyAccount | null;
+  sessionUser?: SessionUser | null;
   onLogout?: () => void;
 }) {
-  let displayName = 'Ophelia Zeogar';
-  let displayRole = 'Owner / Director';
-  let initials = 'OZ';
-
-  if (employee) {
-    displayName = getEmployeeFullName(employee);
-    displayRole = employee.job_title;
-    initials = `${employee.first_name[0]}${employee.last_name[0]}`;
-  } else if (family) {
-    const primary = family.parents.find((p) => p.is_primary) || family.parents[0];
-    if (primary) {
-      displayName = primary.name;
-      displayRole = 'Parent';
-      const parts = primary.name.split(' ');
-      initials = parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : parts[0][0];
-    }
-  }
+  // Identity comes from the verified session, never localStorage demo data.
+  const displayName = sessionUser?.full_name || 'Account';
+  const displayRole = roleLabel(sessionUser?.role);
+  const initials = initialsFrom(sessionUser?.full_name);
 
   return (
     <div className="flex flex-col h-full">
@@ -415,20 +399,16 @@ function TourLauncherWrapper() {
 
 export function DashboardLayout({ children, isAdmin = false, isEmployee = false }: DashboardLayoutProps) {
   const [open, setOpen] = useState(false);
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [family, setFamily] = useState<FamilyAccount | null>(null);
+  const { user: sessionUser } = useSessionUser();
 
-  useEffect(() => {
-    if (isEmployee) {
-      const emp = getCurrentEmployee();
-      setEmployee(emp);
-    } else if (!isAdmin) {
-      const fam = getCurrentFamily();
-      setFamily(fam);
+  const handleLogout = async () => {
+    // Clear the real server session cookie, not just localStorage, so Sign
+    // Out actually signs out (the cookie otherwise lived for 8 hours).
+    try {
+      await fetch('/api/auth/session', { method: 'DELETE' });
+    } catch {
+      /* best effort */
     }
-  }, [isEmployee, isAdmin]);
-
-  const handleLogout = () => {
     if (isEmployee) {
       employeeLogout();
       window.location.href = '/employee-login';
@@ -444,8 +424,7 @@ export function DashboardLayout({ children, isAdmin = false, isEmployee = false 
         <SidebarContent
           isAdmin={isAdmin}
           isEmployee={isEmployee}
-          employee={employee}
-          family={family}
+          sessionUser={sessionUser}
           onLogout={(isEmployee || !isAdmin) ? handleLogout : undefined}
         />
       </aside>
@@ -459,8 +438,7 @@ export function DashboardLayout({ children, isAdmin = false, isEmployee = false 
               <SidebarContent
                 isAdmin={isAdmin}
                 isEmployee={isEmployee}
-                employee={employee}
-                family={family}
+                sessionUser={sessionUser}
                 onLogout={(isEmployee || !isAdmin) ? handleLogout : undefined}
               />
             </SheetContent>

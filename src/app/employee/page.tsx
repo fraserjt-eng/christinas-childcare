@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSessionUser, firstNameFrom } from '@/lib/use-session-user';
 // DashboardLayout provided by employee/layout.tsx — do not wrap again here
 import { HomeTile } from '@/components/employee/HomeTile';
 import {
@@ -229,6 +230,7 @@ function saveToStorage<T>(key: string, data: T[]): void {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function EmployeeDashboardPage() {
+  const { user: sessionUser } = useSessionUser();
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
   const [weeklyEntries, setWeeklyEntries] = useState<TimeEntry[]>([]);
@@ -480,7 +482,10 @@ export default function EmployeeDashboardPage() {
         {/* ── Greeting + Announcement ─────────────────────────────────── */}
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">
-            {getGreeting()}, {employee.first_name}
+            {getGreeting()},{' '}
+            {sessionUser?.full_name
+              ? firstNameFrom(sessionUser.full_name)
+              : employee.first_name}
           </h1>
           <p className="text-muted-foreground mt-1">
             {employee.job_title} &middot; {todayFormatted}
