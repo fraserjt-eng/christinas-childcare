@@ -53,7 +53,7 @@ export async function GET() {
     .limit(5000);
   const { data: kids } = await supabase
     .from('family_children')
-    .select('family_id, name')
+    .select('family_id, name, date_of_birth, classroom')
     .limit(5000);
 
   const families = (fams || [])
@@ -61,9 +61,13 @@ export async function GET() {
     .map((f) => {
       const ps = (parents || []).filter((p) => p.family_id === f.id);
       const primary = ps.find((p) => p.is_primary) || ps[0];
-      const childNames = (kids || [])
+      const children = (kids || [])
         .filter((k) => k.family_id === f.id)
-        .map((k) => k.name);
+        .map((k) => ({
+          name: k.name,
+          date_of_birth: k.date_of_birth || '',
+          classroom: k.classroom || '',
+        }));
       return {
         id: f.id,
         email: f.email,
@@ -72,7 +76,7 @@ export async function GET() {
         created_at: f.created_at,
         parentName: primary?.name || '',
         phone: primary?.phone || '',
-        children: childNames,
+        children,
       };
     });
 
@@ -261,4 +265,129 @@ export async function DELETE(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+// Edit a family: parent name/phone/email, kiosk PIN, and the children list.
+// Body: { id, email, parentName, parentPhone?, pin?, children:[{name,...}] }
+export async function PUT(request: NextRequest) {
+  const session = await requireSession('admin');
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  let body: {
+    id?: string;
+    email?: string;
+    parentName?: string;
+    parentPhone?: string;
+    pin?: string;
+    children?: ChildInput[];
+  };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
+  const id = (body.id || '').trim();
+  const email = (body.email || '').toLowerCase().trim();
+  const parentName = (body.parentName || '').trim();
+  const children = (body.children || []).filter((c) => (c.name || '').trim());
+
+  if (!id) {
+    return NextResponse.json({ error: 'Family id is required' }, { status: 400 });
+  }
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return NextResponse.json({ error: 'A valid family email is required' }, { status: 400 });
+  }
+  if (!parentName) {
+    return NextResponse.json({ error: 'A parent/guardian name is required' }, { status: 400 });
+  }
+  if (children.length === 0) {
+    return NextResponse.json({ error: 'Add at least one child' }, { status: 400 });
+  }
+
+  const pin = (body.pin || '').trim();
+  if (pin && !/^\d{4}$/.test(pin)) {
+    return NextResponse.json({ error: 'PIN must be exactly 4 digits' }, { status: 400 });
+  }
+
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
+  }
+
+  const { data: fam } = await supabase
+    .from('families')
+    .select('id, pin')
+    .eq('id', id)
+    .maybeSingle();
+  if (!fam) {
+    return NextResponse.json({ error: 'Family not found' }, { status: 404 });
+  }
+
+  // Email must stay unique across other families.
+  const { data: emailClash } = await supabase
+    .from('families')
+    .select('id')
+    .ilike('email', email)
+    .neq('id', id)
+    .maybeSingle();
+  if (emailClash) {
+    return NextResponse.json(
+      { error: 'Another family already uses this email' },
+      { status: 409 }
+    );
+  }
+
+  const newPin = pin || fam.pin;
+  if (pin && pin !== fam.pin) {
+    const { data: pinClash } = await supabase
+      .from('families')
+      .select('id')
+      .eq('pin', pin)
+      .neq('id', id)
+      .limit(1)
+      .maybeSingle();
+    if (pinClash) {
+      return NextResponse.json(
+        { error: 'That PIN is already in use' },
+        { status: 409 }
+      );
+    }
+  }
+
+  const { error: upErr } = await supabase
+    .from('families')
+    .update({ email, pin: newPin })
+    .eq('id', id);
+  if (upErr) {
+    return NextResponse.json({ error: 'Could not update the family' }, { status: 500 });
+  }
+
+  // Replace parents + children with the submitted set.
+  await supabase.from('family_parents').delete().eq('family_id', id);
+  await supabase.from('family_parents').insert({
+    family_id: id,
+    name: parentName,
+    phone: body.parentPhone?.trim() || null,
+    email,
+    relationship: 'guardian',
+    is_primary: true,
+  });
+
+  await supabase.from('family_children').delete().eq('family_id', id);
+  const { error: kidErr } = await supabase.from('family_children').insert(
+    children.map((c) => ({
+      family_id: id,
+      name: (c.name as string).trim(),
+      date_of_birth: c.date_of_birth?.trim() || null,
+      classroom: c.classroom?.trim() || null,
+    }))
+  );
+  if (kidErr) {
+    return NextResponse.json({ error: 'Could not update the children' }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, pin: newPin, childCount: children.length });
 }

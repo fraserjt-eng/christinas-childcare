@@ -105,7 +105,19 @@ function StatusBadge({ status }: { status: AppUser['status'] }) {
 
 // A row in the User Management table: a stored staff AppUser, or a live
 // Supabase family mapped onto the same shape with extra display fields.
-type DirectoryRow = AppUser & { familyDetail?: string; isFamily?: boolean };
+type FamilyEdit = {
+  id: string;
+  email: string;
+  parentName: string;
+  parentPhone: string;
+  pin: string;
+  children: { name: string; date_of_birth: string; classroom: string }[];
+};
+type DirectoryRow = AppUser & {
+  familyDetail?: string;
+  isFamily?: boolean;
+  familyEdit?: FamilyEdit;
+};
 
 interface UserFormData {
   // Portal access fields
@@ -367,8 +379,9 @@ export default function UsersPage() {
   >(null);
   const [copied, setCopied] = useState(false);
 
-  // ── Add Family state ───────────────────────
+  // ── Add / Edit Family state ────────────────
   const [isAddFamilyOpen, setIsAddFamilyOpen] = useState(false);
+  const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
   const [familyBusy, setFamilyBusy] = useState(false);
   const [familyError, setFamilyError] = useState<string | null>(null);
   const [familyResult, setFamilyResult] = useState<
@@ -402,9 +415,10 @@ export default function UsersPage() {
           created_at: string;
           parentName: string;
           phone: string;
-          children: string[];
+          children: { name: string; date_of_birth: string; classroom: string }[];
         }) => {
           const parts = (f.parentName || f.email).trim().split(' ');
+          const childNames = f.children.map((c) => c.name);
           return {
             id: `family-${f.id}`,
             email: f.email,
@@ -417,7 +431,18 @@ export default function UsersPage() {
             isFamily: true,
             familyDetail:
               `Kiosk PIN ${f.pin ?? '----'}` +
-              (f.children.length ? ` · ${f.children.join(', ')}` : ''),
+              (childNames.length ? ` · ${childNames.join(', ')}` : ''),
+            familyEdit: {
+              id: f.id,
+              email: f.email,
+              parentName: f.parentName,
+              parentPhone: f.phone || '',
+              pin: f.pin || '',
+              children:
+                f.children.length > 0
+                  ? f.children
+                  : [{ name: '', date_of_birth: '', classroom: '' }],
+            } as FamilyEdit,
           };
         }
       );
@@ -485,7 +510,7 @@ export default function UsersPage() {
     }
   };
 
-  // ── Add Family (creates live family + children + kiosk PIN) ──
+  // ── Add / Edit Family (live family + children + kiosk PIN) ──
   const resetFamilyForm = () =>
     setFamilyForm({
       email: '',
@@ -494,6 +519,23 @@ export default function UsersPage() {
       pin: '',
       children: [{ name: '', date_of_birth: '', classroom: '' }],
     });
+
+  const openEditFamily = (row: DirectoryRow) => {
+    if (!row.familyEdit) return;
+    setFamilyError(null);
+    setEditingFamilyId(row.familyEdit.id);
+    setFamilyForm({
+      email: row.familyEdit.email,
+      parentName: row.familyEdit.parentName,
+      parentPhone: row.familyEdit.parentPhone,
+      pin: row.familyEdit.pin,
+      children:
+        row.familyEdit.children.length > 0
+          ? row.familyEdit.children.map((c) => ({ ...c }))
+          : [{ name: '', date_of_birth: '', classroom: '' }],
+    });
+    setIsAddFamilyOpen(true);
+  };
 
   const submitFamily = async () => {
     setFamilyError(null);
@@ -511,10 +553,12 @@ export default function UsersPage() {
     }
     setFamilyBusy(true);
     try {
+      const editing = !!editingFamilyId;
       const r = await fetch('/api/admin/family', {
-        method: 'POST',
+        method: editing ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(editing ? { id: editingFamilyId } : {}),
           email: familyForm.email,
           parentName: familyForm.parentName,
           parentPhone: familyForm.parentPhone,
@@ -524,7 +568,9 @@ export default function UsersPage() {
       });
       const data = await r.json();
       if (!r.ok) {
-        setFamilyError(data.error || 'Could not create the family.');
+        setFamilyError(
+          data.error || `Could not ${editing ? 'update' : 'create'} the family.`
+        );
         setFamilyBusy(false);
         return;
       }
@@ -534,6 +580,7 @@ export default function UsersPage() {
         childCount: data.childCount,
         email: familyForm.email,
       });
+      setEditingFamilyId(null);
       resetFamilyForm();
       loadFamilies();
     } catch {
@@ -821,20 +868,35 @@ export default function UsersPage() {
                 open={isAddFamilyOpen}
                 onOpenChange={(o) => {
                   setIsAddFamilyOpen(o);
-                  if (!o) setFamilyError(null);
+                  if (!o) {
+                    setFamilyError(null);
+                    setEditingFamilyId(null);
+                    resetFamilyForm();
+                  }
                 }}
               >
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="border-christina-blue text-christina-blue hover:bg-christina-blue/10">
+                  <Button
+                    variant="outline"
+                    className="border-christina-blue text-christina-blue hover:bg-christina-blue/10"
+                    onClick={() => {
+                      setEditingFamilyId(null);
+                      resetFamilyForm();
+                      setFamilyError(null);
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" /> Add Family
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Add Family</DialogTitle>
+                    <DialogTitle>
+                      {editingFamilyId ? 'Edit Family' : 'Add Family'}
+                    </DialogTitle>
                     <DialogDescription>
-                      Creates the family in the live database with a 4-digit kiosk
-                      PIN. The family can sign in and out at the kiosk right away.
+                      {editingFamilyId
+                        ? 'Update this family. Saving replaces their parent, children, and PIN with what you enter here.'
+                        : 'Creates the family in the live database with a 4-digit kiosk PIN. The family can sign in and out at the kiosk right away.'}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-2">
@@ -994,7 +1056,13 @@ export default function UsersPage() {
                       disabled={familyBusy}
                       className="bg-christina-blue hover:bg-christina-blue/90"
                     >
-                      {familyBusy ? 'Creating...' : 'Create Family'}
+                      {familyBusy
+                        ? editingFamilyId
+                          ? 'Saving…'
+                          : 'Creating...'
+                        : editingFamilyId
+                          ? 'Save Changes'
+                          : 'Create Family'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -1093,6 +1161,11 @@ export default function UsersPage() {
                             {!user.isFamily && (
                               <DropdownMenuItem onClick={() => openEditDialog(user)}>
                                 <Pencil className="h-4 w-4 mr-2" /> Edit User
+                              </DropdownMenuItem>
+                            )}
+                            {user.isFamily && user.familyEdit && (
+                              <DropdownMenuItem onClick={() => openEditFamily(user)}>
+                                <Pencil className="h-4 w-4 mr-2" /> Edit family
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
@@ -1238,7 +1311,7 @@ export default function UsersPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Family added</DialogTitle>
+            <DialogTitle>Family saved</DialogTitle>
             <DialogDescription>{familyResult?.email}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2 text-center">
