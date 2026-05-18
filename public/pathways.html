@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>How sign-in flows through Christina's</title>
+<style>
+  :root {
+    --red: #C62828;
+    --blue: #2196F3;
+    --green: #4CAF50;
+    --yellow: #FFD54F;
+    --coral: #FF7043;
+    --ink: #1f2430;
+    --muted: #5b6472;
+    --line: #e6e8ec;
+    --bg: #faf8f5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 48px 24px 80px; }
+  header { text-align: center; margin-bottom: 14px; }
+  .kicker {
+    font-size: 13px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--red); font-weight: 700; margin-bottom: 10px;
+  }
+  h1 { font-size: 34px; line-height: 1.2; font-weight: 800; }
+  .lede {
+    text-align: center; color: var(--muted); font-size: 18px;
+    max-width: 660px; margin: 16px auto 44px;
+  }
+  .grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } h1 { font-size: 28px; } }
+  .lane {
+    background: #fff; border: 1px solid var(--line); border-radius: 18px;
+    padding: 28px; box-shadow: 0 1px 0 rgba(0,0,0,.02);
+  }
+  .lane h2 {
+    font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 10px;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+  .lane.staff h2 .dot { background: var(--blue); }
+  .lane.family h2 .dot { background: var(--green); }
+  .who { font-size: 14px; color: var(--muted); margin: 4px 0 22px; }
+  .step {
+    border-left: 3px solid var(--line); padding: 0 0 22px 20px; position: relative;
+  }
+  .step:last-child { padding-bottom: 0; }
+  .step::before {
+    content: ""; position: absolute; left: -8px; top: 4px;
+    width: 13px; height: 13px; border-radius: 50%; background: #fff;
+    border: 3px solid var(--blue);
+  }
+  .lane.family .step::before { border-color: var(--green); }
+  .step h3 { font-size: 16px; font-weight: 700; }
+  .step p { font-size: 15px; color: var(--muted); margin-top: 3px; }
+  .flows {
+    margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .chip {
+    font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px;
+    background: #f1f3f6; color: var(--ink);
+  }
+  .lane.staff .chip { background: #e8f3fd; color: #15527e; }
+  .lane.family .chip { background: #e9f6ea; color: #1f6f2a; }
+  .note {
+    margin-top: 16px; font-size: 14px; color: var(--muted);
+    background: #fff8e9; border: 1px solid #f3e3b8; border-radius: 12px; padding: 12px 14px;
+  }
+  .converge {
+    margin-top: 28px; background: #fff; border: 1px solid var(--line);
+    border-radius: 18px; padding: 30px;
+  }
+  .converge h2 {
+    font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 10px;
+  }
+  .converge h2 .dot { background: var(--red); }
+  .merge {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    gap: 16px; margin: 22px 0 6px;
+  }
+  @media (max-width: 820px) { .merge { grid-template-columns: 1fr; } .arrow { transform: rotate(90deg); } }
+  .merge .side {
+    text-align: center; font-weight: 700; padding: 16px; border-radius: 14px;
+  }
+  .side.s { background: #e8f3fd; color: #15527e; }
+  .side.f { background: #e9f6ea; color: #1f6f2a; }
+  .arrow { font-size: 26px; color: var(--muted); text-align: center; }
+  .result {
+    text-align: center; background: #fdecec; color: var(--red);
+    font-weight: 700; padding: 16px; border-radius: 14px; margin-top: 4px;
+  }
+  .converge p { color: var(--muted); font-size: 15px; margin-top: 14px; }
+  footer {
+    margin-top: 34px; text-align: center; color: var(--muted); font-size: 14px;
+  }
+  .pill {
+    display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 600;
+    color: var(--ink); background: #fff; border: 1px solid var(--line);
+    padding: 8px 14px; border-radius: 999px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Christina's Child Care Center</div>
+    <h1>How sign-in flows through everything</h1>
+  </header>
+  <p class="lede">
+    Two simple actions run the whole center: staff clocking in and out, and
+    children checking in and out. Here is exactly where each one goes, so
+    nothing has to be entered twice.
+  </p>
+
+  <div class="grid">
+
+    <section class="lane staff">
+      <h2><span class="dot"></span> For staff</h2>
+      <div class="who">Teachers, leads, and admin</div>
+
+      <div class="step">
+        <h3>You enter your PIN and clock in</h3>
+        <p>Your start time is recorded against your name, on the device in
+           your room. You do not log it anywhere else.</p>
+      </div>
+
+      <div class="step">
+        <h3>Your time flows out automatically</h3>
+        <p>The same clock-in feeds every place your hours matter:</p>
+        <div class="flows">
+          <span class="chip">Your hours and pay stub</span>
+          <span class="chip">Who is on the floor</span>
+          <span class="chip">Staff-to-child ratios</span>
+          <span class="chip">Labor on the budget</span>
+          <span class="chip">The owner dashboard</span>
+          <span class="chip">Daily reports</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <h3>You clock out</h3>
+        <p>Your hours close for the day and your pay is calculated from the
+           real times, not an estimate.</p>
+      </div>
+
+      <div class="note">
+        Made a mistake, or forgot to clock out? A manager can correct your
+        clock-in or clock-out time. Your hours and pay update right away.
+      </div>
+    </section>
+
+    <section class="lane family">
+      <h2><span class="dot"></span> For families</h2>
+      <div class="who">Parents and guardians</div>
+
+      <div class="step">
+        <h3>Your child checks in at the kiosk</h3>
+        <p>You enter your family PIN. The arrival time is recorded for your
+           child. That is the only step.</p>
+      </div>
+
+      <div class="step">
+        <h3>It flows where it is needed</h3>
+        <p>Your child's check-in updates the center in real time:</p>
+        <div class="flows">
+          <span class="chip">Marked present in the room</span>
+          <span class="chip">Counted in the ratio check</span>
+          <span class="chip">The owner dashboard</span>
+          <span class="chip">Today's reports</span>
+          <span class="chip">Their daily report</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <h3>Your child checks out</h3>
+        <p>Pickup time is recorded and your child is marked as departed for
+           the day. You only ever see your own child.</p>
+      </div>
+
+      <div class="note">
+        If a check-in or check-out is missed or wrong, staff can correct the
+        time so your child's record and the room count stay accurate.
+      </div>
+    </section>
+
+  </div>
+
+  <section class="converge">
+    <h2><span class="dot"></span> Where the two pathways meet</h2>
+    <div class="merge">
+      <div class="side s">Real staff clocked in</div>
+      <div class="arrow">&#8594;</div>
+      <div class="side f">Real children present</div>
+    </div>
+    <div class="arrow" style="margin:6px 0 0;">&#8595;</div>
+    <div class="result">
+      The Ratio Monitor compares the two, live, so the center stays safe and
+      meets state requirements.
+    </div>
+    <p>
+      Because staff time and child attendance come from the same two sign-ins,
+      payroll, ratios, the budget, the dashboard, and every child's daily
+      report all tell the same story. No double entry, no guesswork.
+    </p>
+  </section>
+
+  <footer>
+    One clock-in. One check-in. Everything else follows.
+    <br />
+    <span class="pill">Times can always be corrected for accuracy</span>
+  </footer>
+</div>
+</body>
+</html>
