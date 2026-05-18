@@ -3,47 +3,67 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
-  Globe, LogIn, UserPlus, ClipboardList, CheckCircle2,
-  Download, Printer,
+  KeyRound, LogIn, UserPlus, ClipboardList, CheckCircle2,
+  Clock, Download, Printer,
 } from 'lucide-react';
 import Link from 'next/link';
 
-const steps = [
+// Two real ways a family gets into the Parent Portal:
+//  A. Christina adds them in User Management and shares a setup link.
+//  B. The family signs up themselves and waits for Christina to approve.
+// Both end at the same place: signed in, seeing their child's daily report.
+
+interface Step {
+  title: string;
+  description: string;
+}
+
+const invitedPath: Step[] = [
   {
-    number: 1,
-    title: 'Visit Our Website',
-    description: "Navigate to Christina's Child Care Center website. You can access the Parent Portal from the homepage or go directly to the login page.",
-    icon: Globe,
-    color: 'bg-christina-blue',
+    title: 'Open the link Christina sent you',
+    description:
+      'Christina adds your family, then sends you a one-time setup link. Open it on your phone or computer. It goes to a "Set Your Password" page on the center website.',
   },
   {
-    number: 2,
-    title: 'Go to Parent Portal',
-    description: 'Click the "Parent Portal" link in the navigation or visit the login page. You\'ll see options to sign in or create a new account.',
-    icon: LogIn,
-    color: 'bg-christina-red',
+    title: 'Choose your password',
+    description:
+      'Enter a password (at least 8 characters) and confirm it, then tap Set Password. The link is good for 7 days; if it expires, ask Christina to resend it.',
   },
   {
-    number: 3,
-    title: 'Create Your Account',
-    description: 'Click the "Create Account" tab. Fill in your name, email address, phone number, and choose a password (at least 6 characters).',
-    icon: UserPlus,
-    color: 'bg-christina-coral',
+    title: 'Sign in',
+    description:
+      'Tap "Go to sign in," then sign in with your email and the password you just chose. That is it. Skip to "Once you are signed in" below.',
+  },
+];
+
+const selfSignupPath: Step[] = [
+  {
+    title: 'Open the Parent Portal',
+    description:
+      'Go to the Parent Portal from the website, or the sign-in page directly. You will see "Sign In" and "Create Account" tabs.',
   },
   {
-    number: 4,
-    title: 'Add Your Children',
-    description: 'Once logged in, click "Add Child" on your dashboard. Enter their name, date of birth, classroom, allergies, and upload a photo.',
-    icon: ClipboardList,
-    color: 'bg-christina-yellow',
+    title: 'Create your account',
+    description:
+      'Tap the "Create Account" tab. Enter your name, email, phone, and a password (at least 8 characters).',
   },
   {
-    number: 5,
-    title: 'Complete Your Profile',
-    description: 'Click "Edit" on your family profile to add your address, family bio, and upload a family photo. You\'re all set!',
-    icon: CheckCircle2,
-    color: 'bg-green-600',
+    title: 'Wait for approval',
+    description:
+      'New accounts are not active right away. Christina reviews and activates your account, usually within 24 hours. You will not be able to sign in until it is approved. This step is normal; it keeps children safe.',
   },
+  {
+    title: 'Sign in once approved',
+    description:
+      'After Christina activates your account, come back to the sign-in page and sign in with your email and password.',
+  },
+];
+
+const afterSignedIn: string[] = [
+  'Add your children: name, date of birth, classroom, allergies, and a photo.',
+  'Complete your family profile: address, a short family bio, and a family photo.',
+  "Open Daily Report to see your child's day as it happens: naps, meals, diapers, activities, notes, and photos that staff log. You only ever see your own child.",
+  'At drop-off and pickup, check your child in and out on the room iPad using your family PIN. Christina gives you this PIN.',
 ];
 
 export default function SignupGuidePage() {
@@ -55,8 +75,15 @@ export default function SignupGuidePage() {
     const jsPDF = (await import('jspdf')).default;
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 25;
+    const margin = 22;
     let y = 20;
+
+    const ensureSpace = (need: number) => {
+      if (y + need > 280) {
+        doc.addPage();
+        y = 22;
+      }
+    };
 
     // Header bar
     doc.setFillColor('#C62828');
@@ -67,63 +94,143 @@ export default function SignupGuidePage() {
     doc.text("Christina's Child Care Center", pageWidth / 2, 12, { align: 'center' });
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text('Parent Portal Signup Guide', pageWidth / 2, 22, { align: 'center' });
+    doc.text('Parent Portal Guide', pageWidth / 2, 22, { align: 'center' });
 
     y = 42;
-
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
-    doc.text('Follow these 5 easy steps to create your family account:', margin, y);
-    y += 14;
+    doc.setFont('helvetica', 'normal');
+    const intro = doc.splitTextToSize(
+      'There are two ways to get into the Parent Portal. Use the one that matches how you were brought in.',
+      pageWidth - margin * 2
+    );
+    doc.text(intro, margin, y);
+    y += intro.length * 5 + 8;
 
-    steps.forEach((step) => {
-      // Step number circle
+    const section = (heading: string, steps: Step[]) => {
+      ensureSpace(16);
       doc.setFillColor('#C62828');
-      doc.circle(margin + 5, y - 2, 5, 'F');
+      doc.rect(margin, y - 5, pageWidth - margin * 2, 9, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text(String(step.number), margin + 5, y, { align: 'center' });
-
-      // Step title
-      doc.setTextColor(0, 0, 0);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(step.title, margin + 15, y);
-      y += 7;
+      doc.text(heading, margin + 3, y + 1);
+      y += 14;
 
-      // Step description
-      doc.setTextColor('#6B7280');
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      const lines = doc.splitTextToSize(step.description, pageWidth - margin * 2 - 15);
-      doc.text(lines, margin + 15, y);
-      y += lines.length * 5 + 10;
+      steps.forEach((step, i) => {
+        ensureSpace(20);
+        doc.setFillColor('#C62828');
+        doc.circle(margin + 5, y - 2, 5, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(String(i + 1), margin + 5, y, { align: 'center' });
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(step.title, margin + 15, y);
+        y += 7;
+
+        doc.setTextColor('#6B7280');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const lines = doc.splitTextToSize(
+          step.description,
+          pageWidth - margin * 2 - 15
+        );
+        doc.text(lines, margin + 15, y);
+        y += lines.length * 5 + 9;
+      });
+      y += 4;
+    };
+
+    section('Path A: Christina sent you a setup link', invitedPath);
+    section('Path B: You are signing up yourself', selfSignupPath);
+
+    ensureSpace(16);
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Once you are signed in (either way)', margin, y);
+    y += 9;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor('#374151');
+    afterSignedIn.forEach((item) => {
+      ensureSpace(14);
+      const lines = doc.splitTextToSize(`-  ${item}`, pageWidth - margin * 2);
+      doc.text(lines, margin, y);
+      y += lines.length * 5 + 4;
     });
 
-    // Footer
-    y = Math.max(y + 10, 220);
+    ensureSpace(20);
+    y += 6;
     doc.setDrawColor('#E5E7EB');
     doc.line(margin, y, pageWidth - margin, y);
     y += 8;
-
     doc.setTextColor('#6B7280');
     doc.setFontSize(9);
-    doc.text('Need help? Contact us at (555) 555-0123 or email info@christinaschildcare.com', margin, y);
+    doc.text(
+      "Christina's Child Care Center, 5510 W Broadway Ave, Crystal, MN 55428",
+      margin,
+      y
+    );
     y += 5;
-    doc.text("Christina's Child Care Center - 5510 W Broadway Ave, Crystal, MN 55428", margin, y);
+    doc.text(
+      'Questions about your account? Ask Christina or the front desk.',
+      margin,
+      y
+    );
 
-    doc.save('signup-guide.pdf');
+    doc.save('parent-portal-guide.pdf');
   }
+
+  const renderPath = (
+    label: string,
+    steps: Step[],
+    Icon: typeof KeyRound,
+    color: string
+  ) => (
+    <Card className="print:shadow-none print:border-gray-300">
+      <CardContent className="p-6 print:p-4">
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className={`w-11 h-11 rounded-full ${color} flex items-center justify-center flex-shrink-0`}
+          >
+            <Icon className="h-5 w-5 text-white" />
+          </div>
+          <h2 className="text-lg font-bold">{label}</h2>
+        </div>
+        <ol className="space-y-4">
+          {steps.map((step, i) => (
+            <li key={step.title} className="flex items-start gap-3">
+              <span className="w-6 h-6 rounded-full bg-muted text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                {i + 1}
+              </span>
+              <div>
+                <h3 className="text-sm font-bold">{step.title}</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {step.description}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="py-16 print:py-4">
       <div className="max-w-2xl mx-auto px-4">
-        {/* Header */}
         <div className="text-center mb-10 print:mb-6">
-          <h1 className="text-3xl font-bold print:text-2xl">Parent Portal Signup Guide</h1>
+          <h1 className="text-3xl font-bold print:text-2xl">
+            Parent Portal Guide
+          </h1>
           <p className="text-muted-foreground mt-2">
-            Follow these 5 easy steps to create your family account
+            Two ways to get in. Use the one that matches how you were brought
+            in.
           </p>
           <div className="flex justify-center gap-3 mt-4 print:hidden">
             <Button variant="outline" size="sm" onClick={handlePrint}>
@@ -135,51 +242,80 @@ export default function SignupGuidePage() {
           </div>
         </div>
 
-        {/* Steps */}
         <div className="space-y-6 print:space-y-4">
-          {steps.map((step, index) => (
-            <div key={step.number} className="relative">
-              {/* Connector line */}
-              {index < steps.length - 1 && (
-                <div className="absolute left-6 top-14 w-0.5 h-[calc(100%-1rem)] bg-border print:bg-gray-300" />
-              )}
-              <Card className="print:shadow-none print:border-gray-300">
-                <CardContent className="p-6 print:p-4 flex items-start gap-4">
-                  {/* Step number */}
-                  <div className={`w-12 h-12 rounded-full ${step.color} flex items-center justify-center flex-shrink-0`}>
-                    <step.icon className="h-6 w-6 text-white" />
-                  </div>
-                  {/* Step content */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-muted-foreground uppercase">Step {step.number}</span>
-                    </div>
-                    <h3 className="text-lg font-bold mt-0.5">{step.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{step.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
+          {renderPath(
+            'Path A: Christina sent you a setup link',
+            invitedPath,
+            KeyRound,
+            'bg-christina-red'
+          )}
+          {renderPath(
+            'Path B: You are signing up yourself',
+            selfSignupPath,
+            UserPlus,
+            'bg-christina-blue'
+          )}
+
+          <Card className="print:shadow-none print:border-gray-300 border-christina-green/40 bg-green-50/40">
+            <CardContent className="p-6 print:p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-11 h-11 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="h-5 w-5 text-white" />
+                </div>
+                <h2 className="text-lg font-bold">
+                  Once you are signed in (either way)
+                </h2>
+              </div>
+              <ul className="space-y-2">
+                {afterSignedIn.map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-2 text-sm text-gray-700"
+                  >
+                    <ClipboardList className="h-4 w-4 text-christina-green mt-0.5 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card className="print:hidden bg-amber-50 border-amber-200">
+            <CardContent className="p-5 flex items-start gap-3">
+              <Clock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-900">
+                Signed up yourself and cannot log in yet? That is expected.
+                Your account stays pending until Christina activates it. Once
+                it is approved you will be able to sign in with the same email
+                and password.
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* CTA */}
         <div className="mt-10 text-center print:hidden">
           <Link href="/login">
-            <Button size="lg" className="bg-christina-blue hover:bg-christina-blue/90">
-              <UserPlus className="h-5 w-5 mr-2" /> Get Started Now
+            <Button
+              size="lg"
+              className="bg-christina-blue hover:bg-christina-blue/90"
+            >
+              <LogIn className="h-5 w-5 mr-2" /> Go to the Parent Portal
             </Button>
           </Link>
           <p className="text-sm text-muted-foreground mt-3">
-            Already have an account?{' '}
-            <Link href="/login" className="text-christina-blue hover:underline">Sign in</Link>
+            Already set up?{' '}
+            <Link href="/login" className="text-christina-blue hover:underline">
+              Sign in
+            </Link>
           </p>
         </div>
 
-        {/* Print footer */}
         <div className="hidden print:block mt-8 pt-4 border-t text-center text-sm text-gray-500">
-          <p>Christina&apos;s Child Care Center - 5510 W Broadway Ave, Crystal, MN 55428</p>
-          <p>Questions? Call (555) 555-0123 or email info@christinaschildcare.com</p>
+          <p>
+            Christina&apos;s Child Care Center - 5510 W Broadway Ave, Crystal,
+            MN 55428
+          </p>
+          <p>Questions about your account? Ask Christina or the front desk.</p>
         </div>
       </div>
     </div>
