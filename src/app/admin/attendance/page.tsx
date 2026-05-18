@@ -5,8 +5,33 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LogIn, LogOut, RefreshCw } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { LogIn, LogOut, RefreshCw, Pencil, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+
+// ISO <-> <input type="datetime-local"> (browser local time).
+function isoToLocal(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
+}
+function localToIso(local: string): string | null {
+  if (!local) return null;
+  const d = new Date(local);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
 
 interface AttendanceRecord {
   id: string;
@@ -39,6 +64,11 @@ export default function AttendancePage() {
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [editing, setEditing] = useState<ChildWithAttendance | null>(null);
+  const [editIn, setEditIn] = useState('');
+  const [editOut, setEditOut] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
 
   const loadData = useCallback(async () => {
     const today = new Date().toISOString().split('T')[0];
@@ -131,6 +161,42 @@ export default function AttendancePage() {
       .update({ check_out: new Date().toISOString() })
       .eq('id', child.attendance_id);
     await loadData();
+  }
+
+  function openEdit(record: ChildWithAttendance) {
+    setEditing(record);
+    setEditIn(isoToLocal(record.check_in));
+    setEditOut(isoToLocal(record.check_out));
+    setEditError('');
+  }
+
+  async function saveEdit() {
+    if (!editing?.attendance_id || savingEdit) return;
+    setSavingEdit(true);
+    setEditError('');
+    try {
+      const r = await fetch('/api/admin/time-correction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'attendance',
+          id: editing.attendance_id,
+          check_in: localToIso(editIn),
+          check_out: localToIso(editOut),
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setEditError(d.error || 'Could not save the correction.');
+        return;
+      }
+      setEditing(null);
+      await loadData();
+    } catch {
+      setEditError('Could not save the correction.');
+    } finally {
+      setSavingEdit(false);
+    }
   }
 
   const present = records.filter((r) => r.check_in && !r.check_out).length;
@@ -252,7 +318,7 @@ export default function AttendancePage() {
                       </span>
                     )}
                   </div>
-                  <div>
+                  <div className="flex items-center gap-2">
                     {!record.check_in ? (
                       <Button size="sm" variant="outline" onClick={() => handleCheckIn(record)} className="text-xs">
                         Check In
@@ -266,6 +332,18 @@ export default function AttendancePage() {
                         Complete
                       </Badge>
                     )}
+                    {record.attendance_id && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEdit(record)}
+                        className="text-xs gap-1"
+                        title="Fix the check-in or check-out time"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit times
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -273,6 +351,68 @@ export default function AttendancePage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={!!editing}
+        onOpenChange={(o) => {
+          if (!o) setEditing(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Correct times — {editing?.child_name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-xs text-muted-foreground">
+              Use this to fix a missed or wrong check-in/out. The change is
+              authoritative and updates ratios and reports.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="att-in">Check-in</Label>
+              <Input
+                id="att-in"
+                type="datetime-local"
+                value={editIn}
+                onChange={(e) => setEditIn(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="att-out">Check-out</Label>
+              <Input
+                id="att-out"
+                type="datetime-local"
+                value={editOut}
+                onChange={(e) => setEditOut(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave check-out blank if the child is still present.
+              </p>
+            </div>
+            {editError && (
+              <p className="text-sm text-christina-coral">{editError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditing(null)}
+              disabled={savingEdit}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={saveEdit}
+              disabled={savingEdit}
+              className="bg-christina-red gap-2"
+            >
+              {savingEdit && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save correction
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

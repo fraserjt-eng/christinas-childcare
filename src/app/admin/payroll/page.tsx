@@ -37,7 +37,6 @@ import {
   createPayStub,
   updatePayStub,
   updateEmployee,
-  updateTimeEntry,
   seedSampleData,
 } from '@/lib/employee-storage';
 import {
@@ -153,10 +152,21 @@ export default function AdminPayrollPage() {
     });
   };
 
-  // Handle saving edited time entry
+  // Handle saving edited time entry. Authoritative server correction so
+  // hours recompute and the fix pulses to ratios/labor/dashboard.
   const handleSaveEntry = async () => {
     if (!editingEntry) return;
-    await updateTimeEntry(editingEntry.id, editingEntry);
+    await fetch('/api/admin/time-correction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'clock',
+        id: editingEntry.id,
+        clock_in: editingEntry.clock_in || null,
+        clock_out: editingEntry.clock_out || null,
+        break_minutes: editingEntry.break_minutes || 0,
+      }),
+    });
     await refreshData();
     setEditingEntry(null);
   };
