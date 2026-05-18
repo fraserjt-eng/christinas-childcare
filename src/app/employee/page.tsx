@@ -7,10 +7,6 @@ import { useSessionUser, firstNameFrom } from '@/lib/use-session-user';
 import { HomeTile } from '@/components/employee/HomeTile';
 import {
   getCurrentEmployee,
-  getActiveTimeEntry,
-  getTimeEntries,
-  clockIn,
-  clockOut,
 } from '@/lib/employee-storage';
 import { Employee, TimeEntry, EmployeeTraining, TrainingModule, formatHours } from '@/types/employee';
 import { Task, DEFAULT_TIME_BLOCKS } from '@/types/tasks';
@@ -257,17 +253,19 @@ export default function EmployeeDashboardPage() {
 
       const employeeName = `${emp.first_name} ${emp.last_name}`;
 
-      // Time entries
-      const active = await getActiveTimeEntry(emp.id);
-      setActiveEntry(active);
-
-      const allEntries = await getTimeEntries({ employee_id: emp.id });
-      const startOfWeek = new Date();
-      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-      startOfWeek.setHours(0, 0, 0, 0);
-      setWeeklyEntries(
-        allEntries.filter((e) => new Date(e.date) >= startOfWeek)
-      );
+      // Clock status from the real server spine (session-stamped time_entries)
+      try {
+        const cr = await fetch('/api/employee/clock');
+        if (cr.ok) {
+          const cd = await cr.json();
+          setActiveEntry((cd.active ?? null) as TimeEntry | null);
+          setWeeklyEntries(
+            (Array.isArray(cd.week) ? cd.week : cd.today ?? []) as TimeEntry[]
+          );
+        }
+      } catch {
+        /* clock status unavailable; the rest of the page still renders */
+      }
 
       // Tasks for today, assigned to this employee
       const allTasks = loadFromStorage<Task>(TASKS_KEY);
@@ -359,26 +357,50 @@ export default function EmployeeDashboardPage() {
 
   // ── Clock actions ──────────────────────────────────────────────────────────
 
+  const refreshClock = useCallback(async () => {
+    try {
+      const cr = await fetch('/api/employee/clock');
+      if (cr.ok) {
+        const cd = await cr.json();
+        setActiveEntry((cd.active ?? null) as TimeEntry | null);
+        setWeeklyEntries(
+          (Array.isArray(cd.week) ? cd.week : cd.today ?? []) as TimeEntry[]
+        );
+      }
+    } catch {
+      /* leave current state */
+    }
+  }, []);
+
   const handleClockIn = useCallback(async () => {
-    if (!employee) return;
     setLoading(true);
-    const entry = await clockIn(employee.id);
-    setActiveEntry(entry);
+    try {
+      await fetch('/api/employee/clock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'in' }),
+      });
+      await refreshClock();
+    } catch {
+      /* surfaced by unchanged state */
+    }
     setLoading(false);
-  }, [employee]);
+  }, [refreshClock]);
 
   const handleClockOut = useCallback(async () => {
-    if (!activeEntry || !employee) return;
     setLoading(true);
-    await clockOut(activeEntry.id, 30);
-    setActiveEntry(null);
-    const entries = await getTimeEntries({ employee_id: employee.id });
-    const startOfWeek = new Date();
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
-    setWeeklyEntries(entries.filter((e) => new Date(e.date) >= startOfWeek));
+    try {
+      await fetch('/api/employee/clock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'out', breakMinutes: 30 }),
+      });
+      await refreshClock();
+    } catch {
+      /* surfaced by unchanged state */
+    }
     setLoading(false);
-  }, [activeEntry, employee]);
+  }, [refreshClock]);
 
   // ── Task toggle ────────────────────────────────────────────────────────────
 
