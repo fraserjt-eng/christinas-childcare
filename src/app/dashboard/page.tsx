@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,6 @@ import {
 import Link from 'next/link';
 import { FamilyAccount, FamilyChild } from '@/types/family';
 import {
-  getCurrentFamily,
   updateFamilyProfile,
   addChild,
   updateChild,
@@ -28,12 +27,27 @@ import {
   compressPhoto,
 } from '@/lib/family-storage';
 
-const updates = [
-  { title: 'Progress Report Available', description: 'January report for Noah is ready to view', time: '2 hours ago', type: 'report' },
-  { title: 'New Photos Added', description: '5 new photos from art time in Bright Butterflies', time: '4 hours ago', type: 'photo' },
-  { title: 'Upcoming Event', description: "Valentine's Day Party - February 14th", time: '1 day ago', type: 'event' },
-  { title: 'Document Reminder', description: "Ava's immunization records due for update", time: '3 days ago', type: 'document' },
-];
+interface UpdateItem {
+  title: string;
+  description: string;
+  time: string;
+  type: string;
+}
+
+function relativeTime(iso: string): string {
+  try {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.round(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins} min ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+    const days = Math.round(hrs / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+  } catch {
+    return '';
+  }
+}
 
 function calculateAge(dob: string): string {
   const birth = new Date(dob);
@@ -51,6 +65,8 @@ function calculateAge(dob: string): string {
 
 export default function ParentDashboard() {
   const [family, setFamily] = useState<FamilyAccount | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [updates, setUpdates] = useState<UpdateItem[]>([]);
   const [editOpen, setEditOpen] = useState(false);
   const [childDialogOpen, setChildDialogOpen] = useState(false);
   const [editingChild, setEditingChild] = useState<FamilyChild | null>(null);
@@ -71,15 +87,68 @@ export default function ParentDashboard() {
   const [childMedical, setChildMedical] = useState('');
   const [childPhotoUrl, setChildPhotoUrl] = useState('');
 
-  useEffect(() => {
-    const f = getCurrentFamily();
-    setFamily(f);
+  const loadFamily = useCallback(async () => {
+    try {
+      const r = await fetch('/api/parent/me', { cache: 'no-store' });
+      if (r.ok) {
+        const d = await r.json();
+        setFamily((d.family as unknown as FamilyAccount) ?? null);
+      }
+    } catch {
+      /* leave as-is; the page shows a friendly empty state */
+    }
   }, []);
 
   function refreshFamily() {
-    const f = getCurrentFamily();
-    setFamily(f);
+    loadFamily();
   }
+
+  useEffect(() => {
+    (async () => {
+      await loadFamily();
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const cr = await fetch('/api/parent/children', { cache: 'no-store' });
+        if (cr.ok) {
+          const cd = await cr.json();
+          const kids: { id: string; name: string }[] = cd.children || [];
+          const all: UpdateItem[] = [];
+          await Promise.all(
+            kids.map(async (kid) => {
+              try {
+                const er = await fetch(
+                  `/api/child-entries?child_id=${encodeURIComponent(kid.id)}&date=${today}`,
+                  { cache: 'no-store' }
+                );
+                if (!er.ok) return;
+                const ed = await er.json();
+                for (const e of ed.entries || []) {
+                  const note =
+                    typeof e.detail?.note === 'string' ? e.detail.note : '';
+                  all.push({
+                    title: `${kid.name}: ${String(e.type)
+                      .charAt(0)
+                      .toUpperCase()}${String(e.type).slice(1)}`,
+                    description: note || `New ${e.type} entry on the daily report`,
+                    time: relativeTime(e.occurred_at),
+                    type: e.type === 'photo' ? 'photo' : e.type === 'incident' ? 'report' : 'event',
+                  });
+                }
+              } catch {
+                /* skip this child's feed */
+              }
+            })
+          );
+          all.sort((a, b) => (a.time < b.time ? -1 : 1));
+          setUpdates(all.slice(0, 6));
+        }
+      } catch {
+        /* no recent activity is fine */
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [loadFamily]);
 
   function openEditProfile() {
     if (!family) return;
@@ -176,7 +245,25 @@ export default function ParentDashboard() {
     setChildPhotoUrl(compressed);
   }
 
-  if (!family) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-christina-red" />
+      </div>
+    );
+  }
+
+  if (!family) {
+    return (
+      <div className="max-w-md mx-auto mt-12 text-center space-y-2">
+        <h1 className="text-xl font-bold">Welcome</h1>
+        <p className="text-muted-foreground text-sm">
+          We could not find a family linked to your account yet. Once your
+          enrollment is approved, your family dashboard appears here.
+        </p>
+      </div>
+    );
+  }
 
   const primaryParent = family.parents.find((p) => p.is_primary) || family.parents[0];
 
@@ -340,16 +427,23 @@ export default function ParentDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {updates.map((update, i) => (
-              <div key={i} className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0">
-                <div className={`w-2 h-2 rounded-full mt-2 ${update.type === 'report' ? 'bg-christina-red' : update.type === 'photo' ? 'bg-christina-blue' : update.type === 'event' ? 'bg-christina-coral' : 'bg-christina-yellow'}`} />
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{update.title}</p>
-                  <p className="text-sm text-muted-foreground">{update.description}</p>
+            {updates.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                Nothing new yet today. Your child&apos;s teachers add to the
+                daily report through the day.
+              </p>
+            ) : (
+              updates.map((update, i) => (
+                <div key={i} className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0">
+                  <div className={`w-2 h-2 rounded-full mt-2 ${update.type === 'report' ? 'bg-christina-red' : update.type === 'photo' ? 'bg-christina-blue' : update.type === 'event' ? 'bg-christina-coral' : 'bg-christina-yellow'}`} />
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{update.title}</p>
+                    <p className="text-sm text-muted-foreground">{update.description}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{update.time}</span>
                 </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">{update.time}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
