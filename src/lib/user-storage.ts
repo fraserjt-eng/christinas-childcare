@@ -1,5 +1,6 @@
 // User Storage Module for Christina's Child Care Center
 // Supabase-first with localStorage fallback
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 // Users and security settings are stored in the app_settings table (migration 007)
 // Audit logs are stored in error_logs table (migration 004)
 
@@ -410,6 +411,7 @@ export async function hydrateUsersFromSupabase(): Promise<void> {
 // Initialize with sample data if empty
 // ============================================================================
 export function seedUserData(): void {
+  if (!isDemoSeedEnabled()) return;
   const existingUsers = getStorageItem<AppUser[] | null>(USERS_KEY, null);
   if (!existingUsers || existingUsers.length === 0) {
     setStorageItem(USERS_KEY, SAMPLE_USERS);

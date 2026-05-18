@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { UserRole } from '@/types/database';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+
+// IMPORTANT: this project uses a `src/` directory, so Next.js reads middleware
+// from `src/middleware.ts`. A root-level `middleware.ts` is IGNORED here and
+// never ran — every protected page was open. This file is the real gate.
 
 // Route protection: maps route prefix to which roles may access it
 const protectedRoutes: Record<string, UserRole[]> = {
@@ -26,8 +29,10 @@ const publicRoutes = [
   '/login',
   '/admin-login',
   '/employee-login',
+  '/set-password',
   '/access-denied',
   '/auth/callback',
+  '/demo',
   '/_next',
   '/favicon',
   '/images',
@@ -43,6 +48,12 @@ const API_RATE_LIMIT = {
 /**
  * Verify an HMAC-signed cookie value in Edge Runtime (Web Crypto API).
  * The cookie format is: <JSON payload>.<hex signature>
+ *
+ * This is the single source of truth for session validity. The session cookie
+ * is only ever minted by /api/auth/session AFTER a real credential (Supabase
+ * Auth token or families password) is verified server-side, and the role it
+ * carries is derived server-side from the database. So verifying this signed
+ * cookie here is sufficient and the role inside it is trustworthy.
  */
 async function verifySignedCookieEdge(cookieValue: string): Promise<Record<string, unknown> | null> {
   // Fail closed in production: no SESSION_SECRET means deny, not sign with a
@@ -91,6 +102,12 @@ export async function middleware(request: NextRequest) {
 
   // Apply rate limiting to all /api/* routes
   if (pathname.startsWith('/api/')) {
+    // The kiosk loads several calls per family; the blanket 5/min limit would
+    // break it. /api/kiosk enforces its own (tighter on PIN, looser overall).
+    if (pathname.startsWith('/api/kiosk')) {
+      return NextResponse.next();
+    }
+
     const clientId = getClientIdentifier(request);
     const result = checkRateLimit(`api:${clientId}`, API_RATE_LIMIT);
 
@@ -127,102 +144,33 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check Supabase configuration
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const supabaseConfigured =
-    Boolean(supabaseUrl) &&
-    Boolean(supabaseAnonKey) &&
-    !supabaseUrl!.includes('placeholder');
+  // Enforce the signed session cookie. It is minted only after a real
+  // credential is verified server-side; the role inside is server-derived.
+  const sessionCookie = request.cookies.get('auth_session')?.value;
 
-  if (supabaseConfigured) {
-    // Supabase path: verify the session JWT with Supabase
-    const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
-
-    // Supabase SSR stores the access token in a cookie named sb-<project-ref>-auth-token
-    // or the legacy sb-access-token. Try both.
-    const accessToken =
-      request.cookies.get('sb-access-token')?.value ??
-      findSupabaseCookie(request);
-
-    if (!accessToken) {
-      return redirectToLogin(request, pathname);
-    }
-
-    try {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser(accessToken);
-
-      if (error || !user) {
-        return redirectToLogin(request, pathname);
-      }
-
-      const userRole = (user.user_metadata?.role ?? 'parent') as UserRole;
-
-      for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
-        if (pathname.startsWith(route)) {
-          if (!allowedRoles.includes(userRole)) {
-            return NextResponse.redirect(new URL('/access-denied', request.url));
-          }
-          break;
-        }
-      }
-
-      return NextResponse.next();
-    } catch {
-      return redirectToLogin(request, pathname);
-    }
-  } else {
-    // No Supabase: enforce cookie-based session set by the login page
-    // The login page writes a signed JSON value into the `auth_session` cookie
-    // when it cannot reach Supabase. Without that cookie, block access entirely.
-    const sessionCookie = request.cookies.get('auth_session')?.value;
-
-    if (!sessionCookie) {
-      return redirectToLogin(request, pathname);
-    }
-
-    const session = await verifySignedCookieEdge(decodeURIComponent(sessionCookie));
-
-    if (!session) {
-      return redirectToLogin(request, pathname);
-    }
-
-    // Enforce role-based access
-    const userRole = (session?.user as { role?: string })?.role ?? 'parent' as UserRole;
-
-    for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
-      if (pathname.startsWith(route)) {
-        if (!allowedRoles.includes(userRole as UserRole)) {
-          return NextResponse.redirect(new URL('/access-denied', request.url));
-        }
-        break;
-      }
-    }
-
-    return NextResponse.next();
+  if (!sessionCookie) {
+    return redirectToLogin(request, pathname);
   }
-}
 
-/**
- * Scan all cookies for the Supabase SSR auth token (sb-*-auth-token pattern).
- * Supabase stores the full session JSON; extract the access_token field.
- */
-function findSupabaseCookie(request: NextRequest): string | undefined {
-  const allCookies = request.cookies.getAll();
-  for (const cookie of allCookies) {
-    if (cookie.name.startsWith('sb-') && cookie.name.endsWith('-auth-token')) {
-      try {
-        const parsed = JSON.parse(decodeURIComponent(cookie.value));
-        if (parsed?.access_token) return parsed.access_token as string;
-      } catch {
-        // Not JSON, skip
+  const session = await verifySignedCookieEdge(decodeURIComponent(sessionCookie));
+
+  if (!session) {
+    return redirectToLogin(request, pathname);
+  }
+
+  // Enforce role-based access
+  const userRole = ((session?.user as { role?: string })?.role ?? 'parent') as UserRole;
+
+  for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
+    if (pathname.startsWith(route)) {
+      if (!allowedRoles.includes(userRole)) {
+        return NextResponse.redirect(new URL('/access-denied', request.url));
       }
+      break;
     }
   }
-  return undefined;
+
+  return NextResponse.next();
 }
 
 function redirectToLogin(request: NextRequest, pathname: string): NextResponse {

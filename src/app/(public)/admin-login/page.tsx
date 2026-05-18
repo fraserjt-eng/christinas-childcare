@@ -23,21 +23,26 @@ export default function AdminLoginPage() {
     const password = formData.get('password') as string;
 
     try {
-      const { signIn, isSupabaseConfigured } = await import('@/lib/auth');
-      if (!isSupabaseConfigured) {
-        setError('Authentication service not configured. Please contact the director.');
+      const { signIn, establishServerSession } = await import('@/lib/auth');
+      const { redirectPathForRole } = await import('@/lib/auth-allowlist');
+
+      const result = await signIn(email, password);
+      if (!result.success) {
+        setError(result.error || 'Invalid credentials. Try Sign in with Google instead.');
         setLoading(false);
         return;
       }
 
-      const result = await signIn(email, password);
-      if (result.success) {
-        router.push('/admin');
+      // Credential proven with Supabase. Exchange it for the signed session
+      // cookie; the server derives the role.
+      const sess = await establishServerSession();
+      if (!sess.success || !sess.role) {
+        setError(sess.error || 'Could not complete sign-in.');
+        setLoading(false);
         return;
       }
 
-      setError(result.error || 'Invalid credentials. Try Sign in with Google instead.');
-      setLoading(false);
+      router.push(redirectPathForRole(sess.role));
     } catch {
       setError('Connection error. Please try again.');
       setLoading(false);

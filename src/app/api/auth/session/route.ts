@@ -1,8 +1,12 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
-import { signPayload, verifySignedCookie, SESSION_MAX_AGE } from '@/lib/session';
+import { verifySignedCookie } from '@/lib/session';
+import { getServerSupabase } from '@/lib/supabase/server';
+import { lookupInviteServer } from '@/lib/auth-allowlist-server';
+import { mintSessionResponse } from '@/lib/mint-session';
 
 // GET: Read current session (returns user info without exposing raw cookie)
 export async function GET(request: NextRequest) {
@@ -22,9 +26,28 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// POST: Create session
+/**
+ * Mint the signed HttpOnly session cookie.
+ *
+ * Security model: the caller must prove identity FIRST. The role is then
+ * derived server-side from the database, never taken from the request body.
+ * Two proofs are accepted:
+ *
+ *   1. accessToken — a Supabase Auth session token (password or Google OAuth).
+ *      Verified with supabase.auth.getUser(); the email comes from the verified
+ *      user, the role from lookupInviteServer().
+ *   2. familyLogin {email, password} — a parent on the legacy families table.
+ *      Verified against families.password_hash; role is always 'parent'.
+ *
+ * Anything else is rejected. The old behaviour (trusting a client-supplied
+ * email + role) is removed: that allowed anyone to mint a superadmin cookie.
+ */
+function sha256Hex(value: string): string {
+  return createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
 export async function POST(request: NextRequest) {
-  // Rate limit: 5 login attempts per IP per 15 minutes
+  // Rate limit: 5 attempts per IP per 15 minutes
   const clientId = getClientIdentifier(request);
   const rateResult = checkRateLimit(`login:${clientId}`, {
     maxRequests: 5,
@@ -41,50 +64,86 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { email?: string; role?: string; name?: string };
+  let body: {
+    accessToken?: string;
+    familyLogin?: { email?: string; password?: string };
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { email, role, name } = body;
+  const supabase = getServerSupabase();
 
-  if (!email || !role) {
-    return NextResponse.json({ error: 'Email and role are required' }, { status: 400 });
+  // --- Path 1: verified Supabase Auth session (staff, admin, OAuth) ---
+  if (body.accessToken) {
+    if (!supabase) {
+      return NextResponse.json({ error: 'Auth unavailable' }, { status: 503 });
+    }
+
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(body.accessToken);
+
+    if (error || !user || !user.email) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    }
+
+    const invite = await lookupInviteServer(user.email);
+    if (!invite.allowed || !invite.role) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    }
+
+    return mintSessionResponse({
+      id: user.id,
+      email: user.email.toLowerCase(),
+      full_name: invite.fullName || user.email.split('@')[0],
+      role: invite.role,
+    });
   }
 
-  // Server-side role validation: only accept known roles
-  const ALLOWED_ROLES = ['superadmin', 'admin', 'owner', 'teacher', 'employee', 'parent'];
-  if (!ALLOWED_ROLES.includes(role)) {
-    return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+  // --- Path 2: legacy parent families password (bridge, role is fixed) ---
+  if (body.familyLogin?.email && body.familyLogin?.password) {
+    if (!supabase) {
+      return NextResponse.json({ error: 'Auth unavailable' }, { status: 503 });
+    }
+
+    const email = body.familyLogin.email.toLowerCase().trim();
+
+    const { data: family } = await supabase
+      .from('families')
+      .select('id, email, password_hash, status')
+      .ilike('email', email)
+      .maybeSingle();
+
+    if (!family || family.status !== 'active') {
+      // Same response whether the email exists or not (no enumeration).
+      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+    }
+
+    if (sha256Hex(body.familyLogin.password) !== family.password_hash) {
+      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
+    }
+
+    const { data: primaryParent } = await supabase
+      .from('family_parents')
+      .select('name, is_primary')
+      .eq('family_id', family.id)
+      .order('is_primary', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return mintSessionResponse({
+      id: `family-${family.id}`,
+      email: family.email,
+      full_name: primaryParent?.name || family.email.split('@')[0],
+      role: 'parent',
+    });
   }
 
-  // Build session payload
-  const sessionData = {
-    user: {
-      id: `local-${Date.now()}`,
-      email,
-      full_name: name || email.split('@')[0],
-      role,
-    },
-    expires_at: Date.now() + SESSION_MAX_AGE * 1000,
-  };
-
-  const payload = JSON.stringify(sessionData);
-  const signature = signPayload(payload);
-  const cookieValue = `${payload}.${signature}`;
-
-  const response = NextResponse.json({ success: true, user: sessionData.user });
-  response.cookies.set('auth_session', cookieValue, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: SESSION_MAX_AGE,
-    path: '/',
-  });
-
-  return response;
+  return NextResponse.json({ error: 'No valid credential provided' }, { status: 400 });
 }
 
 // DELETE: Destroy session (logout)

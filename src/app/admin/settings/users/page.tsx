@@ -151,6 +151,11 @@ export default function UsersPage() {
   const [formData, setFormData] = useState<UserFormData>(emptyFormData);
   const [formError, setFormError] = useState<string | null>(null);
   const [usedPins, setUsedPins] = useState<Set<string>>(new Set());
+  const [inviteBusy, setInviteBusy] = useState<string | null>(null);
+  const [inviteResult, setInviteResult] = useState<
+    { email: string; link: string; emailed: boolean } | null
+  >(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     seedUserData();
@@ -163,6 +168,50 @@ export default function UsersPage() {
 
   const refreshUsers = () => {
     setUsers(getUsers());
+  };
+
+  // ── Account setup / password link ──────────
+  // Creates (or recovers) the Supabase Auth account and returns a "set your
+  // password" link. The role is derived at sign-in from the employee record.
+  const handleInvite = async (user: AppUser) => {
+    setInviteBusy(user.id);
+    setCopied(false);
+    try {
+      const r = await fetch('/api/admin/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        setInviteResult({
+          email: user.email,
+          link: '',
+          emailed: false,
+        });
+        setFormError(data.error || 'Could not create the setup link.');
+      } else {
+        setInviteResult({
+          email: user.email,
+          link: data.link || '',
+          emailed: !!data.emailed,
+        });
+      }
+    } catch {
+      setInviteResult({ email: user.email, link: '', emailed: false });
+    } finally {
+      setInviteBusy(null);
+    }
+  };
+
+  const copyInviteLink = async () => {
+    if (!inviteResult?.link) return;
+    try {
+      await navigator.clipboard.writeText(inviteResult.link);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
   };
 
   // ── PIN generator ──────────────────────────
@@ -634,11 +683,26 @@ export default function UsersPage() {
                             <DropdownMenuItem onClick={() => openEditDialog(user)}>
                               <Pencil className="h-4 w-4 mr-2" /> Edit User
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <KeyRound className="h-4 w-4 mr-2" /> Reset Password
+                            <DropdownMenuItem
+                              disabled={inviteBusy === user.id}
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                handleInvite(user);
+                              }}
+                            >
+                              <Mail className="h-4 w-4 mr-2" />
+                              {inviteBusy === user.id
+                                ? 'Preparing link...'
+                                : 'Email account setup link'}
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Mail className="h-4 w-4 mr-2" /> Send Email
+                            <DropdownMenuItem
+                              disabled={inviteBusy === user.id}
+                              onSelect={(e) => {
+                                e.preventDefault();
+                                handleInvite(user);
+                              }}
+                            >
+                              <KeyRound className="h-4 w-4 mr-2" /> Send password reset link
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleToggleStatus(user)}>
@@ -683,6 +747,54 @@ export default function UsersPage() {
             </Button>
             <Button onClick={handleEditUser} className="bg-christina-red hover:bg-christina-red/90">
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Account setup link result */}
+      <Dialog open={!!inviteResult} onOpenChange={(o) => !o && setInviteResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Account setup link</DialogTitle>
+            <DialogDescription>
+              {inviteResult?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {inviteResult?.emailed ? (
+              <p className="text-sm text-green-700">
+                A setup email was sent to {inviteResult.email}. They can also use the
+                link below.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Copy this link and send it to {inviteResult?.email}. It takes them to a
+                page where they set their own password.
+              </p>
+            )}
+            {inviteResult?.link ? (
+              <div className="flex gap-2">
+                <Input readOnly value={inviteResult.link} className="font-mono text-xs" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={copyInviteLink}
+                >
+                  {copied ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-red-600">
+                No link was generated. Confirm the Supabase Auth redirect URLs include
+                this site, then try again.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteResult(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

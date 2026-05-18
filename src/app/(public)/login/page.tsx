@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, LogIn, UserPlus } from 'lucide-react';
-import { authenticateFamily, seedFamilyData } from '@/lib/family-storage';
 
 export default function ParentLoginPage() {
   const router = useRouter();
@@ -17,10 +16,6 @@ export default function ParentLoginPage() {
   const [signInError, setSignInError] = useState('');
   const [signUpError, setSignUpError] = useState('');
   const [signUpSuccess, setSignUpSuccess] = useState(false);
-
-  useEffect(() => {
-    seedFamilyData();
-  }, []);
 
   async function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,25 +25,31 @@ export default function ParentLoginPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const result = await authenticateFamily(email, password);
-    if (result.family) {
-      // Establish server-side HttpOnly session
+    // Password is verified server-side against the families table; the role
+    // is fixed to 'parent' there. The client never sends a role.
+    try {
       const res = await fetch('/api/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, role: 'parent', name: result.family.parents.find(p => p.is_primary)?.name || result.family.parents[0]?.name || email }),
+        body: JSON.stringify({ familyLogin: { email, password } }),
       });
+
       if (res.status === 429) {
         setSignInError('Too many login attempts. Please wait before trying again.');
         setLoading(false);
         return;
       }
+      if (!res.ok) {
+        setSignInError(
+          'Invalid email or password, or your account is still pending approval.'
+        );
+        setLoading(false);
+        return;
+      }
+
       router.push('/dashboard');
-    } else if (result.pending) {
-      setSignInError('Your account is pending approval. Christina will review and activate your account within 24 hours.');
-      setLoading(false);
-    } else {
-      setSignInError('Invalid email or password.');
+    } catch {
+      setSignInError('Connection error. Please try again.');
       setLoading(false);
     }
   }

@@ -1,5 +1,6 @@
 // Employee Storage Module for Christina's Child Care Center
 // Supabase-first with localStorage as fallback cache
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 import {
   supabaseSelect,
@@ -1382,6 +1383,9 @@ export async function seedSampleData(): Promise<{
   schedules: number;
   training: number;
 }> {
+  if (!isDemoSeedEnabled()) {
+    return { employees: 0, timeEntries: 0, schedules: 0, training: 0 };
+  }
   let employeeCount = 0;
   let timeEntryCount = 0;
   let scheduleCount = 0;

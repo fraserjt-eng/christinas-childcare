@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,11 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PinPad } from '@/components/employee/PinPad';
-import {
-  authenticateByPin,
-  authenticateByEmail,
-  seedSampleData,
-} from '@/lib/employee-storage';
 import { Clock, KeyRound, Mail } from 'lucide-react';
 
 export default function EmployeeLoginPage() {
@@ -22,37 +17,35 @@ export default function EmployeeLoginPage() {
   const [pinError, setPinError] = useState('');
   const [emailError, setEmailError] = useState('');
 
-  useEffect(() => {
-    // Ensure seed data exists for legacy PIN login path
-    seedSampleData().catch(() => {});
-  }, []);
-
   const handlePinSubmit = useCallback(async (pin: string) => {
     setLoading(true);
     setPinError('');
 
-    const employee = await authenticateByPin(pin);
-    if (employee) {
-      // Establish server-side HttpOnly session
-      const res = await fetch('/api/auth/session', {
+    // PIN is verified server-side against the employees table; the role is
+    // derived there, never sent by the client.
+    try {
+      const res = await fetch('/api/auth/staff-pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: employee.email, role: employee.role || 'teacher', name: `${employee.first_name} ${employee.last_name}` }),
+        body: JSON.stringify({ pin }),
       });
+
       if (res.status === 429) {
-        setPinError('Too many login attempts. Please wait before trying again.');
+        setPinError('Too many attempts. Please wait before trying again.');
         setLoading(false);
         return;
       }
-      // Redirect based on role
-      const empRole = employee.role || 'teacher';
-      if (empRole === 'owner' || empRole === 'admin' || empRole === 'superadmin') {
-        router.push('/admin');
-      } else {
-        router.push('/employee');
+      if (!res.ok) {
+        setPinError('Invalid PIN. Please try again.');
+        setLoading(false);
+        return;
       }
-    } else {
-      setPinError('Invalid PIN. Please try again.');
+
+      const data = await res.json();
+      const role = data.user?.role;
+      router.push(role === 'admin' || role === 'superadmin' ? '/admin' : '/employee');
+    } catch {
+      setPinError('Connection error. Please try again.');
       setLoading(false);
     }
   }, [router]);
@@ -66,27 +59,27 @@ export default function EmployeeLoginPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const employee = await authenticateByEmail(email, password);
-    if (employee) {
-      // Establish server-side HttpOnly session
-      const res = await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: employee.email, role: employee.role || 'teacher', name: `${employee.first_name} ${employee.last_name}` }),
-      });
-      if (res.status === 429) {
-        setEmailError('Too many login attempts. Please wait before trying again.');
+    try {
+      const { signIn, establishServerSession } = await import('@/lib/auth');
+      const { redirectPathForRole } = await import('@/lib/auth-allowlist');
+
+      const result = await signIn(email, password);
+      if (!result.success) {
+        setEmailError(result.error || 'Invalid email or password.');
         setLoading(false);
         return;
       }
-      const empRole = employee.role || 'teacher';
-      if (empRole === 'owner' || empRole === 'admin' || empRole === 'superadmin') {
-        router.push('/admin');
-      } else {
-        router.push('/employee');
+
+      const sess = await establishServerSession();
+      if (!sess.success || !sess.role) {
+        setEmailError(sess.error || 'Could not complete sign-in.');
+        setLoading(false);
+        return;
       }
-    } else {
-      setEmailError('Invalid email or password. Use your PIN as password.');
+
+      router.push(redirectPathForRole(sess.role));
+    } catch {
+      setEmailError('Connection error. Please try again.');
       setLoading(false);
     }
   }
@@ -182,7 +175,7 @@ export default function EmployeeLoginPage() {
                       id="password"
                       name="password"
                       type="password"
-                      placeholder="Enter your PIN as password"
+                      placeholder="Your password"
                       required
                     />
                   </div>

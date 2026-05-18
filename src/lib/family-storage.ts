@@ -1,5 +1,6 @@
 // Family Storage Module for Christina's Child Care Center
 // Supabase-first with localStorage as fallback cache
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 import {
   supabaseSelect,
@@ -809,6 +810,7 @@ const SEED_FAMILIES: Omit<FamilyAccount, 'id' | 'created_at' | 'updated_at'>[] =
 ];
 
 export async function seedFamilyData(): Promise<{ families: number }> {
+  if (!isDemoSeedEnabled()) return { families: 0 };
   let familyCount = 0;
   const now = new Date().toISOString();
 

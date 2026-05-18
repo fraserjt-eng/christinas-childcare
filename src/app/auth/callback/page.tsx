@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
-import { lookupInvite, redirectPathForRole } from '@/lib/auth-allowlist';
+import { redirectPathForRole, type AllowedRole } from '@/lib/auth-allowlist';
 
 type CallbackState =
   | { status: 'loading' }
@@ -32,7 +32,7 @@ export default function AuthCallbackPage() {
         error: authError,
       } = await supabase.auth.getSession();
 
-      if (authError || !session) {
+      if (authError || !session?.access_token) {
         setState({
           status: 'error',
           message: 'Authentication failed. Please try again.',
@@ -41,40 +41,31 @@ export default function AuthCallbackPage() {
       }
 
       const email = session.user.email || '';
-      const oauthName =
-        session.user.user_metadata?.full_name ||
-        session.user.user_metadata?.name ||
-        email.split('@')[0];
 
-      // Invite-only allowlist check
-      const invite = await lookupInvite(email);
-
-      if (!invite.allowed || !invite.role) {
-        // Sign them out of Supabase so they can retry with a different account
-        await supabase.auth.signOut();
-        setState({ status: 'not-invited', email });
-        return;
-      }
-
-      const resolvedName = invite.fullName || oauthName;
-
+      // The server verifies the token and DERIVES the role. The client no
+      // longer looks up or asserts a role.
       try {
         const res = await fetch('/api/auth/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            role: invite.role,
-            name: resolvedName,
-          }),
+          body: JSON.stringify({ accessToken: session.access_token }),
         });
+
+        if (res.status === 403) {
+          // Not on the invite list. Sign them out so they can retry.
+          await supabase.auth.signOut();
+          setState({ status: 'not-invited', email });
+          return;
+        }
 
         if (!res.ok) {
           setState({ status: 'error', message: 'Failed to create session.' });
           return;
         }
 
-        router.push(redirectPathForRole(invite.role));
+        const data = await res.json();
+        const role = data.user?.role as AllowedRole | undefined;
+        router.push(role ? redirectPathForRole(role) : '/');
       } catch {
         setState({ status: 'error', message: 'Connection error. Please try again.' });
       }

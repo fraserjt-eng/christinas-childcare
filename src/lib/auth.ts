@@ -130,6 +130,57 @@ export async function signIn(
 }
 
 /**
+ * After a Supabase credential is established (password or Google OAuth),
+ * exchange the Supabase access token for the app's signed HttpOnly session
+ * cookie. The server verifies the token and DERIVES the role from the
+ * database. The client never asserts a role. Returns the server-resolved role.
+ */
+export async function establishServerSession(): Promise<{
+  success: boolean;
+  role?: 'superadmin' | 'admin' | 'teacher' | 'parent';
+  error?: string;
+  notInvited?: boolean;
+}> {
+  if (!supabaseAuth) return { success: false, error: 'Supabase is not configured' };
+
+  const {
+    data: { session },
+  } = await supabaseAuth.auth.getSession();
+
+  if (!session?.access_token) {
+    return { success: false, error: 'No active session' };
+  }
+
+  try {
+    const res = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: session.access_token }),
+    });
+
+    if (res.status === 403) {
+      await supabaseAuth.auth.signOut();
+      return {
+        success: false,
+        notInvited: true,
+        error: 'This account is not on the invite list. Ask the director to add you.',
+      };
+    }
+    if (res.status === 429) {
+      return { success: false, error: 'Too many attempts. Please wait and try again.' };
+    }
+    if (!res.ok) {
+      return { success: false, error: 'Could not establish a session.' };
+    }
+
+    const data = await res.json();
+    return { success: true, role: data.user?.role };
+  } catch {
+    return { success: false, error: 'Connection error. Please try again.' };
+  }
+}
+
+/**
  * Sign out current user
  */
 export async function signOut(): Promise<void> {

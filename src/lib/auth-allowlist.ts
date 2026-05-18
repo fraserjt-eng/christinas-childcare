@@ -14,8 +14,9 @@ export interface AllowlistResult {
   familyId?: string;
 }
 
-// Bootstrap superadmin list — always allowed even if not in any table
-const SUPERADMIN_EMAILS = ['fraserjt@gmail.com'];
+// Bootstrap superadmin list — always allowed even if not in any table.
+// Exported so the server-side resolver shares one source of truth.
+export const SUPERADMIN_EMAILS = ['fraserjt@gmail.com'];
 
 /**
  * Look up a signing-in email against all role tables.

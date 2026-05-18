@@ -1,5 +1,6 @@
 // Food Storage Module for Christina's Child Care Center
 // Supabase-first with localStorage as fallback cache
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 import {
   supabaseSelect,
@@ -1049,6 +1050,9 @@ export async function seedFoodData(): Promise<{
   menuItems: number;
   foodCounts: number;
 }> {
+  if (!isDemoSeedEnabled()) {
+    return { inventory: 0, menuItems: 0, foodCounts: 0 };
+  }
   // Check if data already exists
   const existingInventory = await getInventoryItems();
   if (existingInventory.length > 0) {
