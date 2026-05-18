@@ -52,7 +52,7 @@ import {
   ROLE_DEFINITIONS,
   purgeDemoUsers,
 } from '@/lib/user-storage';
-import { createEmployee, getEmployees } from '@/lib/employee-storage';
+import { getEmployees } from '@/lib/employee-storage';
 import { UserRole } from '@/types/database';
 import { EmployeeBulkUpload } from '@/components/admin/EmployeeBulkUpload';
 
@@ -591,7 +591,40 @@ export default function UsersPage() {
       return;
     }
 
-    // Create the portal login record
+    const pin = formData.pin || generatePin();
+
+    // Persist the staff member to the database server-side so their PIN
+    // actually works at login. The old client path saved to this browser
+    // only, which is why PIN sign-in failed.
+    try {
+      const res = await fetch('/api/admin/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          phone: formData.phone,
+          role: formData.role,
+          pin,
+          job_title: formData.job_title,
+          hourly_rate: parseFloat(formData.hourly_rate) || undefined,
+          hire_date: formData.hire_date || todayIso(),
+          emergency_contact_name: formData.emergency_contact_name,
+          emergency_contact_phone: formData.emergency_contact_phone,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFormError(data.error || 'Could not create the staff member.');
+        return;
+      }
+    } catch {
+      setFormError('Connection error. Please try again.');
+      return;
+    }
+
+    // Local list record so the new staff is visible in this list too.
     createUser({
       first_name: formData.first_name,
       last_name: formData.last_name,
@@ -600,30 +633,11 @@ export default function UsersPage() {
       role: formData.role,
       status: 'active',
     });
-
-    // Create the HR employee record so the person can clock in with their PIN
-    const pin = formData.pin || generatePin();
-    try {
-      await createEmployee({
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        email: formData.email,
-        phone: formData.phone,
-        role: formData.role,
-        pin,
-        job_title: formData.job_title || '',
-        hourly_rate: parseFloat(formData.hourly_rate) || 0,
-        hire_date: formData.hire_date || todayIso(),
-        employment_status: 'active',
-        certifications: [],
-        emergency_contact_name: formData.emergency_contact_name || undefined,
-        emergency_contact_phone: formData.emergency_contact_phone || undefined,
-      });
-      setUsedPins((prev) => { const next = new Set(Array.from(prev)); next.add(pin); return next; });
-    } catch (err) {
-      console.error('Failed to create employee record:', err);
-      // The portal user was already created; do not block the UX
-    }
+    setUsedPins((prev) => {
+      const next = new Set(Array.from(prev));
+      next.add(pin);
+      return next;
+    });
 
     refreshUsers();
     setIsAddDialogOpen(false);
