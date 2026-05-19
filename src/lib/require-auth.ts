@@ -12,6 +12,7 @@
 
 import { cookies } from 'next/headers';
 import { verifySignedCookie } from '@/lib/session';
+import { SUPERADMIN_EMAILS } from '@/lib/auth-allowlist';
 
 export interface SessionUser {
   id: string;
@@ -62,6 +63,16 @@ export async function requireSession(
   }
 
   const session = parsed as unknown as AuthedSession;
+
+  // The configured owner email is ALWAYS treated as superadmin, regardless of
+  // which role its cookie carries. fraserjt@gmail.com is also a staff
+  // (teacher) and a parent record; signing in via the staff PIN mints a
+  // 'teacher' cookie, which then failed every admin action even though the
+  // person IS the owner. The email is the durable identity here.
+  const email = String(session.user.email || '').toLowerCase().trim();
+  if (SUPERADMIN_EMAILS.includes(email)) {
+    return { ...session, user: { ...session.user, role: 'superadmin' } };
+  }
 
   if (minRole) {
     const have = ROLE_RANK[session.user.role] ?? 0;

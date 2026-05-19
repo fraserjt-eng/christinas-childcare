@@ -86,7 +86,13 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const session = await requireSession('admin');
   if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      {
+        error:
+          'Your admin sign-in is not active (you may be signed in as a parent or staff, or it expired). Sign out, then sign in at the admin login with your admin account and try again.',
+      },
+      { status: 401 }
+    );
   }
 
   let body: {
