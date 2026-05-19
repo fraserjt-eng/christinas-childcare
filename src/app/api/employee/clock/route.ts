@@ -4,13 +4,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionEmployee } from '@/lib/employee-server';
+import { centerDate } from '@/lib/center-time';
 
 // Staff clock in/out, written to the real time_entries table, stamped to the
 // VERIFIED session employee (not localStorage). This is the spine the pulse
 // (payroll, ratios, budget, dashboard, daily report) reads from.
 
 function todayDate(): string {
-  return new Date().toISOString().split('T')[0];
+  // Center timezone, so a clock-in pulses on the same day ratios/dashboard
+  // read (they were UTC-vs-Central misaligned after 7pm).
+  return centerDate();
 }
 
 function hoursBetween(inIso: string, outIso: string, breakMin: number): number {

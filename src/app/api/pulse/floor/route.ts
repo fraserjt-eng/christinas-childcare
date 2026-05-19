@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { centerDate } from '@/lib/center-time';
 
 // THE PULSE: who is actually on the floor right now, from the real spine
 // (open time_entries), not an estimate. The ratio monitor is a licensing
@@ -16,7 +17,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 // per-room assignment we do not have.
 
 function todayDate(): string {
-  return new Date().toISOString().split('T')[0];
+  return centerDate();
 }
 
 export async function GET() {

@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { centerDate } from '@/lib/center-time';
 
 // The live kiosk's only data path. The browser never touches the family or
 // attendance tables directly (anon is denied on them by migration 017). This
@@ -12,7 +13,9 @@ import { getServerSupabase } from '@/lib/supabase/server';
 const CRYSTAL_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 
 function todayDate(): string {
-  return new Date().toISOString().split('T')[0];
+  // Center timezone so a kiosk check-in lands on the same day the ratio
+  // monitor, dashboard, and reports read.
+  return centerDate();
 }
 
 export async function POST(request: NextRequest) {
