@@ -30,15 +30,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { PayStubCard } from '@/components/employee/PayStubCard';
-import {
-  getEmployees,
-  getTimeEntries,
-  getPayStubs,
-  createPayStub,
-  updatePayStub,
-  updateEmployee,
-  seedSampleData,
-} from '@/lib/employee-storage';
+// Payroll data + writes go through the admin service-role API. The client
+// employee-storage path used the anon key, which migration 019 locks out
+// (no clock entries shown, edits/rates/stubs silently failed).
 import {
   Employee,
   TimeEntry,
@@ -89,29 +83,36 @@ export default function AdminPayrollPage() {
   const [newRate, setNewRate] = useState<string>('');
   const [selectedStub, setSelectedStub] = useState<PayStub | null>(null);
 
+  async function fetchPayrollData() {
+    const r = await fetch('/api/admin/payroll-data', { cache: 'no-store' });
+    if (!r.ok) return null;
+    return r.json() as Promise<{
+      employees: Employee[];
+      timeEntries: TimeEntry[];
+      payStubs: PayStub[];
+    }>;
+  }
+
   useEffect(() => {
-    async function loadData() {
-      await seedSampleData();
-      const emps = await getEmployees();
-      setEmployees(emps);
-
-      const entries = await getTimeEntries();
-      setTimeEntries(entries);
-
-      const stubs = await getPayStubs();
-      setPayStubs(stubs);
-
+    (async () => {
+      const d = await fetchPayrollData();
+      if (d) {
+        setEmployees(d.employees || []);
+        setTimeEntries(d.timeEntries || []);
+        setPayStubs(d.payStubs || []);
+      }
       setLoading(false);
-    }
-    loadData();
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const refreshData = async () => {
-    const entries = await getTimeEntries();
-    setTimeEntries(entries);
-    const stubs = await getPayStubs();
-    setPayStubs(stubs);
+    const d = await fetchPayrollData();
+    if (d) {
+      setEmployees(d.employees || []);
+      setTimeEntries(d.timeEntries || []);
+      setPayStubs(d.payStubs || []);
+    }
   };
 
   // Filter time entries
@@ -174,11 +175,16 @@ export default function AdminPayrollPage() {
   // Handle saving pay rate
   const handleSaveRate = async () => {
     if (!editingRate || !newRate) return;
-    await updateEmployee(editingRate.id, {
-      hourly_rate: parseFloat(newRate),
+    await fetch('/api/admin/payroll-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'rate',
+        employeeId: editingRate.id,
+        hourly_rate: parseFloat(newRate),
+      }),
     });
-    const emps = await getEmployees();
-    setEmployees(emps);
+    await refreshData();
     setEditingRate(null);
     setNewRate('');
   };
@@ -214,7 +220,11 @@ export default function AdminPayrollPage() {
 
       // Calculate and create pay stub
       const stubData = calculatePayStub(employee, empEntries, periodStart, periodEnd);
-      await createPayStub(stubData);
+      await fetch('/api/admin/payroll-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'createStub', stub: stubData }),
+      });
     }
 
     await refreshData();
@@ -223,16 +233,21 @@ export default function AdminPayrollPage() {
 
   // Mark stub as paid
   const handleMarkPaid = async (stubId: string) => {
-    await updatePayStub(stubId, {
-      status: 'paid',
-      pay_date: new Date().toISOString().split('T')[0],
+    await fetch('/api/admin/payroll-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'markPaid', stubId }),
     });
     await refreshData();
   };
 
   // Finalize stub
   const handleFinalizeStub = async (stubId: string) => {
-    await updatePayStub(stubId, { status: 'finalized' });
+    await fetch('/api/admin/payroll-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'finalize', stubId }),
+    });
     await refreshData();
   };
 
