@@ -54,7 +54,8 @@ export const ROLE_CONFIGS: Record<AppRole, RoleConfig> = {
 
 export function getRoleFromEmployee(role?: string, jobTitle?: string): AppRole {
   if (!role && !jobTitle) return 'owner_director';
-  if (role === 'owner' || role === 'admin') return 'owner_director';
+  const r = (role || '').toLowerCase();
+  if (r === 'owner' || r === 'admin' || r === 'superadmin') return 'owner_director';
   if (jobTitle && jobTitle.toLowerCase().includes('director')) return 'owner_director';
   if (jobTitle && jobTitle.toLowerCase().includes('lead')) return 'lead_teacher';
   return 'assistant_teacher';
