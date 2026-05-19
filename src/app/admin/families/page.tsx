@@ -51,12 +51,30 @@ import {
   generateParentId,
   generateChildId,
 } from '@/types/family';
-import {
-  getFamilies,
-  createFamily,
-  updateFamily,
-  seedFamilyData,
-} from '@/lib/family-storage';
+// Families are read/written through the admin service-role API. The old
+// client family-storage used the anon key, which migration 017 locks out
+// (empty list, silent save failures). Same pattern as User Management.
+type ChildPayload = {
+  name: string;
+  date_of_birth?: string;
+  classroom?: string;
+  allergies?: string[];
+  medical_notes?: string;
+};
+function primaryOf(f: Pick<FamilyAccount, 'parents'>) {
+  return f.parents?.find((p) => p.is_primary) || f.parents?.[0];
+}
+function childrenPayload(f: Pick<FamilyAccount, 'children'>): ChildPayload[] {
+  return (f.children || [])
+    .filter((c) => (c.name || '').trim())
+    .map((c) => ({
+      name: c.name.trim(),
+      date_of_birth: c.date_of_birth || undefined,
+      classroom: c.classroom || undefined,
+      allergies: c.allergies || [],
+      medical_notes: c.medical_notes || undefined,
+    }));
+}
 import { FamilyBulkUpload } from '@/components/admin/FamilyBulkUpload';
 
 // ============================================================================
@@ -764,14 +782,20 @@ export default function FamiliesPage() {
   const [savedPassword, setSavedPassword] = useState<string | null>(null);
 
   const loadFamilies = useCallback(async () => {
-    await seedFamilyData();
-    const data = await getFamilies();
-    // Backfill status for families created before the status field existed
-    const migrated = data.map((f) => ({
-      ...f,
-      status: f.status || 'active' as const,
-    }));
-    setFamilies(migrated);
+    try {
+      const r = await fetch('/api/admin/families', { cache: 'no-store' });
+      if (!r.ok) {
+        setFamilies([]);
+        return;
+      }
+      const d = await r.json();
+      const data: FamilyAccount[] = d.families || [];
+      setFamilies(
+        data.map((f) => ({ ...f, status: f.status || 'active' }))
+      );
+    } catch {
+      setFamilies([]);
+    }
   }, []);
 
   useEffect(() => {
@@ -798,13 +822,21 @@ export default function FamiliesPage() {
     });
 
   // Approval actions
+  const patchFamily = async (payload: Record<string, unknown>) => {
+    await fetch('/api/admin/families', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  };
+
   const handleApprove = async (id: string) => {
-    await updateFamily(id, { status: 'active', approved_at: new Date().toISOString() });
+    await patchFamily({ id, status: 'active' });
     loadFamilies();
   };
 
   const handleDecline = async (id: string) => {
-    await updateFamily(id, { status: 'inactive' });
+    await patchFamily({ id, status: 'inactive' });
     loadFamilies();
   };
 
@@ -821,7 +853,23 @@ export default function FamiliesPage() {
     }
 
     const data = formToFamilyData(addForm, addForm.tempPassword);
-    await createFamily(data);
+    const p = primaryOf(data);
+    const res = await fetch('/api/admin/family', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: data.email,
+        parentName: p?.name || '',
+        parentPhone: p?.phone || '',
+        pin: data.pin || undefined,
+        children: childrenPayload(data),
+      }),
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      setFormError(e.error || 'Could not add the family.');
+      return;
+    }
     setSavedPassword(addForm.tempPassword);
     setIsAddDialogOpen(false);
     setAddForm(buildInitialForm());
@@ -852,7 +900,16 @@ export default function FamiliesPage() {
     }
 
     const data = formToFamilyData(editForm, editingFamily.password_hash);
-    await updateFamily(editingFamily.id, data);
+    const p = primaryOf(data);
+    await patchFamily({
+      id: editingFamily.id,
+      email: data.email,
+      address: data.address || '',
+      family_bio: data.family_bio || '',
+      parentName: p?.name || '',
+      parentPhone: p?.phone || '',
+      children: childrenPayload(data),
+    });
     setIsEditDialogOpen(false);
     setEditingFamily(null);
     loadFamilies();
