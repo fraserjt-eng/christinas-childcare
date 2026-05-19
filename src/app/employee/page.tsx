@@ -25,6 +25,7 @@ import {
   Megaphone,
   UtensilsCrossed,
   Camera,
+  ClipboardList,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -229,6 +230,7 @@ export default function EmployeeDashboardPage() {
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
   const [weeklyEntries, setWeeklyEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [elapsedLabel, setElapsedLabel] = useState('');
 
   // Dashboard data
@@ -246,6 +248,7 @@ export default function EmployeeDashboardPage() {
     async function loadData() {
       const emp = await getSessionEmployee();
       setEmployee(emp as unknown as Employee | null);
+      setSessionChecked(true);
 
       if (!emp) return;
 
@@ -479,12 +482,33 @@ export default function EmployeeDashboardPage() {
   // ── Loading state ──────────────────────────────────────────────────────────
 
   if (!employee) {
-    return (
-      <>
+    if (!sessionChecked) {
+      return (
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-muted-foreground">Loading...</p>
         </div>
-      </>
+      );
+    }
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-center px-4">
+        <p className="text-muted-foreground max-w-sm">
+          We could not load your staff profile. Your sign-in may have ended.
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => window.location.reload()}
+            className="rounded-md bg-christina-red text-white text-sm px-4 py-2"
+          >
+            Try again
+          </button>
+          <a
+            href="/employee-login"
+            className="rounded-md border text-sm px-4 py-2"
+          >
+            Enter PIN again
+          </a>
+        </div>
+      </div>
     );
   }
 
@@ -558,6 +582,17 @@ export default function EmployeeDashboardPage() {
             />
           );
 
+          const dailyTile = (
+            <HomeTile
+              key="daily"
+              href="/employee/daily-report"
+              icon={ClipboardList}
+              label="Daily Report"
+              bgColor="bg-indigo-600"
+              subtitle="Log a child's day"
+            />
+          );
+
           const mealTile = (
             <HomeTile
               key="meal"
@@ -617,13 +652,13 @@ export default function EmployeeDashboardPage() {
           let tiles;
           switch (zone) {
             case 'opening':
-              tiles = [clockTile, scheduleTile, mealTile, chatTile, photoTile, trainingTile];
+              tiles = [clockTile, dailyTile, scheduleTile, mealTile, chatTile, photoTile, trainingTile];
               break;
             case 'core':
-              tiles = [mealTile, clockTile, photoTile, chatTile, scheduleTile, trainingTile];
+              tiles = [dailyTile, clockTile, mealTile, photoTile, chatTile, scheduleTile, trainingTile];
               break;
             case 'closing':
-              tiles = [clockTile, chatTile, mealTile, scheduleTile, photoTile, trainingTile];
+              tiles = [clockTile, dailyTile, chatTile, mealTile, scheduleTile, photoTile, trainingTile];
               break;
           }
 

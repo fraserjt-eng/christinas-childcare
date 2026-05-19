@@ -43,6 +43,13 @@ export async function resolveSessionEmployee(
     employee = (data as ResolvedEmployee) ?? null;
   }
 
-  if (!employee || employee.employment_status !== 'active') return null;
+  if (!employee) return null;
+  // Only an EXPLICITLY ended status locks someone out. A blank/variant
+  // status (a staff member added without one) must not silently break
+  // their portal and clock-in. Lock out only the unambiguous cases.
+  const status = String(employee.employment_status || '').toLowerCase().trim();
+  if (status === 'inactive' || status === 'terminated' || status === 'archived') {
+    return null;
+  }
   return employee;
 }
