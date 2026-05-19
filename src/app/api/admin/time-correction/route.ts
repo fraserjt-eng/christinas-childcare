@@ -158,3 +158,53 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ error: 'Unknown correction kind' }, { status: 400 });
 }
+
+// Hard-delete a record so test data leaves every dataset and feature.
+// ?kind=attendance|clock|entry&id=<uuid>  (admin only)
+//  - attendance -> attendance row (drops it from ratios, dashboard, reports)
+//  - clock      -> time_entries row (drops it from payroll, labor, pulse)
+//  - entry      -> child_daily_entries row (drops it from the daily report)
+export async function DELETE(request: NextRequest) {
+  const session = await requireSession('admin');
+  if (!session) {
+    return NextResponse.json(
+      { error: 'Admin sign-in required. Sign in with your admin account.' },
+      { status: 401 }
+    );
+  }
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const kind = (searchParams.get('kind') || '').trim();
+  const id = (searchParams.get('id') || '').trim();
+  if (!id) {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 });
+  }
+
+  const table =
+    kind === 'attendance'
+      ? 'attendance'
+      : kind === 'clock'
+        ? 'time_entries'
+        : kind === 'entry'
+          ? 'child_daily_entries'
+          : null;
+  if (!table) {
+    return NextResponse.json(
+      { error: 'kind must be attendance, clock, or entry' },
+      { status: 400 }
+    );
+  }
+
+  const { error } = await supabase.from(table).delete().eq('id', id);
+  if (error) {
+    return NextResponse.json(
+      { error: 'Could not delete the record' },
+      { status: 500 }
+    );
+  }
+  return NextResponse.json({ ok: true, deleted: { kind, id } });
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useSessionUser, firstNameFrom } from '@/lib/use-session-user';
 import Link from 'next/link';
 // DashboardLayout provided by admin/layout.tsx — do not wrap again here
 import { Badge } from '@/components/ui/badge';
@@ -285,6 +286,7 @@ function ComingUpSection({
 // ─── Main Page ──────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
+  const { user: sessionUser } = useSessionUser();
   const [zone, setZone] = useState<TimeZone>('core');
   const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
   const [snapshot, setSnapshot] = useState<TodaySnapshot>({
@@ -509,7 +511,7 @@ export default function AdminDashboard() {
   const hasMore = zoneAlerts.length > 5;
   const attentionCount = zoneAlerts.length;
 
-  const greeting = getGreeting('Christina');
+  const greeting = getGreeting(firstNameFrom(sessionUser?.full_name));
 
   // Backup reminder: check when the last snapshot was taken
   const backupDaysAgo = (() => {

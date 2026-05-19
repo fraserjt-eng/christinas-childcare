@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogIn, LogOut, RefreshCw, Pencil, Loader2 } from 'lucide-react';
+import { LogIn, LogOut, RefreshCw, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 // ISO <-> <input type="datetime-local"> (browser local time).
@@ -199,6 +199,28 @@ export default function AttendancePage() {
     }
   }
 
+  async function handleDeleteAttendance(record: ChildWithAttendance) {
+    if (!record.attendance_id) return;
+    const ok = window.confirm(
+      `Delete today's attendance for ${record.child_name}? This removes it from ratios, the dashboard, and reports. This cannot be undone.`
+    );
+    if (!ok) return;
+    try {
+      const r = await fetch(
+        `/api/admin/time-correction?kind=attendance&id=${encodeURIComponent(record.attendance_id)}`,
+        { method: 'DELETE' }
+      );
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        window.alert(d.error || 'Could not delete the record.');
+        return;
+      }
+      await loadData();
+    } catch {
+      window.alert('Could not delete the record.');
+    }
+  }
+
   const present = records.filter((r) => r.check_in && !r.check_out).length;
   const absent = records.filter((r) => !r.check_in).length;
   const departed = records.filter((r) => r.check_in && r.check_out).length;
@@ -333,16 +355,28 @@ export default function AttendancePage() {
                       </Badge>
                     )}
                     {record.attendance_id && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openEdit(record)}
-                        className="text-xs gap-1"
-                        title="Fix the check-in or check-out time"
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Edit times
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEdit(record)}
+                          className="text-xs gap-1"
+                          title="Fix the check-in or check-out time"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Edit times
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteAttendance(record)}
+                          className="text-xs gap-1 text-christina-coral hover:text-christina-coral"
+                          title="Delete this attendance record (removes it from ratios, dashboard, reports)"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Delete
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
