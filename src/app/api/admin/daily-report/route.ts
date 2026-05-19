@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { centerDate } from '@/lib/center-time';
 
 // The room-based per-child daily report for staff/owner: every child, grouped
 // by classroom, with their real child_daily_entries for the chosen day, in one
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const date =
-    searchParams.get('date') || new Date().toISOString().split('T')[0];
+    searchParams.get('date') || centerDate();
 
   const { data: kids } = await supabase
     .from('family_children')

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { centerDate, shiftCenterDate } from '@/lib/center-time';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sunrise, Users, Calendar, ClipboardList, AlertTriangle } from 'lucide-react';
@@ -27,9 +28,10 @@ interface TourRow {
 }
 
 function getTomorrowDate(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
+  // Tomorrow in the center's timezone. Doing local +1 then toISOString
+  // rolled an evening Central time forward an extra UTC day (showed May 20
+  // when tomorrow was May 19).
+  return shiftCenterDate(centerDate(), 1);
 }
 
 function formatDate(dateStr: string): string {

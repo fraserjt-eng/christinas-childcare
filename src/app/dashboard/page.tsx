@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { centerDate } from '@/lib/center-time';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -107,7 +108,7 @@ export default function ParentDashboard() {
     (async () => {
       await loadFamily();
       try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = centerDate();
         const cr = await fetch('/api/parent/children', { cache: 'no-store' });
         if (cr.ok) {
           const cd = await cr.json();

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { centerDate, shiftCenterDate } from '@/lib/center-time';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -77,9 +78,7 @@ function timeOf(iso: string): string {
 export default function ParentDailyReportPage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [activeChild, setActiveChild] = useState<string | null>(null);
-  const [date, setDate] = useState<string>(
-    () => new Date().toISOString().split('T')[0]
-  );
+  const [date, setDate] = useState<string>(() => centerDate());
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loadingChildren, setLoadingChildren] = useState(true);
   const [loadingEntries, setLoadingEntries] = useState(false);
@@ -128,9 +127,7 @@ export default function ParentDailyReportPage() {
   }, [loadEntries]);
 
   function shiftDay(delta: number) {
-    const d = new Date(date + 'T12:00:00');
-    d.setDate(d.getDate() + delta);
-    setDate(d.toISOString().split('T')[0]);
+    setDate(shiftCenterDate(date, delta));
   }
 
   const dateLabel = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
@@ -138,7 +135,7 @@ export default function ParentDailyReportPage() {
     month: 'long',
     day: 'numeric',
   });
-  const isToday = date === new Date().toISOString().split('T')[0];
+  const isToday = date === centerDate();
 
   if (loadingChildren) {
     return (
@@ -220,7 +217,7 @@ export default function ParentDailyReportPage() {
             size="sm"
             className="text-xs"
             onClick={() =>
-              setDate(new Date().toISOString().split('T')[0])
+              setDate(centerDate())
             }
           >
             Today

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { centerDate, shiftCenterDate } from '@/lib/center-time';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,9 +47,7 @@ function timeOf(iso: string): string {
 }
 
 export default function DailyReportsPage() {
-  const [date, setDate] = useState<string>(
-    () => new Date().toISOString().split('T')[0]
-  );
+  const [date, setDate] = useState<string>(() => centerDate());
   const [classrooms, setClassrooms] = useState<string[]>([]);
   const [children, setChildren] = useState<ReportChild[]>([]);
   const [room, setRoom] = useState('All');
@@ -81,12 +80,10 @@ export default function DailyReportsPage() {
   }, [load]);
 
   function shiftDay(delta: number) {
-    const d = new Date(date + 'T12:00:00');
-    d.setDate(d.getDate() + delta);
-    setDate(d.toISOString().split('T')[0]);
+    setDate(shiftCenterDate(date, delta));
   }
 
-  const isToday = date === new Date().toISOString().split('T')[0];
+  const isToday = date === centerDate();
   const dateLabel = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',

@@ -5,6 +5,7 @@ import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionEmployee } from '@/lib/employee-server';
 import { resolveSessionFamily } from '@/lib/parent-server';
+import { centerDate, centerDateOf } from '@/lib/center-time';
 
 // The Tadpoles per-child timeline. Staff write entries stamped to the
 // verified session employee + classroom + time. Parents read ONLY their own
@@ -25,7 +26,7 @@ const ENTRY_TYPES = [
 type EntryType = (typeof ENTRY_TYPES)[number];
 
 function todayDate(): string {
-  return new Date().toISOString().split('T')[0];
+  return centerDate();
 }
 
 // GET ?child_id=&date= : a child's timeline for a day. Parents are scoped to
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
   // Stamp to the real session employee where we can resolve one.
   const employee = await resolveSessionEmployee(session);
   const occurredAt = body.occurred_at || new Date().toISOString();
-  const date = occurredAt.split('T')[0];
+  const date = centerDateOf(occurredAt);
 
   const detail: Record<string, unknown> =
     body.detail && typeof body.detail === 'object' ? { ...body.detail } : {};

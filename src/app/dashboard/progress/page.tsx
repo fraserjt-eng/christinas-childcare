@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { centerDate } from '@/lib/center-time';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,7 @@ export default function ProgressPage() {
         const cd = await cr.json();
         const kids: Child[] = cd.children || [];
         setChildren(kids);
-        const today = new Date().toISOString().split('T')[0];
+        const today = centerDate();
         const map: Record<string, Entry[]> = {};
         await Promise.all(
           kids.map(async (c) => {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { centerDate } from '@/lib/center-time';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -104,7 +105,7 @@ export default function StaffDailyReportPage() {
       return;
     }
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = centerDate();
       const r = await fetch(
         `/api/child-entries?child_id=${encodeURIComponent(childId)}&date=${today}`,
         { cache: 'no-store' }
