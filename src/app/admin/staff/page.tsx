@@ -14,8 +14,8 @@ function initials(e: Employee): string {
   return `${(e.first_name || '?')[0]}${(e.last_name || '?')[0]}`.toUpperCase();
 }
 
-function colorForRole(title: string): string {
-  const t = title.toLowerCase();
+function colorForRole(title: string | null | undefined): string {
+  const t = (title || '').toLowerCase();
   if (t.includes('owner') || t.includes('director')) return 'bg-christina-red';
   if (t.includes('infant')) return 'bg-pink-500';
   if (t.includes('toddler')) return 'bg-blue-500';

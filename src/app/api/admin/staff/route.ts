@@ -150,6 +150,10 @@ export async function POST(request: NextRequest) {
 // The admin's browser saw the change in localStorage but the database did not,
 // so the new PIN never worked at login. Same root cause already fixed for
 // families. Body: { id?, email?, ...updates }. id wins; email is a fallback.
+// Only fields that exist as real columns on public.employees. permissions and
+// pageAccess live on the client Employee type but have no DB column yet, so
+// including them here would make Postgres reject the whole UPDATE with a 500.
+// Until those columns are added, the dialog continues to cache them locally.
 const UPDATABLE_FIELDS = new Set([
   'first_name',
   'last_name',
@@ -164,8 +168,6 @@ const UPDATABLE_FIELDS = new Set([
   'certifications',
   'emergency_contact_name',
   'emergency_contact_phone',
-  'permissions',
-  'pageAccess',
 ]);
 
 export async function PATCH(request: NextRequest) {
