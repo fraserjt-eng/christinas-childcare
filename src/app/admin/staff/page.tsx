@@ -58,6 +58,22 @@ export default function StaffDirectoryPage() {
     await load();
   }
 
+  async function handleDelete(emp: Employee) {
+    if (!emp.email) {
+      window.alert('Cannot delete: this employee has no email on file. Edit them, add an email, save, then try again.');
+      return;
+    }
+    const res = await fetch(`/api/admin/staff?email=${encodeURIComponent(emp.email)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      window.alert(data.error || 'Could not delete the employee.');
+      return;
+    }
+    await load();
+  }
+
   function openEdit(emp: Employee) {
     setEditing(emp);
     setDialogOpen(true);
@@ -172,6 +188,7 @@ export default function StaffDirectoryPage() {
         onOpenChange={setDialogOpen}
         employee={editing}
         onSave={handleSave}
+        onDelete={handleDelete}
       />
     </div>
   );

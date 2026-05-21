@@ -28,16 +28,24 @@ interface EditStaffDialogProps {
   onOpenChange: (open: boolean) => void;
   employee: Employee | null;
   onSave: (id: string, updates: Partial<Employee>) => Promise<void>;
+  onDelete?: (employee: Employee) => Promise<void>;
 }
 
-export function EditStaffDialog({ open, onOpenChange, employee, onSave }: EditStaffDialogProps) {
+export function EditStaffDialog({ open, onOpenChange, employee, onSave, onDelete }: EditStaffDialogProps) {
   const [form, setForm] = useState<Partial<Employee>>({});
   const [certInput, setCertInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  // PIN is intentionally NOT pre-filled from the employee record. Blank means
+  // "keep the existing PIN". Any 4-8 digit value replaces it on save.
+  const [newPin, setNewPin] = useState('');
+  const [pinError, setPinError] = useState('');
 
   useEffect(() => {
     if (employee) {
       setForm({ ...employee });
+      setNewPin('');
+      setPinError('');
     }
   }, [employee]);
 
@@ -73,9 +81,23 @@ export function EditStaffDialog({ open, onOpenChange, employee, onSave }: EditSt
 
   async function handleSave() {
     if (!employee) return;
+    setPinError('');
+    const pin = newPin.trim();
+    if (pin && !/^\d{4,8}$/.test(pin)) {
+      setPinError('PIN must be 4 to 8 digits.');
+      return;
+    }
     setSaving(true);
     try {
-      await onSave(employee.id, form);
+      // Only send the pin field when the admin actually typed a new one,
+      // so saving the dialog without touching the PIN does not overwrite it.
+      const updates: Partial<Employee> = { ...form };
+      if (pin) updates.pin = pin;
+      // Never leak the existing PIN back through the form payload when no
+      // change was requested; the dialog never displays it but the form
+      // state still carries the original value.
+      else delete updates.pin;
+      await onSave(employee.id, updates);
       onOpenChange(false);
     } finally {
       setSaving(false);
@@ -138,6 +160,32 @@ export function EditStaffDialog({ open, onOpenChange, employee, onSave }: EditSt
                   value={form.startDate || form.hire_date || ''}
                   onChange={(e) => update('startDate', e.target.value)}
                 />
+              </div>
+              <div className="col-span-2 rounded border bg-amber-50 p-3 space-y-2">
+                <Label htmlFor="new-pin" className="text-sm font-semibold">
+                  Login PIN
+                </Label>
+                <Input
+                  id="new-pin"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={8}
+                  placeholder="Leave blank to keep current PIN"
+                  value={newPin}
+                  onChange={(e) => {
+                    setNewPin(e.target.value.replace(/\D/g, ''));
+                    setPinError('');
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter a 4 to 8 digit PIN to replace this employee&apos;s login
+                  PIN. Leave blank if you only want to update other fields. The
+                  current PIN is never shown.
+                </p>
+                {pinError && (
+                  <p className="text-xs text-red-600">{pinError}</p>
+                )}
               </div>
             </div>
             <div>
@@ -251,14 +299,38 @@ export function EditStaffDialog({ open, onOpenChange, employee, onSave }: EditSt
           </section>
         </div>
 
-        <div className="flex gap-2 pt-4 border-t mt-6 sticky bottom-0 bg-background">
-          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+        <div className="flex flex-col gap-2 pt-4 border-t mt-6 sticky bottom-0 bg-background sm:flex-row">
+          {onDelete && (
+            <Button
+              variant="outline"
+              className="sm:order-first border-red-300 text-red-700 hover:bg-red-50"
+              onClick={async () => {
+                if (!employee) return;
+                const confirmed = window.confirm(
+                  `Permanently delete ${employee.first_name} ${employee.last_name}? ` +
+                  `This cannot be undone. Their PIN stops working immediately.`
+                );
+                if (!confirmed) return;
+                setDeleting(true);
+                try {
+                  await onDelete(employee);
+                  onOpenChange(false);
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+              disabled={saving || deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete Employee'}
+            </Button>
+          )}
+          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)} disabled={saving || deleting}>
             Cancel
           </Button>
           <Button
             className="flex-1 bg-christina-red hover:bg-christina-red/90"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || deleting}
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
