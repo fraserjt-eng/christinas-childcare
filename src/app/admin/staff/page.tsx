@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Users, Pencil } from 'lucide-react';
-import { getEmployees, updateEmployee } from '@/lib/employee-storage';
+import { getEmployees } from '@/lib/employee-storage';
 import type { Employee } from '@/types/employee';
 import { EditStaffDialog } from '@/components/admin/EditStaffDialog';
 
@@ -42,7 +42,19 @@ export default function StaffDirectoryPage() {
   }, []);
 
   async function handleSave(id: string, updates: Partial<Employee>) {
-    await updateEmployee(id, updates);
+    // PATCH server-side. The previous client path went through anon Supabase,
+    // which RLS silently denies for the employees table; PIN edits never
+    // persisted. The server route runs with the service role.
+    const res = await fetch('/api/admin/staff', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...updates }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      window.alert(data.error || 'Could not save changes.');
+      return;
+    }
     await load();
   }
 

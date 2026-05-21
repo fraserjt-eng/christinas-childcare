@@ -715,6 +715,35 @@ export default function UsersPage() {
       return;
     }
 
+    // PATCH the live employees table server-side so PIN/role/profile edits
+    // actually persist. The previous edit path only wrote to localStorage, so
+    // PIN changes silently failed at login. Use email_lookup so a rename is
+    // unambiguous (email_lookup = old, email = new).
+    const patchBody: Record<string, unknown> = {
+      email_lookup: editingUser.email,
+      email: formData.email,
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      phone: formData.phone,
+      role: formData.role,
+    };
+    if (formData.pin) patchBody.pin = formData.pin;
+    try {
+      const r = await fetch('/api/admin/staff', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patchBody),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setFormError(d.error || 'Could not update the staff member.');
+        return;
+      }
+    } catch {
+      setFormError('Connection error. Please try again.');
+      return;
+    }
+
     updateUser(editingUser.id, {
       first_name: formData.first_name,
       last_name: formData.last_name,
