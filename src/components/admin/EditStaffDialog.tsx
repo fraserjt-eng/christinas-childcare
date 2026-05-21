@@ -307,8 +307,10 @@ export function EditStaffDialog({ open, onOpenChange, employee, onSave, onDelete
               onClick={async () => {
                 if (!employee) return;
                 const confirmed = window.confirm(
-                  `Permanently delete ${employee.first_name} ${employee.last_name}? ` +
-                  `This cannot be undone. Their PIN stops working immediately.`
+                  `Remove ${employee.first_name} ${employee.last_name} from active staff?\n\n` +
+                  `Their PIN stops working immediately. Their history (time entries, ` +
+                  `attendance, pay stubs, training records) stays intact for ` +
+                  `compliance. You can reactivate them from the Inactive section later.`
                 );
                 if (!confirmed) return;
                 setDeleting(true);
@@ -321,7 +323,7 @@ export function EditStaffDialog({ open, onOpenChange, employee, onSave, onDelete
               }}
               disabled={saving || deleting}
             >
-              {deleting ? 'Deleting...' : 'Delete Employee'}
+              {deleting ? 'Removing...' : 'Remove Employee'}
             </Button>
           )}
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)} disabled={saving || deleting}>

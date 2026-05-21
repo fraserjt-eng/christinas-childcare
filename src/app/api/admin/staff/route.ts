@@ -316,8 +316,14 @@ export async function PATCH(request: NextRequest) {
   return NextResponse.json({ ok: true, employee: updated });
 }
 
-// Permanently delete a staff member (their PIN stops working immediately).
-// ?email=<staff email>
+// Remove a staff member from active duty. Their PIN stops working immediately
+// (the PIN auth query filters employment_status='active'), they drop off the
+// active staff grid, and their history (time entries, attendance, pay stubs,
+// training records, HR documents, photos, communications) is preserved for
+// childcare compliance. Hard delete is intentionally NOT supported here: 11
+// of 13 foreign keys to employees are ON DELETE NO ACTION, so a real DELETE
+// would either fail with a constraint violation or orphan compliance-critical
+// rows. ?email=<staff email>
 export async function DELETE(request: NextRequest) {
   const session = await requireSession('admin');
   if (!session) {
@@ -336,17 +342,23 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
 
-  const { error } = await supabase
+  // Soft delete: deactivate. PIN auth already filters on active, so the PIN
+  // stops working at the door without touching any referencing rows.
+  const { data, error } = await supabase
     .from('employees')
-    .delete()
-    .ilike('email', email);
+    .update({
+      employment_status: 'inactive',
+      updated_at: new Date().toISOString(),
+    })
+    .ilike('email', email)
+    .select('id, first_name, last_name, employment_status');
 
-  if (error) {
+  if (error || !data || data.length === 0) {
     return NextResponse.json(
-      { error: 'Could not delete the staff member' },
-      { status: 500 }
+      { error: error ? 'Could not deactivate the staff member' : 'Staff member not found' },
+      { status: error ? 500 : 404 }
     );
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, deactivated: data });
 }

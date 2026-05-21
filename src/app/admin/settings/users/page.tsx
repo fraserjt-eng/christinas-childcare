@@ -766,17 +766,20 @@ export default function UsersPage() {
     refreshUsers();
   };
 
-  // Permanent delete. Families and staff live in the database, so this calls
-  // the server; staff also get removed from the local list.
+  // Remove user. Families are hard-deleted (they have no compliance history
+  // to preserve in this table). Staff are soft-deleted (deactivated) by the
+  // server so attendance, time entries, pay stubs, training and HR records
+  // stay intact for childcare compliance. Either way the PIN stops working
+  // immediately.
   const handleDeleteUser = async (user: DirectoryRow) => {
-    const label = user.isFamily
-      ? `the ${user.first_name} ${user.last_name} family and their children`
-      : `${user.first_name} ${user.last_name}`;
-    if (
-      !window.confirm(
-        `Permanently delete ${label}? This cannot be undone. Their PIN stops working immediately.`
-      )
-    ) {
+    const prompt = user.isFamily
+      ? `Permanently delete the ${user.first_name} ${user.last_name} family and their children? ` +
+        `This cannot be undone. Their PIN stops working immediately.`
+      : `Remove ${user.first_name} ${user.last_name} from active staff?\n\n` +
+        `Their PIN stops working immediately. Their history (time entries, ` +
+        `attendance, pay stubs, training records) stays intact for compliance. ` +
+        `You can reactivate them later from the Staff Directory's Inactive section.`;
+    if (!window.confirm(prompt)) {
       return;
     }
     try {
