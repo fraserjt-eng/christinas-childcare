@@ -83,6 +83,12 @@ export default function AdminPayrollPage() {
   const [newRate, setNewRate] = useState<string>('');
   const [selectedStub, setSelectedStub] = useState<PayStub | null>(null);
 
+  // Only currently-employed staff appear in payroll selection lists, rate
+  // management, and the next-pay-period preview. Their historical time
+  // entries and pay stubs are still resolved by name elsewhere via the full
+  // employees list, so audit/reporting surfaces stay intact.
+  const activeEmployees = employees.filter((e) => e.employment_status === 'active');
+
   async function fetchPayrollData() {
     const r = await fetch('/api/admin/payroll-data', { cache: 'no-store' });
     if (!r.ok) return null;
@@ -196,7 +202,9 @@ export default function AdminPayrollPage() {
 
     const [periodStart, periodEnd] = selectedPeriod.split('|');
 
-    for (const employee of employees) {
+    // Only process currently-employed staff. Terminated employees keep their
+    // historical pay stubs; new stubs are only generated for active staff.
+    for (const employee of activeEmployees) {
       // Get time entries for this employee and period
       const empEntries = timeEntries.filter(
         (e) =>
@@ -290,7 +298,7 @@ export default function AdminPayrollPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Employees</p>
-                <p className="text-xl font-bold">{employees.length}</p>
+                <p className="text-xl font-bold">{activeEmployees.length}</p>
               </div>
             </div>
           </CardContent>
@@ -372,7 +380,7 @@ export default function AdminPayrollPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Employees</SelectItem>
-                      {employees.map((emp) => (
+                      {activeEmployees.map((emp) => (
                         <SelectItem key={emp.id} value={emp.id}>
                           {getEmployeeFullName(emp)}
                         </SelectItem>
@@ -462,7 +470,7 @@ export default function AdminPayrollPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employees.map((emp) => (
+                  {activeEmployees.map((emp) => (
                     <TableRow key={emp.id}>
                       <TableCell className="font-medium">
                         {getEmployeeFullName(emp)}
@@ -516,7 +524,7 @@ export default function AdminPayrollPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Employees</SelectItem>
-                    {employees.map((emp) => (
+                    {activeEmployees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
                         {getEmployeeFullName(emp)}
                       </SelectItem>
@@ -648,7 +656,7 @@ export default function AdminPayrollPage() {
                 <div className="space-y-4">
                   <h3 className="font-medium">Preview: Payroll for Selected Period</h3>
                   <div className="grid gap-3">
-                    {employees.map((emp) => {
+                    {activeEmployees.map((emp) => {
                       const [periodStart, periodEnd] = selectedPeriod.split('|');
                       const empEntries = timeEntries.filter(
                         (e) =>
