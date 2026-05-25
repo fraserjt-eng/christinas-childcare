@@ -26,6 +26,7 @@ import {
   UtensilsCrossed,
   Camera,
   ClipboardList,
+  SquareKanban,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -593,6 +594,17 @@ export default function EmployeeDashboardPage() {
             />
           );
 
+          const batchTile = (
+            <HomeTile
+              key="batch"
+              href="/employee/batch-entry"
+              icon={SquareKanban}
+              label="Batch Entry"
+              bgColor="bg-violet-600"
+              subtitle="Log the whole class"
+            />
+          );
+
           const mealTile = (
             <HomeTile
               key="meal"
@@ -652,13 +664,13 @@ export default function EmployeeDashboardPage() {
           let tiles;
           switch (zone) {
             case 'opening':
-              tiles = [clockTile, dailyTile, scheduleTile, mealTile, chatTile, photoTile, trainingTile];
+              tiles = [clockTile, dailyTile, batchTile, scheduleTile, mealTile, chatTile, photoTile, trainingTile];
               break;
             case 'core':
-              tiles = [dailyTile, clockTile, mealTile, photoTile, chatTile, scheduleTile, trainingTile];
+              tiles = [dailyTile, batchTile, clockTile, mealTile, photoTile, chatTile, scheduleTile, trainingTile];
               break;
             case 'closing':
-              tiles = [clockTile, dailyTile, chatTile, mealTile, scheduleTile, photoTile, trainingTile];
+              tiles = [clockTile, dailyTile, batchTile, chatTile, mealTile, scheduleTile, photoTile, trainingTile];
               break;
           }
 

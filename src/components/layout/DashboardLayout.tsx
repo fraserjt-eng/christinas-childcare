@@ -139,6 +139,7 @@ const employeeNav: NavItem[] = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/employee', label: 'Clock In/Out', icon: Clock },
   { href: '/employee/daily-report', label: 'Daily Report', icon: ClipboardList },
+  { href: '/employee/batch-entry', label: 'Batch Entry', icon: SquareKanban },
   { href: '/employee/meal-count', label: 'Meal Count', icon: UtensilsCrossed },
   { href: '/employee/photos', label: 'Upload Photos', icon: Camera },
   { href: '/employee/nap-tasks', label: 'Nap Time Tasks', icon: Clock },
