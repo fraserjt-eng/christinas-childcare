@@ -8,8 +8,9 @@ import { checkAIRateLimit, rateLimitedResponse } from '@/lib/ai-rate-limit';
 import { checkDailyQuota, recordTokenUsage, estimateTokens } from '@/lib/ai-usage-storage';
 
 export async function POST(request: Request): Promise<NextResponse> {
-  // Admin-only: require auth_session cookie
-  const session = await requireSession();
+  // Admin-only: require auth_session cookie with admin+ role (this triggers a
+  // paid AI research pass, so a valid parent/teacher session must not run it).
+  const session = await requireSession('admin');
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
