@@ -20,13 +20,6 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Upload, Download, Check, X } from 'lucide-react';
-import { createFamily } from '@/lib/family-storage';
-import {
-  generateParentId,
-  generateChildId,
-  FamilyParent,
-  FamilyChild,
-} from '@/types/family';
 
 // ============================================================================
 // CSV Template
@@ -187,44 +180,34 @@ async function importFamilyGroups(
       continue;
     }
 
-    const validRelationship = ['mother', 'father', 'guardian', 'other'].includes(
-      group.relationship.toLowerCase()
-    )
-      ? (group.relationship.toLowerCase() as FamilyParent['relationship'])
-      : 'guardian';
-
-    const parent: FamilyParent = {
-      id: generateParentId(),
-      name: group.parentName,
-      email: group.parentEmail,
-      phone: group.parentPhone,
-      relationship: validRelationship,
-      is_primary: true,
-    };
-
-    const children: FamilyChild[] = group.children.map((c) => ({
-      id: generateChildId(),
-      name: c.name,
-      date_of_birth: c.dob,
-      classroom: c.program || undefined,
-      allergies: c.allergies
-        ? c.allergies.split(';').map((a) => a.trim()).filter(Boolean)
-        : [],
-      emergency_contacts: [],
-    }));
-
+    // Write through the admin service-role route (anon writes to families were
+    // denied by migration 017 + the fortress lockdown, which is why imports
+    // silently failed before). The server allocates a kiosk PIN and dedupes.
     try {
-      await createFamily({
-        email: group.parentEmail,
-        password_hash: '',
-        status: 'active',
-        parents: [parent],
-        children,
+      const res = await fetch('/api/admin/family', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: group.parentEmail,
+          parentName: group.parentName,
+          parentPhone: group.parentPhone,
+          children: group.children.map((c) => ({
+            name: c.name,
+            date_of_birth: c.dob || undefined,
+            classroom: c.program || undefined,
+          })),
+        }),
       });
-      imported++;
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.ok) {
+        imported++;
+      } else {
+        skipped++;
+        reasons.push(`${group.parentName || group.parentEmail}: ${json.error || 'failed to save'}`);
+      }
     } catch {
       skipped++;
-      reasons.push(`${group.parentName}: failed to save`);
+      reasons.push(`${group.parentName || group.parentEmail}: failed to save`);
     }
   }
 
