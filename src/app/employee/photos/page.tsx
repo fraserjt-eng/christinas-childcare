@@ -14,7 +14,7 @@ import {
   ImagePlus,
   Loader2,
 } from 'lucide-react';
-import { createPhoto, ACTIVITY_LABELS, ActivityType } from '@/lib/photo-storage';
+import { ACTIVITY_LABELS, ActivityType } from '@/lib/photo-storage';
 import { getClassrooms } from '@/lib/food-storage';
 import { Classroom } from '@/types/food';
 
@@ -47,6 +47,7 @@ export default function EmployeePhotosPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [uploadCount, setUploadCount] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Load classrooms ────────────────────────────────────────────────────────
@@ -112,30 +113,39 @@ export default function EmployeePhotosPage() {
     if (drafts.length === 0 || !selectedClassroomId) return;
 
     setSubmitting(true);
+    setErrorMsg('');
 
     const classroom = classrooms.find((c) => c.id === selectedClassroomId);
-    const classroomName = classroom?.name || 'Unknown Classroom';
+    const classroomName = classroom?.name || '';
 
     try {
-      await Promise.all(
-        drafts.map((draft) =>
-          createPhoto({
-            classroom_id: selectedClassroomId,
-            classroom_name: classroomName,
-            employee_id: 'demo-employee-1',
-            employee_name: 'Demo Employee',
-            photo_url: draft.previewUrl,
-            caption: draft.caption || undefined,
+      // Service-role API: uploads to storage and tags the classroom's children
+      // so the owner can approve and parents can then see the photos. The signed-in
+      // staff member is taken from the session server-side.
+      const res = await fetch('/api/employee/photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classroom_id: selectedClassroomId,
+          classroom_name: classroomName,
+          photos: drafts.map((draft) => ({
+            photo_data: draft.previewUrl,
             activity_type: draft.activityType,
-          })
-        )
-      );
+            caption: draft.caption || undefined,
+          })),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || 'Upload failed. Please try again.');
+      }
 
-      setUploadCount(drafts.length);
+      setUploadCount(json.count ?? drafts.length);
       setDrafts([]);
       setSubmitted(true);
     } catch (err) {
       console.error('Error uploading photos:', err);
+      setErrorMsg(err instanceof Error ? err.message : 'Upload failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -337,6 +347,12 @@ export default function EmployeePhotosPage() {
             </>
           )}
         </Button>
+      )}
+
+      {errorMsg && (
+        <p className="text-sm text-christina-coral text-center" role="alert">
+          {errorMsg}
+        </p>
       )}
     </div>
   );

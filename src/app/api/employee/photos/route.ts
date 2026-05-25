@@ -1,0 +1,135 @@
+export const runtime = 'nodejs';
+
+import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/require-auth';
+import { getServerSupabase } from '@/lib/supabase/server';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function uuidOrNull(v: unknown): string | null {
+  return typeof v === 'string' && UUID.test(v) ? v : null;
+}
+
+// POST: staff upload one or more photos for a classroom.
+// Service-role path (the old client path uploaded via the anon key, which the
+// storage + daily_photos policies deny, so nothing ever saved). Each photo is
+// uploaded to child_photos and written to daily_photos as 'pending', tagged to
+// the classroom's children so the owner can approve and parents can then see it.
+export async function POST(request: Request): Promise<NextResponse> {
+  const session = await requireSession('teacher');
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const classroomId = uuidOrNull(body.classroom_id);
+  const classroomName =
+    typeof body.classroom_name === 'string' ? body.classroom_name.slice(0, 120) : null;
+  const photos = Array.isArray(body.photos) ? body.photos : [];
+
+  if (photos.length === 0) {
+    return NextResponse.json({ error: 'No photos provided' }, { status: 400 });
+  }
+  if (photos.length > 10) {
+    return NextResponse.json({ error: 'Too many photos at once (max 10)' }, { status: 400 });
+  }
+
+  // Resolve the classroom's children once so every photo reaches those families.
+  // Children link to a classroom by the text `classroom` field (the room name).
+  let childIds: string[] = [];
+  if (classroomName) {
+    const { data: kids } = await supabase
+      .from('family_children')
+      .select('id, classroom')
+      .limit(5000);
+    childIds = (kids ?? [])
+      .filter((k) => ((k.classroom as string | null) ?? null) === classroomName)
+      .map((k) => k.id as string);
+  }
+
+  const employeeId = uuidOrNull(session.user.id);
+  const employeeName = session.user.full_name || session.user.email || 'Staff';
+
+  const saved: string[] = [];
+  for (const p of photos) {
+    const dataUrl = typeof p.photo_data === 'string' ? p.photo_data : '';
+    if (!dataUrl.startsWith('data:')) continue;
+    try {
+      const commaIdx = dataUrl.indexOf(',');
+      const meta = dataUrl.slice(5, commaIdx); // after "data:"
+      const contentType = (meta.split(';')[0] || 'image/jpeg').trim();
+      const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+      const buffer = Buffer.from(dataUrl.slice(commaIdx + 1), 'base64');
+      const path = `gallery/${classroomId ?? 'room'}/${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}.${ext}`;
+
+      const { error: upErr } = await supabase.storage
+        .from('child_photos')
+        .upload(path, buffer, { contentType, upsert: false });
+      if (upErr) continue;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('child_photos').getPublicUrl(path);
+
+      const { data: row, error: insErr } = await supabase
+        .from('daily_photos')
+        .insert({
+          classroom_id: classroomId,
+          classroom_name: classroomName,
+          employee_id: employeeId,
+          employee_name: employeeName,
+          photo_url: publicUrl,
+          caption: typeof p.caption === 'string' ? p.caption.slice(0, 200) : null,
+          activity_type: typeof p.activity_type === 'string' ? p.activity_type : 'other',
+          status: 'pending',
+          child_ids: childIds,
+        })
+        .select('id')
+        .single();
+
+      if (!insErr && row) saved.push(row.id as string);
+    } catch {
+      /* skip this one, keep going with the rest */
+    }
+  }
+
+  if (saved.length === 0) {
+    return NextResponse.json(
+      { error: 'No photos could be saved. Please try again.' },
+      { status: 502 }
+    );
+  }
+
+  return NextResponse.json(
+    { ok: true, count: saved.length, taggedChildren: childIds.length },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
+}
+
+// GET: the most recent photos, so staff can confirm what they just posted shows up.
+export async function GET(): Promise<NextResponse> {
+  const session = await requireSession('teacher');
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
+  }
+
+  const { data } = await supabase
+    .from('daily_photos')
+    .select('id, photo_url, caption, activity_type, status, classroom_name, created_at')
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  return NextResponse.json(
+    { photos: data ?? [] },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
+}

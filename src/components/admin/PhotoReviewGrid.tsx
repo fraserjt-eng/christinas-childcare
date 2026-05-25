@@ -13,9 +13,6 @@ import {
   ImageOff,
 } from 'lucide-react';
 import {
-  getPhotos,
-  updatePhotoStatus,
-  bulkUpdateStatus,
   DailyPhoto,
   PhotoStatus,
   ACTIVITY_LABELS,
@@ -73,8 +70,12 @@ export function PhotoReviewGrid() {
     setLoading(true);
     setSelected(new Set());
     try {
-      const results = await getPhotos({ date: formatDateParam(selectedDate) });
-      setPhotos(results);
+      const res = await fetch(
+        `/api/admin/photos?date=${formatDateParam(selectedDate)}`,
+        { cache: 'no-store' }
+      );
+      const json = await res.json().catch(() => ({ photos: [] }));
+      setPhotos((json.photos ?? []) as DailyPhoto[]);
     } catch (err) {
       console.error('Error loading photos:', err);
     } finally {
@@ -130,7 +131,11 @@ export function PhotoReviewGrid() {
   async function handleSingleUpdate(id: string, status: PhotoStatus) {
     setUpdatingIds((prev) => new Set(prev).add(id));
     try {
-      await updatePhotoStatus(id, status, 'admin');
+      await fetch('/api/admin/photos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [id], status }),
+      });
       setPhotos((prev) =>
         prev.map((p) =>
           p.id === id
@@ -164,7 +169,11 @@ export function PhotoReviewGrid() {
     setUpdatingIds((prev) => new Set([...Array.from(prev), ...ids]));
 
     try {
-      await bulkUpdateStatus(ids, status, 'admin');
+      await fetch('/api/admin/photos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, status }),
+      });
       setPhotos((prev) =>
         prev.map((p) =>
           ids.includes(p.id)
