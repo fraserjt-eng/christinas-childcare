@@ -434,7 +434,7 @@ export default function AdminDashboard() {
         if (!r.ok) return;
         const d = await r.json();
         const meals = d?.meals || {};
-        const served = (['breakfast', 'am_snack', 'lunch', 'pm_snack'] as const)
+        const served = (['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'] as const)
           .reduce((s, k) => s + (meals[k]?.child_count || 0), 0);
         setSnapshot((prev) => ({ ...prev, mealsServed: served }));
       } catch {

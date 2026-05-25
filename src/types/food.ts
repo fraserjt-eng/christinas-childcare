@@ -5,7 +5,24 @@
 // Food Count Types (CACFP Reporting)
 // ============================================================================
 
-export type MealType = 'breakfast' | 'am_snack' | 'lunch' | 'pm_snack';
+export type MealType =
+  | 'breakfast'
+  | 'am_snack'
+  | 'lunch'
+  | 'pm_snack'
+  | 'supper'
+  | 'evening_snack';
+
+// Canonical ordered list of meal types. Import this instead of hardcoding the
+// array so that adding a meal type happens in exactly one place.
+export const MEAL_TYPES: MealType[] = [
+  'breakfast',
+  'am_snack',
+  'lunch',
+  'pm_snack',
+  'supper',
+  'evening_snack',
+];
 
 export interface FoodCount {
   id: string;
@@ -29,6 +46,8 @@ export const CACFP_RATES: Record<MealType, number> = {
   am_snack: 0.97,
   lunch: 3.91,
   pm_snack: 0.97,
+  supper: 3.91,
+  evening_snack: 0.97,
 };
 
 // Meal count deadlines (hour of day in 24h format)
@@ -37,6 +56,8 @@ export const MEAL_DEADLINES: Record<MealType, { hour: number; minute: number }> 
   am_snack: { hour: 10, minute: 30 },
   lunch: { hour: 13, minute: 0 },
   pm_snack: { hour: 15, minute: 30 },
+  supper: { hour: 18, minute: 30 },
+  evening_snack: { hour: 20, minute: 0 },
 };
 
 // Meal reminder config
@@ -289,6 +310,8 @@ export const MEAL_TYPE_LABELS: Record<MealType, string> = {
   am_snack: 'AM Snack',
   lunch: 'Lunch',
   pm_snack: 'PM Snack',
+  supper: 'Supper',
+  evening_snack: 'Evening Snack',
 };
 
 // Inventory category display names

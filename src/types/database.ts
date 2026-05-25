@@ -82,7 +82,7 @@ export interface FoodCount {
   id: string;
   classroom_id: string;
   date: string;
-  meal_type: 'breakfast' | 'am_snack' | 'lunch' | 'pm_snack';
+  meal_type: 'breakfast' | 'am_snack' | 'lunch' | 'pm_snack' | 'supper' | 'evening_snack';
   count: number;
   recorded_by: string;
 }

@@ -24,7 +24,7 @@ export function QuickMealEntry({ mealType, onComplete }: QuickMealEntryProps) {
   const [activeMeal, setActiveMeal] = useState<MealType>(mealType || 'lunch');
 
   const today = new Date().toISOString().split('T')[0];
-  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
+  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'];
 
   useEffect(() => {
     async function load() {

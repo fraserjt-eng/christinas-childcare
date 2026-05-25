@@ -47,6 +47,8 @@ export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
           am_snack: { children: 0, adults: 0 },
           lunch: { children: 0, adults: 0 },
           pm_snack: { children: 0, adults: 0 },
+          supper: { children: 0, adults: 0 },
+          evening_snack: { children: 0, adults: 0 },
         };
       }
 
@@ -119,7 +121,7 @@ export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
       const updated = { ...prev };
       for (const classroom of classrooms) {
         const estimate = Math.round(classroom.capacity * 0.85);
-        for (const meal of ['breakfast', 'am_snack', 'lunch', 'pm_snack'] as MealType[]) {
+        for (const meal of ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'] as MealType[]) {
           updated[classroom.id] = {
             ...updated[classroom.id],
             [meal]: {
@@ -141,7 +143,7 @@ export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
     setCounts((prev) => {
       const updated = { ...prev };
       for (const classroom of classrooms) {
-        for (const meal of ['breakfast', 'am_snack', 'lunch', 'pm_snack'] as MealType[]) {
+        for (const meal of ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'] as MealType[]) {
           updated[classroom.id] = {
             ...updated[classroom.id],
             [meal]: {
@@ -184,7 +186,7 @@ export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
 
     try {
       for (const classroom of classrooms) {
-        for (const mealType of ['breakfast', 'am_snack', 'lunch', 'pm_snack'] as MealType[]) {
+        for (const mealType of ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'] as MealType[]) {
           const countData = counts[classroom.id]?.[mealType];
           if (countData && (countData.children > 0 || countData.adults > 0)) {
             await upsertFoodCount({
@@ -209,7 +211,7 @@ export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
     }
   };
 
-  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
+  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'];
 
   // Calculate totals
   const totals: Record<MealType, { children: number; adults: number }> = {
@@ -217,6 +219,8 @@ export function FoodCountGrid({ date, onSave }: FoodCountGridProps) {
     am_snack: { children: 0, adults: 0 },
     lunch: { children: 0, adults: 0 },
     pm_snack: { children: 0, adults: 0 },
+    supper: { children: 0, adults: 0 },
+    evening_snack: { children: 0, adults: 0 },
   };
 
   for (const classroom of classrooms) {

@@ -373,6 +373,8 @@ export async function getDailyFoodSummary(date: string): Promise<DailyFoodSummar
         am_snack: { children: 0, adults: 0 },
         lunch: { children: 0, adults: 0 },
         pm_snack: { children: 0, adults: 0 },
+        supper: { children: 0, adults: 0 },
+        evening_snack: { children: 0, adults: 0 },
       },
       total_meals_served: 0,
     };
@@ -400,12 +402,14 @@ export async function getCACFPDailyReport(date: string): Promise<CACFPDailyRepor
     am_snack: { children: 0, adults: 0 },
     lunch: { children: 0, adults: 0 },
     pm_snack: { children: 0, adults: 0 },
+    supper: { children: 0, adults: 0 },
+    evening_snack: { children: 0, adults: 0 },
   };
 
   let grandTotal = 0;
 
   for (const summary of summaries) {
-    for (const mealType of ['breakfast', 'am_snack', 'lunch', 'pm_snack'] as MealType[]) {
+    for (const mealType of ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'] as MealType[]) {
       totals[mealType].children += summary.counts[mealType].children;
       totals[mealType].adults += summary.counts[mealType].adults;
       grandTotal += summary.counts[mealType].children + summary.counts[mealType].adults;
@@ -436,12 +440,14 @@ export async function getCACFPMonthlyReport(month: string): Promise<CACFPMonthly
     am_snack: 0,
     lunch: 0,
     pm_snack: 0,
+    supper: 0,
+    evening_snack: 0,
   };
   let grandTotal = 0;
 
   for (const count of counts) {
     if (!dailyTotals[count.date]) {
-      dailyTotals[count.date] = { breakfast: 0, am_snack: 0, lunch: 0, pm_snack: 0 };
+      dailyTotals[count.date] = { breakfast: 0, am_snack: 0, lunch: 0, pm_snack: 0, supper: 0, evening_snack: 0 };
     }
     const mealCount = count.child_count + count.adult_count;
     dailyTotals[count.date][count.meal_type] += mealCount;
@@ -821,6 +827,8 @@ export async function getFoodProjection(period: 'week' | 'month'): Promise<FoodP
     am_snack: 0,
     lunch: 0,
     pm_snack: 0,
+    supper: 0,
+    evening_snack: 0,
   };
 
   const datesWithData = new Set<string>();
@@ -837,6 +845,8 @@ export async function getFoodProjection(period: 'week' | 'month'): Promise<FoodP
     am_snack: Math.round((mealTotals.am_snack / historicalDays) * daysToProject),
     lunch: Math.round((mealTotals.lunch / historicalDays) * daysToProject),
     pm_snack: Math.round((mealTotals.pm_snack / historicalDays) * daysToProject),
+    supper: Math.round((mealTotals.supper / historicalDays) * daysToProject),
+    evening_snack: Math.round((mealTotals.evening_snack / historicalDays) * daysToProject),
   };
 
   const totalProjectedMeals = Object.values(projectedMeals).reduce((a, b) => a + b, 0);
@@ -1091,7 +1101,7 @@ export async function seedFoodData(): Promise<{
       // Random counts based on classroom capacity
       const baseCount = Math.floor(classroom.capacity * 0.7);
 
-      for (const mealType of ['breakfast', 'am_snack', 'lunch', 'pm_snack'] as MealType[]) {
+      for (const mealType of ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'] as MealType[]) {
         const variance = Math.floor(Math.random() * 4) - 2;
         const childCount = Math.max(0, baseCount + variance);
 
@@ -1147,7 +1157,7 @@ export async function getMissingMealCounts(date: string): Promise<{
   const counts = await getFoodCounts({ date });
 
   const missing: { classroom_id: string; classroom_name: string; meal_type: MealType }[] = [];
-  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
+  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'];
 
   for (const classroom of classrooms) {
     for (const mealType of mealTypes) {
@@ -1180,7 +1190,7 @@ export async function getMealComplianceSummary(month: string): Promise<MealCompl
   const counts = await getFoodCounts({ startDate, endDate });
   const classrooms = await getClassrooms({ active_only: true });
 
-  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
+  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'];
 
   // Count weekdays up to today (or end of month)
   let weekdays = 0;

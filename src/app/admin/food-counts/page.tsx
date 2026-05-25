@@ -85,7 +85,7 @@ export default function FoodCountsPage() {
 
   const isToday = selectedDate === new Date().toISOString().split('T')[0];
 
-  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
+  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'];
 
   const handleQuickEntry = (mealType: MealType) => {
     setQuickEntryMeal(mealType);
@@ -303,7 +303,7 @@ function CACFPReportsView() {
     loadReport();
   }, [selectedMonth]);
 
-  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
+  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'];
 
   return (
     <div className="space-y-4">

@@ -42,7 +42,7 @@ export default function MenuPlanningPage() {
     setLoading(false);
   };
 
-  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
+  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'];
 
   return (
     <div className="space-y-6">

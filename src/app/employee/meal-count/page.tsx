@@ -116,7 +116,7 @@ export default function EmployeeMealCountPage() {
     setAdultCount(1);
   };
 
-  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack'];
+  const mealTypes: MealType[] = ['breakfast', 'am_snack', 'lunch', 'pm_snack', 'supper', 'evening_snack'];
 
   if (loading) {
     return (
