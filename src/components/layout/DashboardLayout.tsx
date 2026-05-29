@@ -10,7 +10,8 @@ import {
   DollarSign, UserCheck, ShieldCheck, MessageSquare, SquareKanban, Wallet,
   CreditCard, CalendarDays, UserCog, Briefcase, Package, CalendarRange, CalendarPlus,
   Newspaper, ChevronDown, type LucideIcon,
-  Settings, ListTodo, AlertTriangle, Mail, UserPlus, Presentation, Bell, Brain
+  Settings, ListTodo, AlertTriangle, Mail, UserPlus, Presentation, Bell, Brain,
+  LifeBuoy, Inbox
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -21,6 +22,8 @@ import { logoutFamily } from '@/lib/family-storage';
 import { useSessionUser, initialsFrom, roleLabel, type SessionUser } from '@/lib/use-session-user';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { PortalSwitcher } from '@/components/layout/PortalSwitcher';
+import { ReportIssueButton } from '@/components/support/ReportIssueButton';
+import { HelpdeskNavBadge } from '@/components/support/HelpdeskNavBadge';
 import { useRole } from '@/hooks/useRole';
 import { Suspense } from 'react';
 import { useTourLauncher } from '@/hooks/useTourLauncher';
@@ -50,6 +53,7 @@ const parentNav: NavItem[] = [
   { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
   { href: '/training', label: 'Training', icon: GraduationCap },
   { href: '/guide', label: 'Help & Guide', icon: BookOpen },
+  { href: '/dashboard/support', label: 'Report an Issue', icon: LifeBuoy },
 ];
 
 const adminNavGroups: NavGroup[] = [
@@ -130,6 +134,8 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/settings', label: 'Settings', icon: Settings },
       { href: '/admin/settings/ai', label: 'AI Settings', icon: Brain },
       { href: '/admin/settings/backup', label: 'Backup & Restore', icon: ShieldCheck },
+      { href: '/admin/helpdesk', label: 'Helpdesk', icon: Inbox },
+      { href: '/admin/support', label: 'Report an Issue', icon: LifeBuoy },
       { href: '/guide', label: 'Help & Guide', icon: BookOpen },
     ],
   },
@@ -155,6 +161,7 @@ const employeeNav: NavItem[] = [
   { href: '/training', label: 'Platform Training', icon: Target },
   { href: '/admin/messaging', label: 'Staff Chat', icon: MessageSquare },
   { href: '/guide', label: 'Help & Guide', icon: BookOpen },
+  { href: '/employee/support', label: 'Report an Issue', icon: LifeBuoy },
 ];
 
 function NavSection({ items, label }: { items: NavItem[]; label: string }) {
@@ -448,6 +455,8 @@ export function DashboardLayout({ children, isAdmin = false, isEmployee = false 
           </Sheet>
           <div className="flex items-center gap-2">
             <PortalSwitcher isAdmin={isAdmin} isEmployee={isEmployee} />
+            <ReportIssueButton />
+            {isAdmin && <HelpdeskNavBadge />}
             {(isAdmin || isEmployee) && <NotificationBell />}
           </div>
         </header>
