@@ -1,0 +1,7 @@
+'use client';
+
+import { SupportPageBody } from '@/components/support/SupportPageBody';
+
+export default function ParentSupportPage() {
+  return <SupportPageBody />;
+}
