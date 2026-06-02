@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { centerDate } from '@/lib/center-time';
+import { centerDate, shiftCenterDate } from '@/lib/center-time';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,10 @@ import {
   Camera,
   AlertTriangle,
   StickyNote,
+  Pencil,
+  Trash2,
+  Lock,
+  X,
 } from 'lucide-react';
 import { useCurrentEmployee } from '@/lib/use-current-employee';
 
@@ -34,6 +38,17 @@ interface Entry {
   type: string;
   detail: Record<string, unknown>;
   occurred_at: string;
+  updated_at?: string | null;
+}
+
+// Staff may correct these everyday types within 48h. Medication + incident are
+// admin-only (the server enforces this too; here it just shows the lock).
+const STAFF_EDITABLE = ['note', 'nap', 'meal', 'bathroom', 'diaper', 'activity', 'photo'];
+const EDIT_WINDOW_MS = 48 * 60 * 60 * 1000;
+function canStaffEdit(e: Entry): boolean {
+  if (!STAFF_EDITABLE.includes(e.type)) return false;
+  const occurred = new Date(e.occurred_at).getTime();
+  return !!occurred && Date.now() - occurred <= EDIT_WINDOW_MS;
 }
 
 const TYPES = [
@@ -75,6 +90,14 @@ export default function StaffDailyReportPage() {
   const [loadingRoster, setLoadingRoster] = useState(true);
   const [error, setError] = useState('');
   const [rosterError, setRosterError] = useState(false);
+  const [viewDate, setViewDate] = useState<'today' | 'yesterday'>('today');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editNote, setEditNote] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [editNapStart, setEditNapStart] = useState('');
+  const [editNapEnd, setEditNapEnd] = useState('');
+  const [rowBusy, setRowBusy] = useState<string | null>(null);
+  const [rowError, setRowError] = useState('');
 
   const loadRoster = useCallback(async () => {
     setLoadingRoster(true);
@@ -104,10 +127,11 @@ export default function StaffDailyReportPage() {
       setTodayEntries([]);
       return;
     }
+    setEditingId(null);
+    const date = viewDate === 'today' ? centerDate() : shiftCenterDate(centerDate(), -1);
     try {
-      const today = centerDate();
       const r = await fetch(
-        `/api/child-entries?child_id=${encodeURIComponent(childId)}&date=${today}`,
+        `/api/child-entries?child_id=${encodeURIComponent(childId)}&date=${date}`,
         { cache: 'no-store' }
       );
       if (r.ok) {
@@ -119,7 +143,7 @@ export default function StaffDailyReportPage() {
     } catch {
       setTodayEntries([]);
     }
-  }, [childId]);
+  }, [childId, viewDate]);
 
   useEffect(() => {
     loadToday();
@@ -156,6 +180,7 @@ export default function StaffDailyReportPage() {
         setNapStart('');
         setNapEnd('');
         setPhotoData('');
+        setViewDate('today');
         await loadToday();
         setTimeout(() => setSaved(false), 2500);
       } else {
@@ -170,6 +195,74 @@ export default function StaffDailyReportPage() {
       setError('Network problem. It did not save. Try again.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  function beginEdit(e: Entry) {
+    setEditingId(e.id);
+    setRowError('');
+    setEditNote(typeof e.detail?.note === 'string' ? e.detail.note : '');
+    setEditAmount(typeof e.detail?.amount === 'string' ? e.detail.amount : '');
+    setEditNapStart(typeof e.detail?.start === 'string' ? e.detail.start : '');
+    setEditNapEnd(typeof e.detail?.end === 'string' ? e.detail.end : '');
+  }
+
+  async function saveEdit(e: Entry) {
+    setRowBusy(e.id);
+    setRowError('');
+    const detail: Record<string, unknown> = { ...e.detail };
+    const n = editNote.trim();
+    if (n) detail.note = n;
+    else delete detail.note;
+    if (e.type === 'meal') {
+      const a = editAmount.trim();
+      if (a) detail.amount = a;
+      else delete detail.amount;
+    }
+    if (e.type === 'nap') {
+      const s = editNapStart.trim();
+      const en = editNapEnd.trim();
+      if (s) detail.start = s;
+      else delete detail.start;
+      if (en) detail.end = en;
+      else delete detail.end;
+    }
+    try {
+      const r = await fetch(`/api/child-entries/${e.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ detail }),
+      });
+      if (r.ok) {
+        setEditingId(null);
+        await loadToday();
+      } else {
+        const d = await r.json().catch(() => ({}));
+        setRowError(d.error || 'Could not save the change.');
+      }
+    } catch {
+      setRowError('Network problem. Try again.');
+    } finally {
+      setRowBusy(null);
+    }
+  }
+
+  async function deleteEntry(e: Entry) {
+    if (!window.confirm('Remove this entry? Parents will no longer see it.')) return;
+    setRowBusy(e.id);
+    setRowError('');
+    try {
+      const r = await fetch(`/api/child-entries/${e.id}`, { method: 'DELETE' });
+      if (r.ok) {
+        await loadToday();
+      } else {
+        const d = await r.json().catch(() => ({}));
+        setRowError(d.error || 'Could not remove it.');
+      }
+    } catch {
+      setRowError('Network problem. Try again.');
+    } finally {
+      setRowBusy(null);
     }
   }
 
@@ -391,36 +484,129 @@ export default function StaffDailyReportPage() {
       {childId && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold text-gray-700">
-              Logged today for{' '}
-              {children.find((c) => c.id === childId)?.name || 'this child'}
-            </CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle className="text-sm font-semibold text-gray-700">
+                Logged for{' '}
+                {children.find((c) => c.id === childId)?.name || 'this child'}
+              </CardTitle>
+              <div className="flex rounded-md border overflow-hidden text-xs">
+                <button
+                  type="button"
+                  onClick={() => setViewDate('today')}
+                  className={`px-3 py-1 ${viewDate === 'today' ? 'bg-christina-red text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewDate('yesterday')}
+                  className={`px-3 py-1 border-l ${viewDate === 'yesterday' ? 'bg-christina-red text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                >
+                  Yesterday
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              You can fix or remove your entries from the last 48 hours. Medication and incidents are changed by the director.
+            </p>
           </CardHeader>
           <CardContent>
+            {rowError && (
+              <p className="text-sm text-christina-coral mb-2">{rowError}</p>
+            )}
             {todayEntries.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                Nothing logged yet today.
+                Nothing logged {viewDate === 'today' ? 'yet today' : 'yesterday'}.
               </p>
             ) : (
               <div className="space-y-1">
-                {todayEntries.map((e) => (
-                  <div
-                    key={e.id}
-                    className="flex items-center gap-3 py-2 border-b last:border-b-0 text-sm"
-                  >
-                    <Badge variant="outline" className="text-xs capitalize">
-                      {e.type}
-                    </Badge>
-                    <span className="text-muted-foreground text-xs">
-                      {timeOf(e.occurred_at)}
-                    </span>
-                    <span className="flex-1 truncate text-gray-800">
-                      {typeof e.detail?.note === 'string'
-                        ? e.detail.note
-                        : ''}
-                    </span>
-                  </div>
-                ))}
+                {todayEntries.map((e) => {
+                  const noteText =
+                    typeof e.detail?.note === 'string' ? e.detail.note : '';
+                  const amount =
+                    typeof e.detail?.amount === 'string' ? e.detail.amount : '';
+                  const napStart =
+                    typeof e.detail?.start === 'string' ? e.detail.start : '';
+                  const napEnd =
+                    typeof e.detail?.end === 'string' ? e.detail.end : '';
+                  const extras =
+                    e.type === 'meal' && amount
+                      ? `Ate: ${amount}`
+                      : e.type === 'nap' && (napStart || napEnd)
+                        ? `${napStart || '?'} - ${napEnd || '?'}`
+                        : '';
+                  const editable = canStaffEdit(e);
+                  const adminOnly = e.type === 'medication' || e.type === 'incident';
+                  const busy = rowBusy === e.id;
+
+                  if (editingId === e.id) {
+                    return (
+                      <div key={e.id} className="py-3 border-b last:border-b-0 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs capitalize">{e.type}</Badge>
+                          <span className="text-muted-foreground text-xs">{timeOf(e.occurred_at)}</span>
+                        </div>
+                        {e.type === 'meal' && (
+                          <Input
+                            value={editAmount}
+                            onChange={(ev) => setEditAmount(ev.target.value)}
+                            placeholder="All of it / Half / A few bites"
+                          />
+                        )}
+                        {e.type === 'nap' && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input value={editNapStart} onChange={(ev) => setEditNapStart(ev.target.value)} placeholder="Fell asleep" />
+                            <Input value={editNapEnd} onChange={(ev) => setEditNapEnd(ev.target.value)} placeholder="Woke up" />
+                          </div>
+                        )}
+                        <Textarea
+                          value={editNote}
+                          onChange={(ev) => setEditNote(ev.target.value)}
+                          rows={2}
+                          placeholder="Note for the family…"
+                        />
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" className="bg-christina-red gap-1" disabled={busy} onClick={() => saveEdit(e)}>
+                            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                            Save
+                          </Button>
+                          <Button size="sm" variant="ghost" className="gap-1" disabled={busy} onClick={() => setEditingId(null)}>
+                            <X className="h-3.5 w-3.5" /> Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={e.id} className="flex items-center gap-3 py-2 border-b last:border-b-0 text-sm">
+                      <Badge variant="outline" className="text-xs capitalize">{e.type}</Badge>
+                      <span className="text-muted-foreground text-xs whitespace-nowrap">{timeOf(e.occurred_at)}</span>
+                      <span className="flex-1 truncate text-gray-800">
+                        {noteText}
+                        {extras && (
+                          <span className="text-muted-foreground">{noteText ? ' · ' : ''}{extras}</span>
+                        )}
+                        {e.updated_at && <span className="text-muted-foreground text-xs italic"> (edited)</span>}
+                      </span>
+                      {editable ? (
+                        <span className="flex items-center gap-1">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" disabled={busy} onClick={() => beginEdit(e)} aria-label="Edit entry">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-christina-coral hover:text-christina-coral" disabled={busy} onClick={() => deleteEntry(e)} aria-label="Delete entry">
+                            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          </Button>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                          <Lock className="h-3 w-3" />
+                          {adminOnly ? 'Director only' : 'Locked'}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>

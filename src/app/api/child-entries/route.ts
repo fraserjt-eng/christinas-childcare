@@ -59,9 +59,10 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from('child_daily_entries')
-    .select('id, child_id, date, type, detail, occurred_at, recorded_by, classroom_id')
+    .select('id, child_id, date, type, detail, occurred_at, recorded_by, classroom_id, updated_at')
     .eq('child_id', childId)
     .eq('date', date)
+    .is('deleted_at', null)
     .order('occurred_at', { ascending: false })
     .limit(5000);
 
