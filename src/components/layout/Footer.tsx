@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Heart, Send } from 'lucide-react';
+import { useT } from '@/contexts/LanguageContext';
 
 export function Footer() {
+  const t = useT();
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
@@ -41,21 +43,21 @@ export function Footer() {
               </svg>
               <span className="font-playful text-white text-lg">Christina&apos;s</span>
             </div>
-            <p className="text-sm italic mb-2">&ldquo;Where Learning And Growth Become One&rdquo;</p>
-            <p className="text-sm mb-6">Nurturing young minds with love, creativity, and excellence.</p>
+            <p className="text-sm italic mb-2">{t('chrome.tagline')}</p>
+            <p className="text-sm mb-6">{t('chrome.footerBlurb')}</p>
 
             {/* Newsletter Signup */}
             <div>
-              <h3 className="font-heading font-bold text-white mb-2 text-sm">Stay Connected</h3>
+              <h3 className="font-heading font-bold text-white mb-2 text-sm">{t('chrome.stayConnected')}</h3>
               {subscribed ? (
-                <p className="text-christina-green text-sm">Thanks for subscribing!</p>
+                <p className="text-christina-green text-sm">{t('chrome.thanksSub')}</p>
               ) : (
                 <form onSubmit={handleSubscribe} className="flex gap-2">
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Your email address"
+                    placeholder={t('chrome.emailPlaceholder')}
                     required
                     className="flex-1 px-3 py-2 rounded text-sm bg-gray-800 border border-gray-700 text-white placeholder:text-gray-500 focus:outline-none focus:border-christina-red"
                   />
@@ -71,27 +73,27 @@ export function Footer() {
             </div>
           </div>
           <div>
-            <h3 className="font-heading font-bold text-white mb-3">Programs</h3>
+            <h3 className="font-heading font-bold text-white mb-3">{t('chrome.programs')}</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/programs" className="hover:text-white transition-colors">Infant Care</Link></li>
-              <li><Link href="/programs" className="hover:text-white transition-colors">Toddler Program</Link></li>
-              <li><Link href="/programs" className="hover:text-white transition-colors">Preschool</Link></li>
-              <li><Link href="/programs" className="hover:text-white transition-colors">School Age</Link></li>
+              <li><Link href="/programs" className="hover:text-white transition-colors">{t('chrome.infantCare')}</Link></li>
+              <li><Link href="/programs" className="hover:text-white transition-colors">{t('chrome.toddler')}</Link></li>
+              <li><Link href="/programs" className="hover:text-white transition-colors">{t('chrome.preschool')}</Link></li>
+              <li><Link href="/programs" className="hover:text-white transition-colors">{t('chrome.schoolAge')}</Link></li>
             </ul>
           </div>
           <div>
-            <h3 className="font-heading font-bold text-white mb-3">Quick Links</h3>
+            <h3 className="font-heading font-bold text-white mb-3">{t('chrome.quickLinks')}</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
-              <li><Link href="/gallery" className="hover:text-white transition-colors">Gallery</Link></li>
-              <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
-              <li><Link href="/blog" className="hover:text-white transition-colors">Parent Resources</Link></li>
-              <li><Link href="/enroll" className="hover:text-white transition-colors">Enrollment</Link></li>
-              <li><Link href="/login" className="hover:text-white transition-colors">Parent Portal</Link></li>
+              <li><Link href="/about" className="hover:text-white transition-colors">{t('chrome.aboutUs')}</Link></li>
+              <li><Link href="/gallery" className="hover:text-white transition-colors">{t('chrome.navGallery')}</Link></li>
+              <li><Link href="/faq" className="hover:text-white transition-colors">{t('chrome.navFaq')}</Link></li>
+              <li><Link href="/blog" className="hover:text-white transition-colors">{t('chrome.parentResources')}</Link></li>
+              <li><Link href="/enroll" className="hover:text-white transition-colors">{t('chrome.enrollment')}</Link></li>
+              <li><Link href="/login" className="hover:text-white transition-colors">{t('chrome.parentPortal')}</Link></li>
             </ul>
           </div>
           <div>
-            <h3 className="font-heading font-bold text-white mb-3">Contact</h3>
+            <h3 className="font-heading font-bold text-white mb-3">{t('chrome.contact')}</h3>
             <ul className="space-y-2 text-sm">
               <li>5510 W Broadway Ave</li>
               <li>Crystal, MN 55428</li>
@@ -99,16 +101,16 @@ export function Footer() {
               <li><a href="tel:+15555555555" className="hover:text-white transition-colors">Brooklyn Park: 555-555-5555</a></li>
             </ul>
             <div className="mt-4 text-sm">
-              <p className="text-white font-medium">Hours</p>
-              <p>Mon-Fri: 6:30 AM - 6:00 PM</p>
+              <p className="text-white font-medium">{t('chrome.hours')}</p>
+              <p>{t('chrome.hoursValue')}</p>
             </div>
           </div>
         </div>
         <div className="border-t border-gray-700 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-sm">&copy; 2026 Christina&apos;s Child Care Center. All rights reserved.</p>
+          <p className="text-sm">{t('chrome.rights')}</p>
           <div className="flex items-center gap-4 text-sm">
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <p className="flex items-center gap-1">Made with <Heart className="h-3 w-3 text-christina-red" /> for our families</p>
+            <Link href="/privacy" className="hover:text-white transition-colors">{t('chrome.privacy')}</Link>
+            <p className="flex items-center gap-1">{t('chrome.madeWith')} <Heart className="h-3 w-3 text-christina-red" /> {t('chrome.forFamilies')}</p>
           </div>
         </div>
       </div>
