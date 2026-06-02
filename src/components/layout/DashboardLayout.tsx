@@ -27,10 +27,15 @@ import { HelpdeskNavBadge } from '@/components/support/HelpdeskNavBadge';
 import { useRole } from '@/hooks/useRole';
 import { Suspense } from 'react';
 import { useTourLauncher } from '@/hooks/useTourLauncher';
+import { useOptionalT } from '@/contexts/LanguageContext';
+import type { TranslationKey } from '@/lib/i18n';
 
 interface NavItem {
   href: string;
   label: string;
+  // Translation key for parent-facing items. Resolved via useOptionalT so the
+  // shared admin/employee navs (no LanguageProvider) keep their English label.
+  labelKey?: TranslationKey;
   icon: LucideIcon;
 }
 
@@ -41,19 +46,19 @@ interface NavGroup {
 }
 
 const parentNav: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/dashboard/children', label: 'My Children', icon: Users },
-  { href: '/dashboard/daily', label: "Daily Report", icon: ClipboardList },
-  { href: '/dashboard/progress', label: 'Progress Reports', icon: BarChart3 },
-  { href: '/dashboard/photos', label: 'Photo Gallery', icon: Camera },
-  { href: '/dashboard/news', label: 'Newsletter', icon: Newspaper },
-  { href: '/dashboard/documents', label: 'Documents', icon: FileText },
-  { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare },
-  { href: '/dashboard/notifications', label: 'Notifications', icon: Bell },
-  { href: '/training', label: 'Training', icon: GraduationCap },
-  { href: '/guide', label: 'Help & Guide', icon: BookOpen },
-  { href: '/dashboard/support', label: 'Report an Issue', icon: LifeBuoy },
+  { href: '/dashboard', label: 'Dashboard', labelKey: 'nav.dashboard', icon: Home },
+  { href: '/dashboard/children', label: 'My Children', labelKey: 'nav.myChildren', icon: Users },
+  { href: '/dashboard/daily', label: 'Daily Report', labelKey: 'nav.dailyReport', icon: ClipboardList },
+  { href: '/dashboard/progress', label: 'Progress Reports', labelKey: 'nav.progressReports', icon: BarChart3 },
+  { href: '/dashboard/photos', label: 'Photo Gallery', labelKey: 'nav.photoGallery', icon: Camera },
+  { href: '/dashboard/news', label: 'Newsletter', labelKey: 'nav.newsletter', icon: Newspaper },
+  { href: '/dashboard/documents', label: 'Documents', labelKey: 'nav.documents', icon: FileText },
+  { href: '/dashboard/calendar', label: 'Calendar', labelKey: 'nav.calendar', icon: Calendar },
+  { href: '/dashboard/messages', label: 'Messages', labelKey: 'nav.messages', icon: MessageSquare },
+  { href: '/dashboard/notifications', label: 'Notifications', labelKey: 'nav.notifications', icon: Bell },
+  { href: '/training', label: 'Training', labelKey: 'nav.training', icon: GraduationCap },
+  { href: '/guide', label: 'Help & Guide', labelKey: 'nav.helpGuide', icon: BookOpen },
+  { href: '/dashboard/support', label: 'Report an Issue', labelKey: 'nav.reportIssue', icon: LifeBuoy },
 ];
 
 const adminNavGroups: NavGroup[] = [
@@ -164,11 +169,12 @@ const employeeNav: NavItem[] = [
   { href: '/employee/support', label: 'Report an Issue', icon: LifeBuoy },
 ];
 
-function NavSection({ items, label }: { items: NavItem[]; label: string }) {
+function NavSection({ items, label, labelKey }: { items: NavItem[]; label: string; labelKey?: TranslationKey }) {
   const pathname = usePathname();
+  const t = useOptionalT();
   return (
     <div>
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">{label}</p>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3">{labelKey ? t(labelKey) : label}</p>
       <nav className="space-y-1">
         {items.map((item) => {
           const isActive = pathname === item.href;
@@ -184,7 +190,7 @@ function NavSection({ items, label }: { items: NavItem[]; label: string }) {
               )}
             >
               <item.icon className="h-5 w-5" />
-              {item.label}
+              {item.labelKey ? t(item.labelKey) : item.label}
             </Link>
           );
         })}
@@ -333,8 +339,10 @@ function SidebarContent({
   onLogout?: () => void;
 }) {
   // Identity comes from the verified session, never localStorage demo data.
+  const t = useOptionalT();
   const displayName = sessionUser?.full_name || 'Account';
-  const displayRole = roleLabel(sessionUser?.role);
+  const displayRole =
+    sessionUser?.role === 'parent' ? t('nav.roleParent') : roleLabel(sessionUser?.role);
   const initials = initialsFrom(sessionUser?.full_name);
 
   return (
@@ -365,7 +373,7 @@ function SidebarContent({
         ) : isAdmin ? (
           <RoleFilteredAdminNav />
         ) : (
-          <NavSection items={parentNav} label="Parent Portal" />
+          <NavSection items={parentNav} label="Parent Portal" labelKey="nav.parentPortal" />
         )}
       </div>
       <div className="p-4 border-t">
@@ -383,11 +391,11 @@ function SidebarContent({
             onClick={onLogout}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <LogOut className="h-4 w-4" /> Sign Out
+            <LogOut className="h-4 w-4" /> {t('nav.signOut')}
           </button>
         ) : (
           <Link href="/" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <LogOut className="h-4 w-4" /> Sign Out
+            <LogOut className="h-4 w-4" /> {t('nav.signOut')}
           </Link>
         )}
       </div>

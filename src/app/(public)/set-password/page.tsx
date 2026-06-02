@@ -18,11 +18,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { KeyRound } from 'lucide-react';
+import { useT } from '@/contexts/LanguageContext';
 
 type Phase = 'verifying' | 'ready' | 'saving' | 'invalid';
 
 export default function SetPasswordPage() {
   const router = useRouter();
+  const t = useT();
   const [phase, setPhase] = useState<Phase>('verifying');
   const [error, setError] = useState('');
   const [token, setToken] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export default function SetPasswordPage() {
 
       if (!supabaseUrl || !supabaseKey) {
         setPhase('invalid');
-        setError('Authentication is not configured.');
+        setError(t('setpw.authNotConfigured'));
         return;
       }
       const supabase = createClient(supabaseUrl, supabaseKey);
@@ -64,7 +66,7 @@ export default function SetPasswordPage() {
         });
         if (otpError) {
           setPhase('invalid');
-          setError('This link is invalid or has expired. Ask the director to resend it.');
+          setError(t('setpw.invalidLink'));
           return;
         }
       }
@@ -75,13 +77,14 @@ export default function SetPasswordPage() {
 
       if (!session) {
         setPhase('invalid');
-        setError('This link is invalid or has expired. Ask the director to resend it.');
+        setError(t('setpw.invalidLink'));
         return;
       }
 
       setPhase('ready');
     }
     verify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabaseUrl, supabaseKey]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -92,11 +95,11 @@ export default function SetPasswordPage() {
     const confirm = fd.get('confirm') as string;
 
     if (password.length < 8) {
-      setError('Use at least 8 characters.');
+      setError(t('setpw.useAtLeast8'));
       return;
     }
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError(t('setpw.passwordsNoMatch'));
       return;
     }
 
@@ -113,7 +116,7 @@ export default function SetPasswordPage() {
         });
         const d = await r.json().catch(() => ({}));
         if (!r.ok || !d.ok) {
-          setError(d.error || 'Could not set the password.');
+          setError(d.error || t('setpw.couldNotSet'));
           setPhase('ready');
           return;
         }
@@ -122,7 +125,7 @@ export default function SetPasswordPage() {
           loginPath: d.loginPath || '/login',
         });
       } catch {
-        setError('Connection error. Please try again.');
+        setError(t('setpw.connError'));
         setPhase('ready');
       }
       return;
@@ -132,7 +135,7 @@ export default function SetPasswordPage() {
       const supabase = createClient(supabaseUrl!, supabaseKey!);
       const { error: updErr } = await supabase.auth.updateUser({ password });
       if (updErr) {
-        setError(updErr.message || 'Could not set the password.');
+        setError(updErr.message || t('setpw.couldNotSet'));
         setPhase('ready');
         return;
       }
@@ -148,7 +151,7 @@ export default function SetPasswordPage() {
       }
       router.push(redirectPathForRole(sess.role));
     } catch {
-      setError('Connection error. Please try again.');
+      setError(t('setpw.connError'));
       setPhase('ready');
     }
   }
@@ -160,15 +163,15 @@ export default function SetPasswordPage() {
           <div className="w-16 h-16 rounded-full bg-christina-red flex items-center justify-center mx-auto mb-4">
             <KeyRound className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold">Set Your Password</h1>
-          <p className="text-muted-foreground">Choose a password for your account</p>
+          <h1 className="text-2xl font-bold">{t('setpw.title')}</h1>
+          <p className="text-muted-foreground">{t('setpw.subtitle')}</p>
         </div>
         <Card>
           <CardContent className="p-6">
             {phase === 'verifying' && (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-christina-red mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">Checking your link...</p>
+                <p className="text-sm text-muted-foreground">{t('setpw.checking')}</p>
               </div>
             )}
 
@@ -176,7 +179,7 @@ export default function SetPasswordPage() {
               <div className="text-center py-6 space-y-3">
                 <p className="text-sm text-red-600">{error}</p>
                 <Link href="/admin-login" className="text-christina-blue hover:underline text-sm">
-                  Back to login
+                  {t('setpw.backToLogin')}
                 </Link>
               </div>
             )}
@@ -184,15 +187,15 @@ export default function SetPasswordPage() {
             {doneMsg && (
               <div className="text-center py-6 space-y-4">
                 <p className="text-sm">
-                  Your password is set. {doneMsg.kind === 'parent'
-                    ? 'Sign in with your email and this password to see your child’s daily report.'
-                    : 'You can now sign in.'}
+                  {doneMsg.kind === 'parent'
+                    ? t('setpw.doneParent')
+                    : t('setpw.doneOther')}
                 </p>
                 <Button
                   className="w-full bg-christina-red hover:bg-christina-red/90"
                   onClick={() => router.push(doneMsg.loginPath)}
                 >
-                  Go to sign in
+                  {t('setpw.goToSignIn')}
                 </Button>
               </div>
             )}
@@ -200,17 +203,17 @@ export default function SetPasswordPage() {
             {!doneMsg && (phase === 'ready' || phase === 'saving') && (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="password">New password</Label>
+                  <Label htmlFor="password">{t('setpw.newPassword')}</Label>
                   <Input
                     id="password"
                     name="password"
                     type="password"
-                    placeholder="At least 8 characters"
+                    placeholder={t('setpw.placeholder8')}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm">Confirm password</Label>
+                  <Label htmlFor="confirm">{t('setpw.confirmPassword')}</Label>
                   <Input
                     id="confirm"
                     name="confirm"
@@ -225,7 +228,7 @@ export default function SetPasswordPage() {
                   className="w-full bg-christina-red hover:bg-christina-red/90"
                   disabled={phase === 'saving'}
                 >
-                  {phase === 'saving' ? 'Saving...' : 'Set Password & Continue'}
+                  {phase === 'saving' ? t('setpw.saving') : t('setpw.submit')}
                 </Button>
               </form>
             )}
