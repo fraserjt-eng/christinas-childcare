@@ -7,6 +7,8 @@ import {
   Clock, Download, Printer,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useT } from '@/contexts/LanguageContext';
+import type { TranslationKey } from '@/lib/i18n';
 
 // Two real ways a family gets into the Parent Portal:
 //  A. Christina adds them in User Management and shares a setup link.
@@ -14,59 +16,32 @@ import Link from 'next/link';
 // Both end at the same place: signed in, seeing their child's daily report.
 
 interface Step {
-  title: string;
-  description: string;
+  titleKey: TranslationKey;
+  descKey: TranslationKey;
 }
 
 const invitedPath: Step[] = [
-  {
-    title: 'Open the link Christina sent you',
-    description:
-      'Christina adds your family, then sends you a one-time setup link. Open it on your phone or computer. It goes to a "Set Your Password" page on the center website.',
-  },
-  {
-    title: 'Choose your password',
-    description:
-      'Enter a password (at least 8 characters) and confirm it, then tap Set Password. The link is good for 7 days; if it expires, ask Christina to resend it.',
-  },
-  {
-    title: 'Sign in',
-    description:
-      'Tap "Go to sign in," then sign in with your email and the password you just chose. That is it. Skip to "Once you are signed in" below.',
-  },
+  { titleKey: 'signup.invited1Title', descKey: 'signup.invited1Desc' },
+  { titleKey: 'signup.invited2Title', descKey: 'signup.invited2Desc' },
+  { titleKey: 'signup.invited3Title', descKey: 'signup.invited3Desc' },
 ];
 
 const selfSignupPath: Step[] = [
-  {
-    title: 'Open the Parent Portal',
-    description:
-      'Go to the Parent Portal from the website, or the sign-in page directly. You will see "Sign In" and "Create Account" tabs.',
-  },
-  {
-    title: 'Create your account',
-    description:
-      'Tap the "Create Account" tab. Enter your name, email, phone, and a password (at least 8 characters).',
-  },
-  {
-    title: 'Wait for approval',
-    description:
-      'New accounts are not active right away. Christina reviews and activates your account, usually within 24 hours. You will not be able to sign in until it is approved. This step is normal; it keeps children safe.',
-  },
-  {
-    title: 'Sign in once approved',
-    description:
-      'After Christina activates your account, come back to the sign-in page and sign in with your email and password.',
-  },
+  { titleKey: 'signup.self1Title', descKey: 'signup.self1Desc' },
+  { titleKey: 'signup.self2Title', descKey: 'signup.self2Desc' },
+  { titleKey: 'signup.self3Title', descKey: 'signup.self3Desc' },
+  { titleKey: 'signup.self4Title', descKey: 'signup.self4Desc' },
 ];
 
-const afterSignedIn: string[] = [
-  'Add your children: name, date of birth, classroom, allergies, and a photo.',
-  'Complete your family profile: address, a short family bio, and a family photo.',
-  "Open Daily Report to see your child's day as it happens: naps, meals, diapers, activities, notes, and photos that staff log. You only ever see your own child.",
-  'At drop-off and pickup, check your child in and out on the room iPad using your family PIN. Christina gives you this PIN.',
+const afterSignedIn: TranslationKey[] = [
+  'signup.after1',
+  'signup.after2',
+  'signup.after3',
+  'signup.after4',
 ];
 
 export default function SignupGuidePage() {
+  const t = useT();
   function handlePrint() {
     window.print();
   }
@@ -94,14 +69,14 @@ export default function SignupGuidePage() {
     doc.text("Christina's Child Care Center", pageWidth / 2, 12, { align: 'center' });
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text('Parent Portal Guide', pageWidth / 2, 22, { align: 'center' });
+    doc.text(t('signup.pdfTitle'), pageWidth / 2, 22, { align: 'center' });
 
     y = 42;
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     const intro = doc.splitTextToSize(
-      'There are two ways to get into the Parent Portal. Use the one that matches how you were brought in.',
+      t('signup.intro'),
       pageWidth - margin * 2
     );
     doc.text(intro, margin, y);
@@ -129,14 +104,14 @@ export default function SignupGuidePage() {
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text(step.title, margin + 15, y);
+        doc.text(t(step.titleKey), margin + 15, y);
         y += 7;
 
         doc.setTextColor('#6B7280');
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         const lines = doc.splitTextToSize(
-          step.description,
+          t(step.descKey),
           pageWidth - margin * 2 - 15
         );
         doc.text(lines, margin + 15, y);
@@ -145,21 +120,21 @@ export default function SignupGuidePage() {
       y += 4;
     };
 
-    section('Path A: Christina sent you a setup link', invitedPath);
-    section('Path B: You are signing up yourself', selfSignupPath);
+    section(t('signup.pathATitle'), invitedPath);
+    section(t('signup.pathBTitle'), selfSignupPath);
 
     ensureSpace(16);
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
-    doc.text('Once you are signed in (either way)', margin, y);
+    doc.text(t('signup.afterTitle'), margin, y);
     y += 9;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor('#374151');
     afterSignedIn.forEach((item) => {
       ensureSpace(14);
-      const lines = doc.splitTextToSize(`-  ${item}`, pageWidth - margin * 2);
+      const lines = doc.splitTextToSize(`-  ${t(item)}`, pageWidth - margin * 2);
       doc.text(lines, margin, y);
       y += lines.length * 5 + 4;
     });
@@ -178,7 +153,7 @@ export default function SignupGuidePage() {
     );
     y += 5;
     doc.text(
-      'Questions about your account? Ask Christina or the front desk.',
+      t('signup.footerQuestions'),
       margin,
       y
     );
@@ -204,14 +179,14 @@ export default function SignupGuidePage() {
         </div>
         <ol className="space-y-4">
           {steps.map((step, i) => (
-            <li key={step.title} className="flex items-start gap-3">
+            <li key={step.titleKey} className="flex items-start gap-3">
               <span className="w-6 h-6 rounded-full bg-muted text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                 {i + 1}
               </span>
               <div>
-                <h3 className="text-sm font-bold">{step.title}</h3>
+                <h3 className="text-sm font-bold">{t(step.titleKey)}</h3>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  {step.description}
+                  {t(step.descKey)}
                 </p>
               </div>
             </li>
@@ -226,31 +201,30 @@ export default function SignupGuidePage() {
       <div className="max-w-2xl mx-auto px-4">
         <div className="text-center mb-10 print:mb-6">
           <h1 className="text-3xl font-bold print:text-2xl">
-            Parent Portal Guide
+            {t('signup.heroTitle')}
           </h1>
           <p className="text-muted-foreground mt-2">
-            Two ways to get in. Use the one that matches how you were brought
-            in.
+            {t('signup.heroSubtitle')}
           </p>
           <div className="flex justify-center gap-3 mt-4 print:hidden">
             <Button variant="outline" size="sm" onClick={handlePrint}>
-              <Printer className="h-4 w-4 mr-1" /> Print
+              <Printer className="h-4 w-4 mr-1" /> {t('signup.printBtn')}
             </Button>
             <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
-              <Download className="h-4 w-4 mr-1" /> Download PDF
+              <Download className="h-4 w-4 mr-1" /> {t('signup.downloadBtn')}
             </Button>
           </div>
         </div>
 
         <div className="space-y-6 print:space-y-4">
           {renderPath(
-            'Path A: Christina sent you a setup link',
+            t('signup.pathATitle'),
             invitedPath,
             KeyRound,
             'bg-christina-red'
           )}
           {renderPath(
-            'Path B: You are signing up yourself',
+            t('signup.pathBTitle'),
             selfSignupPath,
             UserPlus,
             'bg-christina-blue'
@@ -263,7 +237,7 @@ export default function SignupGuidePage() {
                   <CheckCircle2 className="h-5 w-5 text-white" />
                 </div>
                 <h2 className="text-lg font-bold">
-                  Once you are signed in (either way)
+                  {t('signup.afterTitle')}
                 </h2>
               </div>
               <ul className="space-y-2">
@@ -273,7 +247,7 @@ export default function SignupGuidePage() {
                     className="flex items-start gap-2 text-sm text-gray-700"
                   >
                     <ClipboardList className="h-4 w-4 text-christina-green mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
+                    <span>{t(item)}</span>
                   </li>
                 ))}
               </ul>
@@ -284,10 +258,7 @@ export default function SignupGuidePage() {
             <CardContent className="p-5 flex items-start gap-3">
               <Clock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-amber-900">
-                Signed up yourself and cannot log in yet? That is expected.
-                Your account stays pending until Christina activates it. Once
-                it is approved you will be able to sign in with the same email
-                and password.
+                {t('signup.pendingNote')}
               </p>
             </CardContent>
           </Card>
@@ -299,13 +270,13 @@ export default function SignupGuidePage() {
               size="lg"
               className="bg-christina-blue hover:bg-christina-blue/90"
             >
-              <LogIn className="h-5 w-5 mr-2" /> Go to the Parent Portal
+              <LogIn className="h-5 w-5 mr-2" /> {t('signup.goToPortalBtn')}
             </Button>
           </Link>
           <p className="text-sm text-muted-foreground mt-3">
-            Already set up?{' '}
+            {t('signup.alreadySetUp')}{' '}
             <Link href="/login" className="text-christina-blue hover:underline">
-              Sign in
+              {t('signup.signInLink')}
             </Link>
           </p>
         </div>
@@ -315,7 +286,7 @@ export default function SignupGuidePage() {
             Christina&apos;s Child Care Center - 5510 W Broadway Ave, Crystal,
             MN 55428
           </p>
-          <p>Questions about your account? Ask Christina or the front desk.</p>
+          <p>{t('signup.footerQuestions')}</p>
         </div>
       </div>
     </div>

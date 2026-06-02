@@ -11,8 +11,10 @@ import { TrainingRole } from '@/types/training';
 import { pathwayInfo, getModulesForRole } from '@/lib/training/pathways';
 import { getSessionEmployee } from '@/lib/session-employee';
 import { getCurrentFamily } from '@/lib/family-storage';
+import { useT } from '@/contexts/LanguageContext';
 
 export default function TrainingHomePage() {
+  const t = useT();
   const [userId, setUserId] = useState<string | null>(null);
   const [role, setRole] = useState<TrainingRole | null>(null);
   const [userName, setUserName] = useState<string>('');
@@ -73,19 +75,21 @@ export default function TrainingHomePage() {
         <div className="flex items-center gap-2 mb-1">
           <GraduationCap className="h-5 w-5 text-christina-red" />
           <p className="text-xs uppercase tracking-widest text-gray-500 font-body">
-            Learning and Development Path
+            {t('train.eyebrow')}
           </p>
         </div>
         <h1 className="text-2xl font-heading font-bold text-gray-900">
-          Welcome back, {userName}
+          {t('train.welcomeBack').replace('{name}', userName)}
         </h1>
         {info && (
           <div className="flex items-center gap-2 mt-1">
             <Badge variant="outline" className="text-xs">
-              {info.name} pathway
+              {t('train.pathwayBadge').replace('{name}', info.name)}
             </Badge>
             <span className="text-sm text-gray-500 font-body">
-              {totalModules} modules &middot; {completedModules} of {totalModules} complete
+              {t('train.moduleCount')
+                .replace('{total}', String(totalModules))
+                .replace('{completed}', String(completedModules))}
             </span>
           </div>
         )}
@@ -99,7 +103,7 @@ export default function TrainingHomePage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-heading">
-              Unit {activeUnit.unit.number}: {activeUnit.unit.title}
+              {t('train.unitLabel').replace('{number}', String(activeUnit.unit.number))}: {activeUnit.unit.title}
             </CardTitle>
             <p className="text-sm text-gray-500 font-body">
               {activeUnit.unit.description}
@@ -121,10 +125,10 @@ export default function TrainingHomePage() {
           <CardContent className="p-6 text-center">
             <GraduationCap className="h-12 w-12 text-christina-green mx-auto mb-3" />
             <h2 className="text-xl font-heading font-bold text-gray-900 mb-1">
-              Training Complete
+              {t('train.completeTitle')}
             </h2>
             <p className="text-sm text-gray-600 font-body">
-              You have completed all {totalModules} modules in your pathway. Great work.
+              {t('train.completeBody').replace('{total}', String(totalModules))}
             </p>
           </CardContent>
         </Card>

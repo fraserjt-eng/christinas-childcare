@@ -1,5 +1,6 @@
 'use client';
 
+import { useT } from '@/contexts/LanguageContext';
 import { ScrollFadeIn, ScrollFadeInStagger } from '@/components/features/ScrollFadeIn';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -21,76 +22,21 @@ import {
 } from 'lucide-react';
 
 const values = [
-  {
-    icon: Shield,
-    title: 'Safety & Well-being',
-    description:
-      'Every decision starts with the safety and health of our children and staff. This is non-negotiable.',
-  },
-  {
-    icon: Heart,
-    title: 'Respect & Inclusion',
-    description:
-      'We celebrate diversity and make sure every family feels welcome, seen, and valued from day one.',
-  },
-  {
-    icon: Lightbulb,
-    title: 'Play-Based Learning',
-    description:
-      'Children learn best through purposeful play, exploration, and discovery. We protect their right to be kids.',
-  },
-  {
-    icon: Handshake,
-    title: 'Family Partnership',
-    description:
-      'Parents are a child\'s first and most important teachers. We work alongside you, never instead of you.',
-  },
-  {
-    icon: Award,
-    title: 'Continuous Improvement',
-    description:
-      'We invest in professional development and evidence-based practices because your children deserve our best.',
-  },
-  {
-    icon: Users,
-    title: 'Community Connection',
-    description:
-      'We build bridges between families, schools, and community resources. No one raises children alone.',
-  },
-];
+  { icon: Shield, titleKey: 'about.valueSafetyTitle', descKey: 'about.valueSafetyDesc' },
+  { icon: Heart, titleKey: 'about.valueRespectTitle', descKey: 'about.valueRespectDesc' },
+  { icon: Lightbulb, titleKey: 'about.valuePlayTitle', descKey: 'about.valuePlayDesc' },
+  { icon: Handshake, titleKey: 'about.valueFamilyTitle', descKey: 'about.valueFamilyDesc' },
+  { icon: Award, titleKey: 'about.valueImprovementTitle', descKey: 'about.valueImprovementDesc' },
+  { icon: Users, titleKey: 'about.valueCommunityTitle', descKey: 'about.valueCommunityDesc' },
+] as const;
 
 const timeline = [
-  {
-    year: '2020',
-    title: 'Founded',
-    description: 'Christina\'s Child Care Center opened its doors in Crystal, MN, welcoming its first families during one of the most challenging years in recent memory.',
-    icon: Sparkles,
-  },
-  {
-    year: '2021',
-    title: 'First Expansion',
-    description: 'Growing demand led us to expand our space and hire additional certified staff, allowing us to serve more families across multiple classrooms.',
-    icon: Building2,
-  },
-  {
-    year: '2022',
-    title: 'School-Age Program Added',
-    description: 'We launched our school-age program with before and after school care, plus free transportation to and from local schools.',
-    icon: BookOpen,
-  },
-  {
-    year: '2023',
-    title: 'Reached 50+ Families',
-    description: 'A milestone that reflects the trust Crystal families have placed in us. Word of mouth has been our strongest recruitment tool.',
-    icon: Users,
-  },
-  {
-    year: '2024',
-    title: 'Curriculum Redesign',
-    description: 'We overhauled our curriculum to incorporate the latest research in early childhood development, doubling down on play-based and culturally responsive learning.',
-    icon: GraduationCap,
-  },
-];
+  { year: '2020', titleKey: 'about.timeline2020Title', descKey: 'about.timeline2020Desc', icon: Sparkles },
+  { year: '2021', titleKey: 'about.timeline2021Title', descKey: 'about.timeline2021Desc', icon: Building2 },
+  { year: '2022', titleKey: 'about.timeline2022Title', descKey: 'about.timeline2022Desc', icon: BookOpen },
+  { year: '2023', titleKey: 'about.timeline2023Title', descKey: 'about.timeline2023Desc', icon: Users },
+  { year: '2024', titleKey: 'about.timeline2024Title', descKey: 'about.timeline2024Desc', icon: GraduationCap },
+] as const;
 
 const staff = [
   {
@@ -101,6 +47,10 @@ const staff = [
     bio: 'Ophelia brings creativity and patience to every classroom interaction. She designs engaging activities that spark curiosity across all age groups, from infants discovering textures to preschoolers building their first stories. Her approach is simple: meet each child where they are and give them what they need to take the next step.',
     funFact: 'Collects children\'s books from around the world',
     initials: 'OZ',
+    roleKey: 'about.staffOpheliaRole',
+    credentialsKey: 'about.staffOpheliaCredentials',
+    bioKey: 'about.staffOpheliaBio',
+    funFactKey: 'about.staffOpheliaFunFact',
   },
   {
     name: 'Stephen Zeogar',
@@ -110,6 +60,10 @@ const staff = [
     bio: 'Stephen keeps the center running smoothly so the teaching staff can focus on what matters: the kids. From facility maintenance to licensing compliance to parent communication, he handles the operational backbone that makes quality care possible. Families know him as the person who picks up the phone.',
     funFact: 'Coaches youth soccer on weekends',
     initials: 'SZ',
+    roleKey: 'about.staffStephenRole',
+    credentialsKey: 'about.staffStephenCredentials',
+    bioKey: 'about.staffStephenBio',
+    funFactKey: 'about.staffStephenFunFact',
   },
   {
     name: 'Christina Fraser',
@@ -119,10 +73,15 @@ const staff = [
     bio: 'With over 20 years in early childhood education, Christina is the heartbeat of the center\'s teaching philosophy. She mentors younger staff, develops curriculum frameworks, and ensures every child has a safe and joyful place to learn. Her experience spans infant care through school-age programming, and she brings that full-spectrum perspective to everything she does.',
     funFact: 'Known for her legendary read-aloud voices',
     initials: 'CF',
+    roleKey: 'about.staffChristinaRole',
+    credentialsKey: 'about.staffChristinaCredentials',
+    bioKey: 'about.staffChristinaBio',
+    funFactKey: 'about.staffChristinaFunFact',
   },
-];
+] as const;
 
 export default function AboutPage() {
+  const t = useT();
   // Person + Organization schema for staff entity recognition in AI search
   const personSchema = {
     '@context': 'https://schema.org',
@@ -158,17 +117,17 @@ export default function AboutPage() {
         <div className="relative container mx-auto px-6 text-center">
           <ScrollFadeIn direction="up" duration={700}>
             <p className="text-xs uppercase tracking-[0.25em] text-white/60 mb-6">
-              Our Story
+              {t('about.heroEyebrow')}
             </p>
           </ScrollFadeIn>
           <ScrollFadeIn direction="up" duration={700} delay={100}>
             <h1 className="font-playful text-4xl md:text-5xl lg:text-6xl text-white mb-6">
-              About Christina&apos;s
+              {t('about.heroTitle')}
             </h1>
           </ScrollFadeIn>
           <ScrollFadeIn direction="up" duration={700} delay={200}>
             <p className="text-xl md:text-2xl text-white/90 font-light italic max-w-2xl mx-auto">
-              &ldquo;Where Learning And Growth Become One&rdquo;
+              {t('about.heroTagline')}
             </p>
           </ScrollFadeIn>
         </div>
@@ -183,34 +142,19 @@ export default function AboutPage() {
                 <Globe className="w-8 h-8 text-[#C62828]" strokeWidth={1.5} />
               </div>
               <p className="text-xs uppercase tracking-[0.25em] text-[#6b6b6b] mb-4">
-                Our Guiding Philosophy
+                {t('about.ubuntuEyebrow')}
               </p>
               <h2 className="font-playful text-3xl md:text-4xl text-[#1a1a1a] mb-4">
-                Ubuntu: &ldquo;I Am Because We Are&rdquo;
+                {t('about.ubuntuTitle')}
               </h2>
               <div className="w-16 h-0.5 bg-[#C62828] mx-auto mb-8" />
             </div>
           </ScrollFadeIn>
           <ScrollFadeIn direction="up" duration={700} delay={150}>
             <div className="max-w-3xl mx-auto space-y-5 text-lg text-[#4a4a4a] leading-relaxed">
-              <p>
-                Christina&apos;s Child Care Center is built on the African philosophy of Ubuntu, the
-                deep understanding that we belong to one another. A child does not grow in
-                isolation. They grow through connection, through the village that surrounds them,
-                through the hands that hold theirs when they stumble and the voices that cheer when
-                they stand.
-              </p>
-              <p>
-                At our center, Ubuntu is not a slogan. It is how we operate every day. Parents,
-                teachers, and staff form a genuine community around each child. We share knowledge.
-                We share responsibility. We show up for each other. When one family is struggling,
-                others step in. When a child hits a milestone, the whole room celebrates.
-              </p>
-              <p>
-                This is what it means to raise children together. Not as a service delivered to
-                customers, but as a community committed to the well-being of its youngest members.
-                Your child is our child. That is the promise.
-              </p>
+              <p>{t('about.ubuntuPara1')}</p>
+              <p>{t('about.ubuntuPara2')}</p>
+              <p>{t('about.ubuntuPara3')}</p>
             </div>
           </ScrollFadeIn>
         </div>
@@ -222,28 +166,18 @@ export default function AboutPage() {
           <ScrollFadeIn direction="up" duration={700}>
             <div className="max-w-3xl mx-auto text-center mb-8">
               <p className="text-xs uppercase tracking-[0.25em] text-[#6b6b6b] mb-4">
-                How We Got Here
+                {t('about.storyEyebrow')}
               </p>
               <h2 className="font-playful text-3xl md:text-4xl text-[#1a1a1a] mb-4">
-                Our Story
+                {t('about.storyTitle')}
               </h2>
               <div className="w-16 h-0.5 bg-[#C62828] mx-auto mb-8" />
             </div>
           </ScrollFadeIn>
           <ScrollFadeIn direction="up" duration={700} delay={100}>
             <div className="max-w-3xl mx-auto space-y-5 text-lg text-[#4a4a4a] leading-relaxed mb-16">
-              <p>
-                Christina&apos;s Child Care Center was born from a simple belief: every child
-                deserves a safe, loving place to learn and grow. Founded by Ophelia Zeogar, the
-                center started as a small home-based program and has grown into Crystal, MN&apos;s
-                trusted child care partner.
-              </p>
-              <p>
-                Today, we serve families across multiple classrooms, providing high-quality care
-                from infancy through school age. Our play-based approach, experienced staff, and
-                commitment to family engagement set us apart. We are proudly licensed by Minnesota
-                DCYF and deeply rooted in the community we serve.
-              </p>
+              <p>{t('about.storyPara1')}</p>
+              <p>{t('about.storyPara2')}</p>
             </div>
           </ScrollFadeIn>
 
@@ -270,8 +204,8 @@ export default function AboutPage() {
                     <span className="text-sm font-bold text-[#C62828] tracking-wide">
                       {item.year}
                     </span>
-                    <h3 className="text-lg font-bold text-[#1a1a1a] mt-1 mb-2">{item.title}</h3>
-                    <p className="text-[#6b6b6b] leading-relaxed">{item.description}</p>
+                    <h3 className="text-lg font-bold text-[#1a1a1a] mt-1 mb-2">{t(item.titleKey)}</h3>
+                    <p className="text-[#6b6b6b] leading-relaxed">{t(item.descKey)}</p>
                   </div>
                 </div>
               </ScrollFadeIn>
@@ -286,10 +220,10 @@ export default function AboutPage() {
           <ScrollFadeIn direction="up" duration={700}>
             <div className="text-center mb-12">
               <p className="text-xs uppercase tracking-[0.25em] text-[#6b6b6b] mb-4">
-                What Drives Us
+                {t('about.driveEyebrow')}
               </p>
               <h2 className="font-playful text-3xl md:text-4xl text-[#1a1a1a]">
-                Mission & Vision
+                {t('about.driveTitle')}
               </h2>
             </div>
           </ScrollFadeIn>
@@ -301,12 +235,10 @@ export default function AboutPage() {
                   <div className="w-12 h-12 rounded-full bg-[#C62828]/10 flex items-center justify-center mb-6">
                     <Target className="w-6 h-6 text-[#C62828]" strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-2xl font-bold text-[#1a1a1a] mb-4">Our Mission</h3>
+                  <h3 className="text-2xl font-bold text-[#1a1a1a] mb-4">{t('about.missionTitle')}</h3>
                   <div className="w-12 h-0.5 bg-[#C62828] mb-6" />
                   <p className="text-[#4a4a4a] leading-relaxed text-lg">
-                    To provide a safe, nurturing, and enriching environment where every child can
-                    learn, grow, and thrive through play-based education and compassionate care. We
-                    partner with families to build strong foundations that last a lifetime.
+                    {t('about.missionBody')}
                   </p>
                 </CardContent>
               </Card>
@@ -317,13 +249,10 @@ export default function AboutPage() {
                   <div className="w-12 h-12 rounded-full bg-[#1565C0]/10 flex items-center justify-center mb-6">
                     <Eye className="w-6 h-6 text-[#1565C0]" strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-2xl font-bold text-[#1a1a1a] mb-4">Our Vision</h3>
+                  <h3 className="text-2xl font-bold text-[#1a1a1a] mb-4">{t('about.visionTitle')}</h3>
                   <div className="w-12 h-0.5 bg-[#1565C0] mb-6" />
                   <p className="text-[#4a4a4a] leading-relaxed text-lg">
-                    To be the child care center in Crystal, MN that families trust most, known for
-                    excellence in early childhood education, authentic family engagement, and
-                    innovative programming that prepares children for lifelong learning and
-                    connection.
+                    {t('about.visionBody')}
                   </p>
                 </CardContent>
               </Card>
@@ -338,14 +267,13 @@ export default function AboutPage() {
           <ScrollFadeIn direction="up" duration={700}>
             <div className="text-center mb-16">
               <p className="text-xs uppercase tracking-[0.25em] text-[#6b6b6b] mb-4">
-                What We Stand For
+                {t('about.valuesEyebrow')}
               </p>
               <h2 className="font-playful text-3xl md:text-4xl lg:text-5xl text-[#1a1a1a] mb-4">
-                Our Core Values
+                {t('about.valuesTitle')}
               </h2>
               <p className="text-lg text-[#6b6b6b] max-w-2xl mx-auto font-light">
-                These are not aspirations on a wall. They are the commitments we hold ourselves to
-                every single day.
+                {t('about.valuesSubtitle')}
               </p>
             </div>
           </ScrollFadeIn>
@@ -360,15 +288,15 @@ export default function AboutPage() {
           >
             {values.map((value) => (
               <Card
-                key={value.title}
+                key={value.titleKey}
                 className="border-0 shadow-sm hover:shadow-md transition-shadow duration-300 bg-white"
               >
                 <CardContent className="p-6 md:p-8">
                   <div className="w-12 h-12 rounded-full bg-[#C62828]/10 flex items-center justify-center mb-5">
                     <value.icon className="h-6 w-6 text-[#C62828]" strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-lg font-bold text-[#1a1a1a] mb-2">{value.title}</h3>
-                  <p className="text-[#6b6b6b] leading-relaxed">{value.description}</p>
+                  <h3 className="text-lg font-bold text-[#1a1a1a] mb-2">{t(value.titleKey)}</h3>
+                  <p className="text-[#6b6b6b] leading-relaxed">{t(value.descKey)}</p>
                 </CardContent>
               </Card>
             ))}
@@ -382,14 +310,13 @@ export default function AboutPage() {
           <ScrollFadeIn direction="up" duration={700}>
             <div className="text-center mb-16">
               <p className="text-xs uppercase tracking-[0.25em] text-[#6b6b6b] mb-4">
-                The People Behind the Care
+                {t('about.teamEyebrow')}
               </p>
               <h2 className="font-playful text-3xl md:text-4xl lg:text-5xl text-[#1a1a1a] mb-4">
-                Meet Our Team
+                {t('about.teamTitle')}
               </h2>
               <p className="text-lg text-[#6b6b6b] max-w-2xl mx-auto font-light">
-                Dedicated professionals who bring heart, skill, and genuine love to the work of
-                caring for your children.
+                {t('about.teamSubtitle')}
               </p>
             </div>
           </ScrollFadeIn>
@@ -416,7 +343,7 @@ export default function AboutPage() {
                       </span>
                     </div>
                     <h3 className="text-lg font-bold text-white">{member.name}</h3>
-                    <p className="text-sm text-white/80 font-medium">{member.role}</p>
+                    <p className="text-sm text-white/80 font-medium">{t(member.roleKey)}</p>
                   </div>
 
                   {/* Credentials bar */}
@@ -424,25 +351,25 @@ export default function AboutPage() {
                     <div className="flex items-center gap-1.5">
                       <GraduationCap className="h-4 w-4 text-[#6b6b6b]" />
                       <span className="text-xs text-[#6b6b6b] font-medium">
-                        {member.credentials}
+                        {t(member.credentialsKey)}
                       </span>
                     </div>
                     <div className="w-px h-3 bg-[#6b6b6b]/30" />
                     <div className="flex items-center gap-1.5">
                       <Calendar className="h-4 w-4 text-[#6b6b6b]" />
                       <span className="text-xs text-[#6b6b6b] font-medium">
-                        {member.years}{member.years === 20 ? '+' : ''} years
+                        {member.years}{member.years === 20 ? '+' : ''} {t('about.yearsLabel')}
                       </span>
                     </div>
                   </div>
 
                   {/* Bio */}
                   <div className="p-6">
-                    <p className="text-[#4a4a4a] text-sm leading-relaxed mb-4">{member.bio}</p>
+                    <p className="text-[#4a4a4a] text-sm leading-relaxed mb-4">{t(member.bioKey)}</p>
                     <div className="flex items-start gap-2 pt-3 border-t border-[#e5e0d8]">
                       <Baby className="h-4 w-4 text-[#C62828]/60 flex-shrink-0 mt-0.5" />
                       <p className="text-xs text-[#C62828]/80 italic">
-                        Fun fact: {member.funFact}
+                        {t('about.funFactLabel').replace('{fact}', t(member.funFactKey))}
                       </p>
                     </div>
                   </div>
@@ -458,18 +385,17 @@ export default function AboutPage() {
         <div className="container mx-auto px-6 text-center">
           <ScrollFadeIn direction="up" duration={700}>
             <h2 className="font-playful text-3xl md:text-4xl text-white mb-4">
-              Come See Us for Yourself
+              {t('about.ctaTitle')}
             </h2>
           </ScrollFadeIn>
           <ScrollFadeIn direction="up" duration={700} delay={100}>
             <p className="text-white/60 text-lg max-w-2xl mx-auto font-light mb-2">
-              The best way to understand what makes Christina&apos;s different is to walk through
-              our doors. Schedule a tour and meet the people who will care for your child.
+              {t('about.ctaBody')}
             </p>
           </ScrollFadeIn>
           <ScrollFadeIn direction="none" duration={800} delay={300}>
             <p className="text-white/40 text-sm mt-8">
-              Crystal, MN &middot; Licensed by Minnesota DCYF &middot; Family-owned since 2020
+              {t('about.ctaMeta')}
             </p>
           </ScrollFadeIn>
         </div>
