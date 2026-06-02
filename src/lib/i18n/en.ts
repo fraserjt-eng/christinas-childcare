@@ -147,6 +147,14 @@ const en = {
   'chrome.privacy': 'Privacy Policy',
   'chrome.madeWith': 'Made with',
   'chrome.forFamilies': 'for our families',
+
+  // Locations page (/locations)
+  'loc.title': 'Our Locations',
+  'loc.subtitle': 'Two Minnesota centers, one team, one philosophy. Find the location closest to you.',
+  'loc.hoursValue': 'Mon-Fri, 6:30 AM - 6:00 PM',
+  'loc.crystalSummary': 'Our original location on West Broadway. Full program from infants through school age with four age-grouped classrooms and outdoor play space.',
+  'loc.bpSummary': 'Our second location serving Brooklyn Park families. Same curriculum, same care philosophy, closer to home for north metro families.',
+  'loc.visitPage': 'Visit {city} page',
 } as const;
 
 export type TranslationKey = keyof typeof en;
