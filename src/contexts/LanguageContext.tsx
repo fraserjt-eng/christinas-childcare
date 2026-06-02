@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   type Lang,
   type TranslationKey,
@@ -35,6 +36,7 @@ export function LanguageProvider({
   children: React.ReactNode;
 }) {
   const [lang, setLangState] = useState<Lang>(initialLang ?? DEFAULT_LANG);
+  const router = useRouter();
 
   // On mount, reconcile with the cookie (covers the client-layout case where
   // no initialLang was provided) and reflect the language on <html lang>.
@@ -55,6 +57,10 @@ export function LanguageProvider({
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
     writeLangCookie(next);
+    // Re-render server components (the marketing pages read the cookie
+    // server-side via getServerT) so their body copy switches too, not just
+    // the client chrome. Client components update instantly from context.
+    router.refresh();
     // If a parent is signed in, remember the choice on their family record so
     // future emails and return visits use it. Fire-and-forget: a 401 (not
     // signed in) or any failure is fine, the cookie already carries the UI.
@@ -67,7 +73,7 @@ export function LanguageProvider({
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [router]);
 
   const toggle = useCallback(() => {
     setLang(lang === 'en' ? 'es' : 'en');

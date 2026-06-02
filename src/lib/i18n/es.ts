@@ -149,6 +149,14 @@ const es: Record<TranslationKey, string> = {
   'chrome.privacy': 'Política de privacidad',
   'chrome.madeWith': 'Hecho con',
   'chrome.forFamilies': 'para nuestras familias',
+
+  // Locations page (/locations)
+  'loc.title': 'Nuestras ubicaciones',
+  'loc.subtitle': 'Dos centros en Minnesota, un solo equipo, una sola filosofía. Encuentre la ubicación más cercana a usted.',
+  'loc.hoursValue': 'Lun a vie, 6:30 a. m. a 6:00 p. m.',
+  'loc.crystalSummary': 'Nuestra ubicación original en West Broadway. Programa completo desde bebés hasta edad escolar, con cuatro salones agrupados por edad y espacio de juego al aire libre.',
+  'loc.bpSummary': 'Nuestra segunda ubicación, al servicio de las familias de Brooklyn Park. El mismo plan de estudios y la misma filosofía de cuidado, más cerca de casa para las familias del norte del área metropolitana.',
+  'loc.visitPage': 'Ver la página de {city}',
 };
 
 export default es;
