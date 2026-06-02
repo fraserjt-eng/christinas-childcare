@@ -27,6 +27,8 @@ import {
   removeChild,
   compressPhoto,
 } from '@/lib/family-storage';
+import { useLang } from '@/contexts/LanguageContext';
+import type { Lang } from '@/lib/i18n';
 
 interface UpdateItem {
   title: string;
@@ -35,10 +37,17 @@ interface UpdateItem {
   type: string;
 }
 
-function relativeTime(iso: string): string {
+function relativeTime(iso: string, lang: Lang = 'en'): string {
   try {
     const diff = Date.now() - new Date(iso).getTime();
     const mins = Math.round(diff / 60000);
+    if (lang === 'es') {
+      if (mins < 1) return 'justo ahora';
+      if (mins < 60) return `hace ${mins} min`;
+      const hrsEs = Math.round(mins / 60);
+      if (hrsEs < 24) return `hace ${hrsEs} h`;
+      return `hace ${Math.round(hrsEs / 24)} d`;
+    }
     if (mins < 1) return 'just now';
     if (mins < 60) return `${mins} min ago`;
     const hrs = Math.round(mins / 60);
@@ -50,13 +59,20 @@ function relativeTime(iso: string): string {
   }
 }
 
-function calculateAge(dob: string): string {
+function calculateAge(dob: string, lang: Lang = 'en'): string {
   const birth = new Date(dob);
   const now = new Date();
   const years = now.getFullYear() - birth.getFullYear();
   const months = now.getMonth() - birth.getMonth();
   const adjustedMonths = months < 0 ? months + 12 : months;
   const adjustedYears = months < 0 ? years - 1 : years;
+
+  if (lang === 'es') {
+    if (adjustedYears === 0) return `${adjustedMonths} meses`;
+    if (adjustedYears === 1 && adjustedMonths === 0) return '1 año';
+    if (adjustedMonths === 0) return `${adjustedYears} años`;
+    return `${adjustedYears}a ${adjustedMonths}m`;
+  }
 
   if (adjustedYears === 0) return `${adjustedMonths} months`;
   if (adjustedYears === 1 && adjustedMonths === 0) return '1 year';
@@ -65,6 +81,7 @@ function calculateAge(dob: string): string {
 }
 
 export default function ParentDashboard() {
+  const { lang, t } = useLang();
   const [family, setFamily] = useState<FamilyAccount | null>(null);
   const [loading, setLoading] = useState(true);
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
@@ -131,7 +148,7 @@ export default function ParentDashboard() {
                       .charAt(0)
                       .toUpperCase()}${String(e.type).slice(1)}`,
                     description: note || `New ${e.type} entry on the daily report`,
-                    time: relativeTime(e.occurred_at),
+                    time: relativeTime(e.occurred_at, lang),
                     type: e.type === 'photo' ? 'photo' : e.type === 'incident' ? 'report' : 'event',
                   });
                 }
@@ -149,6 +166,7 @@ export default function ParentDashboard() {
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadFamily]);
 
   function openEditProfile() {
@@ -257,11 +275,8 @@ export default function ParentDashboard() {
   if (!family) {
     return (
       <div className="max-w-md mx-auto mt-12 text-center space-y-2">
-        <h1 className="text-xl font-bold">Welcome</h1>
-        <p className="text-muted-foreground text-sm">
-          We could not find a family linked to your account yet. Once your
-          enrollment is approved, your family dashboard appears here.
-        </p>
+        <h1 className="text-xl font-bold">{t('dash.welcome')}</h1>
+        <p className="text-muted-foreground text-sm">{t('dash.noFamily')}</p>
       </div>
     );
   }
@@ -272,9 +287,9 @@ export default function ParentDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">
-          Welcome back, {primaryParent?.name.split(' ')[0] || 'Parent'}!
+          {t('dash.welcomeBack').replace('{name}', primaryParent?.name.split(' ')[0] || t('dash.parentFallback'))}
         </h1>
-        <p className="text-muted-foreground">Here&apos;s what&apos;s happening with your family.</p>
+        <p className="text-muted-foreground">{t('dash.whatsHappening')}</p>
       </div>
 
       {/* Family Profile Card */}
@@ -322,7 +337,7 @@ export default function ParentDashboard() {
                   )}
                 </div>
                 <Button variant="ghost" size="sm" onClick={openEditProfile}>
-                  <Pencil className="h-4 w-4 mr-1" /> Edit
+                  <Pencil className="h-4 w-4 mr-1" /> {t('dash.edit')}
                 </Button>
               </div>
               {family.family_bio && (
@@ -337,10 +352,10 @@ export default function ParentDashboard() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold flex items-center gap-2">
-            <Users className="h-5 w-5" /> My Children
+            <Users className="h-5 w-5" /> {t('dash.myChildren')}
           </h2>
           <Button size="sm" variant="outline" onClick={openAddChild}>
-            <Plus className="h-4 w-4 mr-1" /> Add Child
+            <Plus className="h-4 w-4 mr-1" /> {t('dash.addChild')}
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -363,7 +378,7 @@ export default function ParentDashboard() {
                       <div>
                         <h3 className="font-bold text-lg">{child.name}</h3>
                         <p className="text-sm text-muted-foreground">
-                          {child.classroom || 'Not assigned'} · {calculateAge(child.date_of_birth)}
+                          {child.classroom || t('dash.notAssigned')} · {calculateAge(child.date_of_birth, lang)}
                         </p>
                       </div>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditChild(child)}>
@@ -391,8 +406,8 @@ export default function ParentDashboard() {
             <Card className="col-span-full">
               <CardContent className="p-6 text-center text-muted-foreground">
                 <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No children added yet.</p>
-                <Button variant="link" onClick={openAddChild}>Add your first child</Button>
+                <p>{t('dash.noChildrenYet')}</p>
+                <Button variant="link" onClick={openAddChild}>{t('dash.addFirstChild')}</Button>
               </CardContent>
             </Card>
           )}
@@ -402,11 +417,11 @@ export default function ParentDashboard() {
       {/* Quick Links */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { href: '/dashboard/children', label: 'My Children', icon: Users, color: 'bg-christina-red' },
-          { href: '/dashboard/progress', label: 'Progress', icon: FileText, color: 'bg-christina-blue' },
-          { href: '/dashboard/photos', label: 'Photos', icon: Camera, color: 'bg-christina-coral' },
-          { href: '/dashboard/news', label: 'Newsletter', icon: Newspaper, color: 'bg-christina-green' },
-          { href: '/dashboard/calendar', label: 'Calendar', icon: Calendar, color: 'bg-christina-yellow' },
+          { href: '/dashboard/children', label: t('dash.myChildren'), icon: Users, color: 'bg-christina-red' },
+          { href: '/dashboard/progress', label: t('dash.qlProgress'), icon: FileText, color: 'bg-christina-blue' },
+          { href: '/dashboard/photos', label: t('dash.qlPhotos'), icon: Camera, color: 'bg-christina-coral' },
+          { href: '/dashboard/news', label: t('nav.newsletter'), icon: Newspaper, color: 'bg-christina-green' },
+          { href: '/dashboard/calendar', label: t('nav.calendar'), icon: Calendar, color: 'bg-christina-yellow' },
         ].map((link) => (
           <Link key={link.href} href={link.href}>
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
@@ -424,14 +439,13 @@ export default function ParentDashboard() {
       {/* Recent Updates */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5" /> Recent Updates</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5" /> {t('dash.recentUpdates')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {updates.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                Nothing new yet today. Your child&apos;s teachers add to the
-                daily report through the day.
+                {t('dash.nothingNew')}
               </p>
             ) : (
               updates.map((update, i) => (
@@ -453,28 +467,28 @@ export default function ParentDashboard() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Family Profile</DialogTitle>
+            <DialogTitle>{t('dash.editProfile')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Your Name</Label>
+              <Label htmlFor="edit-name">{t('dash.yourName')}</Label>
               <Input id="edit-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-phone">Phone</Label>
+              <Label htmlFor="edit-phone">{t('dash.phone')}</Label>
               <Input id="edit-phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-address">Address</Label>
+              <Label htmlFor="edit-address">{t('dash.address')}</Label>
               <Input id="edit-address" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-bio">Family Bio</Label>
+              <Label htmlFor="edit-bio">{t('dash.familyBio')}</Label>
               <Textarea id="edit-bio" value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={3} />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-              <Button className="bg-christina-blue hover:bg-christina-blue/90" onClick={handleSaveProfile}>Save Changes</Button>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>{t('dash.cancel')}</Button>
+              <Button className="bg-christina-blue hover:bg-christina-blue/90" onClick={handleSaveProfile}>{t('dash.saveChanges')}</Button>
             </div>
           </div>
         </DialogContent>
@@ -484,7 +498,7 @@ export default function ParentDashboard() {
       <Dialog open={childDialogOpen} onOpenChange={setChildDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingChild ? 'Edit Child' : 'Add Child'}</DialogTitle>
+            <DialogTitle>{editingChild ? t('dash.editChild') : t('dash.addChild')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             {/* Child Photo */}
@@ -501,8 +515,8 @@ export default function ParentDashboard() {
                 )}
               </div>
               <div>
-                <p className="text-sm font-medium">Photo</p>
-                <p className="text-xs text-muted-foreground">Click to upload</p>
+                <p className="text-sm font-medium">{t('dash.photo')}</p>
+                <p className="text-xs text-muted-foreground">{t('dash.clickToUpload')}</p>
               </div>
               <input
                 ref={childPhotoRef}
@@ -513,23 +527,23 @@ export default function ParentDashboard() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="child-name">Name</Label>
+              <Label htmlFor="child-name">{t('dash.name')}</Label>
               <Input id="child-name" value={childName} onChange={(e) => setChildName(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="child-dob">Date of Birth</Label>
+              <Label htmlFor="child-dob">{t('dash.dob')}</Label>
               <Input id="child-dob" type="date" value={childDob} onChange={(e) => setChildDob(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="child-classroom">Classroom</Label>
-              <Input id="child-classroom" value={childClassroom} onChange={(e) => setChildClassroom(e.target.value)} placeholder="e.g., Bright Butterflies" />
+              <Label htmlFor="child-classroom">{t('dash.classroom')}</Label>
+              <Input id="child-classroom" value={childClassroom} onChange={(e) => setChildClassroom(e.target.value)} placeholder={t('dash.classroomPlaceholder')} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="child-allergies">Allergies (comma-separated)</Label>
-              <Input id="child-allergies" value={childAllergies} onChange={(e) => setChildAllergies(e.target.value)} placeholder="e.g., Peanuts, Dairy" />
+              <Label htmlFor="child-allergies">{t('dash.allergies')}</Label>
+              <Input id="child-allergies" value={childAllergies} onChange={(e) => setChildAllergies(e.target.value)} placeholder={t('dash.allergiesPlaceholder')} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="child-medical">Medical Notes</Label>
+              <Label htmlFor="child-medical">{t('dash.medicalNotes')}</Label>
               <Textarea id="child-medical" value={childMedical} onChange={(e) => setChildMedical(e.target.value)} rows={2} />
             </div>
             <div className="flex justify-between">
@@ -543,18 +557,18 @@ export default function ParentDashboard() {
                       setChildDialogOpen(false);
                     }}
                   >
-                    <Trash2 className="h-4 w-4 mr-1" /> Remove
+                    <Trash2 className="h-4 w-4 mr-1" /> {t('dash.remove')}
                   </Button>
                 )}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setChildDialogOpen(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setChildDialogOpen(false)}>{t('dash.cancel')}</Button>
                 <Button
                   className="bg-christina-blue hover:bg-christina-blue/90"
                   onClick={handleSaveChild}
                   disabled={!childName || !childDob}
                 >
-                  {editingChild ? 'Save Changes' : 'Add Child'}
+                  {editingChild ? t('dash.saveChanges') : t('dash.addChild')}
                 </Button>
               </div>
             </div>

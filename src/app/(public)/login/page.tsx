@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, LogIn, UserPlus } from 'lucide-react';
+import { useT } from '@/contexts/LanguageContext';
 
 export default function ParentLoginPage() {
   const router = useRouter();
+  const t = useT();
   const [loading, setLoading] = useState(false);
   const [signInError, setSignInError] = useState('');
   const [signUpError, setSignUpError] = useState('');
@@ -35,21 +37,19 @@ export default function ParentLoginPage() {
       });
 
       if (res.status === 429) {
-        setSignInError('Too many login attempts. Please wait before trying again.');
+        setSignInError(t('login.tooManyAttempts'));
         setLoading(false);
         return;
       }
       if (!res.ok) {
-        setSignInError(
-          'Invalid email or password, or your account is still pending approval.'
-        );
+        setSignInError(t('login.invalidCreds'));
         setLoading(false);
         return;
       }
 
       router.push('/dashboard');
     } catch {
-      setSignInError('Connection error. Please try again.');
+      setSignInError(t('login.connError'));
       setLoading(false);
     }
   }
@@ -66,13 +66,13 @@ export default function ParentLoginPage() {
     const confirm = formData.get('confirm') as string;
 
     if (password !== confirm) {
-      setSignUpError('Passwords do not match.');
+      setSignUpError(t('login.passwordsNoMatch'));
       setLoading(false);
       return;
     }
 
     if (password.length < 6) {
-      setSignUpError('Password must be at least 6 characters.');
+      setSignUpError(t('login.passwordMin6'));
       setLoading(false);
       return;
     }
@@ -86,7 +86,7 @@ export default function ParentLoginPage() {
       setLoading(false);
       // Do not redirect: account is pending approval
     } catch (err) {
-      setSignUpError(err instanceof Error ? err.message : 'Registration failed.');
+      setSignUpError(err instanceof Error ? err.message : t('login.regFailed'));
       setLoading(false);
     }
   }
@@ -98,8 +98,8 @@ export default function ParentLoginPage() {
           <div className="w-16 h-16 rounded-full bg-christina-blue flex items-center justify-center mx-auto mb-4">
             <Users className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold">Parent Portal</h1>
-          <p className="text-muted-foreground">Sign in to view your child&apos;s progress</p>
+          <h1 className="text-2xl font-bold">{t('login.portalTitle')}</h1>
+          <p className="text-muted-foreground">{t('login.portalSubtitle')}</p>
         </div>
         <Card>
           <CardContent className="p-6">
@@ -112,7 +112,7 @@ export default function ParentLoginPage() {
                 const { signInWithGoogle } = await import('@/lib/auth');
                 const result = await signInWithGoogle();
                 if (!result.success) {
-                  setSignInError(result.error || 'Google sign-in failed.');
+                  setSignInError(result.error || t('login.googleFailed'));
                   setLoading(false);
                 }
               }}
@@ -125,23 +125,23 @@ export default function ParentLoginPage() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
               </svg>
-              Sign in with Google
+              {t('login.googleSignIn')}
             </button>
 
             <div className="relative mb-4">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
-              <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-gray-400">or email &amp; password</span></div>
+              <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-gray-400">{t('login.orEmailPassword')}</span></div>
             </div>
 
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="signin" className="gap-2">
                   <LogIn className="h-4 w-4" />
-                  Sign In
+                  {t('login.tabSignIn')}
                 </TabsTrigger>
                 <TabsTrigger value="signup" className="gap-2">
                   <UserPlus className="h-4 w-4" />
-                  Create Account
+                  {t('login.tabCreate')}
                 </TabsTrigger>
               </TabsList>
 
@@ -149,16 +149,16 @@ export default function ParentLoginPage() {
               <TabsContent value="signin" className="mt-0">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email">{t('login.email')}</Label>
                     <Input id="signin-email" name="email" type="email" placeholder="you@example.com" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <Label htmlFor="signin-password">{t('login.password')}</Label>
                     <Input id="signin-password" name="password" type="password" placeholder="••••••••" required />
                   </div>
                   {signInError && <p className="text-sm text-red-600">{signInError}</p>}
                   <Button type="submit" className="w-full bg-christina-blue hover:bg-christina-blue/90" disabled={loading}>
-                    {loading ? 'Signing in...' : 'Sign In'}
+                    {loading ? t('login.signingIn') : t('login.signIn')}
                   </Button>
                 </form>
               </TabsContent>
@@ -170,34 +170,34 @@ export default function ParentLoginPage() {
                     <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
                       <UserPlus className="h-6 w-6 text-green-600" />
                     </div>
-                    <p className="font-semibold text-green-700">Registration received!</p>
-                    <p className="text-sm text-muted-foreground mt-1">Your account is pending approval. Christina will review your information and activate your account within 24 hours. You will be able to log in once approved.</p>
+                    <p className="font-semibold text-green-700">{t('login.regReceivedTitle')}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{t('login.regPending')}</p>
                   </div>
                 ) : (
                   <form onSubmit={handleSignUp} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-name">Your Name</Label>
+                      <Label htmlFor="signup-name">{t('login.yourName')}</Label>
                       <Input id="signup-name" name="name" placeholder="Jane Smith" required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email</Label>
+                      <Label htmlFor="signup-email">{t('login.email')}</Label>
                       <Input id="signup-email" name="email" type="email" placeholder="you@example.com" required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-phone">Phone</Label>
+                      <Label htmlFor="signup-phone">{t('login.phone')}</Label>
                       <Input id="signup-phone" name="phone" type="tel" placeholder="(555) 123-4567" required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-password">Password</Label>
-                      <Input id="signup-password" name="password" type="password" placeholder="At least 6 characters" required />
+                      <Label htmlFor="signup-password">{t('login.password')}</Label>
+                      <Input id="signup-password" name="password" type="password" placeholder={t('login.passwordMinPlaceholder')} required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-confirm">Confirm Password</Label>
+                      <Label htmlFor="signup-confirm">{t('login.confirmPassword')}</Label>
                       <Input id="signup-confirm" name="confirm" type="password" placeholder="••••••••" required />
                     </div>
                     {signUpError && <p className="text-sm text-red-600">{signUpError}</p>}
                     <Button type="submit" className="w-full bg-christina-blue hover:bg-christina-blue/90" disabled={loading}>
-                      {loading ? 'Creating account...' : 'Create Account'}
+                      {loading ? t('login.creatingAccount') : t('login.createAccount')}
                     </Button>
                   </form>
                 )}
@@ -207,15 +207,15 @@ export default function ParentLoginPage() {
             {/* Signup Guide */}
             <div className="mt-4 text-center">
               <Link href="/signup-guide" className="text-sm text-christina-blue hover:underline">
-                New parent? View our step-by-step signup guide
+                {t('login.signupGuideLink')}
               </Link>
             </div>
 
             {/* Other Login Links */}
             <div className="mt-3 flex justify-center gap-4 text-sm text-muted-foreground">
-              <Link href="/admin-login" className="text-christina-red hover:underline">Staff login</Link>
+              <Link href="/admin-login" className="text-christina-red hover:underline">{t('login.staffLogin')}</Link>
               <span>·</span>
-              <Link href="/employee-login" className="text-christina-red hover:underline">Employee portal</Link>
+              <Link href="/employee-login" className="text-christina-red hover:underline">{t('login.employeePortal')}</Link>
             </div>
           </CardContent>
         </Card>
