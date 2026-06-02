@@ -5,18 +5,21 @@ import { useState } from 'react';
 import { Menu, Phone, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useT } from '@/contexts/LanguageContext';
+import type { TranslationKey } from '@/lib/i18n';
 
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/programs', label: 'Programs' },
-  { href: '/about', label: 'About' },
-  { href: '/gallery', label: 'Gallery' },
-  { href: '/faq', label: 'FAQ' },
-  { href: '/enroll', label: 'Enroll' },
+const navLinks: { href: string; labelKey: TranslationKey }[] = [
+  { href: '/', labelKey: 'chrome.navHome' },
+  { href: '/programs', labelKey: 'chrome.navPrograms' },
+  { href: '/about', labelKey: 'chrome.navAbout' },
+  { href: '/gallery', labelKey: 'chrome.navGallery' },
+  { href: '/faq', labelKey: 'chrome.navFaq' },
+  { href: '/enroll', labelKey: 'chrome.navEnroll' },
 ];
 
 export function Header() {
   const [open, setOpen] = useState(false);
+  const t = useT();
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
@@ -27,8 +30,8 @@ export function Header() {
             <a href="tel:+15555555555" className="hidden sm:flex items-center gap-1 hover:underline"><Phone className="h-3 w-3" /> Brooklyn Park: 555-555-5555</a>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/employee-login" className="hover:underline">Staff Portal</Link>
-            <Link href="/login" className="hover:underline">Parent Portal</Link>
+            <Link href="/employee-login" className="hover:underline">{t('chrome.staffPortal')}</Link>
+            <Link href="/login" className="hover:underline">{t('chrome.parentPortal')}</Link>
           </div>
         </div>
       </div>
@@ -61,32 +64,32 @@ export function Header() {
           </svg>
           <div>
             <span className="font-playful text-lg text-foreground leading-tight block">Christina&apos;s</span>
-            <span className="text-xs text-muted-foreground leading-tight block">Child Care Center</span>
+            <span className="text-xs text-muted-foreground leading-tight block">{t('chrome.tagline2')}</span>
           </div>
         </Link>
         <div className="hidden lg:flex items-center gap-5">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href} className="text-sm font-medium text-foreground hover:text-christina-red transition-colors">
-              {link.label}
+              {t(link.labelKey)}
             </Link>
           ))}
           <Button asChild className="bg-christina-red hover:bg-christina-red/90">
-            <Link href="/schedule-tour" className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Schedule a Tour</Link>
+            <Link href="/schedule-tour" className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {t('chrome.scheduleTour')}</Link>
           </Button>
         </div>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild className="lg:hidden">
-            <Button variant="ghost" size="icon" aria-label="Open menu"><Menu className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" aria-label={t('chrome.openMenu')}><Menu className="h-5 w-5" /></Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-[280px]">
             <div className="flex flex-col gap-4 mt-8">
               {navLinks.map((link) => (
                 <Link key={link.href} href={link.href} onClick={() => setOpen(false)} className="text-lg font-medium py-2 border-b">
-                  {link.label}
+                  {t(link.labelKey)}
                 </Link>
               ))}
               <Button asChild className="bg-christina-red hover:bg-christina-red/90 mt-4">
-                <Link href="/schedule-tour" onClick={() => setOpen(false)} className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Schedule a Tour</Link>
+                <Link href="/schedule-tour" onClick={() => setOpen(false)} className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {t('chrome.scheduleTour')}</Link>
               </Button>
             </div>
           </SheetContent>

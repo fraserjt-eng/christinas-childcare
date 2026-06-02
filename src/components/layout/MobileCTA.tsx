@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Phone, Calendar } from 'lucide-react';
+import { useT } from '@/contexts/LanguageContext';
 
 export function MobileCTA() {
+  const t = useT();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -25,14 +27,14 @@ export function MobileCTA() {
           className="flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-christina-red hover:bg-red-50 transition-colors"
         >
           <Phone className="h-4 w-4" />
-          Call Now
+          {t('chrome.callNow')}
         </a>
         <Link
           href="/schedule-tour"
           className="flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-white bg-christina-red hover:bg-christina-red/90 transition-colors"
         >
           <Calendar className="h-4 w-4" />
-          Schedule Tour
+          {t('chrome.scheduleTourShort')}
         </Link>
       </div>
     </div>
