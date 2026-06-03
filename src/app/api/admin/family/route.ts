@@ -13,7 +13,8 @@ import { getServerSupabase } from '@/lib/supabase/server';
 interface ChildInput {
   name?: string;
   date_of_birth?: string;
-  classroom?: string;
+  classroom?: string; // legacy display label (room name)
+  classroom_id?: string; // real FK to classrooms(id); drives teacher access scoping
 }
 
 async function uniquePin(
@@ -53,7 +54,7 @@ export async function GET() {
     .limit(5000);
   const { data: kids } = await supabase
     .from('family_children')
-    .select('family_id, name, date_of_birth, classroom')
+    .select('family_id, name, date_of_birth, classroom, classroom_id')
     .limit(5000);
 
   const families = (fams || [])
@@ -67,6 +68,7 @@ export async function GET() {
           name: k.name,
           date_of_birth: k.date_of_birth || '',
           classroom: k.classroom || '',
+          classroom_id: k.classroom_id || '',
         }));
       return {
         id: f.id,
@@ -196,6 +198,7 @@ export async function POST(request: NextRequest) {
     name: (c.name as string).trim(),
     date_of_birth: c.date_of_birth?.trim() || null,
     classroom: c.classroom?.trim() || null,
+    classroom_id: c.classroom_id?.trim() || null,
   }));
   const { error: kidErr } = await supabase
     .from('family_children')
@@ -389,6 +392,7 @@ export async function PUT(request: NextRequest) {
       name: (c.name as string).trim(),
       date_of_birth: c.date_of_birth?.trim() || null,
       classroom: c.classroom?.trim() || null,
+      classroom_id: c.classroom_id?.trim() || null,
     }))
   );
   if (kidErr) {

@@ -6,6 +6,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionEmployee } from '@/lib/employee-server';
 import { resolveSessionFamily } from '@/lib/parent-server';
 import { centerDate, centerDateOf } from '@/lib/center-time';
+import { ADMIN_ROLES } from '@/lib/child-entries-policy';
 
 // The Tadpoles per-child timeline. Staff write entries stamped to the
 // verified session employee + classroom + time. Parents read ONLY their own
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
   // Confirm the child exists (clean FK error -> friendly message).
   const { data: child } = await supabase
     .from('family_children')
-    .select('id, classroom')
+    .select('id, classroom, classroom_id')
     .eq('id', childId)
     .maybeSingle();
   if (!child) {
@@ -126,6 +127,26 @@ export async function POST(request: NextRequest) {
 
   // Stamp to the real session employee where we can resolve one.
   const employee = await resolveSessionEmployee(session);
+
+  // Classroom write guard (defense in depth behind the roster filter): a
+  // teacher may only log for children in their assigned room. Admin / owner /
+  // superadmin bypass. Stops a crafted request from logging to the wrong child
+  // even if the UI is bypassed.
+  const role = String(session.user.role || employee?.role || '').toLowerCase();
+  const isAdmin = ADMIN_ROLES.includes(role);
+  if (!isAdmin) {
+    const childRoom = (child.classroom_id as string | null) ?? null;
+    const myRoom = employee?.classroom_id ?? null;
+    if (!myRoom || childRoom !== myRoom) {
+      return NextResponse.json(
+        { error: 'This child is not in your classroom.' },
+        { status: 403 }
+      );
+    }
+  }
+  // The authoritative room for the entry is the child's, never a client value.
+  const entryClassroomId =
+    (child.classroom_id as string | null) ?? body.classroom_id ?? null;
   const occurredAt = body.occurred_at || new Date().toISOString();
   const date = centerDateOf(occurredAt);
 
@@ -185,7 +206,7 @@ export async function POST(request: NextRequest) {
       // Secondary: classroom gallery. Best-effort; never blocks the report.
       try {
         await supabase.from('daily_photos').insert({
-          classroom_id: body.classroom_id || null,
+          classroom_id: entryClassroomId,
           photo_url: publicUrl,
           caption: noteText || null,
           child_ids: [childId],
@@ -210,7 +231,7 @@ export async function POST(request: NextRequest) {
       detail,
       occurred_at: occurredAt,
       recorded_by: employee?.id ?? null,
-      classroom_id: body.classroom_id || null,
+      classroom_id: entryClassroomId,
     })
     .select('id, child_id, date, type, detail, occurred_at, recorded_by, classroom_id')
     .single();

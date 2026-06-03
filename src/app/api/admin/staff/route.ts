@@ -168,6 +168,7 @@ const UPDATABLE_FIELDS = new Set([
   'certifications',
   'emergency_contact_name',
   'emergency_contact_phone',
+  'classroom_id',
 ]);
 
 export async function PATCH(request: NextRequest) {
@@ -225,6 +226,12 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'PIN must be 4 to 8 digits' }, { status: 400 });
     }
     updates.pin = pin;
+  }
+
+  // Empty classroom selection clears the assignment (back to unassigned).
+  if ('classroom_id' in updates) {
+    const v = String(updates.classroom_id ?? '').trim();
+    updates.classroom_id = v === '' ? null : v;
   }
 
   if ('role' in updates) {

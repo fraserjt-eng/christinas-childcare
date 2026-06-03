@@ -14,6 +14,7 @@ export interface ResolvedEmployee {
   job_title: string | null;
   employment_status: string;
   center_id: string | null;
+  classroom_id: string | null;
 }
 
 export async function resolveSessionEmployee(
@@ -23,7 +24,7 @@ export async function resolveSessionEmployee(
   if (!supabase) return null;
 
   const cols =
-    'id, first_name, last_name, email, role, job_title, employment_status, center_id';
+    'id, first_name, last_name, email, role, job_title, employment_status, center_id, classroom_id';
 
   let employee: ResolvedEmployee | null = null;
   if (session.user.id) {

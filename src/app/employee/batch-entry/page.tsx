@@ -45,8 +45,10 @@ export default function BatchEntryPage() {
   const [submitted, setSubmitted] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
+  const [noClassroom, setNoClassroom] = useState(false);
 
-  // Load the roster once (service-role route returns child + classroom name).
+  // Load the roster once (service-role route returns child + classroom name,
+  // scoped to the teacher's room for non-admins).
   useEffect(() => {
     async function load() {
       try {
@@ -54,6 +56,7 @@ export default function BatchEntryPage() {
         const json = await res.json().catch(() => ({ children: [] }));
         const kids: Child[] = json.children ?? [];
         setChildren(kids);
+        if (json.scoped && !json.classroom_id) setNoClassroom(true);
         const firstRoom = kids.find((c) => c.classroom)?.classroom || '';
         setClassroom(firstRoom);
       } finally {
@@ -191,6 +194,12 @@ export default function BatchEntryPage() {
           <CardTitle className="text-base">What and where</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {noClassroom && (
+            <div className="rounded-md border border-christina-yellow/60 bg-christina-yellow/10 p-3 text-sm">
+              You are not assigned to a classroom yet, so no children show here.
+              Ask your director to assign your classroom in Staff settings.
+            </div>
+          )}
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Classroom</Label>
             <select

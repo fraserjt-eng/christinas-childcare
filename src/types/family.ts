@@ -26,6 +26,7 @@ export interface FamilyChild {
   name: string;
   date_of_birth: string;
   classroom?: string;
+  classroom_id?: string;
   allergies: string[];
   medical_notes?: string;
   emergency_contacts: EmergencyContact[];

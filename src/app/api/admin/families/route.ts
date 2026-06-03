@@ -20,6 +20,7 @@ interface ChildIn {
   name?: string;
   date_of_birth?: string;
   classroom?: string;
+  classroom_id?: string;
   allergies?: string[];
   medical_notes?: string;
 }
@@ -46,7 +47,7 @@ export async function GET() {
       .limit(5000),
     supabase
       .from('family_children')
-      .select('id, family_id, name, date_of_birth, classroom, allergies, medical_notes')
+      .select('id, family_id, name, date_of_birth, classroom, classroom_id, allergies, medical_notes')
       .limit(5000),
   ]);
 
@@ -79,6 +80,7 @@ export async function GET() {
           name: (k.name as string) || '',
           date_of_birth: (k.date_of_birth as string | null) || '',
           classroom: (k.classroom as string | null) || '',
+          classroom_id: (k.classroom_id as string | null) || '',
           allergies: (k.allergies as string[] | null) || [],
           medical_notes: (k.medical_notes as string | null) || undefined,
           emergency_contacts: [],
@@ -169,6 +171,7 @@ export async function PATCH(request: NextRequest) {
           name: (c.name || '').trim(),
           date_of_birth: c.date_of_birth || null,
           classroom: c.classroom || null,
+          classroom_id: c.classroom_id || null,
           allergies: c.allergies || [],
           medical_notes: c.medical_notes || null,
         }))

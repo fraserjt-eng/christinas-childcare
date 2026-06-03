@@ -15,6 +15,7 @@ export interface SessionEmployee {
   role: string;
   job_title: string | null;
   center_id: string | null;
+  classroom_id: string | null;
 }
 
 export async function getSessionEmployee(): Promise<SessionEmployee | null> {

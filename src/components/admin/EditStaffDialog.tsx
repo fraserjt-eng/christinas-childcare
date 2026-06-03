@@ -36,6 +36,7 @@ export function EditStaffDialog({ open, onOpenChange, employee, onSave, onDelete
   const [certInput, setCertInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [classrooms, setClassrooms] = useState<{ id: string; name: string }[]>([]);
   // PIN is intentionally NOT pre-filled from the employee record. Blank means
   // "keep the existing PIN". Any 4-8 digit value replaces it on save.
   const [newPin, setNewPin] = useState('');
@@ -48,6 +49,25 @@ export function EditStaffDialog({ open, onOpenChange, employee, onSave, onDelete
       setPinError('');
     }
   }, [employee]);
+
+  // Load the real classroom list for the assignment dropdown when the dialog opens.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/admin/classrooms', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (!cancelled && Array.isArray(d.classrooms)) setClassrooms(d.classrooms);
+      } catch {
+        /* dropdown just shows no rooms if this fails */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   if (!employee) return null;
 
@@ -131,6 +151,25 @@ export function EditStaffDialog({ open, onOpenChange, employee, onSave, onDelete
               <div>
                 <Label>Job Title</Label>
                 <Input value={form.job_title || ''} onChange={(e) => update('job_title', e.target.value)} />
+              </div>
+              <div>
+                <Label>Classroom</Label>
+                <select
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={form.classroom_id || ''}
+                  onChange={(e) => update('classroom_id', e.target.value || undefined)}
+                >
+                  <option value="">Unassigned (no children visible)</option>
+                  {classrooms.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  A teacher only sees and logs the children in their assigned
+                  room. Owners and admins see every child.
+                </p>
               </div>
               <div>
                 <Label>Hourly Rate</Label>

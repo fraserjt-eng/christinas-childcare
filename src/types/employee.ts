@@ -34,6 +34,7 @@ export interface Employee {
   certifications: string[];
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
+  classroom_id?: string | null; // the single room a teacher is scoped to
   address?: string;
   date_of_birth?: string;
   created_at: string;

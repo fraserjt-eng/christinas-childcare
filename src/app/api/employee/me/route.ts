@@ -57,6 +57,7 @@ export async function GET() {
       role: employee.role,
       job_title: employee.job_title,
       center_id: employee.center_id,
+      classroom_id: employee.classroom_id,
       phone,
       emergency_contact_name,
       emergency_contact_phone,

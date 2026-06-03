@@ -58,6 +58,7 @@ type ChildPayload = {
   name: string;
   date_of_birth?: string;
   classroom?: string;
+  classroom_id?: string;
   allergies?: string[];
   medical_notes?: string;
 };
@@ -71,6 +72,7 @@ function childrenPayload(f: Pick<FamilyAccount, 'children'>): ChildPayload[] {
       name: c.name.trim(),
       date_of_birth: c.date_of_birth || undefined,
       classroom: c.classroom || undefined,
+      classroom_id: c.classroom_id || undefined,
       allergies: c.allergies || [],
       medical_notes: c.medical_notes || undefined,
     }));
@@ -157,6 +159,7 @@ function emptyChild(): ChildFormData {
     name: '',
     date_of_birth: '',
     classroom: '',
+    classroom_id: '',
     allergies: '',
     medical_notes: '',
     emergency_contact_name: '',
@@ -194,6 +197,7 @@ interface ChildFormData {
   name: string;
   date_of_birth: string;
   classroom: string;
+  classroom_id: string;
   allergies: string;
   medical_notes: string;
   emergency_contact_name: string;
@@ -243,6 +247,7 @@ function buildFormFromFamily(family: FamilyAccount): FamilyFormState {
       name: c.name,
       date_of_birth: c.date_of_birth,
       classroom: c.classroom ?? '',
+      classroom_id: c.classroom_id ?? '',
       allergies: c.allergies.join(', '),
       medical_notes: c.medical_notes ?? '',
       emergency_contact_name: ec?.name ?? '',
@@ -306,6 +311,7 @@ function formToFamilyData(
         name: c.name,
         date_of_birth: c.date_of_birth,
         classroom: c.classroom || undefined,
+        classroom_id: c.classroom_id || undefined,
         allergies: c.allergies
           ? c.allergies.split(',').map((a) => a.trim()).filter(Boolean)
           : [],
@@ -346,6 +352,36 @@ function FamilyFormContent({
 
   const updateChild = (index: number, field: keyof ChildFormData, value: string) => {
     const updated = form.children.map((c, i) => (i === index ? { ...c, [field]: value } : c));
+    onChange({ ...form, children: updated });
+  };
+
+  // Real classroom list for the per-child room assignment dropdown.
+  const [rooms, setRooms] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/admin/classrooms', { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (!cancelled && Array.isArray(d.classrooms)) setRooms(d.classrooms);
+      } catch {
+        /* dropdown just shows no rooms if this fails */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Setting the room stores both the FK (drives teacher access) and the display
+  // name. The sentinel clears the assignment back to unassigned.
+  const setChildRoom = (index: number, roomId: string) => {
+    const id = roomId === '__none__' ? '' : roomId;
+    const name = rooms.find((r) => r.id === id)?.name ?? '';
+    const updated = form.children.map((c, i) =>
+      i === index ? { ...c, classroom_id: id, classroom: name } : c
+    );
     onChange({ ...form, children: updated });
   };
 
@@ -590,21 +626,26 @@ function FamilyFormContent({
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor={`child-${idx}-program`}>Program</Label>
+                <Label htmlFor={`child-${idx}-program`}>Classroom</Label>
                 <Select
-                  value={child.classroom}
-                  onValueChange={(v) => updateChild(idx, 'classroom', v)}
+                  value={child.classroom_id || '__none__'}
+                  onValueChange={(v) => setChildRoom(idx, v)}
                 >
                   <SelectTrigger id={`child-${idx}-program`}>
-                    <SelectValue placeholder="Select..." />
+                    <SelectValue placeholder="Select a room..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="infant">Infant</SelectItem>
-                    <SelectItem value="toddler">Toddler</SelectItem>
-                    <SelectItem value="preschool">Preschool</SelectItem>
-                    <SelectItem value="school_age">School Age</SelectItem>
+                    <SelectItem value="__none__">Unassigned</SelectItem>
+                    {rooms.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Sets which teacher can see and log for this child.
+                </p>
               </div>
               <div className="col-span-2 space-y-1">
                 <Label htmlFor={`child-${idx}-allergies`}>Allergies</Label>

@@ -90,6 +90,7 @@ export default function StaffDailyReportPage() {
   const [loadingRoster, setLoadingRoster] = useState(true);
   const [error, setError] = useState('');
   const [rosterError, setRosterError] = useState(false);
+  const [noClassroom, setNoClassroom] = useState(false);
   const [viewDate, setViewDate] = useState<'today' | 'yesterday'>('today');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNote, setEditNote] = useState('');
@@ -102,12 +103,19 @@ export default function StaffDailyReportPage() {
   const loadRoster = useCallback(async () => {
     setLoadingRoster(true);
     setRosterError(false);
+    setNoClassroom(false);
     try {
       const r = await fetch('/api/staff/children', { cache: 'no-store' });
       if (r.ok) {
         const d = await r.json();
         setChildren(d.children || []);
-        if (!d.children || d.children.length === 0) setRosterError(true);
+        // A scoped teacher with no assigned room sees an empty roster on
+        // purpose. Show the "ask your admin" note, not a load error.
+        if (d.scoped && !d.classroom_id) {
+          setNoClassroom(true);
+        } else if (!d.children || d.children.length === 0) {
+          setRosterError(true);
+        }
       } else {
         setRosterError(true);
       }
@@ -297,6 +305,17 @@ export default function StaffDailyReportPage() {
             {loadingRoster ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 className="h-4 w-4 animate-spin" /> Loading roster…
+              </div>
+            ) : noClassroom ? (
+              <div className="mt-1 rounded-md border border-christina-yellow/60 bg-christina-yellow/10 p-3 text-sm">
+                You are not assigned to a classroom yet, so no children show
+                here. Ask your director to assign your classroom in Staff
+                settings, then reload.
+                <div className="mt-2">
+                  <Button type="button" size="sm" variant="outline" onClick={loadRoster} className="text-xs">
+                    Reload
+                  </Button>
+                </div>
               </div>
             ) : (
               <>

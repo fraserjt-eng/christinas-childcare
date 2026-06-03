@@ -3,6 +3,8 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { resolveSessionEmployee } from '@/lib/employee-server';
+import { ADMIN_ROLES } from '@/lib/child-entries-policy';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function uuidOrNull(v: unknown): string | null {
@@ -25,7 +27,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const body = await request.json().catch(() => ({}));
-  const classroomId = uuidOrNull(body.classroom_id);
+  let classroomId = uuidOrNull(body.classroom_id);
   const classroomName =
     typeof body.classroom_name === 'string' ? body.classroom_name.slice(0, 120) : null;
   const photos = Array.isArray(body.photos) ? body.photos : [];
@@ -37,17 +39,45 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Too many photos at once (max 10)' }, { status: 400 });
   }
 
+  // Classroom scope: a teacher may only post to their assigned room. Admin /
+  // owner / superadmin may post to any room. Mirrors the child-roster filter.
+  const employee = await resolveSessionEmployee(session);
+  const role = String(session.user.role || employee?.role || '').toLowerCase();
+  const isAdmin = ADMIN_ROLES.includes(role);
+  if (!isAdmin) {
+    if (!employee?.classroom_id) {
+      return NextResponse.json(
+        { error: 'No classroom assigned. Ask your admin to assign your classroom.' },
+        { status: 403 }
+      );
+    }
+    if (classroomId && classroomId !== employee.classroom_id) {
+      return NextResponse.json(
+        { error: 'You can only post photos for your own classroom.' },
+        { status: 403 }
+      );
+    }
+    classroomId = employee.classroom_id;
+  }
+
   // Resolve the classroom's children once so every photo reaches those families.
-  // Children link to a classroom by the text `classroom` field (the room name).
+  // Prefer the real classroom_id link; fall back to the legacy text room name.
   let childIds: string[] = [];
-  if (classroomName) {
+  if (classroomId || classroomName) {
     const { data: kids } = await supabase
       .from('family_children')
-      .select('id, classroom')
+      .select('id, classroom, classroom_id')
       .limit(5000);
-    childIds = (kids ?? [])
-      .filter((k) => ((k.classroom as string | null) ?? null) === classroomName)
-      .map((k) => k.id as string);
+    if (classroomId) {
+      childIds = (kids ?? [])
+        .filter((k) => ((k.classroom_id as string | null) ?? null) === classroomId)
+        .map((k) => k.id as string);
+    }
+    if (childIds.length === 0 && classroomName) {
+      childIds = (kids ?? [])
+        .filter((k) => ((k.classroom as string | null) ?? null) === classroomName)
+        .map((k) => k.id as string);
+    }
   }
 
   const employeeId = uuidOrNull(session.user.id);
