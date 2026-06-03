@@ -61,7 +61,7 @@ async function loadContext(id: string) {
   }
   const { data: entry } = await supabase
     .from('child_daily_entries')
-    .select('id, type, occurred_at, detail, deleted_at')
+    .select('id, type, occurred_at, detail, deleted_at, child_id, classroom_id')
     .eq('id', id)
     .maybeSingle();
   if (!entry || entry.deleted_at) {
@@ -69,6 +69,31 @@ async function loadContext(id: string) {
   }
   const isAdmin = ADMIN_ROLES.includes(session.user.role);
   const employee = await resolveSessionEmployee(session);
+
+  // Classroom scope: a teacher may only edit/delete entries for children in
+  // their assigned room. Admin/owner/superadmin bypass. The entry carries the
+  // room it was logged under; fall back to the child's current room for older
+  // entries stamped before classroom scoping existed. 404 (not 403) so a
+  // teacher cannot probe which entry ids exist outside their room.
+  if (!isAdmin) {
+    let entryRoom = (entry as { classroom_id?: string | null }).classroom_id ?? null;
+    if (!entryRoom) {
+      const childId = (entry as { child_id?: string | null }).child_id ?? null;
+      if (childId) {
+        const { data: child } = await supabase
+          .from('family_children')
+          .select('classroom_id')
+          .eq('id', childId)
+          .maybeSingle();
+        entryRoom = (child?.classroom_id as string | null) ?? null;
+      }
+    }
+    const myRoom = employee?.classroom_id ?? null;
+    if (!myRoom || entryRoom !== myRoom) {
+      return { error: NextResponse.json({ error: 'Entry not found' }, { status: 404 }) } as const;
+    }
+  }
+
   return { session, supabase, entry: entry as EntryRow, isAdmin, employee } as const;
 }
 

@@ -56,6 +56,24 @@ export async function GET(request: NextRequest) {
       // Never confirm or leak another family's child.
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+  } else {
+    // Staff: a teacher may only read children in their assigned room; admin /
+    // owner / superadmin read any child. Same scope as the roster + write path,
+    // so a guessed child_id cannot leak another room's timeline.
+    const role = String(session.user.role || '').toLowerCase();
+    if (!ADMIN_ROLES.includes(role)) {
+      const employee = await resolveSessionEmployee(session);
+      const { data: child } = await supabase
+        .from('family_children')
+        .select('classroom_id')
+        .eq('id', childId)
+        .maybeSingle();
+      const childRoom = (child?.classroom_id as string | null) ?? null;
+      const myRoom = employee?.classroom_id ?? null;
+      if (!myRoom || childRoom !== myRoom) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
   }
 
   const { data, error } = await supabase
