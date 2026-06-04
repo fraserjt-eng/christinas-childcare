@@ -53,7 +53,9 @@ interface ChildWithAttendance {
   attendance_id: string | null;
 }
 
-const CRYSTAL_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
+// The single operating center (Brooklyn Park). Id retained from the original
+// seed record, renamed from "Crystal Center" once the business consolidated.
+const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -182,7 +184,7 @@ export default function AttendancePage() {
       child_name: child.child_name,
       date: today,
       check_in: new Date().toISOString(),
-      center_id: CRYSTAL_CENTER_ID,
+      center_id: OPERATING_CENTER_ID,
     });
     await loadData();
   }

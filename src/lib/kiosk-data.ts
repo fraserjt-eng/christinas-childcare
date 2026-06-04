@@ -58,8 +58,10 @@ export function getTodayDate(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-// Crystal Center ID (from seeded centers table) — used for live attendance.
-const CRYSTAL_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
+// The single operating center (Brooklyn Park) — used for live attendance. Id
+// retained from the original seed record, renamed from "Crystal Center" once
+// the business consolidated to one location.
+const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 
 // ============================================================
 // LIVE: everything through the locked server route
@@ -165,7 +167,7 @@ export const demoKioskClient: KioskClient = {
       child_name: child.name,
       date: today,
       check_in: new Date().toISOString(),
-      center_id: CRYSTAL_CENTER_ID,
+      center_id: OPERATING_CENTER_ID,
       notes: `family:${familyId}`,
     });
   },

@@ -10,7 +10,10 @@ import { centerDate } from '@/lib/center-time';
 // route uses the service-role client and returns ONLY the fields the kiosk
 // renders — never pin or password_hash.
 
-const CRYSTAL_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
+// The single operating center (Brooklyn Park). Id retained from the original
+// seed record, which was renamed from "Crystal Center" to "Brooklyn Park" once
+// the business consolidated to one location.
+const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 
 function todayDate(): string {
   // Center timezone so a kiosk check-in lands on the same day the ratio
@@ -147,7 +150,7 @@ export async function POST(request: NextRequest) {
       child_name: body.childName,
       date: today,
       check_in: new Date().toISOString(),
-      center_id: CRYSTAL_CENTER_ID,
+      center_id: OPERATING_CENTER_ID,
       notes: body.familyId ? `family:${body.familyId}` : null,
     });
     return NextResponse.json({ data: { ok: true } });
