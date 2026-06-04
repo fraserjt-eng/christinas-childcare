@@ -134,6 +134,39 @@ export default function AttendancePage() {
 
   useEffect(() => {
     loadData();
+
+    // Keep the page live so a kiosk check-in shows up without a manual reload.
+    // Three layers, because a phone left open is the real-world case:
+    //  1. realtime — instant update when the attendance table changes
+    //  2. refetch on focus/visibility — phones drop the socket when the screen
+    //     sleeps, so re-pull the moment the tab comes back to the foreground
+    //  3. slow interval poll — backstop if realtime never connects on mobile
+    let unsubscribe: (() => void) | undefined;
+    (async () => {
+      try {
+        const { subscribeToTable } = await import('@/lib/supabase/realtime');
+        unsubscribe = subscribeToTable('attendance', () => {
+          loadData();
+        });
+      } catch {
+        /* realtime optional; focus + poll still keep it fresh */
+      }
+    })();
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadData();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+
+    const poll = setInterval(loadData, 60000);
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+      clearInterval(poll);
+    };
   }, [loadData]);
 
   async function handleRefresh() {
