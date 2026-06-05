@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollFadeIn } from '@/components/features/ScrollFadeIn';
+import { useT } from '@/contexts/LanguageContext';
 import Link from 'next/link';
 import {
   CalendarDays,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function ScheduleTourPage() {
+  const t = useT();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [preferredTime, setPreferredTime] = useState('');
@@ -82,27 +84,27 @@ export default function ScheduleTourPage() {
             <div className="w-20 h-20 rounded-full bg-christina-red/10 flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="h-10 w-10 text-christina-red" />
             </div>
-            <h1 className="text-3xl font-bold mb-4">Tour Request Received!</h1>
+            <h1 className="text-3xl font-bold mb-4">{t('tour.successTitle')}</h1>
             <p className="text-muted-foreground text-lg mb-8">
-              We&apos;ll confirm your tour within 24 hours.
+              {t('tour.successMessage')}
             </p>
             <Card>
               <CardContent className="p-6 text-left space-y-4">
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-christina-red mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
-                    <p className="font-medium">Tour Location</p>
+                    <p className="font-medium">{t('tour.successLocationLabel')}</p>
                     <p className="text-muted-foreground">5510 W Broadway Ave, Crystal, MN 55428</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <ClipboardList className="h-5 w-5 text-christina-red mt-0.5 flex-shrink-0" />
                   <div className="text-sm">
-                    <p className="font-medium">What to Bring</p>
+                    <p className="font-medium">{t('tour.successBringLabel')}</p>
                     <ul className="text-muted-foreground space-y-1 mt-1">
-                      <li>Your child (so we can meet them!)</li>
-                      <li>Any questions about our programs</li>
-                      <li>A list of your scheduling needs</li>
+                      <li>{t('tour.successBring1')}</li>
+                      <li>{t('tour.successBring2')}</li>
+                      <li>{t('tour.successBring3')}</li>
                     </ul>
                   </div>
                 </div>
@@ -121,11 +123,10 @@ export default function ScheduleTourPage() {
         <ScrollFadeIn direction="up" duration={600}>
           <div className="text-center mb-12">
             <h1 className="font-playful text-4xl md:text-5xl mb-4 text-[#1a1a1a]">
-              Schedule a Tour
+              {t('tour.heroTitle')}
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Come see our center in person and meet the team that will care for your child.
-              We love showing families around and answering all your questions.
+              {t('tour.heroSubtitle')}
             </p>
           </div>
         </ScrollFadeIn>
@@ -139,7 +140,7 @@ export default function ScheduleTourPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CalendarDays className="h-5 w-5 text-christina-red" />
-                    Book Your Visit
+                    {t('tour.formTitle')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -147,16 +148,16 @@ export default function ScheduleTourPage() {
                     {/* Parent Name & Email */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="parentName">Parent Name *</Label>
+                        <Label htmlFor="parentName">{t('tour.parentNameLabel')}</Label>
                         <Input
                           id="parentName"
                           name="parentName"
                           required
-                          placeholder="Your full name"
+                          placeholder={t('tour.parentNamePlaceholder')}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email *</Label>
+                        <Label htmlFor="email">{t('tour.emailLabel')}</Label>
                         <Input
                           id="email"
                           name="email"
@@ -170,7 +171,7 @@ export default function ScheduleTourPage() {
                     {/* Phone & Preferred Date */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone *</Label>
+                        <Label htmlFor="phone">{t('tour.phoneLabel')}</Label>
                         <Input
                           id="phone"
                           name="phone"
@@ -180,7 +181,7 @@ export default function ScheduleTourPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="preferredDate">Preferred Date *</Label>
+                        <Label htmlFor="preferredDate">{t('tour.preferredDateLabel')}</Label>
                         <Input
                           id="preferredDate"
                           name="preferredDate"
@@ -194,21 +195,21 @@ export default function ScheduleTourPage() {
                     {/* Preferred Time & Number of Children */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="preferredTime">Preferred Time *</Label>
+                        <Label htmlFor="preferredTime">{t('tour.preferredTimeLabel')}</Label>
                         <Select required onValueChange={setPreferredTime}>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a time" />
+                            <SelectValue placeholder={t('tour.preferredTimePlaceholder')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="morning-9-10">Morning (9 - 10 AM)</SelectItem>
-                            <SelectItem value="late-morning-10-11">Late Morning (10 - 11 AM)</SelectItem>
-                            <SelectItem value="afternoon-1-2">Afternoon (1 - 2 PM)</SelectItem>
-                            <SelectItem value="late-afternoon-3-4">Late Afternoon (3 - 4 PM)</SelectItem>
+                            <SelectItem value="morning-9-10">{t('tour.timeMorning')}</SelectItem>
+                            <SelectItem value="late-morning-10-11">{t('tour.timeLateMorning')}</SelectItem>
+                            <SelectItem value="afternoon-1-2">{t('tour.timeAfternoon')}</SelectItem>
+                            <SelectItem value="late-afternoon-3-4">{t('tour.timeLateAfternoon')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="numberOfChildren">Number of Children</Label>
+                        <Label htmlFor="numberOfChildren">{t('tour.numberOfChildrenLabel')}</Label>
                         <Input
                           id="numberOfChildren"
                           name="numberOfChildren"
@@ -222,21 +223,21 @@ export default function ScheduleTourPage() {
 
                     {/* Children's Ages */}
                     <div className="space-y-2">
-                      <Label htmlFor="childrenAges">Children&apos;s Ages</Label>
+                      <Label htmlFor="childrenAges">{t('tour.childrenAgesLabel')}</Label>
                       <Input
                         id="childrenAges"
                         name="childrenAges"
-                        placeholder="e.g., 2 years, 4 years"
+                        placeholder={t('tour.childrenAgesPlaceholder')}
                       />
                     </div>
 
                     {/* Questions */}
                     <div className="space-y-2">
-                      <Label htmlFor="questions">Any questions?</Label>
+                      <Label htmlFor="questions">{t('tour.questionsLabel')}</Label>
                       <Textarea
                         id="questions"
                         name="questions"
-                        placeholder="Anything you'd like to know before your visit..."
+                        placeholder={t('tour.questionsPlaceholder')}
                         rows={4}
                       />
                     </div>
@@ -248,14 +249,14 @@ export default function ScheduleTourPage() {
                       className="w-full bg-christina-red hover:bg-christina-red/90"
                       disabled={loading}
                     >
-                      {loading ? 'Submitting...' : 'Request Tour'}
+                      {loading ? t('tour.submitLoading') : t('tour.submitButton')}
                     </Button>
                     <p className="text-xs text-muted-foreground mt-3 text-center">
-                      By submitting, you agree to our{' '}
+                      {t('tour.privacyPrefix')}{' '}
                       <Link href="/privacy" className="text-christina-red hover:underline">
-                        Privacy Policy
+                        {t('tour.privacyLink')}
                       </Link>
-                      . We never share your family&apos;s information.
+                      {t('tour.privacySuffix')}
                     </p>
                   </form>
                 </CardContent>
@@ -271,7 +272,7 @@ export default function ScheduleTourPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Eye className="h-5 w-5 text-christina-red" />
-                    What to Expect on Your Tour
+                    {t('tour.expectTitle')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -281,9 +282,9 @@ export default function ScheduleTourPage() {
                         1
                       </span>
                       <div>
-                        <span className="font-medium">Meet our teaching staff</span>
+                        <span className="font-medium">{t('tour.expect1Title')}</span>
                         <p className="text-muted-foreground mt-0.5">
-                          Get to know the people who will nurture your child every day.
+                          {t('tour.expect1Body')}
                         </p>
                       </div>
                     </li>
@@ -292,9 +293,9 @@ export default function ScheduleTourPage() {
                         2
                       </span>
                       <div>
-                        <span className="font-medium">See classrooms in action</span>
+                        <span className="font-medium">{t('tour.expect2Title')}</span>
                         <p className="text-muted-foreground mt-0.5">
-                          Watch how we create engaging learning environments for every age group.
+                          {t('tour.expect2Body')}
                         </p>
                       </div>
                     </li>
@@ -303,9 +304,9 @@ export default function ScheduleTourPage() {
                         3
                       </span>
                       <div>
-                        <span className="font-medium">Learn about our curriculum</span>
+                        <span className="font-medium">{t('tour.expect3Title')}</span>
                         <p className="text-muted-foreground mt-0.5">
-                          Discover the activities, routines, and learning goals we follow.
+                          {t('tour.expect3Body')}
                         </p>
                       </div>
                     </li>
@@ -314,9 +315,9 @@ export default function ScheduleTourPage() {
                         4
                       </span>
                       <div>
-                        <span className="font-medium">Ask questions and discuss your needs</span>
+                        <span className="font-medium">{t('tour.expect4Title')}</span>
                         <p className="text-muted-foreground mt-0.5">
-                          We want to hear about your family and what matters most to you.
+                          {t('tour.expect4Body')}
                         </p>
                       </div>
                     </li>
@@ -325,9 +326,9 @@ export default function ScheduleTourPage() {
                         5
                       </span>
                       <div>
-                        <span className="font-medium">Tours typically last 30 to 45 minutes</span>
+                        <span className="font-medium">{t('tour.expect5Title')}</span>
                         <p className="text-muted-foreground mt-0.5">
-                          Enough time to see everything without feeling rushed.
+                          {t('tour.expect5Body')}
                         </p>
                       </div>
                     </li>
@@ -342,7 +343,7 @@ export default function ScheduleTourPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-christina-red" />
-                    Getting Here
+                    {t('tour.gettingHereTitle')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -368,8 +369,8 @@ export default function ScheduleTourPage() {
                   <div className="flex items-start gap-3 text-sm">
                     <Car className="h-5 w-5 text-christina-red mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-medium">Parking</p>
-                      <p className="text-muted-foreground">Free parking available in our lot</p>
+                      <p className="font-medium">{t('tour.parkingLabel')}</p>
+                      <p className="text-muted-foreground">{t('tour.parkingBody')}</p>
                     </div>
                   </div>
                 </CardContent>

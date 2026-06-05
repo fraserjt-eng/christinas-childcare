@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollFadeIn } from '@/components/features/ScrollFadeIn';
 import { CheckCircle, Phone, Mail, MapPin, Calendar, Shield, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { useT } from '@/contexts/LanguageContext';
 
 interface InquiryData {
   parentName: string;
@@ -25,6 +26,7 @@ interface InquiryData {
 }
 
 export default function EnrollPage() {
+  const t = useT();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -86,25 +88,25 @@ export default function EnrollPage() {
             <div className="w-16 h-16 rounded-full bg-christina-green/10 flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="h-8 w-8 text-christina-green" />
             </div>
-            <h1 className="font-playful text-3xl mb-4">Thank You!</h1>
+            <h1 className="font-playful text-3xl mb-4">{t('enroll.thankYouTitle')}</h1>
             <p className="text-muted-foreground text-lg mb-6">
-              We&apos;ve received your enrollment inquiry and will contact you within 24 hours. We can&apos;t wait to meet your family!
+              {t('enroll.thankYouBody')}
             </p>
             <div className="bg-muted/50 rounded-lg p-6 text-left mb-6">
-              <h3 className="font-heading font-bold mb-3">What Happens Next</h3>
+              <h3 className="font-heading font-bold mb-3">{t('enroll.whatHappensNext')}</h3>
               <ol className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex gap-2"><span className="font-bold text-christina-red">1.</span> Our team reviews your inquiry</li>
-                <li className="flex gap-2"><span className="font-bold text-christina-red">2.</span> We&apos;ll call or email within 24 hours</li>
-                <li className="flex gap-2"><span className="font-bold text-christina-red">3.</span> Schedule a personal tour of our center</li>
-                <li className="flex gap-2"><span className="font-bold text-christina-red">4.</span> Complete enrollment paperwork</li>
+                <li className="flex gap-2"><span className="font-bold text-christina-red">1.</span> {t('enroll.successStep1')}</li>
+                <li className="flex gap-2"><span className="font-bold text-christina-red">2.</span> {t('enroll.successStep2')}</li>
+                <li className="flex gap-2"><span className="font-bold text-christina-red">3.</span> {t('enroll.successStep3')}</li>
+                <li className="flex gap-2"><span className="font-bold text-christina-red">4.</span> {t('enroll.successStep4')}</li>
               </ol>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button asChild className="bg-christina-red hover:bg-christina-red/90">
-                <Link href="/schedule-tour">Schedule a Tour Now</Link>
+                <Link href="/schedule-tour">{t('enroll.scheduleTourNow')}</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/">Back to Home</Link>
+                <Link href="/">{t('enroll.backToHome')}</Link>
               </Button>
             </div>
           </ScrollFadeIn>
@@ -118,9 +120,9 @@ export default function EnrollPage() {
       <div className="max-w-7xl mx-auto px-4">
         <ScrollFadeIn direction="up" duration={600}>
           <div className="text-center mb-12">
-            <h1 className="font-playful text-4xl md:text-5xl mb-4">Start Your Journey</h1>
+            <h1 className="font-playful text-4xl md:text-5xl mb-4">{t('enroll.heroTitle')}</h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Fill out the form below and we&apos;ll reach out to schedule a tour of our center. We&apos;d love to show you what makes Christina&apos;s special.
+              {t('enroll.heroSubtitle')}
             </p>
           </div>
         </ScrollFadeIn>
@@ -129,28 +131,29 @@ export default function EnrollPage() {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Enrollment Inquiry</CardTitle>
+                <CardTitle>{t('enroll.formCardTitle')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="parentName">Parent / Guardian Name *</Label>
+                      <Label htmlFor="parentName">{t('enroll.parentNameLabel')}</Label>
                       <Input
                         id="parentName"
                         required
-                        placeholder="Full name"
+                        placeholder={t('enroll.parentNamePlaceholder')}
                         value={formData.parentName}
                         onChange={(e) => updateField('parentName', e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email Address *</Label>
+                      <Label htmlFor="email">{t('enroll.emailLabel')}</Label>
                       <Input
                         id="email"
                         type="email"
                         required
                         placeholder="you@example.com"
+                        aria-label={t('enroll.emailLabel')}
                         value={formData.email}
                         onChange={(e) => updateField('email', e.target.value)}
                       />
@@ -158,7 +161,7 @@ export default function EnrollPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Label htmlFor="phone">{t('enroll.phoneLabel')}</Label>
                       <Input
                         id="phone"
                         type="tel"
@@ -169,11 +172,11 @@ export default function EnrollPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="childName">Child&apos;s Name *</Label>
+                      <Label htmlFor="childName">{t('enroll.childNameLabel')}</Label>
                       <Input
                         id="childName"
                         required
-                        placeholder="Child's first name"
+                        placeholder={t('enroll.childNamePlaceholder')}
                         value={formData.childName}
                         onChange={(e) => updateField('childName', e.target.value)}
                       />
@@ -181,36 +184,36 @@ export default function EnrollPage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="childAge">Child&apos;s Age *</Label>
+                      <Label htmlFor="childAge">{t('enroll.childAgeLabel')}</Label>
                       <Input
                         id="childAge"
                         required
-                        placeholder="e.g., 18 months, 3 years"
+                        placeholder={t('enroll.childAgePlaceholder')}
                         value={formData.childAge}
                         onChange={(e) => updateField('childAge', e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="program">Program Interest *</Label>
+                      <Label htmlFor="program">{t('enroll.programLabel')}</Label>
                       <Select
                         required
                         value={formData.program}
                         onValueChange={(v) => updateField('program', v)}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a program" />
+                          <SelectValue placeholder={t('enroll.programPlaceholder')} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="infant">Infant Care (6 wks - 12 mo)</SelectItem>
-                          <SelectItem value="toddler">Toddler (1 - 3 years)</SelectItem>
-                          <SelectItem value="preschool">Preschool (3 - 5 years)</SelectItem>
-                          <SelectItem value="school_age">School Age (5 - 12 years)</SelectItem>
+                          <SelectItem value="infant">{t('enroll.programInfant')}</SelectItem>
+                          <SelectItem value="toddler">{t('enroll.programToddler')}</SelectItem>
+                          <SelectItem value="preschool">{t('enroll.programPreschool')}</SelectItem>
+                          <SelectItem value="school_age">{t('enroll.programSchoolAge')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="startDate">Preferred Start Date</Label>
+                    <Label htmlFor="startDate">{t('enroll.startDateLabel')}</Label>
                     <Input
                       id="startDate"
                       type="date"
@@ -219,10 +222,10 @@ export default function EnrollPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="message">Additional Information</Label>
+                    <Label htmlFor="message">{t('enroll.messageLabel')}</Label>
                     <Textarea
                       id="message"
-                      placeholder="Tell us about your child, any questions, or special needs..."
+                      placeholder={t('enroll.messagePlaceholder')}
                       rows={4}
                       value={formData.message}
                       onChange={(e) => updateField('message', e.target.value)}
@@ -234,14 +237,14 @@ export default function EnrollPage() {
                     className="w-full bg-christina-red hover:bg-christina-red/90"
                     disabled={loading}
                   >
-                    {loading ? 'Submitting...' : 'Submit Inquiry'}
+                    {loading ? t('enroll.submitting') : t('enroll.submitButton')}
                   </Button>
                   <p className="text-xs text-muted-foreground mt-3 text-center">
-                    By submitting, you agree to our{' '}
+                    {t('enroll.privacyPrefix')}{' '}
                     <Link href="/privacy" className="text-christina-red hover:underline">
-                      Privacy Policy
+                      {t('enroll.privacyPolicyLink')}
                     </Link>
-                    . We never share your family&apos;s information.
+                    {t('enroll.privacySuffix')}
                   </p>
                 </form>
               </CardContent>
@@ -250,7 +253,7 @@ export default function EnrollPage() {
           <div className="space-y-6">
             <Card>
               <CardContent className="p-6">
-                <h3 className="font-bold mb-4">Contact Information</h3>
+                <h3 className="font-bold mb-4">{t('enroll.contactInfoTitle')}</h3>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-christina-red mt-0.5" />
@@ -269,7 +272,7 @@ export default function EnrollPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Clock className="h-5 w-5 text-christina-red" />
-                    <span className="text-sm">Mon-Fri, 6:30 AM - 6:00 PM</span>
+                    <span className="text-sm">{t('enroll.hours')}</span>
                   </div>
                 </div>
               </CardContent>
@@ -277,23 +280,23 @@ export default function EnrollPage() {
 
             <Card>
               <CardContent className="p-6">
-                <h3 className="font-bold mb-4">What to Expect</h3>
+                <h3 className="font-bold mb-4">{t('enroll.whatToExpectTitle')}</h3>
                 <ol className="space-y-3 text-sm text-muted-foreground">
                   <li className="flex gap-3">
                     <span className="w-6 h-6 rounded-full bg-christina-red text-white flex items-center justify-center text-xs flex-shrink-0">1</span>
-                    <span>We&apos;ll contact you within 24 hours</span>
+                    <span>{t('enroll.expectStep1')}</span>
                   </li>
                   <li className="flex gap-3">
                     <span className="w-6 h-6 rounded-full bg-christina-red text-white flex items-center justify-center text-xs flex-shrink-0">2</span>
-                    <span>Schedule a personal tour of our center</span>
+                    <span>{t('enroll.expectStep2')}</span>
                   </li>
                   <li className="flex gap-3">
                     <span className="w-6 h-6 rounded-full bg-christina-red text-white flex items-center justify-center text-xs flex-shrink-0">3</span>
-                    <span>Complete enrollment paperwork</span>
+                    <span>{t('enroll.expectStep3')}</span>
                   </li>
                   <li className="flex gap-3">
                     <span className="w-6 h-6 rounded-full bg-christina-red text-white flex items-center justify-center text-xs flex-shrink-0">4</span>
-                    <span>Welcome to the Christina&apos;s family!</span>
+                    <span>{t('enroll.expectStep4')}</span>
                   </li>
                 </ol>
               </CardContent>
@@ -302,12 +305,12 @@ export default function EnrollPage() {
             <Card className="bg-christina-red text-white">
               <CardContent className="p-6">
                 <Calendar className="h-8 w-8 mb-3 text-white/80" />
-                <h3 className="font-bold mb-2">Prefer to tour first?</h3>
+                <h3 className="font-bold mb-2">{t('enroll.tourFirstTitle')}</h3>
                 <p className="text-sm text-white/80 mb-4">
-                  See our classrooms, meet the teachers, and get all your questions answered in person.
+                  {t('enroll.tourFirstBody')}
                 </p>
                 <Button asChild variant="outline" className="border-white text-white hover:bg-white/10 w-full">
-                  <Link href="/schedule-tour">Schedule a Tour</Link>
+                  <Link href="/schedule-tour">{t('enroll.scheduleTour')}</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -315,11 +318,11 @@ export default function EnrollPage() {
             <Card>
               <CardContent className="p-6">
                 <Shield className="h-6 w-6 text-christina-green mb-3" />
-                <h3 className="font-bold mb-2 text-sm">We Accept</h3>
+                <h3 className="font-bold mb-2 text-sm">{t('enroll.weAcceptTitle')}</h3>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>County child care assistance</li>
-                  <li>Flexible spending accounts</li>
-                  <li>Multiple payment options</li>
+                  <li>{t('enroll.acceptCounty')}</li>
+                  <li>{t('enroll.acceptFsa')}</li>
+                  <li>{t('enroll.acceptMultiple')}</li>
                 </ul>
               </CardContent>
             </Card>

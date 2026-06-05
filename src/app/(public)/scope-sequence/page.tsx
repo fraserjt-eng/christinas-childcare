@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useT } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -72,7 +73,17 @@ function getExperienceIcon(type: ExperienceType) {
 }
 
 export default function ScopeSequencePage() {
+  const t = useT();
   const [activeTab, setActiveTab] = useState<AgeGroup>('infant');
+
+  const circleTimeLearnings = [
+    { icon: Heart, text: t('scope.learnEmpathy') },
+    { icon: MessageCircle, text: t('scope.learnListening') },
+    { icon: Users, text: t('scope.learnBelonging') },
+    { icon: HandHeart, text: t('scope.learnConflict') },
+    { icon: Sparkles, text: t('scope.learnGratitude') },
+    { icon: Star, text: t('scope.learnSelfworth') },
+  ];
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -80,15 +91,13 @@ export default function ScopeSequencePage() {
       <section className="bg-gradient-to-br from-christina-red to-red-700 text-white py-16 md:py-20">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Our Curriculum
+            {t('scope.heroTitle')}
           </h1>
           <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-6">
-            Scope & Sequence: What Your Child Will Learn
+            {t('scope.heroSubtitle')}
           </p>
           <p className="text-white/80 max-w-2xl mx-auto">
-            At Christina&apos;s Child Care Center, we follow a research-based, play-centered curriculum
-            that supports your child&apos;s growth across all developmental domains. Explore the milestones
-            we focus on at each age.
+            {t('scope.heroDescription')}
           </p>
         </div>
       </section>
@@ -99,14 +108,13 @@ export default function ScopeSequencePage() {
           <div className="text-center mb-12">
             <Badge className="bg-christina-red text-white mb-4 px-4 py-1">
               <Star className="h-3 w-3 mr-1" />
-              Signature Practice
+              {t('scope.signaturePractice')}
             </Badge>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Daily Circle Time & Prayer
+              {t('scope.circleTimeTitle')}
             </h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Rooted in indigenous wisdom and African Ubuntu philosophy, our daily circle time creates a sacred space
-              where every child belongs, every voice matters, and we grow together as a community.
+              {t('scope.circleTimeIntro')}
             </p>
           </div>
 
@@ -120,16 +128,13 @@ export default function ScopeSequencePage() {
               </div>
               <div className="text-center md:text-left">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  &ldquo;I Am Because We Are&rdquo;
+                  {t('scope.ubuntuQuote')}
                 </h3>
                 <p className="text-gray-600 mb-3">
-                  <span className="font-semibold text-christina-red">Ubuntu</span>, an African philosophy meaning
-                  &ldquo;I am because we are,&rdquo; guides our approach to building community. We teach children that
-                  their identity and worth come from being part of something greater than themselves.
+                  <span className="font-semibold text-christina-red">{t('scope.ubuntuWord')}</span>{t('scope.ubuntuBody')}
                 </p>
                 <p className="text-sm text-gray-500 italic">
-                  This interconnected worldview helps children develop empathy, belonging, and the understanding that
-                  we are all responsible for one another.
+                  {t('scope.ubuntuNote')}
                 </p>
               </div>
             </div>
@@ -143,10 +148,9 @@ export default function ScopeSequencePage() {
                 <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4">
                   <Sparkles className="h-6 w-6 text-christina-red" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Opening Prayer</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('scope.prayerTitle')}</h3>
                 <p className="text-sm text-gray-600">
-                  Each circle begins with a simple prayer of gratitude, blessing, and intention for our day together.
-                  This grounds us in thankfulness and sets a peaceful tone.
+                  {t('scope.prayerDesc')}
                 </p>
               </CardContent>
             </Card>
@@ -157,10 +161,9 @@ export default function ScopeSequencePage() {
                 <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-4">
                   <CircleDot className="h-6 w-6 text-amber-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">The Talking Piece</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('scope.talkingPieceTitle')}</h3>
                 <p className="text-sm text-gray-600">
-                  A special object passed around the circle gives each child the right to speak while others
-                  listen with respect. This teaches turn-taking, patience, and honoring every voice.
+                  {t('scope.talkingPieceDesc')}
                 </p>
               </CardContent>
             </Card>
@@ -171,10 +174,9 @@ export default function ScopeSequencePage() {
                 <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
                   <Users className="h-6 w-6 text-green-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Community Circle</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('scope.communityCircleTitle')}</h3>
                 <p className="text-sm text-gray-600">
-                  Sitting in a circle where everyone can see each other creates equality and connection.
-                  We share feelings, celebrate successes, and support one another as family.
+                  {t('scope.communityCircleDesc')}
                 </p>
               </CardContent>
             </Card>
@@ -185,10 +187,9 @@ export default function ScopeSequencePage() {
                 <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-4">
                   <HandHeart className="h-6 w-6 text-purple-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Healing & Restoration</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('scope.healingTitle')}</h3>
                 <p className="text-sm text-gray-600">
-                  When conflicts arise, we return to the circle to talk, listen, and restore relationships.
-                  We focus on understanding and making things right, not punishment.
+                  {t('scope.healingDesc')}
                 </p>
               </CardContent>
             </Card>
@@ -196,16 +197,9 @@ export default function ScopeSequencePage() {
 
           {/* What Children Learn */}
           <div className="bg-gray-900 rounded-2xl p-8 md:p-10 text-white">
-            <h3 className="text-xl font-bold mb-6 text-center">What Children Learn Through Circle Time</h3>
+            <h3 className="text-xl font-bold mb-6 text-center">{t('scope.whatChildrenLearn')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { icon: Heart, text: 'Empathy and compassion for others' },
-                { icon: MessageCircle, text: 'Listening skills and respectful communication' },
-                { icon: Users, text: 'Sense of belonging to a community' },
-                { icon: HandHeart, text: 'Conflict resolution through dialogue' },
-                { icon: Sparkles, text: 'Gratitude and spiritual awareness' },
-                { icon: Star, text: 'Self-worth and confidence to share' },
-              ].map((item, i) => (
+              {circleTimeLearnings.map((item, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
                     <item.icon className="h-4 w-4 text-christina-yellow" />
@@ -221,7 +215,7 @@ export default function ScopeSequencePage() {
       {/* Domain Legend */}
       <section className="bg-white border-b py-8">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-lg font-semibold text-gray-700 mb-4 text-center">Learning Domains We Focus On</h2>
+          <h2 className="text-lg font-semibold text-gray-700 mb-4 text-center">{t('scope.learningDomainsTitle')}</h2>
           <div className="flex flex-wrap justify-center gap-2">
             {DOMAIN_OVERVIEWS.map((domain) => {
               const Icon = iconMap[domain.icon] || Brain;
@@ -266,10 +260,10 @@ export default function ScopeSequencePage() {
               <TabsContent key={ageGroup} value={ageGroup} className="mt-0">
                 <div className="mb-6 text-center">
                   <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                    {AGE_GROUP_DISPLAY[ageGroup].label} Program
+                    {t('scope.programLabel').replace('{label}', AGE_GROUP_DISPLAY[ageGroup].label)}
                   </h2>
                   <p className="text-gray-600">
-                    Ages {AGE_GROUP_DISPLAY[ageGroup].ages}
+                    {t('scope.agesLabel').replace('{ages}', AGE_GROUP_DISPLAY[ageGroup].ages)}
                   </p>
                 </div>
 
@@ -322,10 +316,9 @@ export default function ScopeSequencePage() {
       <section className="bg-gradient-to-b from-white to-amber-50/30 py-16 md:py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900">Developmental Experiences</h2>
+            <h2 className="text-3xl font-bold text-gray-900">{t('scope.experiencesTitle')}</h2>
             <p className="text-lg text-muted-foreground mt-3 max-w-2xl mx-auto">
-              Learning that goes beyond the classroom. These experiences connect children
-              to their community, natural world, and cultural heritage.
+              {t('scope.experiencesIntro')}
             </p>
           </div>
 
@@ -356,7 +349,7 @@ export default function ScopeSequencePage() {
 
                   {/* Ubuntu connection callout */}
                   <div className="mx-5 mb-5 bg-amber-50 rounded-lg p-4 border-l-4 border-amber-400">
-                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">Ubuntu Connection</p>
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-1">{t('scope.ubuntuConnectionLabel')}</p>
                     <p className="text-sm text-amber-900 italic leading-relaxed">&ldquo;{exp.ubuntuConnection}&rdquo;</p>
                   </div>
 
@@ -379,22 +372,21 @@ export default function ScopeSequencePage() {
       <section className="bg-gray-900 py-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">
-            See Our Curriculum in Action
+            {t('scope.ctaTitle')}
           </h2>
           <p className="text-gray-300 mb-8 max-w-2xl mx-auto">
-            Visit our center to see how we bring these developmental milestones to life
-            through engaging, play-based activities every day.
+            {t('scope.ctaDescription')}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button asChild size="lg" className="bg-christina-red hover:bg-red-700 px-8">
               <Link href="/enroll">
-                Schedule a Tour
+                {t('scope.scheduleTour')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="text-white border-2 border-white bg-transparent hover:bg-white/10 px-8">
               <Link href="/programs">
-                View Our Programs
+                {t('scope.viewPrograms')}
               </Link>
             </Button>
           </div>
