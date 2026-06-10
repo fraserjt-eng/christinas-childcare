@@ -12,6 +12,7 @@ import {
   Moon,
   UtensilsCrossed,
   Baby,
+  Milk,
   Pill,
   Sparkles,
   Camera,
@@ -43,6 +44,7 @@ const TYPE_META: Record<
   note: { label: 'Note', icon: StickyNote, color: 'text-gray-600' },
   nap: { label: 'Nap', icon: Moon, color: 'text-indigo-600' },
   meal: { label: 'Meal', icon: UtensilsCrossed, color: 'text-amber-600' },
+  bottle: { label: 'Bottle', icon: Milk, color: 'text-sky-600' },
   bathroom: { label: 'Bathroom', icon: Baby, color: 'text-cyan-600' },
   diaper: { label: 'Diaper', icon: Baby, color: 'text-cyan-600' },
   medication: { label: 'Medication', icon: Pill, color: 'text-red-600' },
@@ -57,6 +59,16 @@ function detailText(detail: Record<string, unknown>): string {
   const note = detail.note ?? detail.text ?? detail.description;
   if (typeof note === 'string' && note.trim()) parts.push(note.trim());
   if (typeof detail.amount === 'string' && detail.amount) parts.push(`Ate: ${detail.amount}`);
+  if (typeof detail.contents === 'string' || typeof detail.oz === 'string') {
+    const bottle = [
+      typeof detail.contents === 'string' ? detail.contents : '',
+      typeof detail.oz === 'string' && detail.oz ? `${detail.oz} oz` : '',
+    ]
+      .filter(Boolean)
+      .join(', ');
+    if (bottle) parts.push(bottle);
+  }
+  if (typeof detail.condition === 'string' && detail.condition) parts.push(detail.condition);
   if (typeof detail.start === 'string' && detail.start) {
     const end = typeof detail.end === 'string' && detail.end ? ` – ${detail.end}` : '';
     parts.push(`Slept ${detail.start}${end}`);

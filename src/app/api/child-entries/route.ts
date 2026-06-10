@@ -6,7 +6,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionEmployee } from '@/lib/employee-server';
 import { resolveSessionFamily } from '@/lib/parent-server';
 import { centerDate, centerDateOf } from '@/lib/center-time';
-import { ADMIN_ROLES } from '@/lib/child-entries-policy';
+import { ADMIN_ROLES, CLASSROOM_SCOPING_ENABLED } from '@/lib/child-entries-policy';
 
 // The Tadpoles per-child timeline. Staff write entries stamped to the
 // verified session employee + classroom + time. Parents read ONLY their own
@@ -17,6 +17,7 @@ const ENTRY_TYPES = [
   'note',
   'nap',
   'meal',
+  'bottle',
   'bathroom',
   'diaper',
   'medication',
@@ -57,11 +58,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
   } else {
-    // Staff: a teacher may only read children in their assigned room; admin /
-    // owner / superadmin read any child. Same scope as the roster + write path,
-    // so a guessed child_id cannot leak another room's timeline.
+    // Staff: when scoping is on, a teacher may only read children in their
+    // assigned room; admin / owner / superadmin read any child. Same scope as
+    // the roster + write path, so a guessed child_id cannot leak another
+    // room's timeline.
     const role = String(session.user.role || '').toLowerCase();
-    if (!ADMIN_ROLES.includes(role)) {
+    if (CLASSROOM_SCOPING_ENABLED && !ADMIN_ROLES.includes(role)) {
       const employee = await resolveSessionEmployee(session);
       const { data: child } = await supabase
         .from('family_children')
@@ -152,7 +154,7 @@ export async function POST(request: NextRequest) {
   // even if the UI is bypassed.
   const role = String(session.user.role || employee?.role || '').toLowerCase();
   const isAdmin = ADMIN_ROLES.includes(role);
-  if (!isAdmin) {
+  if (CLASSROOM_SCOPING_ENABLED && !isAdmin) {
     const childRoom = (child.classroom_id as string | null) ?? null;
     const myRoom = employee?.classroom_id ?? null;
     if (!myRoom || childRoom !== myRoom) {

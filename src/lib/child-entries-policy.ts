@@ -6,6 +6,7 @@ export const STAFF_EDITABLE_TYPES = [
   'note',
   'nap',
   'meal',
+  'bottle',
   'bathroom',
   'diaper',
   'activity',
@@ -20,3 +21,10 @@ export const STAFF_EDIT_WINDOW_MS = 48 * 60 * 60 * 1000;
 
 // Roles that bypass the type + time limits (mirror require-auth ranks).
 export const ADMIN_ROLES = ['admin', 'owner', 'superadmin'];
+
+// Classroom scoping for teachers. OFF for now: staff float between rooms
+// during the day, so any staff member sees every child and can log a daily
+// report from whichever room they walk into. Flip to true to re-enable
+// room-scoped teacher access; the enforcement code in the routes is intact
+// and the admin assignment UI + classroom_id stamping keep working either way.
+export const CLASSROOM_SCOPING_ENABLED = false;

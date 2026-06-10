@@ -15,6 +15,7 @@ import {
   Moon,
   UtensilsCrossed,
   Baby,
+  Milk,
   Pill,
   Sparkles,
   Camera,
@@ -43,7 +44,7 @@ interface Entry {
 
 // Staff may correct these everyday types within 48h. Medication + incident are
 // admin-only (the server enforces this too; here it just shows the lock).
-const STAFF_EDITABLE = ['note', 'nap', 'meal', 'bathroom', 'diaper', 'activity', 'photo'];
+const STAFF_EDITABLE = ['note', 'nap', 'meal', 'bottle', 'bathroom', 'diaper', 'activity', 'photo'];
 const EDIT_WINDOW_MS = 48 * 60 * 60 * 1000;
 function canStaffEdit(e: Entry): boolean {
   if (!STAFF_EDITABLE.includes(e.type)) return false;
@@ -54,6 +55,7 @@ function canStaffEdit(e: Entry): boolean {
 const TYPES = [
   { value: 'note', label: 'Note', icon: StickyNote },
   { value: 'meal', label: 'Meal', icon: UtensilsCrossed },
+  { value: 'bottle', label: 'Bottle', icon: Milk },
   { value: 'nap', label: 'Nap', icon: Moon },
   { value: 'diaper', label: 'Diaper', icon: Baby },
   { value: 'bathroom', label: 'Bathroom', icon: Baby },
@@ -62,6 +64,28 @@ const TYPES = [
   { value: 'photo', label: 'Photo', icon: Camera },
   { value: 'incident', label: 'Incident', icon: AlertTriangle },
 ] as const;
+
+const BOTTLE_CONTENTS = ['Breast milk', 'Formula', 'Milk', 'Water'] as const;
+const DIAPER_CONDITIONS = ['Wet', 'Dirty', 'Both', 'Dry'] as const;
+
+// "10:15" (from <input type="time">) on today's date -> ISO. Empty -> now.
+function todayAtTime(hhmm: string): string {
+  if (!hhmm) return new Date().toISOString();
+  const [h, m] = hhmm.split(':').map((n) => parseInt(n, 10));
+  const d = new Date();
+  if (!Number.isNaN(h) && !Number.isNaN(m)) d.setHours(h, m, 0, 0);
+  return d.toISOString();
+}
+
+// ISO -> "10:15" for prefilling the time input when editing.
+function hhmmOf(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  } catch {
+    return '';
+  }
+}
 
 function timeOf(iso: string): string {
   try {
@@ -81,6 +105,10 @@ export default function StaffDailyReportPage() {
   const [type, setType] = useState<string>('note');
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState('');
+  const [bottleContents, setBottleContents] = useState('');
+  const [bottleOz, setBottleOz] = useState('');
+  const [diaperCondition, setDiaperCondition] = useState('');
+  const [entryTime, setEntryTime] = useState('');
   const [napStart, setNapStart] = useState('');
   const [napEnd, setNapEnd] = useState('');
   const [photoData, setPhotoData] = useState('');
@@ -95,6 +123,10 @@ export default function StaffDailyReportPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editNote, setEditNote] = useState('');
   const [editAmount, setEditAmount] = useState('');
+  const [editBottleContents, setEditBottleContents] = useState('');
+  const [editBottleOz, setEditBottleOz] = useState('');
+  const [editDiaperCondition, setEditDiaperCondition] = useState('');
+  const [editTime, setEditTime] = useState('');
   const [editNapStart, setEditNapStart] = useState('');
   const [editNapEnd, setEditNapEnd] = useState('');
   const [rowBusy, setRowBusy] = useState<string | null>(null);
@@ -165,6 +197,11 @@ export default function StaffDailyReportPage() {
     const detail: Record<string, string> = {};
     if (note.trim()) detail.note = note.trim();
     if (type === 'meal' && amount.trim()) detail.amount = amount.trim();
+    if (type === 'bottle') {
+      if (bottleContents) detail.contents = bottleContents;
+      if (bottleOz.trim()) detail.oz = bottleOz.trim();
+    }
+    if (type === 'diaper' && diaperCondition) detail.condition = diaperCondition;
     if (type === 'nap') {
       if (napStart.trim()) detail.start = napStart.trim();
       if (napEnd.trim()) detail.end = napEnd.trim();
@@ -177,7 +214,7 @@ export default function StaffDailyReportPage() {
           child_id: childId,
           type,
           detail,
-          occurred_at: new Date().toISOString(),
+          occurred_at: todayAtTime(entryTime),
           ...(type === 'photo' && photoData ? { photo_data: photoData } : {}),
         }),
       });
@@ -185,6 +222,10 @@ export default function StaffDailyReportPage() {
         setSaved(true);
         setNote('');
         setAmount('');
+        setBottleContents('');
+        setBottleOz('');
+        setDiaperCondition('');
+        setEntryTime('');
         setNapStart('');
         setNapEnd('');
         setPhotoData('');
@@ -211,6 +252,10 @@ export default function StaffDailyReportPage() {
     setRowError('');
     setEditNote(typeof e.detail?.note === 'string' ? e.detail.note : '');
     setEditAmount(typeof e.detail?.amount === 'string' ? e.detail.amount : '');
+    setEditBottleContents(typeof e.detail?.contents === 'string' ? e.detail.contents : '');
+    setEditBottleOz(typeof e.detail?.oz === 'string' ? e.detail.oz : '');
+    setEditDiaperCondition(typeof e.detail?.condition === 'string' ? e.detail.condition : '');
+    setEditTime(hhmmOf(e.occurred_at));
     setEditNapStart(typeof e.detail?.start === 'string' ? e.detail.start : '');
     setEditNapEnd(typeof e.detail?.end === 'string' ? e.detail.end : '');
   }
@@ -227,6 +272,17 @@ export default function StaffDailyReportPage() {
       if (a) detail.amount = a;
       else delete detail.amount;
     }
+    if (e.type === 'bottle') {
+      if (editBottleContents) detail.contents = editBottleContents;
+      else delete detail.contents;
+      const oz = editBottleOz.trim();
+      if (oz) detail.oz = oz;
+      else delete detail.oz;
+    }
+    if (e.type === 'diaper') {
+      if (editDiaperCondition) detail.condition = editDiaperCondition;
+      else delete detail.condition;
+    }
     if (e.type === 'nap') {
       const s = editNapStart.trim();
       const en = editNapEnd.trim();
@@ -235,11 +291,21 @@ export default function StaffDailyReportPage() {
       if (en) detail.end = en;
       else delete detail.end;
     }
+    // Time change: keep the entry's original date, swap the clock time.
+    let occurredAt: string | undefined;
+    if (editTime && editTime !== hhmmOf(e.occurred_at)) {
+      const [h, m] = editTime.split(':').map((n) => parseInt(n, 10));
+      const d = new Date(e.occurred_at);
+      if (!Number.isNaN(h) && !Number.isNaN(m)) {
+        d.setHours(h, m, 0, 0);
+        occurredAt = d.toISOString();
+      }
+    }
     try {
       const r = await fetch(`/api/child-entries/${e.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ detail }),
+        body: JSON.stringify({ detail, ...(occurredAt ? { occurred_at: occurredAt } : {}) }),
       });
       if (r.ok) {
         setEditingId(null);
@@ -395,6 +461,61 @@ export default function StaffDailyReportPage() {
             </div>
           )}
 
+          {type === 'bottle' && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm">What was in it?</Label>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  {BOTTLE_CONTENTS.map((c) => (
+                    <Button
+                      key={c}
+                      type="button"
+                      variant={bottleContents === c ? 'default' : 'outline'}
+                      size="sm"
+                      className={bottleContents === c ? 'bg-christina-red' : ''}
+                      onClick={() => setBottleContents(bottleContents === c ? '' : c)}
+                    >
+                      {c}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="oz" className="text-sm">
+                  How much did they take? (oz)
+                </Label>
+                <Input
+                  id="oz"
+                  value={bottleOz}
+                  onChange={(e) => setBottleOz(e.target.value)}
+                  placeholder="4"
+                  inputMode="decimal"
+                  className="mt-1 max-w-[8rem]"
+                />
+              </div>
+            </div>
+          )}
+
+          {type === 'diaper' && (
+            <div>
+              <Label className="text-sm">Diaper was</Label>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {DIAPER_CONDITIONS.map((c) => (
+                  <Button
+                    key={c}
+                    type="button"
+                    variant={diaperCondition === c ? 'default' : 'outline'}
+                    size="sm"
+                    className={diaperCondition === c ? 'bg-christina-red' : ''}
+                    onClick={() => setDiaperCondition(diaperCondition === c ? '' : c)}
+                  >
+                    {c}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {type === 'nap' && (
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -458,6 +579,22 @@ export default function StaffDailyReportPage() {
               )}
             </div>
           )}
+
+          <div>
+            <Label htmlFor="when" className="text-sm">
+              When did it happen?
+            </Label>
+            <Input
+              id="when"
+              type="time"
+              value={entryTime}
+              onChange={(e) => setEntryTime(e.target.value)}
+              className="mt-1 max-w-[10rem]"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Leave blank to use right now.
+            </p>
+          </div>
 
           <div>
             <Label htmlFor="note" className="text-sm">
@@ -548,12 +685,21 @@ export default function StaffDailyReportPage() {
                     typeof e.detail?.start === 'string' ? e.detail.start : '';
                   const napEnd =
                     typeof e.detail?.end === 'string' ? e.detail.end : '';
+                  const contents =
+                    typeof e.detail?.contents === 'string' ? e.detail.contents : '';
+                  const oz = typeof e.detail?.oz === 'string' ? e.detail.oz : '';
+                  const condition =
+                    typeof e.detail?.condition === 'string' ? e.detail.condition : '';
                   const extras =
                     e.type === 'meal' && amount
                       ? `Ate: ${amount}`
-                      : e.type === 'nap' && (napStart || napEnd)
-                        ? `${napStart || '?'} - ${napEnd || '?'}`
-                        : '';
+                      : e.type === 'bottle' && (contents || oz)
+                        ? [contents, oz ? `${oz} oz` : ''].filter(Boolean).join(', ')
+                        : e.type === 'diaper' && condition
+                          ? condition
+                          : e.type === 'nap' && (napStart || napEnd)
+                            ? `${napStart || '?'} - ${napEnd || '?'}`
+                            : '';
                   const editable = canStaffEdit(e);
                   const adminOnly = e.type === 'medication' || e.type === 'incident';
                   const busy = rowBusy === e.id;
@@ -572,12 +718,62 @@ export default function StaffDailyReportPage() {
                             placeholder="All of it / Half / A few bites"
                           />
                         )}
+                        {e.type === 'bottle' && (
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap gap-2">
+                              {BOTTLE_CONTENTS.map((c) => (
+                                <Button
+                                  key={c}
+                                  type="button"
+                                  variant={editBottleContents === c ? 'default' : 'outline'}
+                                  size="sm"
+                                  className={editBottleContents === c ? 'bg-christina-red' : ''}
+                                  onClick={() => setEditBottleContents(editBottleContents === c ? '' : c)}
+                                >
+                                  {c}
+                                </Button>
+                              ))}
+                            </div>
+                            <Input
+                              value={editBottleOz}
+                              onChange={(ev) => setEditBottleOz(ev.target.value)}
+                              placeholder="oz"
+                              inputMode="decimal"
+                              className="max-w-[8rem]"
+                            />
+                          </div>
+                        )}
+                        {e.type === 'diaper' && (
+                          <div className="flex flex-wrap gap-2">
+                            {DIAPER_CONDITIONS.map((c) => (
+                              <Button
+                                key={c}
+                                type="button"
+                                variant={editDiaperCondition === c ? 'default' : 'outline'}
+                                size="sm"
+                                className={editDiaperCondition === c ? 'bg-christina-red' : ''}
+                                onClick={() => setEditDiaperCondition(editDiaperCondition === c ? '' : c)}
+                              >
+                                {c}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
                         {e.type === 'nap' && (
                           <div className="grid grid-cols-2 gap-2">
                             <Input value={editNapStart} onChange={(ev) => setEditNapStart(ev.target.value)} placeholder="Fell asleep" />
                             <Input value={editNapEnd} onChange={(ev) => setEditNapEnd(ev.target.value)} placeholder="Woke up" />
                           </div>
                         )}
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-muted-foreground">Time</Label>
+                          <Input
+                            type="time"
+                            value={editTime}
+                            onChange={(ev) => setEditTime(ev.target.value)}
+                            className="max-w-[9rem] h-8"
+                          />
+                        </div>
                         <Textarea
                           value={editNote}
                           onChange={(ev) => setEditNote(ev.target.value)}

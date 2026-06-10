@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionEmployee } from '@/lib/employee-server';
-import { ADMIN_ROLES } from '@/lib/child-entries-policy';
+import { ADMIN_ROLES, CLASSROOM_SCOPING_ENABLED } from '@/lib/child-entries-policy';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function uuidOrNull(v: unknown): string | null {
@@ -39,12 +39,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Too many photos at once (max 10)' }, { status: 400 });
   }
 
-  // Classroom scope: a teacher may only post to their assigned room. Admin /
-  // owner / superadmin may post to any room. Mirrors the child-roster filter.
+  // Classroom scope (when enabled): a teacher may only post to their assigned
+  // room. Admin / owner / superadmin may post to any room. Mirrors the
+  // child-roster filter.
   const employee = await resolveSessionEmployee(session);
   const role = String(session.user.role || employee?.role || '').toLowerCase();
   const isAdmin = ADMIN_ROLES.includes(role);
-  if (!isAdmin) {
+  if (CLASSROOM_SCOPING_ENABLED && !isAdmin) {
     if (!employee?.classroom_id) {
       return NextResponse.json(
         { error: 'No classroom assigned. Ask your admin to assign your classroom.' },
