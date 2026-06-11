@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf6ec"/><stop offset="1" stop-color="#f7ecdb"/></linearGradient></defs>
+  <rect width="800" height="600" fill="url(#bg)"/>
+  <rect x="60" y="420" width="680" height="36" rx="10" fill="#d9c9ae"/>
+  <ellipse cx="400" cy="330" rx="200" ry="110" fill="#ffffff" stroke="#e7e0d6" stroke-width="5"/>
+  <circle cx="340" cy="310" r="38" fill="#e8604c"/>
+  <circle cx="430" cy="345" r="30" fill="#e9b44c"/>
+  <rect x="455" y="280" width="70" height="26" rx="10" fill="#c98d4b"/>
+  <text x="120" y="160" font-size="72">🍎</text>
+</svg>

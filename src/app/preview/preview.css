@@ -1,0 +1,97 @@
+/* Design tokens for the sealed /preview layer only.
+   Palette ported from christinas-ui-design-exploration.html (the ten studies).
+   Scoped under .pv-root so nothing leaks into the live site. */
+
+.pv-root {
+  --pv-ink: #2d2a26;
+  --pv-paper: #faf7f2;
+  --pv-card: #ffffff;
+  --pv-coral: #e8604c;
+  --pv-teal: #2a9d8f;
+  --pv-gold: #e9b44c;
+  --pv-plum: #6d597a;
+  --pv-sky: #4a90d9;
+  --pv-line: #e7e0d6;
+  --pv-muted: #8a8378;
+  --pv-red-bad: #c44536;
+
+  background: var(--pv-paper);
+  color: var(--pv-ink);
+  min-height: 100dvh;
+  font-family: "Open Sans", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.pv-root h1,
+.pv-root h2,
+.pv-root h3 {
+  font-family: "Nunito", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* Section 10 rule 5: every press visibly responds. */
+.pv-press {
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+.pv-press:hover {
+  transform: scale(1.05);
+}
+.pv-press:active {
+  transform: scale(0.96);
+}
+
+/* Section 10 rule 4: visible focus for keyboard and switch users. */
+.pv-root :focus-visible {
+  outline: 3px solid var(--pv-sky);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Kiosk floor: 56px minimum touch targets on kiosk surfaces. */
+.pv-kiosk-target {
+  min-height: 56px;
+  min-width: 56px;
+}
+
+/* Everywhere else: 44px absolute minimum. */
+.pv-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* PIN pad error: shake and clear (section 02). */
+@keyframes pv-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-7px); }
+  80% { transform: translateX(7px); }
+}
+.pv-shake {
+  animation: pv-shake 0.4s ease;
+}
+
+/* Office edit mode: tile wiggle. */
+@keyframes pv-wiggle {
+  0% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.2deg); }
+  100% { transform: rotate(-1.2deg); }
+}
+.pv-wiggle {
+  animation: pv-wiggle 0.35s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pv-press,
+  .pv-press:hover,
+  .pv-press:active {
+    transition: none;
+    transform: none;
+  }
+  .pv-shake,
+  .pv-wiggle {
+    animation: none;
+  }
+}
