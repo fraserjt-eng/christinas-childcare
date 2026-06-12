@@ -27,8 +27,6 @@ type TileDef =
   | { kind: "link"; emoji: string; label: string; sub: string; href: string }
   | { kind: "stub"; emoji: string; label: string; sub: string; message: string };
 
-const LATER_MESSAGE = "Coming in a later phase. Your buttons, your pace.";
-
 const TILES: Record<OfficeTileId, TileDef> = {
   rooms: {
     kind: "rooms",
@@ -65,11 +63,11 @@ const TILES: Record<OfficeTileId, TileDef> = {
     message: "Josh sends these weekly. Nothing for you to do here.",
   },
   training: {
-    kind: "stub",
+    kind: "link",
     emoji: "🎓",
     label: "Training",
-    sub: "Coming later",
-    message: LATER_MESSAGE,
+    sub: "Who is current",
+    href: "/preview/office/training",
   },
   food: {
     kind: "link",
@@ -86,18 +84,18 @@ const TILES: Record<OfficeTileId, TileDef> = {
     href: "/preview/family",
   },
   messages: {
-    kind: "stub",
+    kind: "link",
     emoji: "💬",
     label: "Messages",
-    sub: "Coming later",
-    message: LATER_MESSAGE,
+    sub: "Read and write families",
+    href: "/preview/office/messages",
   },
   billing: {
-    kind: "stub",
+    kind: "link",
     emoji: "💵",
     label: "Billing",
-    sub: "Coming later",
-    message: LATER_MESSAGE,
+    sub: "Who owes what",
+    href: "/preview/office/billing",
   },
 };
 

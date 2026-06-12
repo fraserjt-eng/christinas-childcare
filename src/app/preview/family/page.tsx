@@ -15,14 +15,13 @@ import { PhotoUpload } from "@/components/preview/PhotoUpload";
 import {
   CENTER_EVENTS,
   FAMILIES,
-  FAMILY_MESSAGES,
   photoById,
   roomById,
   type FeedEvent,
   type PreviewFamily,
   type PreviewKid,
 } from "@/lib/preview/fixtures";
-import { usePreviewStore } from "@/lib/preview/store";
+import { usePreviewStore, type PreviewMessage } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
 
 const KIND_LOOK: Record<FeedEvent["kind"], { emoji: string; bg: string }> = {
@@ -60,6 +59,9 @@ export default function ParentPhonePage() {
   const checkedIn = usePreviewStore((s) => s.checkedIn);
   const kidPhotos = usePreviewStore((s) => s.kidPhotos);
   const setKidPhoto = usePreviewStore((s) => s.setKidPhoto);
+  const balances = usePreviewStore((s) => s.balances);
+  const threads = usePreviewStore((s) => s.threads);
+  const sendToFamily = usePreviewStore((s) => s.sendToFamily);
 
   const [familyId, setFamilyId] = useState<string | null>(null);
   const family = familyId ? FAMILIES.find((f) => f.id === familyId) ?? null : null;
@@ -67,6 +69,10 @@ export default function ParentPhonePage() {
   if (!family) {
     return <SignIn onPick={(id) => setFamilyId(id)} />;
   }
+
+  // The office can change these; the parent phone reads the live values.
+  const balanceOwed = mounted ? balances[family.id] ?? family.balanceOwed : family.balanceOwed;
+  const thread = mounted ? threads[family.id] ?? [] : [];
 
   return (
     <ParentHome
@@ -76,6 +82,9 @@ export default function ParentPhonePage() {
       checkedIn={mounted ? checkedIn : {}}
       kidPhotos={mounted ? kidPhotos : {}}
       setKidPhoto={setKidPhoto}
+      balanceOwed={balanceOwed}
+      thread={thread}
+      onReply={(body) => sendToFamily(family.id, family.parentName, body, false)}
       onSignOut={() => setFamilyId(null)}
     />
   );
@@ -134,6 +143,9 @@ function ParentHome({
   checkedIn,
   kidPhotos,
   setKidPhoto,
+  balanceOwed,
+  thread,
+  onReply,
   onSignOut,
 }: {
   family: PreviewFamily;
@@ -142,18 +154,30 @@ function ParentHome({
   checkedIn: Record<string, string | null>;
   kidPhotos: Record<string, string>;
   setKidPhoto: (kidId: string, dataUrl: string) => void;
+  balanceOwed: number;
+  thread: PreviewMessage[];
+  onReply: (body: string) => void;
   onSignOut: () => void;
 }) {
   const myKids = useMemo(
     () => kids.filter((k) => family.kidIds.includes(k.id)),
     [kids, family.kidIds],
   );
-  const message = FAMILY_MESSAGES[family.id];
+  const message = thread[0];
   const nextEvent = CENTER_EVENTS[0];
   const [detail, setDetail] = useState<DetailKind | null>(null);
 
   if (detail) {
-    return <DetailView kind={detail} family={family} onBack={() => setDetail(null)} />;
+    return (
+      <DetailView
+        kind={detail}
+        family={family}
+        balanceOwed={balanceOwed}
+        thread={thread}
+        onReply={onReply}
+        onBack={() => setDetail(null)}
+      />
+    );
   }
 
   return (
@@ -205,18 +229,18 @@ function ParentHome({
               <NeedTile
                 emoji="💬"
                 title="Message from the room"
-                body={`${message.from}: ${message.body}`}
-                tag={message.unread ? "1 new" : null}
+                body={`${message.fromOffice ? message.from : "You"}: ${message.body}`}
+                tag={message.unread && message.fromOffice ? "1 new" : null}
                 accent="var(--pv-sky)"
                 onOpen={() => setDetail("messages")}
               />
             ) : null}
             <NeedTile
               emoji="💵"
-              title={family.balanceOwed > 0 ? `You owe $${family.balanceOwed}` : "Paid up"}
-              body={family.balanceDueLabel}
-              tag={family.balanceOwed > 0 ? "Pay" : null}
-              accent={family.balanceOwed > 0 ? "var(--pv-coral)" : "var(--pv-teal)"}
+              title={balanceOwed > 0 ? `You owe $${balanceOwed}` : "Paid up"}
+              body={balanceOwed > 0 ? family.balanceDueLabel : "Thank you"}
+              tag={balanceOwed > 0 ? "Pay" : null}
+              accent={balanceOwed > 0 ? "var(--pv-coral)" : "var(--pv-teal)"}
               onOpen={() => setDetail("billing")}
             />
             <NeedTile
@@ -504,10 +528,16 @@ type DetailKind = "billing" | "messages" | "forms" | "calendar";
 function DetailView({
   kind,
   family,
+  balanceOwed,
+  thread,
+  onReply,
   onBack,
 }: {
   kind: DetailKind;
   family: PreviewFamily;
+  balanceOwed: number;
+  thread: PreviewMessage[];
+  onReply: (body: string) => void;
   onBack: () => void;
 }) {
   const titles: Record<DetailKind, { title: string; emoji: string }> = {
@@ -539,8 +569,8 @@ function DetailView({
         </h1>
 
         <div className="mt-5">
-          {kind === "billing" ? <BillingDetail family={family} /> : null}
-          {kind === "messages" ? <MessagesDetail family={family} /> : null}
+          {kind === "billing" ? <BillingDetail family={family} balanceOwed={balanceOwed} /> : null}
+          {kind === "messages" ? <MessagesDetail thread={thread} onReply={onReply} /> : null}
           {kind === "forms" ? <FormsDetail family={family} /> : null}
           {kind === "calendar" ? <CalendarDetail /> : null}
         </div>
@@ -549,7 +579,7 @@ function DetailView({
   );
 }
 
-function BillingDetail({ family }: { family: PreviewFamily }) {
+function BillingDetail({ family, balanceOwed }: { family: PreviewFamily; balanceOwed: number }) {
   const weekly = 120;
   const lines = [
     { label: "Weekly tuition, week of June 9", amount: weekly },
@@ -561,12 +591,12 @@ function BillingDetail({ family }: { family: PreviewFamily }) {
         <p className="text-base font-semibold" style={{ color: "var(--pv-muted)" }}>
           Current balance
         </p>
-        <p className="text-4xl font-extrabold" style={{ color: family.balanceOwed > 0 ? "var(--pv-coral)" : "var(--pv-teal)" }}>
-          ${family.balanceOwed}
+        <p className="text-4xl font-extrabold" style={{ color: balanceOwed > 0 ? "var(--pv-coral)" : "var(--pv-teal)" }}>
+          ${balanceOwed}
         </p>
-        <p className="text-base">{family.balanceDueLabel}</p>
+        <p className="text-base">{balanceOwed > 0 ? family.balanceDueLabel : "Thank you, you are paid up"}</p>
         <div className="mt-4 flex flex-col gap-2">
-          {family.balanceOwed > 0
+          {balanceOwed > 0
             ? lines.map((l) => (
                 <div key={l.label} className="flex items-center justify-between border-t pt-2 text-base" style={{ borderColor: "var(--pv-line)" }}>
                   <span>{l.label}</span>
@@ -575,39 +605,48 @@ function BillingDetail({ family }: { family: PreviewFamily }) {
               ))
             : <p className="text-base" style={{ color: "var(--pv-muted)" }}>Nothing due. You are paid through the end of June.</p>}
         </div>
-        {family.balanceOwed > 0 ? (
+        {balanceOwed > 0 ? (
           <BigButton emoji="💳" label="Pay now" color="var(--pv-coral)" kiosk className="mt-5 w-full text-center" onClick={() => {}} />
         ) : null}
       </Card>
       <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
-        To build. The owner already creates these statements in the office. A
-        parent just has no screen to see a balance or pay. This shows the shape.
+        To build. The owner makes these statements in the office; when she marks
+        you paid there, this balance clears. A parent just has no screen yet.
       </p>
     </>
   );
 }
 
-function MessagesDetail({ family }: { family: PreviewFamily }) {
-  const message = FAMILY_MESSAGES[family.id];
+function MessagesDetail({
+  thread,
+  onReply,
+}: {
+  thread: PreviewMessage[];
+  onReply: (body: string) => void;
+}) {
   const [reply, setReply] = useState("");
-  const [sent, setSent] = useState<string | null>(null);
+  const ordered = [...thread].reverse(); // oldest first for a chat read
 
   return (
     <>
       <Card>
-        {message ? (
-          <div className="rounded-2xl p-4" style={{ backgroundColor: "#eaf4fd" }}>
-            <p className="text-sm font-bold" style={{ color: "var(--pv-sky)" }}>{message.from}</p>
-            <p className="mt-1 text-base">{message.body}</p>
-            <p className="mt-1 text-xs" style={{ color: "var(--pv-muted)" }}>{message.time}</p>
-          </div>
-        ) : null}
-        {sent ? (
-          <div className="mt-3 ml-auto max-w-[85%] rounded-2xl p-4 text-white" style={{ backgroundColor: "var(--pv-teal)" }}>
-            <p className="text-base">{sent}</p>
-            <p className="mt-1 text-xs opacity-90">You, just now</p>
-          </div>
-        ) : null}
+        <div className="flex flex-col gap-2">
+          {ordered.map((m) => (
+            <div
+              key={m.id}
+              className={`max-w-[85%] rounded-2xl p-3 ${m.fromOffice ? "" : "ml-auto text-white"}`}
+              style={{ backgroundColor: m.fromOffice ? "#eef1f4" : "var(--pv-teal)" }}
+            >
+              <p className="text-base">{m.body}</p>
+              <p className="mt-1 text-xs" style={{ color: m.fromOffice ? "var(--pv-muted)" : "rgba(255,255,255,0.85)" }}>
+                {m.fromOffice ? m.from : "You"}, {m.time}
+              </p>
+            </div>
+          ))}
+          {ordered.length === 0 ? (
+            <p className="text-base" style={{ color: "var(--pv-muted)" }}>No messages yet.</p>
+          ) : null}
+        </div>
         <div className="mt-4 flex flex-col gap-2">
           <textarea
             value={reply}
@@ -624,7 +663,7 @@ function MessagesDetail({ family }: { family: PreviewFamily }) {
             color="var(--pv-sky)"
             disabled={!reply.trim()}
             onClick={() => {
-              setSent(reply.trim());
+              onReply(reply.trim());
               setReply("");
             }}
             className="w-full text-center"
@@ -632,9 +671,8 @@ function MessagesDetail({ family }: { family: PreviewFamily }) {
         </div>
       </Card>
       <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
-        To build. The room can send a parent a message today, and the parent
-        sees it. But a parent writing back does not reach the teacher yet. This
-        shows the two-way thread that needs building.
+        To build. Your reply here reaches Christina&apos;s office in this demo. In
+        the real app that two-way thread is the piece that still needs building.
       </p>
     </>
   );

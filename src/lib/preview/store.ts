@@ -19,6 +19,7 @@ import {
   CLOCKED_IN_SEED,
   DEFAULT_OFFICE_TILES,
   FAMILIES,
+  FAMILY_MESSAGES,
   FEED_SEED,
   KIDS,
   MEALS_SEED,
@@ -60,6 +61,18 @@ export interface LogEventInput {
   photoUrl?: string | null;
 }
 
+/** One message in a family thread. `mine: true` means the office/center sent
+ *  it; `mine: false` means the parent wrote back. Same shape both ways so the
+ *  office and the parent phone read the same thread. */
+export interface PreviewMessage {
+  id: string;
+  from: string;
+  body: string;
+  time: string;
+  fromOffice: boolean;
+  unread: boolean;
+}
+
 export interface PreviewState {
   kids: PreviewKid[];
   staff: PreviewStaff[];
@@ -77,6 +90,12 @@ export interface PreviewState {
   soundOn: boolean;
   /** kidId to an uploaded photo data URL, used as the child's box avatar. */
   kidPhotos: Record<string, string>;
+  /** familyId to current balance owed. The office can change it; the parent
+   *  phone reads it. Maps to family_statements in the real app. */
+  balances: Record<string, number>;
+  /** familyId to its message thread, newest first. Shared by the office
+   *  messages screen and the parent phone, so a send shows up on both. */
+  threads: Record<string, PreviewMessage[]>;
 
   checkInKid: (kidId: string, by: string, photoUrl?: string | null) => void;
   checkOutKid: (kidId: string, by: string) => void;
@@ -84,6 +103,9 @@ export interface PreviewState {
   clockOutStaff: (staffId: string) => void;
   logEvent: (input: LogEventInput) => void;
   setKidPhoto: (kidId: string, dataUrl: string) => void;
+  markFamilyPaid: (familyId: string) => void;
+  sendToFamily: (familyId: string, from: string, body: string, fromOffice: boolean) => void;
+  markThreadRead: (familyId: string) => void;
   setMealMark: (roomId: string, meal: string, kidId: string, mark: MealMark) => void;
   addShift: (shift: Omit<PreviewShift, "id">) => void;
   removeShift: (shiftId: string) => void;
@@ -114,6 +136,27 @@ function buildSeed() {
     officeTiles: [...DEFAULT_OFFICE_TILES],
     soundOn: true,
     kidPhotos: {} as Record<string, string>,
+    balances: Object.fromEntries(FAMILIES.map((f) => [f.id, f.balanceOwed])) as Record<string, number>,
+    threads: Object.fromEntries(
+      FAMILIES.map((f) => {
+        const seed = FAMILY_MESSAGES[f.id];
+        return [
+          f.id,
+          seed
+            ? [
+                {
+                  id: newId("msg"),
+                  from: seed.from,
+                  body: seed.body,
+                  time: seed.time,
+                  fromOffice: true,
+                  unread: seed.unread,
+                },
+              ]
+            : [],
+        ];
+      }),
+    ) as Record<string, PreviewMessage[]>,
   };
 }
 
@@ -204,6 +247,40 @@ export const usePreviewStore = create<PreviewState>()(
       setKidPhoto: (kidId, dataUrl) => {
         set((state) => ({
           kidPhotos: { ...state.kidPhotos, [kidId]: dataUrl },
+        }));
+      },
+
+      markFamilyPaid: (familyId) => {
+        set((state) => ({
+          balances: { ...state.balances, [familyId]: 0 },
+        }));
+      },
+
+      sendToFamily: (familyId, from, body, fromOffice) => {
+        set((state) => ({
+          threads: {
+            ...state.threads,
+            [familyId]: [
+              {
+                id: newId("msg"),
+                from,
+                body,
+                time: nowTime(),
+                fromOffice,
+                unread: true,
+              },
+              ...(state.threads[familyId] ?? []),
+            ],
+          },
+        }));
+      },
+
+      markThreadRead: (familyId) => {
+        set((state) => ({
+          threads: {
+            ...state.threads,
+            [familyId]: (state.threads[familyId] ?? []).map((m) => ({ ...m, unread: false })),
+          },
         }));
       },
 
@@ -347,8 +424,9 @@ export const usePreviewStore = create<PreviewState>()(
       skipHydration: true,
       // Bump when the fixture world changes shape so devices that walked an
       // older demo reseed instead of carrying a stale world (v2: four rooms,
-      // bottles and diapers, infant and school-age kids. v3: uploaded photos).
-      version: 3,
+      // bottles and diapers, infant and school-age kids. v3: uploaded photos.
+      // v4: office-driven balances and message threads).
+      version: 4,
       migrate: () => buildSeed(),
     },
   ),
