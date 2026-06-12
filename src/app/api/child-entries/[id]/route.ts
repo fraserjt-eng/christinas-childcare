@@ -12,6 +12,7 @@ import {
   ADMIN_ROLES,
   CLASSROOM_SCOPING_ENABLED,
 } from '@/lib/child-entries-policy';
+import { signEntryPhoto } from '@/lib/photo-url';
 
 // Edit (PATCH) and soft-delete (DELETE) a single child_daily_entries row.
 // Staff (teacher rank) may change everyday entries from the last 48 hours;
@@ -136,7 +137,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (error || !updated) {
     return NextResponse.json({ error: 'Could not update the entry' }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, entry: updated });
+  return NextResponse.json({ ok: true, entry: await signEntryPhoto(supabase, updated) });
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {

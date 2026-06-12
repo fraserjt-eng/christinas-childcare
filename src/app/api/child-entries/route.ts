@@ -7,6 +7,7 @@ import { resolveSessionEmployee } from '@/lib/employee-server';
 import { resolveSessionFamily } from '@/lib/parent-server';
 import { centerDate, centerDateOf } from '@/lib/center-time';
 import { ADMIN_ROLES, CLASSROOM_SCOPING_ENABLED } from '@/lib/child-entries-policy';
+import { signEntryPhoto } from '@/lib/photo-url';
 
 // The Tadpoles per-child timeline. Staff write entries stamped to the
 // verified session employee + classroom + time. Parents read ONLY their own
@@ -94,8 +95,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const entries = await Promise.all(
+    (data ?? []).map((e) => signEntryPhoto(supabase, e))
+  );
   return NextResponse.json(
-    { child_id: childId, date, entries: data ?? [] },
+    { child_id: childId, date, entries },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }
@@ -193,7 +197,7 @@ export async function POST(request: NextRequest) {
         ((r.detail as Record<string, unknown>)?.note ?? '') === noteText
     );
     if (dup) {
-      return NextResponse.json({ ok: true, entry: dup, deduped: true });
+      return NextResponse.json({ ok: true, entry: await signEntryPhoto(supabase, dup), deduped: true });
     }
   }
 
@@ -219,15 +223,14 @@ export async function POST(request: NextRequest) {
           { status: 502 }
         );
       }
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('child_photos').getPublicUrl(path);
-      detail.photo_url = publicUrl;
+      // Store the object path, not a public URL. Reads sign it on the way out
+      // and the bucket can be private.
+      detail.photo_url = path;
       // Secondary: classroom gallery. Best-effort; never blocks the report.
       try {
         await supabase.from('daily_photos').insert({
           classroom_id: entryClassroomId,
-          photo_url: publicUrl,
+          photo_url: path,
           caption: noteText || null,
           child_ids: [childId],
         });
@@ -263,5 +266,5 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true, entry: created });
+  return NextResponse.json({ ok: true, entry: await signEntryPhoto(supabase, created) });
 }

@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionFamily } from '@/lib/parent-server';
+import { signPhotoList } from '@/lib/photo-url';
 
 // The signed-in parent's photo gallery: only photos tagged to THEIR
 // children (daily_photos.child_ids overlaps the family's children). This
@@ -44,20 +45,23 @@ export async function GET() {
   }
 
   // Defensive: only keep rows that really overlap this family's children.
-  const photos = (data ?? [])
-    .filter((p) =>
-      Array.isArray(p.child_ids)
-        ? p.child_ids.some((id: string) => childIds.includes(id))
-        : false
-    )
-    .map((p) => ({
-      id: p.id as string,
-      photo_url: (p.photo_url as string) || '',
-      caption: (p.caption as string | null) || '',
-      created_at: (p.created_at as string) || new Date().toISOString(),
-      classroom_name: (p.classroom_name as string | null) || '',
-      activity_type: (p.activity_type as string | null) || 'other',
-    }));
+  const visible = (data ?? []).filter((p) =>
+    Array.isArray(p.child_ids)
+      ? p.child_ids.some((id: string) => childIds.includes(id))
+      : false
+  );
+  const signed = await signPhotoList(
+    supabase,
+    visible.map((p) => (p.photo_url as string) || '')
+  );
+  const photos = visible.map((p, i) => ({
+    id: p.id as string,
+    photo_url: signed[i],
+    caption: (p.caption as string | null) || '',
+    created_at: (p.created_at as string) || new Date().toISOString(),
+    classroom_name: (p.classroom_name as string | null) || '',
+    activity_type: (p.activity_type as string | null) || 'other',
+  }));
 
   return NextResponse.json(
     { photos },

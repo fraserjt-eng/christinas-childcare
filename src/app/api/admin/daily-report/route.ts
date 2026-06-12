@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { centerDate } from '@/lib/center-time';
+import { signPhotoList } from '@/lib/photo-url';
 
 // The room-based per-child daily report for staff/owner: every child, grouped
 // by classroom, with their real child_daily_entries for the chosen day, in one
@@ -48,19 +49,33 @@ export async function GET(request: NextRequest) {
     .order('occurred_at', { ascending: false })
     .limit(5000);
 
-  // Group entries by child in JS (PostgREST .in can drop rows).
+  // Sign photo entries in one batch, then group by child in JS (PostgREST .in
+  // can drop rows).
+  const all = entries ?? [];
+  const signedUrls = await signPhotoList(
+    supabase,
+    all.map((e) =>
+      e.type === 'photo'
+        ? ((e.detail as Record<string, unknown> | null)?.photo_url as string | undefined) ?? null
+        : null
+    )
+  );
   const byChild = new Map<string, ReportEntry[]>();
-  for (const e of entries ?? []) {
+  all.forEach((e, idx) => {
     const cid = e.child_id as string;
     const list = byChild.get(cid) || [];
+    let detail = (e.detail as Record<string, unknown>) || {};
+    if (e.type === 'photo' && signedUrls[idx]) {
+      detail = { ...detail, photo_url: signedUrls[idx] };
+    }
     list.push({
       id: e.id as string,
       type: e.type as string,
-      detail: (e.detail as Record<string, unknown>) || {},
+      detail,
       occurred_at: e.occurred_at as string,
     });
     byChild.set(cid, list);
-  }
+  });
 
   const children: ReportChild[] = (kids ?? [])
     .map((c) => ({

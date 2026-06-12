@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { signPhotoList } from '@/lib/photo-url';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function uuidOrNull(v: unknown): string | null {
@@ -42,8 +43,12 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Could not load photos' }, { status: 500 });
   }
 
+  const rows = data ?? [];
+  const signed = await signPhotoList(supabase, rows.map((p) => p.photo_url as string));
+  const photos = rows.map((p, i) => ({ ...p, photo_url: signed[i] }));
+
   return NextResponse.json(
-    { photos: data ?? [] },
+    { photos },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }

@@ -100,8 +100,9 @@ async function uploadPhotoToStorage(photoData: string, filename: string): Promis
       return null;
     }
 
-    const { data: { publicUrl } } = supabase.storage.from('child_photos').getPublicUrl(path);
-    return publicUrl;
+    // Return the object path, not a public URL. Reads sign it on the way out
+    // (see src/lib/photo-url.ts) so the child_photos bucket can be private.
+    return path;
   } catch (err) {
     console.error('Error uploading photo to storage:', err);
     return null;
