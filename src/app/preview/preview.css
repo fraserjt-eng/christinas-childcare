@@ -1,19 +1,28 @@
 /* Design tokens for the sealed /preview layer only.
-   Palette ported from christinas-ui-design-exploration.html (the ten studies).
+   Brand-matched to the real Christina's Child Care site: christina-red
+   primary, the site's secondary palette, and the site's font stack
+   (Nunito headings, Open Sans body, Fredoka One display). The token NAMES
+   are kept so every screen reskins from this one block; only the values
+   changed from the earlier warm-proposal palette.
    Scoped under .pv-root so nothing leaks into the live site. */
 
 .pv-root {
-  --pv-ink: #2d2a26;
-  --pv-paper: #faf7f2;
+  /* Neutrals: the site's warm off-white background + dark navy text. */
+  --pv-ink: #1f2933;
+  --pv-paper: #f7f3ec;
   --pv-card: #ffffff;
-  --pv-coral: #e8604c;
-  --pv-teal: #2a9d8f;
-  --pv-gold: #e9b44c;
-  --pv-plum: #6d597a;
-  --pv-sky: #4a90d9;
-  --pv-line: #e7e0d6;
-  --pv-muted: #8a8378;
-  --pv-red-bad: #c44536;
+  /* Brand primary: christina-red. Used for the main actions and the banner. */
+  --pv-coral: #c62828;
+  /* Brand secondaries (site palette). */
+  --pv-teal: #2e9e4f;   /* green: here / good / success */
+  --pv-gold: #f4a720;   /* amber: near limit / attention (readable on white text) */
+  --pv-plum: #ff7043;   /* coral: a warm secondary, distinct from the red */
+  --pv-sky: #1f7fd4;    /* blue: info, links, focus */
+  --pv-line: #e6e1d8;
+  --pv-muted: #6b6b6b;
+  /* Danger: a deep oxblood, kept distinct from the brighter primary red so a
+     CTA and an allergy alert never read as the same thing. */
+  --pv-red-bad: #8e1b1b;
 
   background: var(--pv-paper);
   color: var(--pv-ink);
@@ -29,6 +38,13 @@
   font-family: "Nunito", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
   font-weight: 800;
   line-height: 1.2;
+}
+
+/* The site's display font, used sparingly on the biggest hero titles.
+   Scoped under .pv-root so it beats the `.pv-root h1` heading rule above. */
+.pv-root .pv-display {
+  font-family: "Fredoka One", "Nunito", -apple-system, "Segoe UI", sans-serif;
+  font-weight: 400;
 }
 
 /* Section 10 rule 5: every press visibly responds. */

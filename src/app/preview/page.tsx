@@ -38,8 +38,8 @@ export default function PreviewIndexPage() {
         <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: "var(--pv-coral)" }}>
           Design preview
         </p>
-        <h1 className="mt-2 text-4xl sm:text-5xl">Christina&apos;s Simplified Summer</h1>
-        <p className="mt-4 text-lg" style={{ color: "#555049" }}>
+        <h1 className="pv-display mt-2 text-4xl sm:text-5xl">Christina&apos;s Simplified Summer</h1>
+        <p className="mt-4 text-lg" style={{ color: "#4d4d4d" }}>
           This is a clickable preview of the simpler daily tools: the front door,
           the kiosk, the teacher view, the family feed, food counts, the schedule,
           the newsletter, and Christina&apos;s office. Everything works, everything is
@@ -47,23 +47,11 @@ export default function PreviewIndexPage() {
         </p>
 
         <div
-          className="mt-6 rounded-2xl border-2 p-5"
-          style={{ borderColor: "var(--pv-gold)", backgroundColor: "#fdf8ef" }}
-        >
-          <h2 className="text-xl">🎨 About the colors</h2>
-          <p className="mt-2 text-base" style={{ color: "#555049" }}>
-            These warmer colors are a proposal for the daily tools. The website
-            families see keeps its red. If the warm palette feels wrong, say so
-            and the same screens can wear the red instead. That is a one-day change.
-          </p>
-        </div>
-
-        <div
           className="mt-4 rounded-2xl border-2 p-5"
           style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
         >
           <h2 className="text-xl">🔑 Demo codes</h2>
-          <p className="mt-2 text-base" style={{ color: "#555049" }}>
+          <p className="mt-2 text-base" style={{ color: "#4d4d4d" }}>
             Staff: <b>7321</b> (Dana, Toddlers) · <b>7322</b> (Maria, Preschool) ·
             <b> 7324</b> (Keisha, Infants) · <b>7325</b> (Marcus, School Age) ·
             <b> 7323</b> (Tasha, floats). Families: <b>1234</b> (Brown) ·
@@ -77,7 +65,7 @@ export default function PreviewIndexPage() {
           style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
         >
           <h2 className="text-xl">🧭 What is real today, and what is next</h2>
-          <p className="mt-2 text-base" style={{ color: "#555049" }}>
+          <p className="mt-2 text-base" style={{ color: "#4d4d4d" }}>
             This preview shows the whole picture. Some of it the app already does,
             some is the shape of what comes next. Here is the honest split.
           </p>

@@ -156,19 +156,19 @@ export function photoById(id: string | null): DemoPhoto | null {
 }
 
 export const ROOMS: PreviewRoom[] = [
-  { id: "infants", name: "Infants", emoji: "🍼", color: "#4a90d9", capacity: 8, ratioLimit: 4 },
-  { id: "toddlers", name: "Toddlers", emoji: "🧸", color: "#2a9d8f", capacity: 14, ratioLimit: 7 },
-  { id: "preschool", name: "Preschool", emoji: "🎨", color: "#6d597a", capacity: 20, ratioLimit: 10 },
-  { id: "schoolage", name: "School Age", emoji: "🎒", color: "#e9b44c", capacity: 20, ratioLimit: 10 },
+  { id: "infants", name: "Infants", emoji: "🍼", color: "#1f7fd4", capacity: 8, ratioLimit: 4 },
+  { id: "toddlers", name: "Toddlers", emoji: "🧸", color: "#2e9e4f", capacity: 14, ratioLimit: 7 },
+  { id: "preschool", name: "Preschool", emoji: "🎨", color: "#ff7043", capacity: 20, ratioLimit: 10 },
+  { id: "schoolage", name: "School Age", emoji: "🎒", color: "#f4a720", capacity: 20, ratioLimit: 10 },
 ];
 
 export const STAFF: PreviewStaff[] = [
-  { id: "st-dana", firstName: "Dana", lastName: "Whitfield", role: "teacher", roomId: "toddlers", pin: "7321", avatar: "👩🏾‍🏫", color: "#2a9d8f" },
-  { id: "st-maria", firstName: "Maria", lastName: "Lewis", role: "teacher", roomId: "preschool", pin: "7322", avatar: "👩🏿‍🏫", color: "#6d597a" },
-  { id: "st-tasha", firstName: "Tasha", lastName: "Reed", role: "teacher", roomId: null, pin: "7323", avatar: "👩🏾‍🦱", color: "#c98d4b" },
-  { id: "st-keisha", firstName: "Keisha", lastName: "Daniels", role: "teacher", roomId: "infants", pin: "7324", avatar: "👩🏿", color: "#4a90d9" },
-  { id: "st-marcus", firstName: "Marcus", lastName: "Boyd", role: "teacher", roomId: "schoolage", pin: "7325", avatar: "👨🏾", color: "#e9b44c" },
-  { id: "st-christina", firstName: "Christina", lastName: "B.", role: "owner", roomId: null, pin: "9999", avatar: "👩🏾‍💼", color: "#e8604c" },
+  { id: "st-dana", firstName: "Dana", lastName: "Whitfield", role: "teacher", roomId: "toddlers", pin: "7321", avatar: "👩🏾‍🏫", color: "#2e9e4f" },
+  { id: "st-maria", firstName: "Maria", lastName: "Lewis", role: "teacher", roomId: "preschool", pin: "7322", avatar: "👩🏿‍🏫", color: "#ff7043" },
+  { id: "st-tasha", firstName: "Tasha", lastName: "Reed", role: "teacher", roomId: null, pin: "7323", avatar: "👩🏾‍🦱", color: "#6b6b6b" },
+  { id: "st-keisha", firstName: "Keisha", lastName: "Daniels", role: "teacher", roomId: "infants", pin: "7324", avatar: "👩🏿", color: "#1f7fd4" },
+  { id: "st-marcus", firstName: "Marcus", lastName: "Boyd", role: "teacher", roomId: "schoolage", pin: "7325", avatar: "👨🏾", color: "#f4a720" },
+  { id: "st-christina", firstName: "Christina", lastName: "B.", role: "owner", roomId: null, pin: "9999", avatar: "👩🏾‍💼", color: "#c62828" },
 ];
 
 export const FAMILIES: PreviewFamily[] = [

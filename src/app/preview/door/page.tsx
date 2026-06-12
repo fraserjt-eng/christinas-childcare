@@ -13,21 +13,21 @@ const DOORS = [
     label: "Staff",
     sub: "Clock in or out",
     emoji: "🧑🏾‍🏫",
-    color: "#2a9d8f",
+    color: "#2e9e4f",
   },
   {
     href: "/preview/office",
     label: "Office",
     sub: "Christina's view",
     emoji: "🗝️",
-    color: "#e8604c",
+    color: "#c62828",
   },
   {
     href: "/preview/kiosk",
     label: "Families",
     sub: "Check your kids in or out",
     emoji: "👨🏾‍👩🏾‍👧🏾",
-    color: "#e9b44c",
+    color: "#f4a720",
   },
 ];
 
@@ -39,9 +39,9 @@ export default function DoorPage() {
       </div>
       <div
         className="mx-auto mt-2 max-w-4xl rounded-3xl px-6 py-12 text-center sm:py-16"
-        style={{ background: "linear-gradient(160deg, #2d2a26, #4a4440)" }}
+        style={{ background: "linear-gradient(160deg, #1f2933, #33414d)" }}
       >
-        <h1 className="text-3xl text-white sm:text-5xl">Good morning! Who&apos;s here?</h1>
+        <h1 className="pv-display text-3xl text-white sm:text-5xl">Good morning! Who&apos;s here?</h1>
         <div className="mt-10 flex flex-wrap items-stretch justify-center gap-6 sm:gap-10">
           {DOORS.map((door) => (
             <Link

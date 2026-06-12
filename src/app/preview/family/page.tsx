@@ -287,7 +287,7 @@ function ParentHome({
                   {kid.allergy ? (
                     <span
                       className="rounded-full px-3 py-1 text-sm font-bold text-white"
-                      style={{ backgroundColor: "var(--pv-coral)" }}
+                      style={{ backgroundColor: "var(--pv-red-bad)" }}
                     >
                       ⚠️ {kid.allergy}
                     </span>
@@ -381,7 +381,7 @@ function KidCard({
             {kid.allergy ? (
               <span
                 className="rounded-full px-2 py-0.5 text-xs font-bold text-white"
-                style={{ backgroundColor: "var(--pv-coral)" }}
+                style={{ backgroundColor: "var(--pv-red-bad)" }}
               >
                 ⚠️ {kid.allergy}
               </span>
