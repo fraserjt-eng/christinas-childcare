@@ -48,25 +48,51 @@ function vibrate(pattern: number | number[]) {
   }
 }
 
-/** Soft click on every press. Short, quiet, low. */
+/** Crisp, positive click on every press. A short high-passed noise burst is
+ *  the tactile body of the click, and a tiny upward ping over the top makes it
+ *  land bright and pleasant instead of a dull thunk. Quiet and very short,
+ *  since it fires on every tap. */
 export function playClick() {
-  vibrate(8);
+  vibrate(6);
   if (!soundEnabled) return;
   const ctx = getCtx();
   if (!ctx) return;
   try {
     const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.setValueAtTime(420, t);
-    osc.frequency.exponentialRampToValueAtTime(320, t + 0.05);
-    gain.gain.setValueAtTime(0.1, t);
-    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
-    osc.start(t);
-    osc.stop(t + 0.07);
+
+    // Layer 1: a short, high-passed noise burst, the body of the click.
+    const dur = 0.018;
+    const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 3);
+    }
+    const noise = ctx.createBufferSource();
+    const noiseFilter = ctx.createBiquadFilter();
+    const noiseGain = ctx.createGain();
+    noise.buffer = buffer;
+    noiseFilter.type = "highpass";
+    noiseFilter.frequency.value = 1800;
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseGain.gain.setValueAtTime(0.07, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    noise.start(t);
+
+    // Layer 2: a tiny upward ping for a bright, positive feel.
+    const ping = ctx.createOscillator();
+    const pingGain = ctx.createGain();
+    ping.type = "triangle";
+    ping.connect(pingGain);
+    pingGain.connect(ctx.destination);
+    ping.frequency.setValueAtTime(900, t);
+    ping.frequency.exponentialRampToValueAtTime(1350, t + 0.03);
+    pingGain.gain.setValueAtTime(0.0001, t);
+    pingGain.gain.exponentialRampToValueAtTime(0.13, t + 0.004);
+    pingGain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    ping.start(t);
+    ping.stop(t + 0.06);
   } catch {
     // Silent fallback.
   }
