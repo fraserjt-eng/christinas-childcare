@@ -5,6 +5,7 @@
 // Nobody picks a mode. The code decides what happens next:
 // staff code, clock in or out. Family code, tap your kids. Office code, office.
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { BigButton, Card, ScreenHeader, StepNote, SuccessBanner, cx } from "@/components/preview/ui";
@@ -156,7 +157,6 @@ export default function KioskPage() {
                   onClick={() => {
                     clockOutStaff(activeStaff.id);
                     setSuccess(`Bye ${activeStaff.firstName}. You are clocked out. See you tomorrow!`);
-                    backToPad();
                   }}
                 />
               ) : (
@@ -168,11 +168,53 @@ export default function KioskPage() {
                   onClick={() => {
                     clockInStaff(activeStaff.id);
                     setSuccess(`Hi ${activeStaff.firstName}. You are clocked in. Have a great day!`);
-                    backToPad();
                   }}
                 />
               )}
-              <BigButton emoji="↩️" label="Not you? Go back" color="#8a8378" onClick={backToPad} />
+            </div>
+            <div className="mt-7 text-left">
+              <h3 className="text-lg font-extrabold">Your tools</h3>
+              <div className="mt-3 grid grid-cols-1 gap-3">
+                <Link
+                  href="/preview/room"
+                  onClick={() => playClick()}
+                  className="pv-press pv-kiosk-target flex items-center gap-3 rounded-2xl px-5 py-4 text-lg font-extrabold text-white shadow-md"
+                  style={{ backgroundColor: "var(--pv-teal)" }}
+                >
+                  <span aria-hidden="true" className="text-2xl">🧸</span>
+                  <span>
+                    Your room
+                    <span className="block text-sm font-semibold opacity-90">Log meals, naps, photos, notes</span>
+                  </span>
+                </Link>
+                <Link
+                  href="/preview/meals"
+                  onClick={() => playClick()}
+                  className="pv-press pv-kiosk-target flex items-center gap-3 rounded-2xl px-5 py-4 text-lg font-extrabold text-white shadow-md"
+                  style={{ backgroundColor: "var(--pv-gold)" }}
+                >
+                  <span aria-hidden="true" className="text-2xl">🍽️</span>
+                  <span>
+                    Food counts
+                    <span className="block text-sm font-semibold opacity-90">Two taps per child at the table</span>
+                  </span>
+                </Link>
+                <Link
+                  href="/preview/schedule"
+                  onClick={() => playClick()}
+                  className="pv-press pv-kiosk-target flex items-center gap-3 rounded-2xl px-5 py-4 text-lg font-extrabold text-white shadow-md"
+                  style={{ backgroundColor: "var(--pv-sky)" }}
+                >
+                  <span aria-hidden="true" className="text-2xl">📅</span>
+                  <span>
+                    Your week
+                    <span className="block text-sm font-semibold opacity-90">See your shifts</span>
+                  </span>
+                </Link>
+              </div>
+            </div>
+            <div className="mt-6">
+              <BigButton emoji="✅" label="Done" color="#8a8378" onClick={backToPad} className="w-full text-center" />
             </div>
           </Card>
         ) : null}
