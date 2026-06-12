@@ -48,52 +48,53 @@ function vibrate(pattern: number | number[]) {
   }
 }
 
-/** A deep, contemporary tap on every press. A warm low-mid body tone that
- *  settles downward gives it a grounded, premium "tok", and a subtle dark
- *  transient adds tactile definition. No bright upward chirp, so it never
- *  reads cartoonish. Quiet and short, since it fires on every press. */
+/** A crisp, contemporary click on every press. Transient-forward, so it reads
+ *  as a real click: a focused, resonant filtered tick (the snap) leads, with a
+ *  short mid-range body under it for tactility. Mid-bright, not a high chirp,
+ *  not a low tok. Quiet and short, since it fires on every press. */
 export function playClick() {
-  vibrate(7);
+  vibrate(6);
   if (!soundEnabled) return;
   const ctx = getCtx();
   if (!ctx) return;
   try {
     const t = ctx.currentTime;
 
-    // Layer 1: the body. A warm triangle that drops slightly, snappy envelope.
-    const body = ctx.createOscillator();
-    const bodyGain = ctx.createGain();
-    body.type = "triangle";
-    body.connect(bodyGain);
-    bodyGain.connect(ctx.destination);
-    body.frequency.setValueAtTime(230, t);
-    body.frequency.exponentialRampToValueAtTime(165, t + 0.045);
-    bodyGain.gain.setValueAtTime(0.0001, t);
-    bodyGain.gain.exponentialRampToValueAtTime(0.17, t + 0.003);
-    bodyGain.gain.exponentialRampToValueAtTime(0.0008, t + 0.07);
-    body.start(t);
-    body.stop(t + 0.08);
-
-    // Layer 2: a subtle, dark transient for tactile definition (bandpass, low).
-    const dur = 0.011;
+    // Layer 1: the click snap. A short noise burst through a resonant bandpass
+    // around 2.2 kHz gives a focused, distinctive tick rather than a hiss.
+    const dur = 0.013;
     const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < data.length; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 3);
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2.5);
     }
     const noise = ctx.createBufferSource();
     const noiseFilter = ctx.createBiquadFilter();
     const noiseGain = ctx.createGain();
     noise.buffer = buffer;
     noiseFilter.type = "bandpass";
-    noiseFilter.frequency.value = 950;
-    noiseFilter.Q.value = 0.8;
+    noiseFilter.frequency.value = 2200;
+    noiseFilter.Q.value = 1.6;
     noise.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
     noiseGain.connect(ctx.destination);
-    noiseGain.gain.setValueAtTime(0.04, t);
+    noiseGain.gain.setValueAtTime(0.075, t);
     noiseGain.gain.exponentialRampToValueAtTime(0.0006, t + dur);
     noise.start(t);
+
+    // Layer 2: a short mid body for tactility, triangle, slight downward settle.
+    const body = ctx.createOscillator();
+    const bodyGain = ctx.createGain();
+    body.type = "triangle";
+    body.connect(bodyGain);
+    bodyGain.connect(ctx.destination);
+    body.frequency.setValueAtTime(520, t);
+    body.frequency.exponentialRampToValueAtTime(430, t + 0.028);
+    bodyGain.gain.setValueAtTime(0.0001, t);
+    bodyGain.gain.exponentialRampToValueAtTime(0.11, t + 0.003);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0008, t + 0.045);
+    body.start(t);
+    body.stop(t + 0.05);
   } catch {
     // Silent fallback.
   }
