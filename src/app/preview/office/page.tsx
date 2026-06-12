@@ -127,9 +127,15 @@ function TileBody({ def }: { def: TileDef }) {
   );
 }
 
-/** One room's live line inside the traffic-light card. */
+/** One room's live line inside the traffic-light card.
+ *  Select raw fields, compute the status in render: a selector that returns
+ *  a fresh object every call makes zustand v5 re-render forever. */
 function RoomRow({ room }: { room: (typeof ROOMS)[number] }) {
-  const status = usePreviewStore((s) => getRoomStatus(s, room.id));
+  const kids = usePreviewStore((s) => s.kids);
+  const staff = usePreviewStore((s) => s.staff);
+  const checkedIn = usePreviewStore((s) => s.checkedIn);
+  const clockedIn = usePreviewStore((s) => s.clockedIn);
+  const status = getRoomStatus({ kids, staff, checkedIn, clockedIn }, room.id);
   const bg =
     status.level === "good"
       ? "var(--pv-teal)"

@@ -338,8 +338,13 @@ export interface RoomStatus {
 }
 
 /** Live ratio per room, computed from check-ins and clock-ins.
- *  This is the math behind the office traffic-light tiles. */
-export function getRoomStatus(state: PreviewState, roomId: string): RoomStatus {
+ *  This is the math behind the office traffic-light tiles.
+ *  Call it OUTSIDE a zustand selector (it returns a fresh object every
+ *  call, which zustand v5 reads as an endless snapshot change). */
+export function getRoomStatus(
+  state: Pick<PreviewState, "kids" | "staff" | "checkedIn" | "clockedIn">,
+  roomId: string,
+): RoomStatus {
   const room = ROOMS.find((r) => r.id === roomId);
   const limit = room?.ratioLimit ?? 10;
   const present = state.kids.filter(
