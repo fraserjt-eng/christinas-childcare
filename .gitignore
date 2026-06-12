@@ -1,5 +1,11 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# SOC 2 readiness outputs (enumerate security gaps; never commit to this public repo,
+# store in the private fortress/evidence/soc2/ folder instead)
+SOC2_READINESS_REPORT.md
+SOC2_FINDINGS.csv
+soc2-evidence/
+
 # dependencies
 /node_modules
 /.pnp
