@@ -92,7 +92,7 @@ function SignIn({ onPick }: { onPick: (familyId: string) => void }) {
           <h2 className="text-2xl">Sign in</h2>
           <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
             Real families sign in with their email and password. For this demo,
-            pick a parent to sign in as. You will see only that family's kids.
+            pick a parent to sign in as. You will see only their own kids.
           </p>
           <div className="mt-5 flex flex-col gap-3">
             {FAMILIES.map((f) => (
@@ -220,7 +220,7 @@ function ParentHome({
             />
           </div>
           <p className="mt-2 text-sm" style={{ color: "var(--pv-muted)" }}>
-            The "Pay" and "Sign" tags are not built yet. The owner already makes
+            The Pay and Sign tags are not built yet. The owner already makes
             the statements; parents just have no screen for them.
           </p>
         </section>
@@ -236,7 +236,7 @@ function ParentHome({
           >
             <span aria-hidden="true" className="text-2xl">📰</span>
             <span>
-              <span className="block text-base font-extrabold">This week's newsletter</span>
+              <span className="block text-base font-extrabold">This week&apos;s newsletter</span>
               <span className="block text-xs font-semibold" style={{ color: "var(--pv-teal)" }}>
                 Photos and reminders from the room
               </span>
@@ -248,7 +248,7 @@ function ParentHome({
         {/* FAMILY DETAILS. */}
         <section className="mb-6">
           <h2 className="flex items-center text-xl">
-            Your family's details <Tag kind="new" />
+            Your family&apos;s details <Tag kind="new" />
           </h2>
           <Card className="mt-3">
             <h3 className="text-base font-extrabold" style={{ color: "var(--pv-muted)" }}>
