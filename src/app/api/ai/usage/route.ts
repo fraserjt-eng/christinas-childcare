@@ -4,8 +4,12 @@ import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { checkDailyQuota, getDailyCap, setDailyCap } from '@/lib/ai-usage-storage';
 
-// GET: Return today's usage + configured cap
+// GET: Return today's usage + configured cap. Operational data, so it requires
+// a valid session (matches the POST below); anon callers get 401.
 export async function GET(): Promise<NextResponse> {
+  if (!(await requireSession())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const [quota, cap] = await Promise.all([checkDailyQuota(), getDailyCap()]);
     return NextResponse.json(
