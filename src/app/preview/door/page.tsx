@@ -35,7 +35,7 @@ export default function DoorPage() {
   return (
     <main className="px-4 py-6">
       <div className="mx-auto max-w-4xl">
-        <StepNote step={1} text="The front door. One question, three big doors." />
+        <StepNote step={1} text="The iPad in the lobby. One question, three big doors." />
       </div>
       <div
         className="mx-auto mt-2 max-w-4xl rounded-3xl px-6 py-12 text-center sm:py-16"

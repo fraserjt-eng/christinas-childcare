@@ -19,16 +19,40 @@ const STEPS = [
   { href: "/preview/office/people", label: "People", detail: "Add a person, reset a code. That is the whole screen." },
 ];
 
-const SCREENS = [
-  { href: "/preview/door", emoji: "🚪", label: "Front door" },
-  { href: "/preview/kiosk", emoji: "🔢", label: "Lobby kiosk" },
-  { href: "/preview/room", emoji: "🧸", label: "Teacher room view" },
-  { href: "/preview/family", emoji: "📱", label: "Parent's phone" },
-  { href: "/preview/meals", emoji: "🍽️", label: "Food counts" },
-  { href: "/preview/schedule", emoji: "📅", label: "Schedule" },
-  { href: "/preview/newsletter", emoji: "📰", label: "Newsletter" },
-  { href: "/preview/office", emoji: "🗝️", label: "Office" },
-  { href: "/preview/office/people", emoji: "🧑🏾‍🤝‍🧑🏾", label: "People" },
+const SCREEN_GROUPS = [
+  {
+    place: "On the lobby iPad",
+    note: "The screen by the front desk that everyone shares.",
+    screens: [
+      { href: "/preview/door", emoji: "🚪", label: "Front door" },
+      { href: "/preview/kiosk", emoji: "🔢", label: "Code pad" },
+    ],
+  },
+  {
+    place: "On a parent's phone",
+    note: "What a family opens at home or at work.",
+    screens: [
+      { href: "/preview/family", emoji: "📱", label: "Parent's phone" },
+    ],
+  },
+  {
+    place: "For teachers, in the room",
+    note: "What staff use during the day.",
+    screens: [
+      { href: "/preview/room", emoji: "🧸", label: "Room view" },
+      { href: "/preview/meals", emoji: "🍽️", label: "Food counts" },
+    ],
+  },
+  {
+    place: "For the office",
+    note: "Christina's view and the back-of-house tools.",
+    screens: [
+      { href: "/preview/office", emoji: "🗝️", label: "Office" },
+      { href: "/preview/office/people", emoji: "🧑🏾‍🤝‍🧑🏾", label: "People" },
+      { href: "/preview/schedule", emoji: "📅", label: "Schedule" },
+      { href: "/preview/newsletter", emoji: "📰", label: "Newsletter" },
+    ],
+  },
 ];
 
 export default function PreviewIndexPage() {
@@ -138,19 +162,31 @@ export default function PreviewIndexPage() {
           ))}
         </ol>
 
-        <h2 className="mt-10 text-2xl">All screens</h2>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {SCREENS.map((screen) => (
-            <Link
-              key={screen.href + screen.label}
-              href={screen.href}
-              onClick={() => playClick()}
-              className="pv-press pv-target rounded-2xl border bg-[var(--pv-card)] p-4 text-center"
-              style={{ borderColor: "var(--pv-line)" }}
-            >
-              <span aria-hidden="true" className="block text-3xl">{screen.emoji}</span>
-              <span className="mt-1 block text-base font-extrabold">{screen.label}</span>
-            </Link>
+        <h2 className="mt-10 text-2xl">All screens, by where they live</h2>
+        <p className="mt-1 text-base" style={{ color: "var(--pv-muted)" }}>
+          Three places: the iPad in the lobby, a parent&apos;s own phone, and the
+          office. Same data, different screen for each.
+        </p>
+        <div className="mt-4 flex flex-col gap-6">
+          {SCREEN_GROUPS.map((group) => (
+            <div key={group.place}>
+              <h3 className="text-lg font-extrabold">{group.place}</h3>
+              <p className="text-sm" style={{ color: "var(--pv-muted)" }}>{group.note}</p>
+              <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {group.screens.map((screen) => (
+                  <Link
+                    key={screen.href + screen.label}
+                    href={screen.href}
+                    onClick={() => playClick()}
+                    className="pv-press pv-target rounded-2xl border bg-[var(--pv-card)] p-4 text-center"
+                    style={{ borderColor: "var(--pv-line)" }}
+                  >
+                    <span aria-hidden="true" className="block text-3xl">{screen.emoji}</span>
+                    <span className="mt-1 block text-base font-extrabold">{screen.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
 
