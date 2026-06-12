@@ -64,14 +64,29 @@ export default function PreviewIndexPage() {
         </p>
         <h1 className="pv-display mt-2 text-4xl sm:text-5xl">Christina&apos;s Simplified Summer</h1>
         <p className="mt-4 text-lg" style={{ color: "#4d4d4d" }}>
-          This is a clickable preview of the simpler daily tools: the front door,
-          the kiosk, the teacher view, the family feed, food counts, the schedule,
-          the newsletter, and Christina&apos;s office. Everything works, everything is
-          demo data, and nothing touches the real center.
+          This page is the walkthrough: a map of every screen so you can try the
+          simpler daily tools. Everything works, everything is demo data, and
+          nothing touches the real center.
         </p>
 
+        <Link
+          href="/preview/landing"
+          onClick={() => playClick()}
+          className="pv-press mt-6 flex items-center gap-4 rounded-2xl p-5 text-white shadow-md"
+          style={{ background: "linear-gradient(160deg, #c62828, #9e1f1f)" }}
+        >
+          <span aria-hidden="true" className="text-3xl">🚪</span>
+          <span className="flex-1">
+            <span className="block text-lg font-extrabold">See the landing page</span>
+            <span className="block text-base" style={{ color: "rgba(255,255,255,0.9)" }}>
+              How the front door would look on the real site
+            </span>
+          </span>
+          <span aria-hidden="true" className="text-2xl">→</span>
+        </Link>
+
         <div
-          className="mt-4 rounded-2xl border-2 p-5"
+          className="mt-6 rounded-2xl border-2 p-5"
           style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
         >
           <h2 className="text-xl">🔑 Demo codes</h2>
