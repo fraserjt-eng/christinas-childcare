@@ -10,7 +10,9 @@ import {
   STAFF_EDITABLE_TYPES,
   STAFF_EDIT_WINDOW_MS,
   ADMIN_ROLES,
+  CLASSROOM_SCOPING_ENABLED,
 } from '@/lib/child-entries-policy';
+import { signEntryPhoto } from '@/lib/photo-url';
 
 // Edit (PATCH) and soft-delete (DELETE) a single child_daily_entries row.
 // Staff (teacher rank) may change everyday entries from the last 48 hours;
@@ -70,12 +72,12 @@ async function loadContext(id: string) {
   const isAdmin = ADMIN_ROLES.includes(session.user.role);
   const employee = await resolveSessionEmployee(session);
 
-  // Classroom scope: a teacher may only edit/delete entries for children in
-  // their assigned room. Admin/owner/superadmin bypass. The entry carries the
-  // room it was logged under; fall back to the child's current room for older
-  // entries stamped before classroom scoping existed. 404 (not 403) so a
-  // teacher cannot probe which entry ids exist outside their room.
-  if (!isAdmin) {
+  // Classroom scope (when enabled): a teacher may only edit/delete entries for
+  // children in their assigned room. Admin/owner/superadmin bypass. The entry
+  // carries the room it was logged under; fall back to the child's current
+  // room for older entries stamped before classroom scoping existed. 404 (not
+  // 403) so a teacher cannot probe which entry ids exist outside their room.
+  if (CLASSROOM_SCOPING_ENABLED && !isAdmin) {
     let entryRoom = (entry as { classroom_id?: string | null }).classroom_id ?? null;
     if (!entryRoom) {
       const childId = (entry as { child_id?: string | null }).child_id ?? null;
@@ -135,7 +137,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (error || !updated) {
     return NextResponse.json({ error: 'Could not update the entry' }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, entry: updated });
+  return NextResponse.json({ ok: true, entry: await signEntryPhoto(supabase, updated) });
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {

@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionEmployee } from '@/lib/employee-server';
-import { ADMIN_ROLES } from '@/lib/child-entries-policy';
+import { ADMIN_ROLES, CLASSROOM_SCOPING_ENABLED } from '@/lib/child-entries-policy';
 
 // Roster for staff capture: the children a teacher may log for. A teacher is
 // scoped to their assigned classroom (employees.classroom_id); admin / owner /
@@ -33,7 +33,7 @@ export async function GET() {
     .limit(5000);
 
   let rows = kids ?? [];
-  if (!isAdmin) {
+  if (CLASSROOM_SCOPING_ENABLED && !isAdmin) {
     // Scoped teacher: only their room. No room assigned -> empty roster, never
     // a silent all-children fallback (the whole point of the feature).
     rows = myClassroom
@@ -58,7 +58,7 @@ export async function GET() {
     });
 
   return NextResponse.json(
-    { children, scoped: !isAdmin, classroom_id: myClassroom },
+    { children, scoped: CLASSROOM_SCOPING_ENABLED && !isAdmin, classroom_id: myClassroom },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }

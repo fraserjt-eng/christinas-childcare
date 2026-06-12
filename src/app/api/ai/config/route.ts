@@ -2,9 +2,16 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { loadAIConfig, saveAIConfig, AIConfig } from '@/lib/ai-config';
+import { requireSession } from '@/lib/require-auth';
+
+// Owner/admin only. This endpoint reads and writes the Anthropic API key, so
+// every method fails closed for anyone who is not a verified admin session.
+const unauthorized = () =>
+  NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
 // GET: Return current config with API key masked
 export async function GET(): Promise<NextResponse> {
+  if (!(await requireSession('admin'))) return unauthorized();
   try {
     const config = await loadAIConfig();
     const hasKey = !!config.apiKey;
@@ -30,6 +37,7 @@ export async function GET(): Promise<NextResponse> {
 
 // POST: Save config (full or partial)
 export async function POST(request: Request): Promise<NextResponse> {
+  if (!(await requireSession('admin'))) return unauthorized();
   try {
     const body = (await request.json()) as Partial<AIConfig>;
 
@@ -72,6 +80,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
 // PUT: Test a candidate API key against the Anthropic API
 export async function PUT(request: Request): Promise<NextResponse> {
+  if (!(await requireSession('admin'))) return unauthorized();
   try {
     const body = await request.json();
     const candidateKey = body.apiKey || (await loadAIConfig()).apiKey;

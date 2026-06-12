@@ -162,7 +162,15 @@ const sections: PolicySection[] = [
             </span>
           </li>
         </ul>
-        <p>You may request deletion of your data at any time by contacting us directly.</p>
+        <p>
+          You may request deletion of your data at any time using our{' '}
+          <a href="/delete-data" className="text-christina-blue hover:underline">
+            data deletion request form
+          </a>
+          , or by contacting us directly. As a licensed childcare provider, we delete what we are
+          permitted to and keep only the records Minnesota licensing requires us to retain, then
+          remove those once their retention period ends.
+        </p>
       </div>
     ),
   },
@@ -242,7 +250,11 @@ const sections: PolicySection[] = [
           ))}
         </ul>
         <p>
-          To exercise any of these rights, contact us using the information at the bottom of this
+          To request deletion, use our{' '}
+          <a href="/delete-data" className="text-christina-blue hover:underline">
+            data deletion request form
+          </a>
+          . To exercise any other right, contact us using the information at the bottom of this
           page. We will respond within 10 business days.
         </p>
       </div>

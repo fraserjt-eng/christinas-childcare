@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionEmployee } from '@/lib/employee-server';
-import { ADMIN_ROLES } from '@/lib/child-entries-policy';
+import { ADMIN_ROLES, CLASSROOM_SCOPING_ENABLED } from '@/lib/child-entries-policy';
+import { signPhotoList } from '@/lib/photo-url';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function uuidOrNull(v: unknown): string | null {
@@ -39,12 +40,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Too many photos at once (max 10)' }, { status: 400 });
   }
 
-  // Classroom scope: a teacher may only post to their assigned room. Admin /
-  // owner / superadmin may post to any room. Mirrors the child-roster filter.
+  // Classroom scope (when enabled): a teacher may only post to their assigned
+  // room. Admin / owner / superadmin may post to any room. Mirrors the
+  // child-roster filter.
   const employee = await resolveSessionEmployee(session);
   const role = String(session.user.role || employee?.role || '').toLowerCase();
   const isAdmin = ADMIN_ROLES.includes(role);
-  if (!isAdmin) {
+  if (CLASSROOM_SCOPING_ENABLED && !isAdmin) {
     if (!employee?.classroom_id) {
       return NextResponse.json(
         { error: 'No classroom assigned. Ask your admin to assign your classroom.' },
@@ -102,10 +104,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         .upload(path, buffer, { contentType, upsert: false });
       if (upErr) continue;
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('child_photos').getPublicUrl(path);
-
+      // Store the object path, not a public URL. The GET below and the parent
+      // and admin reads sign it on the way out, so the bucket can be private.
       const { data: row, error: insErr } = await supabase
         .from('daily_photos')
         .insert({
@@ -113,7 +113,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           classroom_name: classroomName,
           employee_id: employeeId,
           employee_name: employeeName,
-          photo_url: publicUrl,
+          photo_url: path,
           caption: typeof p.caption === 'string' ? p.caption.slice(0, 200) : null,
           activity_type: typeof p.activity_type === 'string' ? p.activity_type : 'other',
           status: 'pending',
@@ -158,8 +158,12 @@ export async function GET(): Promise<NextResponse> {
     .order('created_at', { ascending: false })
     .limit(30);
 
+  const rows = data ?? [];
+  const signed = await signPhotoList(supabase, rows.map((p) => p.photo_url as string));
+  const photos = rows.map((p, i) => ({ ...p, photo_url: signed[i] }));
+
   return NextResponse.json(
-    { photos: data ?? [] },
+    { photos },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }
