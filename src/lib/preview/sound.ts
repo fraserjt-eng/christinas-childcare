@@ -48,20 +48,34 @@ function vibrate(pattern: number | number[]) {
   }
 }
 
-/** Crisp, positive click on every press. A short high-passed noise burst is
- *  the tactile body of the click, and a tiny upward ping over the top makes it
- *  land bright and pleasant instead of a dull thunk. Quiet and very short,
- *  since it fires on every tap. */
+/** A deep, contemporary tap on every press. A warm low-mid body tone that
+ *  settles downward gives it a grounded, premium "tok", and a subtle dark
+ *  transient adds tactile definition. No bright upward chirp, so it never
+ *  reads cartoonish. Quiet and short, since it fires on every press. */
 export function playClick() {
-  vibrate(6);
+  vibrate(7);
   if (!soundEnabled) return;
   const ctx = getCtx();
   if (!ctx) return;
   try {
     const t = ctx.currentTime;
 
-    // Layer 1: a short, high-passed noise burst, the body of the click.
-    const dur = 0.018;
+    // Layer 1: the body. A warm triangle that drops slightly, snappy envelope.
+    const body = ctx.createOscillator();
+    const bodyGain = ctx.createGain();
+    body.type = "triangle";
+    body.connect(bodyGain);
+    bodyGain.connect(ctx.destination);
+    body.frequency.setValueAtTime(230, t);
+    body.frequency.exponentialRampToValueAtTime(165, t + 0.045);
+    bodyGain.gain.setValueAtTime(0.0001, t);
+    bodyGain.gain.exponentialRampToValueAtTime(0.17, t + 0.003);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0008, t + 0.07);
+    body.start(t);
+    body.stop(t + 0.08);
+
+    // Layer 2: a subtle, dark transient for tactile definition (bandpass, low).
+    const dur = 0.011;
     const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * dur)), ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < data.length; i++) {
@@ -71,28 +85,15 @@ export function playClick() {
     const noiseFilter = ctx.createBiquadFilter();
     const noiseGain = ctx.createGain();
     noise.buffer = buffer;
-    noiseFilter.type = "highpass";
-    noiseFilter.frequency.value = 1800;
+    noiseFilter.type = "bandpass";
+    noiseFilter.frequency.value = 950;
+    noiseFilter.Q.value = 0.8;
     noise.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
     noiseGain.connect(ctx.destination);
-    noiseGain.gain.setValueAtTime(0.07, t);
-    noiseGain.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    noiseGain.gain.setValueAtTime(0.04, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0006, t + dur);
     noise.start(t);
-
-    // Layer 2: a tiny upward ping for a bright, positive feel.
-    const ping = ctx.createOscillator();
-    const pingGain = ctx.createGain();
-    ping.type = "triangle";
-    ping.connect(pingGain);
-    pingGain.connect(ctx.destination);
-    ping.frequency.setValueAtTime(900, t);
-    ping.frequency.exponentialRampToValueAtTime(1350, t + 0.03);
-    pingGain.gain.setValueAtTime(0.0001, t);
-    pingGain.gain.exponentialRampToValueAtTime(0.13, t + 0.004);
-    pingGain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-    ping.start(t);
-    ping.stop(t + 0.06);
   } catch {
     // Silent fallback.
   }
