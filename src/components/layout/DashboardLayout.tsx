@@ -89,6 +89,7 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/salaried-scheduling', label: 'Salaried Staff', icon: Building2 },
       { href: '/admin/hr', label: 'HR & Onboarding', icon: UserPlus },
       { href: '/admin/compliance', label: 'Compliance', icon: ShieldCheck },
+      { href: '/admin/data-requests', label: 'Data Requests', icon: FileText },
       { href: '/admin/payroll', label: 'Payroll', icon: CreditCard },
       { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
       { href: '/admin/families', label: 'Families', icon: Users },

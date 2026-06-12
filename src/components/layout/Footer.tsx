@@ -110,6 +110,8 @@ export function Footer() {
           <p className="text-sm">{t('chrome.rights')}</p>
           <div className="flex items-center gap-4 text-sm">
             <Link href="/privacy" className="hover:text-white transition-colors">{t('chrome.privacy')}</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+            <Link href="/delete-data" className="hover:text-white transition-colors">Delete My Data</Link>
             <p className="flex items-center gap-1">{t('chrome.madeWith')} <Heart className="h-3 w-3 text-christina-red" /> {t('chrome.forFamilies')}</p>
           </div>
         </div>
