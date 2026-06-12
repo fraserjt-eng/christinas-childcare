@@ -10,7 +10,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Card, ScreenHeader, StepNote, useMounted } from "@/components/preview/ui";
+import { BigButton, Card, EmptyState, ScreenHeader, StepNote, useMounted } from "@/components/preview/ui";
 import {
   CENTER_EVENTS,
   FAMILIES,
@@ -141,6 +141,11 @@ function ParentHome({
   );
   const message = FAMILY_MESSAGES[family.id];
   const nextEvent = CENTER_EVENTS[0];
+  const [detail, setDetail] = useState<DetailKind | null>(null);
+
+  if (detail) {
+    return <DetailView kind={detail} family={family} onBack={() => setDetail(null)} />;
+  }
 
   return (
     <main className="px-4 py-6">
@@ -187,6 +192,7 @@ function ParentHome({
                 body={`${message.from}: ${message.body}`}
                 tag={message.unread ? "1 new" : null}
                 accent="var(--pv-sky)"
+                onOpen={() => setDetail("messages")}
               />
             ) : null}
             <NeedTile
@@ -195,6 +201,7 @@ function ParentHome({
               body={family.balanceDueLabel}
               tag={family.balanceOwed > 0 ? "Pay" : null}
               accent={family.balanceOwed > 0 ? "var(--pv-coral)" : "var(--pv-teal)"}
+              onOpen={() => setDetail("billing")}
             />
             <NeedTile
               emoji="📝"
@@ -210,6 +217,7 @@ function ParentHome({
               }
               tag={family.formsToSign.length > 0 ? "Sign" : null}
               accent="var(--pv-gold)"
+              onOpen={() => setDetail("forms")}
             />
             <NeedTile
               emoji={nextEvent.kind === "closure" ? "🚫" : "📅"}
@@ -217,11 +225,13 @@ function ParentHome({
               body={`${nextEvent.title}, ${nextEvent.dateLabel}`}
               tag={null}
               accent="var(--pv-plum)"
+              onOpen={() => setDetail("calendar")}
             />
           </div>
           <p className="mt-2 text-sm" style={{ color: "var(--pv-muted)" }}>
-            The Pay and Sign tags are not built yet. The owner already makes
-            the statements; parents just have no screen for them.
+            Tap any of these to see the screen behind it. The Pay and Sign
+            tags are not built yet; the owner already makes the statements,
+            parents just have no screen for them.
           </p>
         </section>
 
@@ -412,17 +422,22 @@ function NeedTile({
   body,
   tag,
   accent,
+  onOpen,
 }: {
   emoji: string;
   title: string;
   body: string;
   tag: string | null;
   accent: string;
+  onOpen: () => void;
 }) {
   return (
     <button
       type="button"
-      onClick={() => playClick()}
+      onClick={() => {
+        playClick();
+        onOpen();
+      }}
       className="pv-press pv-target rounded-2xl border bg-[var(--pv-card)] p-4 text-left"
       style={{ borderColor: "var(--pv-line)" }}
     >
@@ -440,6 +455,224 @@ function NeedTile({
       </div>
       <p className="mt-1 text-sm" style={{ color: "#4d473f" }}>{body}</p>
     </button>
+  );
+}
+
+type DetailKind = "billing" | "messages" | "forms" | "calendar";
+
+/** The four screens behind the needs-me tiles. Each opens in place so the
+ *  signed-in family stays, like drilling into a phone app. */
+function DetailView({
+  kind,
+  family,
+  onBack,
+}: {
+  kind: DetailKind;
+  family: PreviewFamily;
+  onBack: () => void;
+}) {
+  const titles: Record<DetailKind, { title: string; emoji: string }> = {
+    billing: { title: "What you owe", emoji: "💵" },
+    messages: { title: "Messages with the room", emoji: "💬" },
+    forms: { title: "Forms to sign", emoji: "📝" },
+    calendar: { title: "Closures and events", emoji: "📅" },
+  };
+  const head = titles[kind];
+
+  return (
+    <main className="px-4 py-6">
+      <div className="mx-auto max-w-2xl">
+        <button
+          type="button"
+          onClick={() => {
+            playClick();
+            onBack();
+          }}
+          className="pv-press pv-target rounded-xl px-3 py-2 text-base font-bold"
+          style={{ color: "var(--pv-plum)" }}
+        >
+          ← Back to home
+        </button>
+        <h1 className="mt-2 flex items-center text-3xl">
+          <span aria-hidden="true" className="mr-2">{head.emoji}</span>
+          {head.title}
+          <Tag kind="new" />
+        </h1>
+
+        <div className="mt-5">
+          {kind === "billing" ? <BillingDetail family={family} /> : null}
+          {kind === "messages" ? <MessagesDetail family={family} /> : null}
+          {kind === "forms" ? <FormsDetail family={family} /> : null}
+          {kind === "calendar" ? <CalendarDetail /> : null}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function BillingDetail({ family }: { family: PreviewFamily }) {
+  const weekly = 120;
+  const lines = [
+    { label: "Weekly tuition, week of June 9", amount: weekly },
+    { label: "Weekly tuition, week of June 2", amount: weekly },
+  ];
+  return (
+    <>
+      <Card>
+        <p className="text-base font-semibold" style={{ color: "var(--pv-muted)" }}>
+          Current balance
+        </p>
+        <p className="text-4xl font-extrabold" style={{ color: family.balanceOwed > 0 ? "var(--pv-coral)" : "var(--pv-teal)" }}>
+          ${family.balanceOwed}
+        </p>
+        <p className="text-base">{family.balanceDueLabel}</p>
+        <div className="mt-4 flex flex-col gap-2">
+          {family.balanceOwed > 0
+            ? lines.map((l) => (
+                <div key={l.label} className="flex items-center justify-between border-t pt-2 text-base" style={{ borderColor: "var(--pv-line)" }}>
+                  <span>{l.label}</span>
+                  <span className="font-bold">${l.amount}</span>
+                </div>
+              ))
+            : <p className="text-base" style={{ color: "var(--pv-muted)" }}>Nothing due. You are paid through the end of June.</p>}
+        </div>
+        {family.balanceOwed > 0 ? (
+          <BigButton emoji="💳" label="Pay now" color="var(--pv-coral)" kiosk className="mt-5 w-full text-center" onClick={() => {}} />
+        ) : null}
+      </Card>
+      <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
+        To build. The owner already creates these statements in the office. A
+        parent just has no screen to see a balance or pay. This shows the shape.
+      </p>
+    </>
+  );
+}
+
+function MessagesDetail({ family }: { family: PreviewFamily }) {
+  const message = FAMILY_MESSAGES[family.id];
+  const [reply, setReply] = useState("");
+  const [sent, setSent] = useState<string | null>(null);
+
+  return (
+    <>
+      <Card>
+        {message ? (
+          <div className="rounded-2xl p-4" style={{ backgroundColor: "#eaf4fd" }}>
+            <p className="text-sm font-bold" style={{ color: "var(--pv-sky)" }}>{message.from}</p>
+            <p className="mt-1 text-base">{message.body}</p>
+            <p className="mt-1 text-xs" style={{ color: "var(--pv-muted)" }}>{message.time}</p>
+          </div>
+        ) : null}
+        {sent ? (
+          <div className="mt-3 ml-auto max-w-[85%] rounded-2xl p-4 text-white" style={{ backgroundColor: "var(--pv-teal)" }}>
+            <p className="text-base">{sent}</p>
+            <p className="mt-1 text-xs opacity-90">You, just now</p>
+          </div>
+        ) : null}
+        <div className="mt-4 flex flex-col gap-2">
+          <textarea
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            placeholder="Write back to the room"
+            rows={2}
+            aria-label="Write a reply to the room"
+            className="rounded-xl border-2 px-4 py-3 text-base"
+            style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
+          />
+          <BigButton
+            emoji="➤"
+            label="Send"
+            color="var(--pv-sky)"
+            disabled={!reply.trim()}
+            onClick={() => {
+              setSent(reply.trim());
+              setReply("");
+            }}
+            className="w-full text-center"
+          />
+        </div>
+      </Card>
+      <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
+        To build. The room can send a parent a message today, and the parent
+        sees it. But a parent writing back does not reach the teacher yet. This
+        shows the two-way thread that needs building.
+      </p>
+    </>
+  );
+}
+
+function FormsDetail({ family }: { family: PreviewFamily }) {
+  const [signed, setSigned] = useState<string[]>([]);
+  if (family.formsToSign.length === 0) {
+    return <EmptyState emoji="✅" title="Nothing to sign" detail="You are all caught up on forms." />;
+  }
+  return (
+    <>
+      <div className="flex flex-col gap-3">
+        {family.formsToSign.map((form) => {
+          const isSigned = signed.includes(form);
+          return (
+            <Card key={form}>
+              <div className="flex flex-wrap items-center gap-3">
+                <span aria-hidden="true" className="text-2xl">📄</span>
+                <span className="text-base font-extrabold">{form}</span>
+                {isSigned ? (
+                  <span className="ml-auto rounded-full px-3 py-1 text-sm font-bold text-white" style={{ backgroundColor: "var(--pv-teal)" }}>
+                    ✓ Signed
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playClick();
+                      setSigned((s) => [...s, form]);
+                    }}
+                    className="pv-press pv-target ml-auto rounded-full px-4 py-2 text-sm font-extrabold text-white"
+                    style={{ backgroundColor: "var(--pv-gold)" }}
+                  >
+                    Review and sign
+                  </button>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+      <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
+        To build. There is no documents or forms table in the real app yet. The
+        live Documents page shows fake sample files with buttons that do nothing.
+      </p>
+    </>
+  );
+}
+
+function CalendarDetail() {
+  return (
+    <>
+      <div className="flex flex-col gap-3">
+        {CENTER_EVENTS.map((ev) => (
+          <Card key={ev.id}>
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className="flex h-12 w-12 items-center justify-center rounded-xl text-2xl"
+                style={{ backgroundColor: ev.kind === "closure" ? "#fdeae6" : "#ece5f1" }}
+              >
+                {ev.kind === "closure" ? "🚫" : "🎉"}
+              </span>
+              <div>
+                <p className="text-base font-extrabold">{ev.title}</p>
+                <p className="text-sm" style={{ color: "var(--pv-muted)" }}>{ev.dateLabel}</p>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
+        To build. The live Calendar page is a fixed list of old 2023 dates that
+        never change. A real closures list is what a parent needs to plan around.
+      </p>
+    </>
   );
 }
 
