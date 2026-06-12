@@ -56,3 +56,15 @@ Training curriculum: `docs/training/` (19 files, 12K+ lines)
 - ExcelJS for spreadsheet export (dynamic import)
 - 10 of 23 storage modules Supabase-backed; 13 remain localStorage-only
 - 3 portals: admin, employee, parent (dashboard)
+
+## Deploy safety: staging lane (Fortress Layer 7, non-negotiable, added 2026-06-11)
+
+This app holds children's and family PII and auto-deploys `main` straight to production. Until a real staging environment exists, every change follows the **no-staging fallback** so families never see work in progress:
+
+1. Branch off `main` for any change (`git checkout -b fix/...`). Never commit features straight to `main`.
+2. Push the branch. Vercel builds a **preview deployment** automatically (preview URL, not the live domain).
+3. Verify on the preview URL with synthetic data only. Never test against real family data on a shared write path.
+4. Only after the preview checks out, merge to `main` so the production deploy carries verified code.
+5. Never `vercel --prod` from a dirty or unpushed tree. The local pre-flight hook (`scripts/hardening-preflight.mjs`) blocks committed secrets and warns on RLS/lockfile drift.
+
+**Tracked Layer 7 finding (build when scheduled):** a true staging lane = a Vercel preview environment with its own env vars pointing at either a Supabase branch or a second project seeded with synthetic data, so preview never reads or writes the live `dkzxcxwjhhxqfgksynjb` instance. The fallback above is the interim; the real lane closes the finding.
