@@ -3,6 +3,8 @@
 // Teacher quick-tap logging (design study 03, Brightwheel pattern).
 // One tap logs for the whole room. Every present kid starts selected,
 // the teacher drops the one or two it does not apply to, then saves.
+// The Infants room gets two extra actions, Bottle and Diaper, and most
+// actions carry quick-detail chips that fill the detail box in one tap.
 
 import { useState } from "react";
 import {
@@ -19,7 +21,7 @@ import { DEMO_PHOTOS, ROOMS } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
 
-type ActionKind = "meal" | "nap" | "activity" | "photo" | "note";
+type ActionKind = "meal" | "bottle" | "diaper" | "nap" | "activity" | "photo" | "note";
 
 interface RoomAction {
   kind: ActionKind;
@@ -28,9 +30,16 @@ interface RoomAction {
   color: string;
   panelTitle: string;
   defaultDetail: string;
+  /** One-tap fills for the detail box. Empty means free text only. */
+  quickChips: string[];
 }
 
-const ACTIONS: RoomAction[] = [
+const MEAL_CHIPS = ["Ate all", "Ate some", "Just a little"];
+const BOTTLE_CHIPS = ["2 oz", "4 oz", "6 oz", "8 oz, finished it"];
+const DIAPER_CHIPS = ["Wet", "BM", "Dry, checked"];
+const NAP_CHIPS = ["Just fell asleep", "Woke up happy", "Short rest"];
+
+const STANDARD_ACTIONS: RoomAction[] = [
   {
     kind: "meal",
     label: "Meal",
@@ -38,6 +47,7 @@ const ACTIONS: RoomAction[] = [
     color: "var(--pv-teal)",
     panelTitle: "Log a meal",
     defaultDetail: "Morning snack, ate most",
+    quickChips: MEAL_CHIPS,
   },
   {
     kind: "nap",
@@ -46,6 +56,7 @@ const ACTIONS: RoomAction[] = [
     color: "var(--pv-plum)",
     panelTitle: "Log a nap",
     defaultDetail: "Slept 12:30 to 2:05",
+    quickChips: NAP_CHIPS,
   },
   {
     kind: "activity",
@@ -54,6 +65,7 @@ const ACTIONS: RoomAction[] = [
     color: "var(--pv-gold)",
     panelTitle: "Log an activity",
     defaultDetail: "Outdoor play and big blocks",
+    quickChips: [],
   },
   {
     kind: "photo",
@@ -62,6 +74,7 @@ const ACTIONS: RoomAction[] = [
     color: "var(--pv-sky)",
     panelTitle: "Log a photo",
     defaultDetail: "A moment from today",
+    quickChips: [],
   },
   {
     kind: "note",
@@ -70,6 +83,75 @@ const ACTIONS: RoomAction[] = [
     color: "var(--pv-coral)",
     panelTitle: "Log a note",
     defaultDetail: "A quick note from the room",
+    quickChips: [],
+  },
+];
+
+/** The Infants room logs bottles and diapers all day, so those lead.
+ *  Seven actions share five readable colors, repeats spaced apart. */
+const INFANT_ACTIONS: RoomAction[] = [
+  {
+    kind: "bottle",
+    label: "Bottle",
+    emoji: "🍼",
+    color: "var(--pv-sky)",
+    panelTitle: "Log a bottle",
+    defaultDetail: "4 oz",
+    quickChips: BOTTLE_CHIPS,
+  },
+  {
+    kind: "diaper",
+    label: "Diaper",
+    emoji: "🧷",
+    color: "var(--pv-plum)",
+    panelTitle: "Log a diaper change",
+    defaultDetail: "Wet, changed",
+    quickChips: DIAPER_CHIPS,
+  },
+  {
+    kind: "meal",
+    label: "Meal",
+    emoji: "🍎",
+    color: "var(--pv-teal)",
+    panelTitle: "Log a meal",
+    defaultDetail: "Baby food, ate most",
+    quickChips: MEAL_CHIPS,
+  },
+  {
+    kind: "nap",
+    label: "Nap",
+    emoji: "😴",
+    color: "var(--pv-gold)",
+    panelTitle: "Log a nap",
+    defaultDetail: "Morning nap, slept well",
+    quickChips: NAP_CHIPS,
+  },
+  {
+    kind: "activity",
+    label: "Activity",
+    emoji: "🎨",
+    color: "var(--pv-coral)",
+    panelTitle: "Log an activity",
+    defaultDetail: "Tummy time and rattles",
+    quickChips: [],
+  },
+  {
+    kind: "photo",
+    label: "Photo",
+    emoji: "📷",
+    color: "var(--pv-sky)",
+    panelTitle: "Log a photo",
+    defaultDetail: "A moment from today",
+    quickChips: [],
+  },
+  {
+    kind: "note",
+    label: "Note",
+    emoji: "📝",
+    color: "var(--pv-plum)",
+    panelTitle: "Log a note",
+    defaultDetail: "A quick note from the room",
+    quickChips: [],
   },
 ];
 
@@ -89,7 +171,8 @@ export default function RoomPage() {
   const roomKids = kids.filter((k) => k.roomId === roomId);
   const presentKids = mounted ? roomKids.filter((k) => checkedIn[k.id]) : [];
   const awayKids = mounted ? roomKids.filter((k) => !checkedIn[k.id]) : roomKids;
-  const activeAction = ACTIONS.find((a) => a.kind === activeKind) ?? null;
+  const actions = roomId === "infants" ? INFANT_ACTIONS : STANDARD_ACTIONS;
+  const activeAction = actions.find((a) => a.kind === activeKind) ?? null;
 
   function pickRoom(id: string) {
     setRoomId(id);
@@ -182,7 +265,7 @@ export default function RoomPage() {
 
         <h2 className="mt-7 text-2xl">What just happened?</h2>
         <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {ACTIONS.map((action) => (
+          {actions.map((action) => (
             <BigButton
               key={action.kind}
               kiosk
@@ -197,6 +280,25 @@ export default function RoomPage() {
         {activeAction ? (
           <Card className="mt-6">
             <h2 className="text-2xl">{activeAction.panelTitle}</h2>
+
+            {activeAction.quickChips.length > 0 ? (
+              <>
+                <p className="mt-4 text-base" style={{ color: "var(--pv-muted)" }}>
+                  Tap one and it fills the box. You can still change the words.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {activeAction.quickChips.map((chip) => (
+                    <Chip
+                      key={chip}
+                      label={chip}
+                      on={detail === chip}
+                      onColor={activeAction.color}
+                      onClick={() => setDetail(chip)}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null}
 
             <label htmlFor="room-log-detail" className="mt-4 block text-base font-bold">
               What happened

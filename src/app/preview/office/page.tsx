@@ -8,7 +8,7 @@
 // the numbers carry the detail.
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   BigButton,
   Card,
@@ -190,6 +190,12 @@ export default function OfficePage() {
   const [editing, setEditing] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Stable callback for the success banner. The banner chimes once per mount
+  // inside an effect keyed on onDone; a fresh arrow function here made every
+  // unrelated re-render (a kiosk check-in, tapping Edit) replay the chime and
+  // restart the timer. That was the page's share of the "noise and delay".
+  const handleSuccessDone = useCallback(() => setSuccess(null), []);
+
   const kidsHere = Object.values(checkedIn).filter(Boolean).length;
   const missingTiles = (Object.keys(TILES) as OfficeTileId[]).filter(
     (id) => !officeTiles.includes(id),
@@ -338,7 +344,7 @@ export default function OfficePage() {
         </p>
       </div>
 
-      {success ? <SuccessBanner message={success} onDone={() => setSuccess(null)} /> : null}
+      {success ? <SuccessBanner message={success} onDone={handleSuccessDone} /> : null}
     </main>
   );
 }

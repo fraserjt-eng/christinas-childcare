@@ -112,8 +112,9 @@ export default function PeoplePage() {
                         {ROOMS.map((room) => (
                           <Chip
                             key={room.id}
-                            label={room.name}
+                            label={`${room.emoji} ${room.name}`}
                             on={person.roomId === room.id}
+                            onColor={room.color}
                             onClick={() => setStaffRoom(person.id, room.id)}
                           />
                         ))}

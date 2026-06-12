@@ -44,6 +44,8 @@ export interface PreviewFamily {
 
 export type FeedKind =
   | "meal"
+  | "bottle"
+  | "diaper"
   | "nap"
   | "activity"
   | "photo"
@@ -122,22 +124,26 @@ export function photoById(id: string | null): DemoPhoto | null {
 }
 
 export const ROOMS: PreviewRoom[] = [
+  { id: "infants", name: "Infants", emoji: "🍼", color: "#4a90d9", capacity: 8, ratioLimit: 4 },
   { id: "toddlers", name: "Toddlers", emoji: "🧸", color: "#2a9d8f", capacity: 14, ratioLimit: 7 },
   { id: "preschool", name: "Preschool", emoji: "🎨", color: "#6d597a", capacity: 20, ratioLimit: 10 },
+  { id: "schoolage", name: "School Age", emoji: "🎒", color: "#e9b44c", capacity: 20, ratioLimit: 10 },
 ];
 
 export const STAFF: PreviewStaff[] = [
   { id: "st-dana", firstName: "Dana", lastName: "Whitfield", role: "teacher", roomId: "toddlers", pin: "7321", avatar: "👩🏾‍🏫", color: "#2a9d8f" },
   { id: "st-maria", firstName: "Maria", lastName: "Lewis", role: "teacher", roomId: "preschool", pin: "7322", avatar: "👩🏿‍🏫", color: "#6d597a" },
-  { id: "st-tasha", firstName: "Tasha", lastName: "Reed", role: "teacher", roomId: null, pin: "7323", avatar: "👩🏾‍🦱", color: "#e9b44c" },
+  { id: "st-tasha", firstName: "Tasha", lastName: "Reed", role: "teacher", roomId: null, pin: "7323", avatar: "👩🏾‍🦱", color: "#c98d4b" },
+  { id: "st-keisha", firstName: "Keisha", lastName: "Daniels", role: "teacher", roomId: "infants", pin: "7324", avatar: "👩🏿", color: "#4a90d9" },
+  { id: "st-marcus", firstName: "Marcus", lastName: "Boyd", role: "teacher", roomId: "schoolage", pin: "7325", avatar: "👨🏾", color: "#e9b44c" },
   { id: "st-christina", firstName: "Christina", lastName: "B.", role: "owner", roomId: null, pin: "9999", avatar: "👩🏾‍💼", color: "#e8604c" },
 ];
 
 export const FAMILIES: PreviewFamily[] = [
-  { id: "fam-brown", name: "Brown family", pin: "1234", avatar: "👨🏾‍👩🏾‍👧🏾", kidIds: ["kid-noah", "kid-ava"] },
-  { id: "fam-garcia", name: "Garcia family", pin: "2345", avatar: "👨🏽‍👩🏽‍👧🏽", kidIds: ["kid-sofia", "kid-mateo"] },
-  { id: "fam-johnson", name: "Johnson family", pin: "3456", avatar: "👨🏿‍👩🏿‍👦🏿", kidIds: ["kid-zoe", "kid-jordan"] },
-  { id: "fam-okafor", name: "Okafor family", pin: "4567", avatar: "👨🏿‍👩🏾‍👧🏾", kidIds: ["kid-amara", "kid-kofi"] },
+  { id: "fam-brown", name: "Brown family", pin: "1234", avatar: "👨🏾‍👩🏾‍👧🏾", kidIds: ["kid-noah", "kid-ava", "kid-imani"] },
+  { id: "fam-garcia", name: "Garcia family", pin: "2345", avatar: "👨🏽‍👩🏽‍👧🏽", kidIds: ["kid-sofia", "kid-mateo", "kid-luca"] },
+  { id: "fam-johnson", name: "Johnson family", pin: "3456", avatar: "👨🏿‍👩🏿‍👦🏿", kidIds: ["kid-zoe", "kid-jordan", "kid-nia"] },
+  { id: "fam-okafor", name: "Okafor family", pin: "4567", avatar: "👨🏿‍👩🏾‍👧🏾", kidIds: ["kid-amara", "kid-kofi", "kid-ade"] },
   { id: "fam-williams", name: "Williams family", pin: "5678", avatar: "👩🏾‍👧🏾‍👦🏾", kidIds: ["kid-maya", "kid-eli"] },
 ];
 
@@ -152,6 +158,10 @@ export const KIDS: PreviewKid[] = [
   { id: "kid-kofi", firstName: "Kofi", lastName: "Okafor", roomId: "toddlers", familyId: "fam-okafor", avatar: "👦🏿", allergy: null },
   { id: "kid-maya", firstName: "Maya", lastName: "Williams", roomId: "preschool", familyId: "fam-williams", avatar: "👧🏾", allergy: null },
   { id: "kid-eli", firstName: "Eli", lastName: "Williams", roomId: "toddlers", familyId: "fam-williams", avatar: "👦🏾", allergy: null },
+  { id: "kid-imani", firstName: "Imani", lastName: "Brown", roomId: "infants", familyId: "fam-brown", avatar: "👶🏾", allergy: null },
+  { id: "kid-luca", firstName: "Luca", lastName: "Garcia", roomId: "infants", familyId: "fam-garcia", avatar: "👶🏽", allergy: "Dairy" },
+  { id: "kid-nia", firstName: "Nia", lastName: "Johnson", roomId: "schoolage", familyId: "fam-johnson", avatar: "👧🏿", allergy: null },
+  { id: "kid-ade", firstName: "Ade", lastName: "Okafor", roomId: "schoolage", familyId: "fam-okafor", avatar: "👦🏾", allergy: null },
 ];
 
 /** A believable past week plus a live "Today" the walkthrough adds to. */
@@ -170,6 +180,10 @@ export const FEED_SEED: FeedEvent[] = [
   { id: "fe-12", kind: "checkin", roomId: "preschool", kidIds: ["kid-sofia"], title: "Check in", detail: "Dropped off by Mom", time: "8:02 AM", dayLabel: "Today", photoId: null },
   { id: "fe-13", kind: "checkin", roomId: "preschool", kidIds: ["kid-amara"], title: "Check in", detail: "Dropped off by Auntie", time: "8:10 AM", dayLabel: "Today", photoId: null },
   { id: "fe-14", kind: "meal", roomId: "toddlers", kidIds: ["kid-noah", "kid-zoe"], title: "Morning snack", detail: "Banana and graham crackers", time: "9:20 AM", dayLabel: "Today", photoId: null },
+  { id: "fe-15", kind: "checkin", roomId: "infants", kidIds: ["kid-imani"], title: "Check in", detail: "Dropped off by Mom", time: "8:05 AM", dayLabel: "Today", photoId: null },
+  { id: "fe-16", kind: "bottle", roomId: "infants", kidIds: ["kid-imani"], title: "Bottle", detail: "4 oz, finished it all", time: "9:40 AM", dayLabel: "Today", photoId: null },
+  { id: "fe-17", kind: "diaper", roomId: "infants", kidIds: ["kid-imani"], title: "Diaper", detail: "Wet, changed and happy", time: "10:15 AM", dayLabel: "Today", photoId: null },
+  { id: "fe-18", kind: "activity", roomId: "schoolage", kidIds: ["kid-nia", "kid-ade"], title: "Activity", detail: "Homework table, then gym games", time: "4:10 PM", dayLabel: "Thu", photoId: null },
 ];
 
 /** Mon to Fri shifts. Color comes from the room. Christina holds office days. */
@@ -186,6 +200,12 @@ export const SHIFTS_SEED: PreviewShift[] = [
   { id: "sh-10", staffId: "st-tasha", day: 4, start: "10:00", end: "6:00", roomId: "preschool" },
   { id: "sh-11", staffId: "st-christina", day: 0, start: "8:00", end: "4:00", roomId: null },
   { id: "sh-12", staffId: "st-christina", day: 2, start: "8:00", end: "4:00", roomId: null },
+  { id: "sh-13", staffId: "st-keisha", day: 0, start: "7:00", end: "3:00", roomId: "infants" },
+  { id: "sh-14", staffId: "st-keisha", day: 1, start: "7:00", end: "3:00", roomId: "infants" },
+  { id: "sh-15", staffId: "st-keisha", day: 3, start: "7:00", end: "3:00", roomId: "infants" },
+  { id: "sh-16", staffId: "st-marcus", day: 0, start: "2:00", end: "6:00", roomId: "schoolage" },
+  { id: "sh-17", staffId: "st-marcus", day: 2, start: "2:00", end: "6:00", roomId: "schoolage" },
+  { id: "sh-18", staffId: "st-marcus", day: 4, start: "2:00", end: "6:00", roomId: "schoolage" },
 ];
 
 export const NEWSLETTER_SEED: NewsletterBlock[] = [
@@ -215,18 +235,21 @@ export const NEWSLETTER_SEED: NewsletterBlock[] = [
   },
 ];
 
-/** Kids already in the building when the demo starts, with display times. */
+/** Kids already in the building when the demo starts, with display times.
+ *  School Age stays empty until after school: a true quiet room. */
 export const CHECKED_IN_SEED: Record<string, string | null> = {
   "kid-noah": "7:42 AM",
   "kid-zoe": "7:55 AM",
   "kid-sofia": "8:02 AM",
   "kid-amara": "8:10 AM",
+  "kid-imani": "8:05 AM",
 };
 
 /** Staff already clocked in when the demo starts. */
 export const CLOCKED_IN_SEED: Record<string, string | null> = {
   "st-dana": "6:58 AM",
   "st-maria": "8:00 AM",
+  "st-keisha": "7:30 AM",
 };
 
 /** Meal marks already taken today: key is roomId|mealName, value maps kid to mark. */

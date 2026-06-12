@@ -1,11 +1,19 @@
 // Sound and haptics for the /preview layer.
-// Synthesis approach ported from the proven Web Audio pattern in
+// Synthesis voicing ported from the proven Web Audio pattern in
 // flowstate-v2/src/lib/cadence/dropSound.ts (original: bccs-mnmtss-hub
 // src/lib/bce-board/dropSound.ts). Pure Web Audio, no assets, no deps.
-// New here: a user-facing sound toggle and navigator.vibrate support.
+//
+// One change from the source pattern, learned in this preview: the source
+// created a NEW AudioContext per play, fine for rare drag-drops, but a UI
+// that clicks on every tap piles up contexts until the browser caps them,
+// which shows up as crackle and a growing delay before each sound. This
+// module keeps ONE shared context for the whole session and resumes it on
+// demand. Same exported API as before.
+//
 // Known limit: iPad Safari has no vibrate; sound and motion carry tablets.
 
 let soundEnabled = true;
+let sharedCtx: AudioContext | null = null;
 
 export function setSoundEnabled(on: boolean) {
   soundEnabled = on;
@@ -13,14 +21,18 @@ export function setSoundEnabled(on: boolean) {
 
 function getCtx(): AudioContext | null {
   try {
-    type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext };
-    const AudioCtx =
-      typeof window !== "undefined"
-        ? window.AudioContext ?? (window as WebkitWindow).webkitAudioContext
-        : undefined;
-    if (!AudioCtx) return null;
+    if (typeof window === "undefined") return null;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return null;
-    return new AudioCtx();
+    if (!sharedCtx) {
+      type WebkitWindow = Window & { webkitAudioContext?: typeof AudioContext };
+      const AudioCtx = window.AudioContext ?? (window as WebkitWindow).webkitAudioContext;
+      if (!AudioCtx) return null;
+      sharedCtx = new AudioCtx();
+    }
+    if (sharedCtx.state === "suspended") {
+      void sharedCtx.resume();
+    }
+    return sharedCtx;
   } catch {
     return null;
   }
@@ -51,8 +63,8 @@ export function playClick() {
     gain.connect(ctx.destination);
     osc.frequency.setValueAtTime(420, t);
     osc.frequency.exponentialRampToValueAtTime(320, t + 0.05);
-    gain.gain.setValueAtTime(0.12, t);
-    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.07);
+    gain.gain.setValueAtTime(0.1, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
     osc.start(t);
     osc.stop(t + 0.07);
   } catch {
@@ -74,7 +86,7 @@ export function playSuccess() {
     first.connect(firstGain);
     firstGain.connect(ctx.destination);
     first.frequency.setValueAtTime(660, t);
-    firstGain.gain.setValueAtTime(0.18, t);
+    firstGain.gain.setValueAtTime(0.16, t);
     firstGain.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
     first.start(t);
     first.stop(t + 0.18);
@@ -86,7 +98,7 @@ export function playSuccess() {
     secondGain.connect(ctx.destination);
     second.frequency.setValueAtTime(990, t + 0.12);
     secondGain.gain.setValueAtTime(0, t + 0.1);
-    secondGain.gain.linearRampToValueAtTime(0.18, t + 0.14);
+    secondGain.gain.linearRampToValueAtTime(0.16, t + 0.14);
     secondGain.gain.exponentialRampToValueAtTime(0.01, t + 0.38);
     second.start(t + 0.12);
     second.stop(t + 0.38);
@@ -110,7 +122,7 @@ export function playError() {
     gain.connect(ctx.destination);
     osc.frequency.setValueAtTime(180, t);
     osc.frequency.exponentialRampToValueAtTime(140, t + 0.2);
-    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.setValueAtTime(0.13, t);
     gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
     osc.start(t);
     osc.stop(t + 0.25);

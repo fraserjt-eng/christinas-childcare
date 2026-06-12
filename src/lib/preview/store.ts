@@ -323,6 +323,11 @@ export const usePreviewStore = create<PreviewState>()(
       name: "cc-preview-demo-v1",
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
+      // Bump when the fixture world changes shape so devices that walked an
+      // older demo reseed instead of carrying a stale world (v2: four rooms,
+      // bottles and diapers, infant and school-age kids).
+      version: 2,
+      migrate: () => buildSeed(),
     },
   ),
 );

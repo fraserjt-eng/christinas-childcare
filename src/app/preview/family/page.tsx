@@ -13,6 +13,8 @@ const DAY_ORDER = ["Today", "Fri", "Thu", "Wed", "Tue", "Mon"];
 
 const KIND_LOOK: Record<FeedKind, { emoji: string; bg: string }> = {
   meal: { emoji: "🍎", bg: "#fdebd2" },
+  bottle: { emoji: "🍼", bg: "#eaf4fd" },
+  diaper: { emoji: "🧷", bg: "#f1ede6" },
   nap: { emoji: "😴", bg: "#dff0ee" },
   activity: { emoji: "🎨", bg: "#ece5f1" },
   photo: { emoji: "📷", bg: "#fdeae6" },
@@ -27,6 +29,10 @@ function summaryLines(todayEvents: FeedEvent[]): Array<{ emoji: string; text: st
   const lines: Array<{ emoji: string; text: string }> = [];
   const meals = count("meal");
   if (meals > 0) lines.push({ emoji: "🍎", text: meals === 1 ? "1 meal logged" : `${meals} meals logged` });
+  const bottles = count("bottle");
+  if (bottles > 0) lines.push({ emoji: "🍼", text: bottles === 1 ? "1 bottle" : `${bottles} bottles` });
+  const diapers = count("diaper");
+  if (diapers > 0) lines.push({ emoji: "🧷", text: diapers === 1 ? "1 diaper change" : `${diapers} diaper changes` });
   const naps = count("nap");
   if (naps > 0) lines.push({ emoji: "😴", text: naps === 1 ? "1 nap" : `${naps} naps` });
   const activities = count("activity");

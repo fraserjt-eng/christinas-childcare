@@ -223,7 +223,10 @@ export default function SchedulePage() {
                 <select
                   id="shift-start"
                   value={editor.start}
-                  onChange={(e) => setEditor({ ...editor, start: e.target.value })}
+                  onChange={(e) => {
+                    playClick();
+                    setEditor({ ...editor, start: e.target.value });
+                  }}
                   className="pv-target h-12 w-full rounded-xl border-2 px-3 text-lg font-semibold"
                   style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)", color: "var(--pv-ink)" }}
                 >
@@ -241,7 +244,10 @@ export default function SchedulePage() {
                 <select
                   id="shift-end"
                   value={editor.end}
-                  onChange={(e) => setEditor({ ...editor, end: e.target.value })}
+                  onChange={(e) => {
+                    playClick();
+                    setEditor({ ...editor, end: e.target.value });
+                  }}
                   className="pv-target h-12 w-full rounded-xl border-2 px-3 text-lg font-semibold"
                   style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)", color: "var(--pv-ink)" }}
                 >

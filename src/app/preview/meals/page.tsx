@@ -59,6 +59,8 @@ export default function MealsPage() {
         />
         <StepNote step={6} text="Pick a room and a meal, then tap one chip per child." />
 
+        {/* Room picker maps ROOMS from fixtures. Never hardcode rooms here:
+            a fifth room added to fixtures shows up with no code change. */}
         <div className="flex flex-wrap gap-2">
           {ROOMS.map((r) => (
             <Chip
@@ -116,6 +118,8 @@ export default function MealsPage() {
                         {kid.avatar}
                       </span>
                       <span className="min-w-[90px] text-lg font-bold">{kid.firstName}</span>
+                      {/* Allergy badge is data-driven from kid.allergy, so
+                          Luca Garcia (Infants, Dairy) shows it once checked in. */}
                       {kid.allergy ? (
                         <span
                           className="rounded-full px-3 py-1 text-sm font-bold text-white"

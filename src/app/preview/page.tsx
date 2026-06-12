@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { playClick } from "@/lib/preview/sound";
 
 // The preview index doubles as the walkthrough agenda (sit-down with
 // Christina) and the self-guided tour (when she explores on her own).
@@ -61,9 +64,11 @@ export default function PreviewIndexPage() {
         >
           <h2 className="text-xl">🔑 Demo codes</h2>
           <p className="mt-2 text-base" style={{ color: "#555049" }}>
-            Staff: <b>7321</b> (Dana) · <b>7322</b> (Maria) · <b>7323</b> (Tasha).
-            Families: <b>1234</b> (Brown) · <b>2345</b> (Garcia) · <b>3456</b> (Johnson).
-            Office: <b>9999</b> (Christina). Every person here is made up.
+            Staff: <b>7321</b> (Dana, Toddlers) · <b>7322</b> (Maria, Preschool) ·
+            <b> 7324</b> (Keisha, Infants) · <b>7325</b> (Marcus, School Age) ·
+            <b> 7323</b> (Tasha, floats). Families: <b>1234</b> (Brown) ·
+            <b> 2345</b> (Garcia) · <b>3456</b> (Johnson). Office: <b>9999</b>{" "}
+            (Christina). Every person here is made up.
           </p>
         </div>
 
@@ -77,6 +82,7 @@ export default function PreviewIndexPage() {
             <li key={`${step.href}-${i}`}>
               <Link
                 href={step.href}
+                onClick={() => playClick()}
                 className="pv-press flex items-center gap-4 rounded-2xl border bg-[var(--pv-card)] p-4"
                 style={{ borderColor: "var(--pv-line)" }}
               >
@@ -106,6 +112,7 @@ export default function PreviewIndexPage() {
             <Link
               key={screen.href + screen.label}
               href={screen.href}
+              onClick={() => playClick()}
               className="pv-press pv-target rounded-2xl border bg-[var(--pv-card)] p-4 text-center"
               style={{ borderColor: "var(--pv-line)" }}
             >

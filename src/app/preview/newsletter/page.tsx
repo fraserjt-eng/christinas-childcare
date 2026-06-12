@@ -4,7 +4,7 @@
 // Three blocks to fill, a flip to see what families get, one send button.
 // The owner types words and picks photos. The design is never her job.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BigButton, Card, Chip, ScreenHeader, StepNote, SuccessBanner, useMounted } from "@/components/preview/ui";
 import { DEMO_PHOTOS } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
@@ -50,31 +50,21 @@ export default function NewsletterPage() {
                 >
                   {block.label}
                 </p>
-                <input
-                  type="text"
+                <DebouncedText
+                  as="input"
                   value={block.title}
-                  onChange={(e) => updateNewsletterBlock(block.id, { title: e.target.value })}
+                  onCommit={(next) => updateNewsletterBlock(block.id, { title: next })}
                   placeholder="Give this block a title"
-                  aria-label={`${block.label} title`}
+                  ariaLabel={`${block.label} title`}
                   className="pv-target mt-2 w-full rounded-xl border-2 px-4 py-3 text-lg font-bold"
-                  style={{
-                    borderColor: "var(--pv-line)",
-                    color: "var(--pv-ink)",
-                    backgroundColor: "var(--pv-card)",
-                  }}
                 />
-                <textarea
+                <DebouncedText
+                  as="textarea"
                   value={block.body}
-                  onChange={(e) => updateNewsletterBlock(block.id, { body: e.target.value })}
+                  onCommit={(next) => updateNewsletterBlock(block.id, { body: next })}
                   placeholder="Write a line or two"
-                  aria-label={`${block.label} body`}
-                  rows={3}
+                  ariaLabel={`${block.label} body`}
                   className="pv-target mt-3 w-full rounded-xl border-2 px-4 py-3 text-lg"
-                  style={{
-                    borderColor: "var(--pv-line)",
-                    color: "var(--pv-ink)",
-                    backgroundColor: "var(--pv-card)",
-                  }}
                 />
                 {block.kind === "photos" ? (
                   <div className="mt-4">
@@ -249,5 +239,110 @@ export default function NewsletterPage() {
 
       {success ? <SuccessBanner message={success} onDone={() => setSuccess(null)} /> : null}
     </main>
+  );
+}
+
+/** Locally controlled text field so typing stays smooth.
+ *  Each keystroke updates only this field's own state. The store hears about
+ *  it on blur and through a 400ms debounce, which keeps the family-view flip
+ *  fresh without re-rendering every block and the photo grid per character.
+ *  If the field unmounts mid-debounce (say, flipping to the family view
+ *  right after typing) the pending text still commits. No sound on typing. */
+function DebouncedText({
+  as,
+  value,
+  placeholder,
+  ariaLabel,
+  className,
+  onCommit,
+}: {
+  as: "input" | "textarea";
+  value: string;
+  placeholder: string;
+  ariaLabel: string;
+  className: string;
+  onCommit: (next: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef({ text: value, dirty: false, onCommit });
+
+  // Keep the latest commit callback without retriggering effects.
+  useEffect(() => {
+    pendingRef.current.onCommit = onCommit;
+  });
+
+  // If the store changes underneath an idle field (Reset Demo), follow it.
+  useEffect(() => {
+    if (!pendingRef.current.dirty) {
+      pendingRef.current.text = value;
+      setText(value);
+    }
+  }, [value]);
+
+  // Flush any pending text if the field unmounts before the debounce fires.
+  // The pending object keeps one identity for the field's whole life, so
+  // capturing it here is safe and keeps the lint rule satisfied.
+  useEffect(() => {
+    const pending = pendingRef.current;
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (pending.dirty) {
+        pending.dirty = false;
+        pending.onCommit(pending.text);
+      }
+    };
+  }, []);
+
+  const commitNow = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (pendingRef.current.dirty) {
+      pendingRef.current.dirty = false;
+      pendingRef.current.onCommit(pendingRef.current.text);
+    }
+  };
+
+  const handleChange = (next: string) => {
+    setText(next);
+    pendingRef.current.text = next;
+    pendingRef.current.dirty = true;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(commitNow, 400);
+  };
+
+  const fieldStyle = {
+    borderColor: "var(--pv-line)",
+    color: "var(--pv-ink)",
+    backgroundColor: "var(--pv-card)",
+  };
+
+  if (as === "textarea") {
+    return (
+      <textarea
+        value={text}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={commitNow}
+        placeholder={placeholder}
+        aria-label={ariaLabel}
+        rows={3}
+        className={className}
+        style={fieldStyle}
+      />
+    );
+  }
+  return (
+    <input
+      type="text"
+      value={text}
+      onChange={(e) => handleChange(e.target.value)}
+      onBlur={commitNow}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      className={className}
+      style={fieldStyle}
+    />
   );
 }
