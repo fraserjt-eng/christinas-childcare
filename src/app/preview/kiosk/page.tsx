@@ -37,6 +37,8 @@ export default function KioskPage() {
   const setKidPhoto = usePreviewStore((s) => s.setKidPhoto);
   const logEvent = usePreviewStore((s) => s.logEvent);
   const kidPhotos = usePreviewStore((s) => s.kidPhotos);
+  const staffPhotos = usePreviewStore((s) => s.staffPhotos);
+  const setStaffPhoto = usePreviewStore((s) => s.setStaffPhoto);
 
   const [pin, setPin] = useState("");
   const [mode, setMode] = useState<Mode>({ kind: "pad" });
@@ -144,7 +146,16 @@ export default function KioskPage() {
 
         {mode.kind === "staff" && activeStaff ? (
           <Card className="mx-auto max-w-md text-center">
-            <div aria-hidden="true" className="text-6xl">{activeStaff.avatar}</div>
+            {mounted && staffPhotos[activeStaff.id] ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={staffPhotos[activeStaff.id]}
+                alt={activeStaff.firstName}
+                className="mx-auto h-24 w-24 rounded-full object-cover"
+              />
+            ) : (
+              <div aria-hidden="true" className="text-6xl">{activeStaff.avatar}</div>
+            )}
             <h2 className="mt-3 text-3xl">Hi {activeStaff.firstName}!</h2>
             <p className="mt-2 text-lg" style={{ color: "var(--pv-muted)" }}>
               {mounted && clockedIn[activeStaff.id]
@@ -175,6 +186,18 @@ export default function KioskPage() {
                   }}
                 />
               )}
+            </div>
+            <div className="mt-4">
+              <PhotoUpload
+                label={mounted && staffPhotos[activeStaff.id] ? "Change your photo" : "Add your photo"}
+                capture
+                color="var(--pv-sky)"
+                className="w-full text-center"
+                onPhoto={(url) => {
+                  setStaffPhoto(activeStaff.id, url);
+                  setSuccess(`Photo saved, ${activeStaff.firstName}.`);
+                }}
+              />
             </div>
             <div className="mt-7 text-left">
               <h3 className="text-lg font-extrabold">Your tools</h3>

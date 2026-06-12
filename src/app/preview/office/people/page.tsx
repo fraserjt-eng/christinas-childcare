@@ -30,6 +30,7 @@ export default function PeoplePage() {
   const families = usePreviewStore((s) => s.families);
   const setStaffRoom = usePreviewStore((s) => s.setStaffRoom);
   const addPerson = usePreviewStore((s) => s.addPerson);
+  const staffPhotos = usePreviewStore((s) => s.staffPhotos);
 
   const [openStaffId, setOpenStaffId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -78,13 +79,22 @@ export default function PeoplePage() {
                       aria-expanded={openStaffId === person.id}
                       className="pv-press pv-target flex flex-1 items-center gap-3 rounded-xl text-left"
                     >
-                      <span
-                        aria-hidden="true"
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-2xl"
-                        style={{ backgroundColor: "#f4f0e9" }}
-                      >
-                        {person.avatar}
-                      </span>
+                      {mounted && staffPhotos[person.id] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={staffPhotos[person.id]}
+                          alt={person.firstName}
+                          className="h-11 w-11 shrink-0 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span
+                          aria-hidden="true"
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-2xl"
+                          style={{ backgroundColor: "#f4f0e9" }}
+                        >
+                          {person.avatar}
+                        </span>
+                      )}
                       <span>
                         <span className="block text-lg font-bold" style={{ color: "var(--pv-ink)" }}>
                           {person.firstName} {person.lastName}

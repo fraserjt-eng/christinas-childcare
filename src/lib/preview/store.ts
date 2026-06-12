@@ -90,6 +90,8 @@ export interface PreviewState {
   soundOn: boolean;
   /** kidId to an uploaded photo data URL, used as the child's box avatar. */
   kidPhotos: Record<string, string>;
+  /** staffId to an uploaded photo data URL, used as the staff member's avatar. */
+  staffPhotos: Record<string, string>;
   /** familyId to current balance owed. The office can change it; the parent
    *  phone reads it. Maps to family_statements in the real app. */
   balances: Record<string, number>;
@@ -103,6 +105,7 @@ export interface PreviewState {
   clockOutStaff: (staffId: string) => void;
   logEvent: (input: LogEventInput) => void;
   setKidPhoto: (kidId: string, dataUrl: string) => void;
+  setStaffPhoto: (staffId: string, dataUrl: string) => void;
   markFamilyPaid: (familyId: string) => void;
   sendToFamily: (familyId: string, from: string, body: string, fromOffice: boolean) => void;
   markThreadRead: (familyId: string) => void;
@@ -136,6 +139,7 @@ function buildSeed() {
     officeTiles: [...DEFAULT_OFFICE_TILES],
     soundOn: true,
     kidPhotos: {} as Record<string, string>,
+    staffPhotos: {} as Record<string, string>,
     balances: Object.fromEntries(FAMILIES.map((f) => [f.id, f.balanceOwed])) as Record<string, number>,
     threads: Object.fromEntries(
       FAMILIES.map((f) => {
@@ -247,6 +251,12 @@ export const usePreviewStore = create<PreviewState>()(
       setKidPhoto: (kidId, dataUrl) => {
         set((state) => ({
           kidPhotos: { ...state.kidPhotos, [kidId]: dataUrl },
+        }));
+      },
+
+      setStaffPhoto: (staffId, dataUrl) => {
+        set((state) => ({
+          staffPhotos: { ...state.staffPhotos, [staffId]: dataUrl },
         }));
       },
 
@@ -425,8 +435,8 @@ export const usePreviewStore = create<PreviewState>()(
       // Bump when the fixture world changes shape so devices that walked an
       // older demo reseed instead of carrying a stale world (v2: four rooms,
       // bottles and diapers, infant and school-age kids. v3: uploaded photos.
-      // v4: office-driven balances and message threads).
-      version: 4,
+      // v4: office-driven balances and message threads. v5: staff photos).
+      version: 5,
       migrate: () => buildSeed(),
     },
   ),
