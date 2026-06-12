@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { BigButton, Card, ScreenHeader, StepNote, SuccessBanner, cx } from "@/components/preview/ui";
+import { PhotoUpload } from "@/components/preview/PhotoUpload";
 import { roomById } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { useMounted } from "@/components/preview/ui";
@@ -33,6 +34,9 @@ export default function KioskPage() {
   const checkOutKid = usePreviewStore((s) => s.checkOutKid);
   const clockInStaff = usePreviewStore((s) => s.clockInStaff);
   const clockOutStaff = usePreviewStore((s) => s.clockOutStaff);
+  const setKidPhoto = usePreviewStore((s) => s.setKidPhoto);
+  const logEvent = usePreviewStore((s) => s.logEvent);
+  const kidPhotos = usePreviewStore((s) => s.kidPhotos);
 
   const [pin, setPin] = useState("");
   const [mode, setMode] = useState<Mode>({ kind: "pad" });
@@ -231,39 +235,69 @@ export default function KioskPage() {
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
               {familyKids.map((kid) => {
                 const inAt = mounted ? checkedIn[kid.id] : null;
+                const photo = mounted ? kidPhotos[kid.id] : undefined;
                 const room = roomById(kid.roomId);
                 return (
-                  <button
+                  <div
                     key={kid.id}
-                    type="button"
-                    onClick={() => {
-                      playClick();
-                      if (inAt) {
-                        checkOutKid(kid.id, activeFamily.name);
-                        setSuccess(`${kid.firstName} is checked out. See you tomorrow!`);
-                      } else {
-                        checkInKid(kid.id, activeFamily.name);
-                        setSuccess(`${kid.firstName} is checked in. Have a great day!`);
-                      }
-                    }}
-                    className="pv-press pv-kiosk-target rounded-2xl border-2 p-4 text-center"
+                    className="rounded-2xl border-2 p-4 text-center"
                     style={{
                       borderColor: inAt ? "var(--pv-teal)" : "var(--pv-line)",
                       backgroundColor: inAt ? "#e7f4f2" : "var(--pv-card)",
                     }}
                   >
-                    <span aria-hidden="true" className="block text-5xl">{kid.avatar}</span>
-                    <span className="mt-2 block text-xl font-extrabold">{kid.firstName}</span>
-                    <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
-                      {room ? `${room.emoji} ${room.name}` : ""}
-                    </span>
-                    <span
-                      className="mt-2 inline-block rounded-full px-3 py-1 text-sm font-bold text-white"
-                      style={{ backgroundColor: inAt ? "var(--pv-teal)" : "#8a8378" }}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playClick();
+                        if (inAt) {
+                          checkOutKid(kid.id, activeFamily.name);
+                          setSuccess(`${kid.firstName} is checked out. See you tomorrow!`);
+                        } else {
+                          checkInKid(kid.id, activeFamily.name);
+                          setSuccess(`${kid.firstName} is checked in. Have a great day!`);
+                        }
+                      }}
+                      className="pv-press pv-kiosk-target w-full"
                     >
-                      {inAt ? `Here since ${inAt}` : "Not here yet"}
-                    </span>
-                  </button>
+                      {photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={photo} alt={kid.firstName} className="mx-auto h-20 w-20 rounded-2xl object-cover" />
+                      ) : (
+                        <span aria-hidden="true" className="block text-5xl">{kid.avatar}</span>
+                      )}
+                      <span className="mt-2 block text-xl font-extrabold">{kid.firstName}</span>
+                      <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
+                        {room ? `${room.emoji} ${room.name}` : ""}
+                      </span>
+                      <span
+                        className="mt-2 inline-block rounded-full px-3 py-1 text-sm font-bold text-white"
+                        style={{ backgroundColor: inAt ? "var(--pv-teal)" : "#8a8378" }}
+                      >
+                        {inAt ? `Here since ${inAt}` : "Not here yet"}
+                      </span>
+                    </button>
+                    <div className="mt-3">
+                      <PhotoUpload
+                        label="Add a drop-off photo"
+                        capture
+                        color="var(--pv-sky)"
+                        className="w-full text-center"
+                        onPhoto={(url) => {
+                          setKidPhoto(kid.id, url);
+                          logEvent({
+                            kind: "photo",
+                            roomId: kid.roomId,
+                            kidIds: [kid.id],
+                            title: "Photo",
+                            detail: "Drop-off photo",
+                            photoUrl: url,
+                          });
+                          setSuccess(`Photo added for ${kid.firstName}. Family will see it.`);
+                        }}
+                      />
+                    </div>
+                  </div>
                 );
               })}
             </div>

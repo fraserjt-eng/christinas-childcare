@@ -95,6 +95,9 @@ export interface FeedEvent {
   dayLabel: string;
   /** Photo id from DEMO_PHOTOS, or null. */
   photoId: string | null;
+  /** An uploaded photo as a data URL. When set, it wins over photoId. Maps to
+   *  the child_photos storage bucket in the real app. */
+  photoUrl?: string | null;
 }
 
 export interface PreviewShift {

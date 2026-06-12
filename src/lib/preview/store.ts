@@ -57,6 +57,7 @@ export interface LogEventInput {
   title: string;
   detail: string;
   photoId?: string | null;
+  photoUrl?: string | null;
 }
 
 export interface PreviewState {
@@ -74,12 +75,15 @@ export interface PreviewState {
   meals: Record<string, Record<string, MealMark>>;
   officeTiles: OfficeTileId[];
   soundOn: boolean;
+  /** kidId to an uploaded photo data URL, used as the child's box avatar. */
+  kidPhotos: Record<string, string>;
 
-  checkInKid: (kidId: string, by: string) => void;
+  checkInKid: (kidId: string, by: string, photoUrl?: string | null) => void;
   checkOutKid: (kidId: string, by: string) => void;
   clockInStaff: (staffId: string) => void;
   clockOutStaff: (staffId: string) => void;
   logEvent: (input: LogEventInput) => void;
+  setKidPhoto: (kidId: string, dataUrl: string) => void;
   setMealMark: (roomId: string, meal: string, kidId: string, mark: MealMark) => void;
   addShift: (shift: Omit<PreviewShift, "id">) => void;
   removeShift: (shiftId: string) => void;
@@ -109,6 +113,7 @@ function buildSeed() {
     ),
     officeTiles: [...DEFAULT_OFFICE_TILES],
     soundOn: true,
+    kidPhotos: {} as Record<string, string>,
   };
 }
 
@@ -117,7 +122,7 @@ export const usePreviewStore = create<PreviewState>()(
     (set, get) => ({
       ...buildSeed(),
 
-      checkInKid: (kidId, by) => {
+      checkInKid: (kidId, by, photoUrl) => {
         const kid = get().kids.find((k) => k.id === kidId);
         if (!kid) return;
         const time = nowTime();
@@ -134,6 +139,7 @@ export const usePreviewStore = create<PreviewState>()(
               time,
               dayLabel: "Today",
               photoId: null,
+              photoUrl: photoUrl ?? null,
             },
             ...state.feed,
           ],
@@ -188,9 +194,16 @@ export const usePreviewStore = create<PreviewState>()(
               time: nowTime(),
               dayLabel: "Today",
               photoId: input.photoId ?? null,
+              photoUrl: input.photoUrl ?? null,
             },
             ...state.feed,
           ],
+        }));
+      },
+
+      setKidPhoto: (kidId, dataUrl) => {
+        set((state) => ({
+          kidPhotos: { ...state.kidPhotos, [kidId]: dataUrl },
         }));
       },
 
@@ -334,8 +347,8 @@ export const usePreviewStore = create<PreviewState>()(
       skipHydration: true,
       // Bump when the fixture world changes shape so devices that walked an
       // older demo reseed instead of carrying a stale world (v2: four rooms,
-      // bottles and diapers, infant and school-age kids).
-      version: 2,
+      // bottles and diapers, infant and school-age kids. v3: uploaded photos).
+      version: 3,
       migrate: () => buildSeed(),
     },
   ),

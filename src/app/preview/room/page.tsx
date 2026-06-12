@@ -17,6 +17,7 @@ import {
   SuccessBanner,
   useMounted,
 } from "@/components/preview/ui";
+import { PhotoUpload } from "@/components/preview/PhotoUpload";
 import { DEMO_PHOTOS, ROOMS } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
@@ -166,6 +167,7 @@ export default function RoomPage() {
   const [detail, setDetail] = useState("");
   const [selectedKidIds, setSelectedKidIds] = useState<string[]>([]);
   const [photoId, setPhotoId] = useState<string | null>(null);
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const roomKids = kids.filter((k) => k.roomId === roomId);
@@ -184,6 +186,7 @@ export default function RoomPage() {
     setDetail(action.defaultDetail);
     setSelectedKidIds(presentKids.map((k) => k.id));
     setPhotoId(null);
+    setUploadedUrl(null);
   }
 
   function closePanel() {
@@ -203,7 +206,8 @@ export default function RoomPage() {
       kidIds: selectedKidIds,
       title: action.label,
       detail,
-      photoId,
+      photoId: uploadedUrl ? null : photoId,
+      photoUrl: uploadedUrl,
     });
     closePanel();
     setSuccess("Saved. Families will see this in their feed.");
@@ -336,8 +340,26 @@ export default function RoomPage() {
 
             {activeAction.kind === "photo" ? (
               <>
-                <h3 className="mt-5 text-xl">Pick the photo</h3>
-                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <h3 className="mt-5 text-xl">Add a photo</h3>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <PhotoUpload
+                    label="Take or upload your own"
+                    capture
+                    color="var(--pv-teal)"
+                    onPhoto={(url) => {
+                      setUploadedUrl(url);
+                      setPhotoId(null);
+                    }}
+                  />
+                  {uploadedUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={uploadedUrl} alt="Your photo" className="h-16 w-16 rounded-lg object-cover" />
+                  ) : null}
+                </div>
+                <p className="mt-3 text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
+                  Or pick a sample
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {DEMO_PHOTOS.map((photo) => (
                     <button
                       key={photo.id}
@@ -345,6 +367,7 @@ export default function RoomPage() {
                       aria-pressed={photoId === photo.id}
                       onClick={() => {
                         playClick();
+                        setUploadedUrl(null);
                         setPhotoId((prev) => (prev === photo.id ? null : photo.id));
                       }}
                       className="pv-press pv-target rounded-xl border-4 p-1 text-left"

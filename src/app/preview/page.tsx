@@ -72,6 +72,50 @@ export default function PreviewIndexPage() {
           </p>
         </div>
 
+        <div
+          className="mt-4 rounded-2xl border-2 p-5"
+          style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
+        >
+          <h2 className="text-xl">🧭 What is real today, and what is next</h2>
+          <p className="mt-2 text-base" style={{ color: "#555049" }}>
+            This preview shows the whole picture. Some of it the app already does,
+            some is the shape of what comes next. Here is the honest split.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-sm font-extrabold" style={{ color: "var(--pv-teal)" }}>Live today</p>
+              <ul className="mt-1 text-sm" style={{ color: "#4d473f" }}>
+                <li>The daily feed of meals, naps, photos</li>
+                <li>Photo gallery for your own kids</li>
+                <li>Messages the center sends out</li>
+                <li>Newsletters</li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm font-extrabold" style={{ color: "var(--pv-gold)" }}>Shape shown here</p>
+              <ul className="mt-1 text-sm" style={{ color: "#4d473f" }}>
+                <li>Is my kid here, on my phone</li>
+                <li>What I owe and pay</li>
+                <li>Writing back to the teacher</li>
+                <li>Forms to sign, closures, photo upload</li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm font-extrabold" style={{ color: "var(--pv-coral)" }}>Still to build</p>
+              <ul className="mt-1 text-sm" style={{ color: "#4d473f" }}>
+                <li>Who is allowed to pick up (top safety gap)</li>
+                <li>Real billing and documents screens</li>
+                <li>Two-way messages that reach staff</li>
+                <li>Secure photo storage</li>
+              </ul>
+            </div>
+          </div>
+          <p className="mt-3 text-sm" style={{ color: "var(--pv-muted)" }}>
+            Nothing here touches the real site or the real database. This is a
+            sealed preview with made-up families.
+          </p>
+        </div>
+
         <h2 className="mt-10 text-2xl">The 10-step walk</h2>
         <p className="mt-1 text-base" style={{ color: "var(--pv-muted)" }}>
           Follow these in order. Each screen also carries its own step note, so

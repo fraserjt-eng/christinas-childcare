@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { BigButton, Card, EmptyState, ScreenHeader, StepNote, useMounted } from "@/components/preview/ui";
+import { PhotoUpload } from "@/components/preview/PhotoUpload";
 import {
   CENTER_EVENTS,
   FAMILIES,
@@ -57,6 +58,8 @@ export default function ParentPhonePage() {
   const kids = usePreviewStore((s) => s.kids);
   const feed = usePreviewStore((s) => s.feed);
   const checkedIn = usePreviewStore((s) => s.checkedIn);
+  const kidPhotos = usePreviewStore((s) => s.kidPhotos);
+  const setKidPhoto = usePreviewStore((s) => s.setKidPhoto);
 
   const [familyId, setFamilyId] = useState<string | null>(null);
   const family = familyId ? FAMILIES.find((f) => f.id === familyId) ?? null : null;
@@ -71,6 +74,8 @@ export default function ParentPhonePage() {
       kids={kids}
       feed={feed}
       checkedIn={mounted ? checkedIn : {}}
+      kidPhotos={mounted ? kidPhotos : {}}
+      setKidPhoto={setKidPhoto}
       onSignOut={() => setFamilyId(null)}
     />
   );
@@ -127,12 +132,16 @@ function ParentHome({
   kids,
   feed,
   checkedIn,
+  kidPhotos,
+  setKidPhoto,
   onSignOut,
 }: {
   family: PreviewFamily;
   kids: PreviewKid[];
   feed: FeedEvent[];
   checkedIn: Record<string, string | null>;
+  kidPhotos: Record<string, string>;
+  setKidPhoto: (kidId: string, dataUrl: string) => void;
   onSignOut: () => void;
 }) {
   const myKids = useMemo(
@@ -176,7 +185,14 @@ function ParentHome({
           </h2>
           <div className="mt-3 flex flex-col gap-4">
             {myKids.map((kid) => (
-              <KidCard key={kid.id} kid={kid} feed={feed} checkedIn={checkedIn} />
+              <KidCard
+                key={kid.id}
+                kid={kid}
+                feed={feed}
+                checkedIn={checkedIn}
+                photo={kidPhotos[kid.id]}
+                onAddPhoto={(url) => setKidPhoto(kid.id, url)}
+              />
             ))}
           </div>
         </section>
@@ -320,15 +336,19 @@ function ParentHome({
   );
 }
 
-/** One kid: presence pill on top, then today's feed. */
+/** One kid: presence pill on top, a photo you can add, then today's feed. */
 function KidCard({
   kid,
   feed,
   checkedIn,
+  photo,
+  onAddPhoto,
 }: {
   kid: PreviewKid;
   feed: FeedEvent[];
   checkedIn: Record<string, string | null>;
+  photo: string | undefined;
+  onAddPhoto: (dataUrl: string) => void;
 }) {
   const here = checkedIn[kid.id];
   const room = roomById(kid.roomId);
@@ -345,7 +365,16 @@ function KidCard({
   return (
     <Card>
       <div className="flex items-center gap-3">
-        <span aria-hidden="true" className="text-4xl">{kid.avatar}</span>
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photo}
+            alt={`${kid.firstName}`}
+            className="h-14 w-14 flex-shrink-0 rounded-2xl object-cover"
+          />
+        ) : (
+          <span aria-hidden="true" className="text-4xl">{kid.avatar}</span>
+        )}
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xl font-extrabold">{kid.firstName}</span>
@@ -370,11 +399,21 @@ function KidCard({
         </span>
       </div>
 
+      <div className="mt-3">
+        <PhotoUpload
+          label={photo ? "Change photo" : "Add a photo"}
+          onPhoto={onAddPhoto}
+          color="var(--pv-sky)"
+        />
+      </div>
+
       {today.length > 0 ? (
         <div className="mt-4 flex flex-col gap-2">
           {today.map((e) => {
             const look = KIND_LOOK[e.kind];
-            const photo = photoById(e.photoId);
+            const demo = photoById(e.photoId);
+            const imgSrc = e.photoUrl ?? demo?.src ?? null;
+            const imgAlt = demo?.caption ?? e.title;
             return (
               <div
                 key={e.id}
@@ -397,9 +436,9 @@ function KidCard({
                     {e.time}
                   </span>
                 </div>
-                {photo ? (
+                {imgSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={photo.src} alt={photo.caption} className="mt-2 w-full rounded-lg" />
+                  <img src={imgSrc} alt={imgAlt} className="mt-2 w-full rounded-lg" />
                 ) : null}
               </div>
             );
