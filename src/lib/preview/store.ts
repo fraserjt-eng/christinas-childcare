@@ -273,15 +273,24 @@ export const usePreviewStore = create<PreviewState>()(
             ],
           }));
         } else {
+          const name = trimmed.endsWith("family") ? trimmed : `${trimmed} family`;
+          const parentFirst = trimmed.replace(/family$/i, "").trim().split(" ")[0] || trimmed;
           set((state) => ({
             families: [
               ...state.families,
               {
                 id: newId("fam"),
-                name: trimmed.endsWith("family") ? trimmed : `${trimmed} family`,
+                name,
                 pin: String(1000 + Math.floor(Math.random() * 9000)),
                 avatar: "👨🏾‍👩🏾‍👧🏾",
                 kidIds: [],
+                parentName: parentFirst,
+                email: `${parentFirst.toLowerCase()}@example.com`,
+                emergencyContact: { name: "", relationship: "", phone: "" },
+                approvedPickups: [{ name: parentFirst, relationship: "Parent" }],
+                balanceOwed: 0,
+                balanceDueLabel: "no balance yet",
+                formsToSign: [],
               },
             ],
           }));

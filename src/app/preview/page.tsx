@@ -9,9 +9,9 @@ import { playClick } from "@/lib/preview/sound";
 const STEPS = [
   { href: "/preview/door", label: "The front door", detail: "One question, three doors. No login form." },
   { href: "/preview/kiosk", label: "Staff clock-in", detail: "Tap Staff, enter 7321, one tap to clock in." },
-  { href: "/preview/kiosk", label: "Family check-in", detail: "Enter 1234, tap a child in or out." },
+  { href: "/preview/kiosk", label: "Family check-in at the lobby", detail: "Enter 1234, tap a child in or out on the iPad." },
   { href: "/preview/room", label: "Teacher logs lunch", detail: "Big buttons, log the whole room at once." },
-  { href: "/preview/family", label: "The family feed", detail: "The same lunch shows up here instantly." },
+  { href: "/preview/family", label: "The parent's phone", detail: "Sign in, see your kids, who is here, their day, what needs you." },
   { href: "/preview/meals", label: "Food counts", detail: "One row per child, two taps max." },
   { href: "/preview/schedule", label: "The week's schedule", detail: "Staff as rows, days as columns, copy last week." },
   { href: "/preview/newsletter", label: "Newsletter Monday", detail: "Stack three blocks, photos come from the feed." },
@@ -21,9 +21,9 @@ const STEPS = [
 
 const SCREENS = [
   { href: "/preview/door", emoji: "🚪", label: "Front door" },
-  { href: "/preview/kiosk", emoji: "🔢", label: "Kiosk" },
+  { href: "/preview/kiosk", emoji: "🔢", label: "Lobby kiosk" },
   { href: "/preview/room", emoji: "🧸", label: "Teacher room view" },
-  { href: "/preview/family", emoji: "💛", label: "Family feed" },
+  { href: "/preview/family", emoji: "📱", label: "Parent's phone" },
   { href: "/preview/meals", emoji: "🍽️", label: "Food counts" },
   { href: "/preview/schedule", emoji: "📅", label: "Schedule" },
   { href: "/preview/newsletter", emoji: "📰", label: "Newsletter" },

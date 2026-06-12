@@ -21,6 +21,15 @@ export interface PreviewKid {
   familyId: string;
   avatar: string;
   allergy: string | null;
+  /** Maps to family_children medical_notes in production. */
+  note: string | null;
+}
+
+/** A person allowed to pick a child up. No such table exists in production
+ *  today; modeling it here is the point (the review flagged this gap). */
+export interface ApprovedPickup {
+  name: string;
+  relationship: string;
 }
 
 export interface PreviewStaff {
@@ -40,6 +49,26 @@ export interface PreviewFamily {
   pin: string;
   avatar: string;
   kidIds: string[];
+  /** The parent who "logs in" for the demo. Real app: families.email. */
+  parentName: string;
+  email: string;
+  emergencyContact: { name: string; relationship: string; phone: string };
+  approvedPickups: ApprovedPickup[];
+  /** Demo billing. Real app: family_statements (owner can make these today,
+   *  parents have no screen to see them). Amount is the current balance. */
+  balanceOwed: number;
+  balanceDueLabel: string;
+  /** Forms the family still needs to sign. No documents table exists yet. */
+  formsToSign: string[];
+}
+
+/** A center closure or event. No events table exists in production; the live
+ *  Calendar page is hardcoded fake. Modeling it here shows the real shape. */
+export interface CenterEvent {
+  id: string;
+  title: string;
+  dateLabel: string;
+  kind: "closure" | "event";
 }
 
 export type FeedKind =
@@ -140,29 +169,104 @@ export const STAFF: PreviewStaff[] = [
 ];
 
 export const FAMILIES: PreviewFamily[] = [
-  { id: "fam-brown", name: "Brown family", pin: "1234", avatar: "👨🏾‍👩🏾‍👧🏾", kidIds: ["kid-noah", "kid-ava", "kid-imani"] },
-  { id: "fam-garcia", name: "Garcia family", pin: "2345", avatar: "👨🏽‍👩🏽‍👧🏽", kidIds: ["kid-sofia", "kid-mateo", "kid-luca"] },
-  { id: "fam-johnson", name: "Johnson family", pin: "3456", avatar: "👨🏿‍👩🏿‍👦🏿", kidIds: ["kid-zoe", "kid-jordan", "kid-nia"] },
-  { id: "fam-okafor", name: "Okafor family", pin: "4567", avatar: "👨🏿‍👩🏾‍👧🏾", kidIds: ["kid-amara", "kid-kofi", "kid-ade"] },
-  { id: "fam-williams", name: "Williams family", pin: "5678", avatar: "👩🏾‍👧🏾‍👦🏾", kidIds: ["kid-maya", "kid-eli"] },
+  {
+    id: "fam-brown", name: "Brown family", pin: "1234", avatar: "👨🏾‍👩🏾‍👧🏾",
+    kidIds: ["kid-noah", "kid-ava", "kid-imani"],
+    parentName: "Jasmine Brown", email: "jasmine@example.com",
+    emergencyContact: { name: "Denise Brown", relationship: "Grandma", phone: "(763) 555-0148" },
+    approvedPickups: [
+      { name: "Jasmine Brown", relationship: "Mom" },
+      { name: "Marcus Brown", relationship: "Dad" },
+      { name: "Denise Brown", relationship: "Grandma" },
+    ],
+    balanceOwed: 240, balanceDueLabel: "due Friday, June 13",
+    formsToSign: ["Summer field trip permission"],
+  },
+  {
+    id: "fam-garcia", name: "Garcia family", pin: "2345", avatar: "👨🏽‍👩🏽‍👧🏽",
+    kidIds: ["kid-sofia", "kid-mateo", "kid-luca"],
+    parentName: "Elena Garcia", email: "elena@example.com",
+    emergencyContact: { name: "Rosa Garcia", relationship: "Aunt", phone: "(763) 555-0172" },
+    approvedPickups: [
+      { name: "Elena Garcia", relationship: "Mom" },
+      { name: "Rosa Garcia", relationship: "Aunt" },
+    ],
+    balanceOwed: 0, balanceDueLabel: "paid through June",
+    formsToSign: [],
+  },
+  {
+    id: "fam-johnson", name: "Johnson family", pin: "3456", avatar: "👨🏿‍👩🏿‍👦🏿",
+    kidIds: ["kid-zoe", "kid-jordan", "kid-nia"],
+    parentName: "Andre Johnson", email: "andre@example.com",
+    emergencyContact: { name: "Patricia Johnson", relationship: "Grandma", phone: "(763) 555-0199" },
+    approvedPickups: [
+      { name: "Andre Johnson", relationship: "Dad" },
+      { name: "Tasha Johnson", relationship: "Mom" },
+    ],
+    balanceOwed: 120, balanceDueLabel: "due Friday, June 13",
+    formsToSign: ["Updated immunization record"],
+  },
+  {
+    id: "fam-okafor", name: "Okafor family", pin: "4567", avatar: "👨🏿‍👩🏾‍👧🏾",
+    kidIds: ["kid-amara", "kid-kofi", "kid-ade"],
+    parentName: "Ngozi Okafor", email: "ngozi@example.com",
+    emergencyContact: { name: "Chidi Okafor", relationship: "Uncle", phone: "(763) 555-0155" },
+    approvedPickups: [
+      { name: "Ngozi Okafor", relationship: "Mom" },
+      { name: "Emeka Okafor", relationship: "Dad" },
+    ],
+    balanceOwed: 0, balanceDueLabel: "paid through June",
+    formsToSign: [],
+  },
+  {
+    id: "fam-williams", name: "Williams family", pin: "5678", avatar: "👩🏾‍👧🏾‍👦🏾",
+    kidIds: ["kid-maya", "kid-eli"],
+    parentName: "Keisha Williams", email: "keisha.w@example.com",
+    emergencyContact: { name: "Gloria Williams", relationship: "Grandma", phone: "(763) 555-0133" },
+    approvedPickups: [{ name: "Keisha Williams", relationship: "Mom" }],
+    balanceOwed: 360, balanceDueLabel: "past due",
+    formsToSign: ["Photo release", "Summer field trip permission"],
+  },
 ];
 
 export const KIDS: PreviewKid[] = [
-  { id: "kid-noah", firstName: "Noah", lastName: "Brown", roomId: "toddlers", familyId: "fam-brown", avatar: "👦🏾", allergy: null },
-  { id: "kid-ava", firstName: "Ava", lastName: "Brown", roomId: "preschool", familyId: "fam-brown", avatar: "👧🏾", allergy: null },
-  { id: "kid-sofia", firstName: "Sofia", lastName: "Garcia", roomId: "preschool", familyId: "fam-garcia", avatar: "👧🏽", allergy: null },
-  { id: "kid-mateo", firstName: "Mateo", lastName: "Garcia", roomId: "toddlers", familyId: "fam-garcia", avatar: "👦🏽", allergy: "Peanuts" },
-  { id: "kid-zoe", firstName: "Zoe", lastName: "Johnson", roomId: "toddlers", familyId: "fam-johnson", avatar: "👧🏿", allergy: null },
-  { id: "kid-jordan", firstName: "Jordan", lastName: "Johnson", roomId: "preschool", familyId: "fam-johnson", avatar: "👦🏿", allergy: null },
-  { id: "kid-amara", firstName: "Amara", lastName: "Okafor", roomId: "preschool", familyId: "fam-okafor", avatar: "👧🏾", allergy: null },
-  { id: "kid-kofi", firstName: "Kofi", lastName: "Okafor", roomId: "toddlers", familyId: "fam-okafor", avatar: "👦🏿", allergy: null },
-  { id: "kid-maya", firstName: "Maya", lastName: "Williams", roomId: "preschool", familyId: "fam-williams", avatar: "👧🏾", allergy: null },
-  { id: "kid-eli", firstName: "Eli", lastName: "Williams", roomId: "toddlers", familyId: "fam-williams", avatar: "👦🏾", allergy: null },
-  { id: "kid-imani", firstName: "Imani", lastName: "Brown", roomId: "infants", familyId: "fam-brown", avatar: "👶🏾", allergy: null },
-  { id: "kid-luca", firstName: "Luca", lastName: "Garcia", roomId: "infants", familyId: "fam-garcia", avatar: "👶🏽", allergy: "Dairy" },
-  { id: "kid-nia", firstName: "Nia", lastName: "Johnson", roomId: "schoolage", familyId: "fam-johnson", avatar: "👧🏿", allergy: null },
-  { id: "kid-ade", firstName: "Ade", lastName: "Okafor", roomId: "schoolage", familyId: "fam-okafor", avatar: "👦🏾", allergy: null },
+  { id: "kid-noah", firstName: "Noah", lastName: "Brown", roomId: "toddlers", familyId: "fam-brown", avatar: "👦🏾", allergy: null, note: null },
+  { id: "kid-ava", firstName: "Ava", lastName: "Brown", roomId: "preschool", familyId: "fam-brown", avatar: "👧🏾", allergy: null, note: null },
+  { id: "kid-sofia", firstName: "Sofia", lastName: "Garcia", roomId: "preschool", familyId: "fam-garcia", avatar: "👧🏽", allergy: null, note: null },
+  { id: "kid-mateo", firstName: "Mateo", lastName: "Garcia", roomId: "toddlers", familyId: "fam-garcia", avatar: "👦🏽", allergy: "Peanuts", note: "Carries an EpiPen in his cubby" },
+  { id: "kid-zoe", firstName: "Zoe", lastName: "Johnson", roomId: "toddlers", familyId: "fam-johnson", avatar: "👧🏿", allergy: null, note: null },
+  { id: "kid-jordan", firstName: "Jordan", lastName: "Johnson", roomId: "preschool", familyId: "fam-johnson", avatar: "👦🏿", allergy: null, note: null },
+  { id: "kid-amara", firstName: "Amara", lastName: "Okafor", roomId: "preschool", familyId: "fam-okafor", avatar: "👧🏾", allergy: null, note: null },
+  { id: "kid-kofi", firstName: "Kofi", lastName: "Okafor", roomId: "toddlers", familyId: "fam-okafor", avatar: "👦🏿", allergy: null, note: null },
+  { id: "kid-maya", firstName: "Maya", lastName: "Williams", roomId: "preschool", familyId: "fam-williams", avatar: "👧🏾", allergy: null, note: null },
+  { id: "kid-eli", firstName: "Eli", lastName: "Williams", roomId: "toddlers", familyId: "fam-williams", avatar: "👦🏾", allergy: null, note: null },
+  { id: "kid-imani", firstName: "Imani", lastName: "Brown", roomId: "infants", familyId: "fam-brown", avatar: "👶🏾", allergy: null, note: "Still on bottles, 4 oz every 3 hours" },
+  { id: "kid-luca", firstName: "Luca", lastName: "Garcia", roomId: "infants", familyId: "fam-garcia", avatar: "👶🏽", allergy: "Dairy", note: "Soy formula only" },
+  { id: "kid-nia", firstName: "Nia", lastName: "Johnson", roomId: "schoolage", familyId: "fam-johnson", avatar: "👧🏿", allergy: null, note: null },
+  { id: "kid-ade", firstName: "Ade", lastName: "Okafor", roomId: "schoolage", familyId: "fam-okafor", avatar: "👦🏾", allergy: null, note: null },
 ];
+
+/** Center closures and events. No events table exists in production yet. */
+export const CENTER_EVENTS: CenterEvent[] = [
+  { id: "ev-1", title: "Water day, bring towels", dateLabel: "Friday, June 13", kind: "event" },
+  { id: "ev-2", title: "Closed, Juneteenth", dateLabel: "Thursday, June 19", kind: "closure" },
+  { id: "ev-3", title: "Summer family picnic", dateLabel: "Saturday, June 28", kind: "event" },
+];
+
+export function familyById(id: string): PreviewFamily | null {
+  return FAMILIES.find((f) => f.id === id) ?? null;
+}
+
+/** One recent message from the room per family, for the parent home.
+ *  Real app: this is the one-way center message that already works, plus
+ *  the two-way teacher reply that is fake today and needs a real table. */
+export const FAMILY_MESSAGES: Record<string, { from: string; body: string; time: string; unread: boolean }> = {
+  "fam-brown": { from: "Dana in Toddlers", body: "Noah had a big morning with the blocks. He did not nap long though, he may be tired tonight.", time: "1:10 PM", unread: true },
+  "fam-garcia": { from: "Keisha in Infants", body: "Luca took his bottle well and we used the soy formula you sent. All good today.", time: "11:45 AM", unread: true },
+  "fam-johnson": { from: "Christina", body: "Reminder, your updated immunization record is due this week. You can bring it to the front desk.", time: "9:00 AM", unread: false },
+  "fam-okafor": { from: "Maria in Preschool", body: "Amara led story circle today and picked the book. She was so proud.", time: "1:25 PM", unread: true },
+  "fam-williams": { from: "Christina", body: "Your account is past due. Please stop by the office so we can sort it out together.", time: "8:30 AM", unread: true },
+};
 
 /** A believable past week plus a live "Today" the walkthrough adds to. */
 export const FEED_SEED: FeedEvent[] = [
