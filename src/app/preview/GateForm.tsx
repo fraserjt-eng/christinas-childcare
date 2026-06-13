@@ -34,7 +34,7 @@ export function GateForm() {
         >
           Preview
         </p>
-        <h1 className="mt-2 text-3xl">Christina&apos;s Simplified Summer</h1>
+        <h1 className="mt-2 text-3xl">Summer Version 1</h1>
         <p className="mt-3 text-base" style={{ color: "var(--pv-muted)" }}>
           This is a clickable design preview with demo data only. Enter the
           preview code Josh gave you.

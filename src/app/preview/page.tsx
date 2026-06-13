@@ -60,13 +60,14 @@ export default function PreviewIndexPage() {
     <main className="px-4 py-8">
       <div className="mx-auto max-w-3xl">
         <p className="text-xs font-extrabold uppercase tracking-widest" style={{ color: "var(--pv-coral)" }}>
-          Design preview
+          Summer revamp
         </p>
-        <h1 className="pv-display mt-2 text-4xl sm:text-5xl">Christina&apos;s Simplified Summer</h1>
+        <h1 className="pv-display mt-2 text-4xl sm:text-5xl">Summer Version 1</h1>
         <p className="mt-4 text-lg" style={{ color: "#4d4d4d" }}>
-          This page is the walkthrough: a map of every screen so you can try the
-          simpler daily tools. Everything works, everything is demo data, and
-          nothing touches the real center.
+          A simpler take on the daily tools, built from what we learned this past
+          month. Three layers, each simplified: the family layer, the staff layer,
+          and the director layer. This page maps every screen. Everything works,
+          it is all demo data, and nothing touches the real center.
         </p>
 
         <Link

@@ -8,7 +8,7 @@ import { GateForm } from "./GateForm";
 // never indexed. See docs/preview/PLAN.md for the isolation contract.
 export const metadata: Metadata = {
   title: {
-    default: "Preview | Christina's Simplified Summer",
+    default: "Summer Version 1 | Preview",
     template: "%s | Preview",
   },
   robots: {

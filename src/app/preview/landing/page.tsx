@@ -12,24 +12,24 @@ const DOORS = [
   {
     href: "/preview/family",
     emoji: "👨🏾‍👩🏾‍👧🏾",
-    title: "For families",
-    body: "See your child's day as it happens: who is here, meals and naps, photos, and a note from the room.",
+    title: "Family account",
+    body: "Sign in to see your child's day as it happens: who is here, meals and naps, photos, messages, and what you owe.",
     cta: "Open the family app",
     color: "#c62828",
   },
   {
     href: "/preview/kiosk",
     emoji: "🧑🏾‍🏫",
-    title: "For staff",
-    body: "Clock in with your code, then log your room in a tap. Meals, naps, bottles, photos, all from one screen.",
+    title: "Staff account",
+    body: "Sign in with your code to clock in and log any room: meals, naps, bottles, photos, all from one screen.",
     cta: "Go to the staff view",
     color: "#2e9e4f",
   },
   {
     href: "/preview/office",
     emoji: "🗝️",
-    title: "For the office",
-    body: "Christina's simple view of the whole center: who is in each room, billing, messages, and the day at a glance.",
+    title: "Office account",
+    body: "Christina's view of the whole center: who is in each room, billing, messages, and the day at a glance.",
     cta: "Open the office",
     color: "#1f7fd4",
   },
@@ -62,28 +62,36 @@ export default function LandingPage() {
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
-            href="/preview/family"
-            onClick={() => playClick()}
-            className="pv-press pv-kiosk-target rounded-2xl bg-white px-6 py-4 text-lg font-extrabold shadow-md"
-            style={{ color: "#c62828" }}
-          >
-            I&apos;m a family
-          </Link>
-          <Link
             href="/preview/kiosk"
             onClick={() => playClick()}
-            className="pv-press pv-kiosk-target rounded-2xl px-6 py-4 text-lg font-extrabold text-white shadow-md"
+            className="pv-press pv-kiosk-target rounded-2xl bg-white px-7 py-5 text-xl font-extrabold shadow-md"
+            style={{ color: "#c62828" }}
+          >
+            ✅ Check in or out
+          </Link>
+          <Link
+            href="/preview/family"
+            onClick={() => playClick()}
+            className="pv-press pv-kiosk-target rounded-2xl px-6 py-5 text-lg font-extrabold text-white shadow-md"
             style={{ backgroundColor: "rgba(255,255,255,0.16)" }}
           >
-            I&apos;m staff
+            See my child&apos;s day
           </Link>
         </div>
+        <p className="mt-4 text-base" style={{ color: "rgba(255,255,255,0.85)" }}>
+          Check in or out is the front-desk pad. Tap your code, tap your kids,
+          done. No login needed.
+        </p>
       </section>
 
-      {/* THREE DOORS */}
+      {/* ACCOUNTS */}
       <section className="px-4 py-12">
         <div className="mx-auto max-w-4xl">
-          <h2 className="text-center text-2xl sm:text-3xl">Choose how you are here</h2>
+          <h2 className="text-center text-2xl sm:text-3xl">Sign in to your account</h2>
+          <p className="mx-auto mt-2 max-w-xl text-center text-base" style={{ color: "var(--pv-muted)" }}>
+            The full app, for when you want more than a quick check-in. Families
+            see the day, staff log the room, the office runs the center.
+          </p>
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
             {DOORS.map((door) => (
               <Link

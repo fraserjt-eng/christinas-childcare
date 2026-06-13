@@ -219,6 +219,16 @@ function ParentHome({
               />
             ))}
           </div>
+          <Link
+            href="/preview/kiosk"
+            onClick={() => playClick()}
+            className="pv-press pv-target mt-3 flex items-center gap-2 rounded-xl border p-3 text-base font-bold"
+            style={{ borderColor: "var(--pv-line)", color: "var(--pv-teal)" }}
+          >
+            <span aria-hidden="true">✅</span>
+            Dropping off or picking up? Check in or out at the front desk
+            <span aria-hidden="true" className="ml-auto">→</span>
+          </Link>
         </section>
 
         {/* THINGS THAT NEED ME. */}
