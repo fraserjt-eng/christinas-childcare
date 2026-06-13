@@ -10,7 +10,7 @@ const STEPS = [
   { href: "/preview/door", label: "The front door", detail: "One question, three doors. No login form." },
   { href: "/preview/kiosk", label: "Staff clock-in", detail: "Tap Staff, enter 7321, one tap to clock in." },
   { href: "/preview/kiosk", label: "Family check-in at the lobby", detail: "Enter 1234, tap a child in or out on the iPad." },
-  { href: "/preview/room", label: "Teacher logs lunch", detail: "Big buttons, log the whole room at once." },
+  { href: "/preview/room", label: "Teacher logs lunch", detail: "Pick any room, big buttons, log the whole room. Edit or remove anything after." },
   { href: "/preview/family", label: "The parent's phone", detail: "Sign in, see your kids, who is here, their day, what needs you." },
   { href: "/preview/meals", label: "Food counts", detail: "One row per child, two taps max." },
   { href: "/preview/schedule", label: "The week's schedule", detail: "Staff as rows, days as columns, copy last week." },
@@ -39,7 +39,7 @@ const SCREEN_GROUPS = [
     place: "For teachers, in the room",
     note: "What staff use during the day.",
     screens: [
-      { href: "/preview/room", emoji: "🧸", label: "Room view" },
+      { href: "/preview/room", emoji: "📋", label: "Room log" },
       { href: "/preview/meals", emoji: "🍽️", label: "Food counts" },
     ],
   },

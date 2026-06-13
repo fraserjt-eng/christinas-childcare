@@ -104,6 +104,8 @@ export interface PreviewState {
   clockInStaff: (staffId: string) => void;
   clockOutStaff: (staffId: string) => void;
   logEvent: (input: LogEventInput) => void;
+  editEvent: (eventId: string, detail: string) => void;
+  removeEvent: (eventId: string) => void;
   setKidPhoto: (kidId: string, dataUrl: string) => void;
   setStaffPhoto: (staffId: string, dataUrl: string) => void;
   markFamilyPaid: (familyId: string) => void;
@@ -245,6 +247,18 @@ export const usePreviewStore = create<PreviewState>()(
             },
             ...state.feed,
           ],
+        }));
+      },
+
+      editEvent: (eventId, detail) => {
+        set((state) => ({
+          feed: state.feed.map((e) => (e.id === eventId ? { ...e, detail } : e)),
+        }));
+      },
+
+      removeEvent: (eventId) => {
+        set((state) => ({
+          feed: state.feed.filter((e) => e.id !== eventId),
         }));
       },
 

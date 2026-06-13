@@ -208,10 +208,10 @@ export default function KioskPage() {
                   className="pv-press pv-kiosk-target flex items-center gap-3 rounded-2xl px-5 py-4 text-lg font-extrabold text-white shadow-md"
                   style={{ backgroundColor: "var(--pv-teal)" }}
                 >
-                  <span aria-hidden="true" className="text-2xl">🧸</span>
+                  <span aria-hidden="true" className="text-2xl">📋</span>
                   <span>
-                    Your room
-                    <span className="block text-sm font-semibold opacity-90">Log meals, naps, photos, notes</span>
+                    Log the day
+                    <span className="block text-sm font-semibold opacity-90">Any room: meals, naps, photos, notes</span>
                   </span>
                 </Link>
                 <Link

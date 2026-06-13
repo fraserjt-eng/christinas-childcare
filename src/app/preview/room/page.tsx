@@ -156,17 +156,33 @@ const INFANT_ACTIONS: RoomAction[] = [
   },
 ];
 
+const KIND_EMOJI: Record<string, string> = {
+  meal: "🍎",
+  bottle: "🍼",
+  diaper: "🧷",
+  nap: "😴",
+  activity: "🎨",
+  photo: "📷",
+  note: "📝",
+};
+
 export default function RoomPage() {
   const mounted = useMounted();
   const kids = usePreviewStore((s) => s.kids);
   const checkedIn = usePreviewStore((s) => s.checkedIn);
   const logEvent = usePreviewStore((s) => s.logEvent);
+  const feed = usePreviewStore((s) => s.feed);
+  const editEvent = usePreviewStore((s) => s.editEvent);
+  const removeEvent = usePreviewStore((s) => s.removeEvent);
 
   const [roomId, setRoomId] = useState("toddlers");
   const [activeKind, setActiveKind] = useState<ActionKind | null>(null);
   const [detail, setDetail] = useState("");
   const [selectedKidIds, setSelectedKidIds] = useState<string[]>([]);
   const [photoId, setPhotoId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -175,10 +191,48 @@ export default function RoomPage() {
   const awayKids = mounted ? roomKids.filter((k) => !checkedIn[k.id]) : roomKids;
   const actions = roomId === "infants" ? INFANT_ACTIONS : STANDARD_ACTIONS;
   const activeAction = actions.find((a) => a.kind === activeKind) ?? null;
+  const activeRoom = ROOMS.find((r) => r.id === roomId) ?? null;
+  const todaysLog = mounted
+    ? feed.filter(
+        (e) =>
+          e.roomId === roomId &&
+          e.dayLabel === "Today" &&
+          e.kind !== "checkin" &&
+          e.kind !== "checkout",
+      )
+    : [];
 
   function pickRoom(id: string) {
     setRoomId(id);
     setActiveKind(null);
+    setEditingId(null);
+    setConfirmDeleteId(null);
+  }
+
+  function startEdit(eventId: string, currentDetail: string) {
+    playClick();
+    setEditingId(eventId);
+    setEditText(currentDetail);
+    setConfirmDeleteId(null);
+  }
+
+  function saveEdit() {
+    if (editingId && editText.trim()) {
+      editEvent(editingId, editText.trim());
+      setSuccess("Updated. Families see the change in their feed.");
+    }
+    setEditingId(null);
+  }
+
+  function handleDelete(eventId: string) {
+    playClick();
+    if (confirmDeleteId !== eventId) {
+      setConfirmDeleteId(eventId);
+      return;
+    }
+    removeEvent(eventId);
+    setConfirmDeleteId(null);
+    setSuccess("Removed. It is off the family feed too.");
   }
 
   function openAction(action: RoomAction) {
@@ -217,13 +271,19 @@ export default function RoomPage() {
     <main className="px-4 py-6">
       <div className="mx-auto max-w-3xl">
         <ScreenHeader
-          title="Your room"
-          emoji="🧸"
-          note="Log once for everyone, adjust one child if you need to."
+          title="Room log"
+          emoji="📋"
+          note="Pick a room, log the day, fix anything you need to. Any teacher, any room."
         />
-        <StepNote step={4} text="Tap an action. Every kid here starts selected, so saving takes two taps." />
+        <StepNote step={4} text="Pick a room, tap an action. Every kid here starts selected, so saving takes two taps." />
 
-        <div className="flex flex-wrap gap-3">
+        <p className="text-base font-bold">
+          Logging for:{" "}
+          <span style={{ color: activeRoom?.color ?? "var(--pv-ink)" }}>
+            {activeRoom ? `${activeRoom.emoji} ${activeRoom.name}` : ""}
+          </span>
+        </p>
+        <div className="mt-2 flex flex-wrap gap-3">
           {ROOMS.map((room) => (
             <Chip
               key={room.id}
@@ -404,6 +464,99 @@ export default function RoomPage() {
             </div>
           </Card>
         ) : null}
+
+        {/* TODAY'S LOG: edit the wording or remove an entry. Any teacher. */}
+        <h2 className="mt-8 text-2xl">Today&apos;s log</h2>
+        <p className="mt-1 text-base" style={{ color: "var(--pv-muted)" }}>
+          Tap Edit to fix the words, or Remove to take an entry off. Families see
+          the change right away.
+        </p>
+        <div className="mt-3 flex flex-col gap-3">
+          {todaysLog.length === 0 ? (
+            <EmptyState emoji="📋" title="Nothing logged here yet" detail="What you log shows up in this list to fix later." />
+          ) : (
+            todaysLog.map((e) => (
+              <Card key={e.id}>
+                {editingId === e.id ? (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-base font-extrabold">
+                      <span aria-hidden="true" className="mr-1">{KIND_EMOJI[e.kind] ?? "📝"}</span>
+                      {e.title}
+                    </p>
+                    <textarea
+                      value={editText}
+                      onChange={(ev) => setEditText(ev.target.value)}
+                      rows={2}
+                      aria-label="Edit the entry"
+                      className="rounded-xl border-2 px-4 py-3 text-base"
+                      style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClick();
+                          saveEdit();
+                        }}
+                        disabled={!editText.trim()}
+                        className="pv-press pv-target rounded-xl px-4 py-2 text-base font-extrabold text-white disabled:opacity-50"
+                        style={{ backgroundColor: "var(--pv-teal)" }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClick();
+                          setEditingId(null);
+                        }}
+                        className="pv-press pv-target rounded-xl px-4 py-2 text-base font-bold"
+                        style={{ color: "var(--pv-muted)" }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-start gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg"
+                      style={{ backgroundColor: "#f1ede6" }}
+                    >
+                      {KIND_EMOJI[e.kind] ?? "📝"}
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-base font-extrabold">{e.title}</p>
+                      <p className="text-sm" style={{ color: "#4d473f" }}>{e.detail}</p>
+                      <p className="text-xs" style={{ color: "var(--pv-muted)" }}>
+                        {e.time} · {e.kidIds.length} {e.kidIds.length === 1 ? "kid" : "kids"}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(e.id, e.detail)}
+                        className="pv-press pv-target rounded-xl px-3 py-2 text-sm font-bold"
+                        style={{ color: "var(--pv-sky)" }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(e.id)}
+                        className="pv-press pv-target rounded-xl px-3 py-2 text-sm font-bold"
+                        style={{ color: "var(--pv-coral)" }}
+                      >
+                        {confirmDeleteId === e.id ? "Tap to confirm" : "Remove"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            ))
+          )}
+        </div>
       </div>
 
       {success ? <SuccessBanner message={success} onDone={() => setSuccess(null)} /> : null}
