@@ -180,6 +180,58 @@ function RoomsCard() {
 }
 
 export default function OfficePage() {
+  const [signedIn, setSignedIn] = useState(false);
+  if (!signedIn) {
+    return <OfficeSignIn onSignIn={() => setSignedIn(true)} />;
+  }
+  return <OfficeHome onSignOut={() => setSignedIn(false)} />;
+}
+
+/** The office is the director's account, so it signs in like the others. In
+ *  the real app this is the admin login (email and password, or Google). */
+function OfficeSignIn({ onSignIn }: { onSignIn: () => void }) {
+  return (
+    <main className="px-4 py-6">
+      <div className="mx-auto max-w-md">
+        <ScreenHeader
+          title="The office"
+          emoji="🗝️"
+          backHref="/preview/door"
+          backLabel="Front door"
+          note="Christina's account: who is here, billing, messages, the whole center."
+        />
+        <Card>
+          <h2 className="text-2xl">Sign in to the office</h2>
+          <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
+            In the real app this is the admin login with an email and password,
+            or Google. For this demo, tap to sign in as Christina.
+          </p>
+          <div className="mt-5">
+            <button
+              type="button"
+              onClick={() => {
+                playClick();
+                onSignIn();
+              }}
+              className="pv-press pv-kiosk-target flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left"
+              style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
+            >
+              <span aria-hidden="true" className="text-4xl">👩🏾‍💼</span>
+              <span>
+                <span className="block text-lg font-extrabold">Christina B.</span>
+                <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
+                  Owner and director
+                </span>
+              </span>
+            </button>
+          </div>
+        </Card>
+      </div>
+    </main>
+  );
+}
+
+function OfficeHome({ onSignOut }: { onSignOut: () => void }) {
   const checkedIn = usePreviewStore((s) => s.checkedIn);
   const officeTiles = usePreviewStore((s) => s.officeTiles);
   const addOfficeTile = usePreviewStore((s) => s.addOfficeTile);
@@ -209,6 +261,19 @@ export default function OfficePage() {
           backLabel="Front door"
           note="Exactly the buttons you asked for. Nothing else."
         />
+        <div className="-mt-3 mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              playClick();
+              onSignOut();
+            }}
+            className="pv-press pv-target rounded-xl px-3 py-2 text-base font-bold"
+            style={{ color: "var(--pv-plum)" }}
+          >
+            ← Sign out
+          </button>
+        </div>
         <StepNote
           step={9}
           text="Check a kid in at the kiosk and watch the number and room colors move here."
