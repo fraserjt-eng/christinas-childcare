@@ -168,7 +168,7 @@ export const STAFF: PreviewStaff[] = [
   { id: "st-tasha", firstName: "Tasha", lastName: "Reed", role: "teacher", roomId: null, pin: "7323", avatar: "👩🏾‍🦱", color: "#6b6b6b" },
   { id: "st-keisha", firstName: "Keisha", lastName: "Daniels", role: "teacher", roomId: "infants", pin: "7324", avatar: "👩🏿", color: "#1f7fd4" },
   { id: "st-marcus", firstName: "Marcus", lastName: "Boyd", role: "teacher", roomId: "schoolage", pin: "7325", avatar: "👨🏾", color: "#f4a720" },
-  { id: "st-christina", firstName: "Christina", lastName: "B.", role: "owner", roomId: null, pin: "9999", avatar: "👩🏾‍💼", color: "#c62828" },
+  { id: "st-christina", firstName: "Christina", lastName: "", role: "owner", roomId: null, pin: "9999", avatar: "👩🏾‍💼", color: "#c62828" },
 ];
 
 export const FAMILIES: PreviewFamily[] = [

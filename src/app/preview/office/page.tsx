@@ -180,16 +180,60 @@ function RoomsCard() {
 }
 
 export default function OfficePage() {
-  const [signedIn, setSignedIn] = useState(false);
-  if (!signedIn) {
-    return <OfficeSignIn onSignIn={() => setSignedIn(true)} />;
+  const [signedInAs, setSignedInAs] = useState<string | null>(null);
+  if (!signedInAs) {
+    return <OfficeSignIn onSignIn={(name) => setSignedInAs(name)} />;
   }
-  return <OfficeHome onSignOut={() => setSignedIn(false)} />;
+  return <OfficeHome name={signedInAs} onSignOut={() => setSignedInAs(null)} />;
 }
 
-/** The office is the director's account, so it signs in like the others. In
- *  the real app this is the admin login (email and password, or Google). */
-function OfficeSignIn({ onSignIn }: { onSignIn: () => void }) {
+/** The office team. Each person has their own login. For this demo only
+ *  Christina's password is set up; the others are placeholders for now.
+ *  In the real app this is the admin login (email and password, or Google). */
+type OfficeAccount = {
+  name: string;
+  role: string;
+  avatar: string;
+  password: string | null;
+};
+
+const OFFICE_ACCOUNTS: OfficeAccount[] = [
+  { name: "Christina", role: "Owner and director", avatar: "👩🏾‍💼", password: "summer2026" },
+  { name: "Ophelia", role: "Office", avatar: "👩🏿‍💼", password: null },
+  { name: "Stephan", role: "Office", avatar: "👨🏾‍💼", password: null },
+  { name: "Garhjuan", role: "Office", avatar: "👨🏿‍💼", password: null },
+];
+
+function OfficeSignIn({ onSignIn }: { onSignIn: (name: string) => void }) {
+  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(false);
+
+  const account = OFFICE_ACCOUNTS.find((a) => a.name === selectedName) ?? null;
+
+  function pick(name: string) {
+    playClick();
+    setSelectedName(name);
+    setPassword("");
+    setError(false);
+  }
+
+  function back() {
+    playClick();
+    setSelectedName(null);
+    setPassword("");
+    setError(false);
+  }
+
+  function submit() {
+    if (!account) return;
+    if (account.password && password === account.password) {
+      onSignIn(account.name);
+    } else {
+      setError(true);
+    }
+  }
+
   return (
     <main className="px-4 py-6">
       <div className="mx-auto max-w-md">
@@ -198,40 +242,103 @@ function OfficeSignIn({ onSignIn }: { onSignIn: () => void }) {
           emoji="🗝️"
           backHref="/preview/door"
           backLabel="Front door"
-          note="Christina's account: who is here, billing, messages, the whole center."
+          note="The office account: who is here, billing, messages, the whole center."
         />
-        <Card>
-          <h2 className="text-2xl">Sign in to the office</h2>
-          <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
-            In the real app this is the admin login with an email and password,
-            or Google. For this demo, tap to sign in as Christina.
-          </p>
-          <div className="mt-5">
+
+        {!account ? (
+          <Card>
+            <h2 className="text-2xl">Who is signing in?</h2>
+            <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
+              Everyone in the office has their own login. Tap your name.
+            </p>
+            <div className="mt-5 flex flex-col gap-3">
+              {OFFICE_ACCOUNTS.map((a) => (
+                <button
+                  key={a.name}
+                  type="button"
+                  onClick={() => pick(a.name)}
+                  className="pv-press pv-kiosk-target flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left"
+                  style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
+                >
+                  <span aria-hidden="true" className="text-4xl">{a.avatar}</span>
+                  <span>
+                    <span className="block text-lg font-extrabold">{a.name}</span>
+                    <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
+                      {a.role}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </Card>
+        ) : (
+          <Card>
             <button
               type="button"
-              onClick={() => {
-                playClick();
-                onSignIn();
-              }}
-              className="pv-press pv-kiosk-target flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left"
-              style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
+              onClick={back}
+              className="pv-press text-base font-bold"
+              style={{ color: "var(--pv-plum)" }}
             >
-              <span aria-hidden="true" className="text-4xl">👩🏾‍💼</span>
+              ← Pick a different name
+            </button>
+
+            <div className="mt-4 flex items-center gap-3">
+              <span aria-hidden="true" className="text-4xl">{account.avatar}</span>
               <span>
-                <span className="block text-lg font-extrabold">Christina B.</span>
+                <span className="block text-xl font-extrabold">{account.name}</span>
                 <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
-                  Owner and director
+                  {account.role}
                 </span>
               </span>
-            </button>
-          </div>
-        </Card>
+            </div>
+
+            {account.password === null ? (
+              <p className="mt-5 rounded-2xl border-2 p-4 text-base" style={{ borderColor: "var(--pv-line)", color: "var(--pv-muted)" }}>
+                This account does not have a password set up yet. For now only
+                Christina can sign in to the office.
+              </p>
+            ) : (
+              <>
+                <label htmlFor="office-password" className="mt-5 block text-lg font-bold">
+                  Password
+                </label>
+                <input
+                  id="office-password"
+                  type="password"
+                  value={password}
+                  autoComplete="off"
+                  autoFocus
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) setError(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submit();
+                  }}
+                  className="mt-2 w-full rounded-2xl border-2 px-5 py-4 text-2xl tracking-widest"
+                  style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-paper)" }}
+                />
+                {error ? (
+                  <p role="alert" className="mt-2 text-base font-bold" style={{ color: "var(--pv-coral)" }}>
+                    That password did not match. Try again.
+                  </p>
+                ) : null}
+                <div className="mt-4">
+                  <BigButton label="Sign in" onClick={submit} kiosk color="var(--pv-sky)" />
+                </div>
+                <p className="mt-3 text-sm" style={{ color: "var(--pv-muted)" }}>
+                  Demo password for Christina: <b>summer2026</b>
+                </p>
+              </>
+            )}
+          </Card>
+        )}
       </div>
     </main>
   );
 }
 
-function OfficeHome({ onSignOut }: { onSignOut: () => void }) {
+function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }) {
   const checkedIn = usePreviewStore((s) => s.checkedIn);
   const officeTiles = usePreviewStore((s) => s.officeTiles);
   const addOfficeTile = usePreviewStore((s) => s.addOfficeTile);
@@ -280,7 +387,7 @@ function OfficeHome({ onSignOut }: { onSignOut: () => void }) {
         />
 
         <section className="mb-6">
-          <h2 className="text-2xl sm:text-3xl">Good morning, Christina.</h2>
+          <h2 className="text-2xl sm:text-3xl">Good morning, {name}.</h2>
           <p className="mt-1 text-lg font-semibold">
             <span className="text-2xl font-extrabold" style={{ color: "var(--pv-coral)" }}>
               {kidsHere}
