@@ -88,6 +88,7 @@ export interface LivePayload {
   checkedIn: Record<string, string | null>;
   clockedIn: Record<string, string | null>;
   feed: FeedEvent[];
+  shifts: PreviewShift[];
 }
 
 export interface PreviewState {
@@ -476,7 +477,7 @@ export const usePreviewStore = create<PreviewState>()(
           balances: Object.fromEntries(payload.families.map((f) => [f.id, f.balanceOwed])),
           threads: Object.fromEntries(payload.families.map((f) => [f.id, state.threads[f.id] ?? []])),
           meals: {},
-          shifts: [],
+          shifts: payload.shifts,
         }));
       },
 

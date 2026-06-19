@@ -72,10 +72,29 @@ export default function SchedulePage() {
   const updateShift = usePreviewStore((s) => s.updateShift);
   const removeShift = usePreviewStore((s) => s.removeShift);
 
+  const hydrateFromLive = usePreviewStore((s) => s.hydrateFromLive);
+
   const [editor, setEditor] = useState<ShiftEditor | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const editorStaff = editor ? staff.find((s) => s.id === editor.staffId) ?? null : null;
+
+  // Re-pull the live portal payload and re-hydrate the store, so an optimistic
+  // client-id shift row is replaced by the real staff_schedules row (same fetch
+  // + hydrate LivePortalHydrator uses). No-op when not signed in (the fetch
+  // 401s and the fixtures demo stays put).
+  async function resyncFromLive() {
+    try {
+      const res = await fetch("/api/portal/center-data", { cache: "no-store" });
+      if (!res.ok) return;
+      const payload = await res.json();
+      if (payload && Array.isArray(payload.rooms)) {
+        hydrateFromLive(payload);
+      }
+    } catch {
+      /* keep the optimistic store on any error */
+    }
+  }
 
   function openAdd(staffId: string, day: number) {
     const member = staff.find((s) => s.id === staffId);
@@ -92,19 +111,50 @@ export default function SchedulePage() {
   function saveShift() {
     if (!editor) return;
     if (editor.shiftId) {
-      updateShift(editor.shiftId, {
+      // Edit: optimistic store update, then persist the patch (fire-and-forget).
+      const patch = {
         start: editor.start,
         end: editor.end,
         roomId: editor.roomId,
-      });
+      };
+      updateShift(editor.shiftId, patch);
+      void fetch("/api/staff/schedule", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editor.shiftId,
+          start: patch.start,
+          end: patch.end,
+          classroomId: patch.roomId,
+        }),
+      }).catch(() => {});
     } else {
-      addShift({
-        staffId: editor.staffId,
-        day: editor.day,
-        start: editor.start,
-        end: editor.end,
-        roomId: editor.roomId,
-      });
+      // Add: optimistic store add (a client-id row), then persist. On success,
+      // re-sync from live so the real staff_schedules row replaces it.
+      const staffId = editor.staffId;
+      const day = editor.day;
+      const start = editor.start;
+      const end = editor.end;
+      const roomId = editor.roomId;
+      addShift({ staffId, day, start, end, roomId });
+      void (async () => {
+        try {
+          const res = await fetch("/api/staff/schedule", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              employeeId: staffId,
+              day,
+              start,
+              end,
+              classroomId: roomId,
+            }),
+          });
+          if (res.ok) await resyncFromLive();
+        } catch {
+          /* keep the optimistic row on any error */
+        }
+      })();
     }
     setEditor(null);
     setSuccess("Saved. The grid is up to date.");
@@ -112,7 +162,11 @@ export default function SchedulePage() {
 
   function removeCurrentShift() {
     if (!editor || !editor.shiftId) return;
-    removeShift(editor.shiftId);
+    const id = editor.shiftId;
+    removeShift(id);
+    void fetch(`/api/staff/schedule?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch(() => {});
     setEditor(null);
     setSuccess("Saved. The grid is up to date.");
   }

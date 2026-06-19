@@ -81,9 +81,18 @@ export async function GET(request: NextRequest) {
   }
 
   const today = centerDate();
+  // This week's Monday..Sunday in center time, for the schedule grid.
+  const todayD = new Date(`${today}T12:00:00`);
+  const dow = todayD.getDay(); // 0=Sun..6=Sat
+  const monday = new Date(todayD);
+  monday.setDate(todayD.getDate() + (dow === 0 ? -6 : 1 - dow));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const weekStart = centerDate(monday);
+  const weekEnd = centerDate(sunday);
 
   // Pull each slice broad + center-scoped, then shape in JS (PostgREST gotchas).
-  const [centersRes, roomsRes, kidsRes, staffRes, famRes, parentsRes, attRes, teRes, feedRes] =
+  const [centersRes, roomsRes, kidsRes, staffRes, famRes, parentsRes, attRes, teRes, feedRes, shiftsRes] =
     await Promise.all([
       supabase.from('centers').select('id, name').limit(5000),
       supabase.from('classrooms').select('id, name, age_group, capacity').eq('center_id', centerId).limit(5000),
@@ -94,6 +103,7 @@ export async function GET(request: NextRequest) {
       supabase.from('attendance').select('child_id, check_in, check_out').eq('center_id', centerId).eq('date', today).limit(5000),
       supabase.from('time_entries').select('employee_id, clock_in, clock_out').eq('center_id', centerId).eq('date', today).limit(5000),
       supabase.from('child_daily_entries').select('id, child_id, classroom_id, type, detail, occurred_at').eq('center_id', centerId).order('occurred_at', { ascending: false }).limit(200),
+      supabase.from('staff_schedules').select('id, employee_id, date, start_time, end_time, classroom_id').eq('center_id', centerId).gte('date', weekStart).lte('date', weekEnd).limit(5000),
     ]);
 
   const centers = (centersRes.data ?? []).map((c) => ({ id: c.id as string, name: c.name as string }));
@@ -218,10 +228,29 @@ export async function GET(request: NextRequest) {
     };
   });
 
+  // This week's shifts -> the weekly grid (day 0=Mon..4=Fri). Real DB ids so
+  // the schedule screen can edit/remove a shift by id.
+  const fmtTime = (t: string | null): string => {
+    if (!t) return '';
+    const [h, m] = t.split(':');
+    return `${parseInt(h, 10)}:${m ?? '00'}`;
+  };
+  const shifts = (shiftsRes.data ?? []).map((s) => {
+    const wd = new Date(`${s.date as string}T12:00:00`).getDay(); // 0=Sun..6=Sat
+    return {
+      id: s.id as string,
+      staffId: (s.employee_id as string) ?? '',
+      day: (wd + 6) % 7, // Mon=0..Sun=6
+      start: fmtTime(s.start_time as string | null),
+      end: fmtTime(s.end_time as string | null),
+      roomId: (s.classroom_id as string | null) ?? null,
+    };
+  });
+
   const centerName = centers.find((c) => c.id === centerId)?.name ?? null;
 
   return NextResponse.json(
-    { centerId, centerName, centers, rooms, kids, staff, families, checkedIn, clockedIn, feed },
+    { centerId, centerName, centers, rooms, kids, staff, families, checkedIn, clockedIn, feed, shifts },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }
