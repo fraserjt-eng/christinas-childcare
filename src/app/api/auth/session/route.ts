@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
       email: user.email.toLowerCase(),
       full_name: invite.fullName || user.email.split('@')[0],
       role: invite.role,
+      center_id: invite.centerId ?? null,
     });
   }
 
@@ -140,6 +141,9 @@ export async function POST(request: NextRequest) {
       email: family.email,
       full_name: primaryParent?.name || family.email.split('@')[0],
       role: 'parent',
+      // families has no center_id column yet; parents carry null until a
+      // follow-up migration adds families.center_id (Phase 1 open item).
+      center_id: null,
     });
   }
 

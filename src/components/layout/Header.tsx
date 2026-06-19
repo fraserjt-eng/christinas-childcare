@@ -30,7 +30,7 @@ export function Header() {
             <a href="tel:+15555555555" className="hidden sm:flex items-center gap-1 hover:underline"><Phone className="h-3 w-3" /> Brooklyn Park: 555-555-5555</a>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/employee-login" className="hover:underline">{t('chrome.staffPortal')}</Link>
+            <Link href="/start" className="hover:underline">{t('chrome.staffPortal')}</Link>
             <Link href="/login" className="hover:underline">{t('chrome.parentPortal')}</Link>
           </div>
         </div>

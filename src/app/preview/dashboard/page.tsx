@@ -19,11 +19,11 @@ import {
   Palette,
   ShieldAlert,
 } from "lucide-react";
-import { StepNote, cx, useMounted } from "@/components/preview/ui";
+import { cx, useMounted } from "@/components/preview/ui";
 import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { AvatarUpload } from "@/components/preview/AvatarUpload";
 import { Reveal } from "@/components/preview/Reveal";
-import { ROOMS, type PreviewKid, type PreviewRoom } from "@/lib/preview/fixtures";
+import { type PreviewKid, type PreviewRoom } from "@/lib/preview/fixtures";
 import { usePreviewStore, getRoomStatus } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
 
@@ -57,10 +57,10 @@ const TABS: { id: TabId; label: string }[] = [
 
 type ViewId = "combined" | "students" | "staff";
 
-/** White panel with layered depth that lifts on hover. */
+/** White glow panel (the branded pv-tile surface) with layered depth. */
 function Panel({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={cx("pv-lift pv-deep rounded-xl border bg-white p-5", className)} style={{ borderColor: "var(--tad-line)" }}>
+    <div className={cx("pv-tile p-5", className)}>
       {children}
     </div>
   );
@@ -136,11 +136,12 @@ function RoomCard({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const rooms = usePreviewStore((s) => s.rooms);
   const kids = usePreviewStore((s) => s.kids);
   const staff = usePreviewStore((s) => s.staff);
   const checkedIn = usePreviewStore((s) => s.checkedIn);
   const clockedIn = usePreviewStore((s) => s.clockedIn);
-  const status = getRoomStatus({ kids, staff, checkedIn, clockedIn }, room.id);
+  const status = getRoomStatus({ rooms, kids, staff, checkedIn, clockedIn }, room.id);
   const Icon = ROOM_ICON[room.id] ?? Baby;
   const band =
     status.level === "good" ? "var(--pv-teal)" : status.level === "near" ? "var(--pv-gold)" : "var(--pv-red-bad)";
@@ -151,8 +152,8 @@ function RoomCard({
         playClick();
         onSelect();
       }}
-      className="pv-press pv-target overflow-hidden rounded-md border-2 bg-white text-left"
-      style={{ borderColor: selected ? "var(--pv-coral)" : "var(--tad-line)" }}
+      className="pv-tile pv-target overflow-hidden text-left"
+      style={selected ? { borderColor: "var(--pv-coral)", borderWidth: 2 } : undefined}
       aria-pressed={selected}
     >
       <div
@@ -182,7 +183,7 @@ function RoomCard({
  *  with an uppercase tracked label. The number is the "pop". */
 function StatSquare({ value, label, color }: { value: number; label: string; color: string }) {
   return (
-    <div className="pv-lift pv-deep flex flex-col rounded-xl border bg-white p-4" style={{ borderColor: "var(--tad-line)" }}>
+    <div className="pv-tile flex flex-col p-4">
       <span className="pv-serif text-4xl font-semibold leading-none sm:text-5xl" style={{ color }}>
         {value}
       </span>
@@ -218,6 +219,7 @@ function PillButton({
 
 export default function DashboardPage() {
   const mounted = useMounted();
+  const rooms = usePreviewStore((s) => s.rooms);
   const kids = usePreviewStore((s) => s.kids);
   const staff = usePreviewStore((s) => s.staff);
   const families = usePreviewStore((s) => s.families);
@@ -277,7 +279,7 @@ export default function DashboardPage() {
   function exportCsv() {
     const rows = [["Student", "Room", "In", "Hours"]];
     for (const k of scopeKids) {
-      const room = ROOMS.find((r) => r.id === k.roomId);
+      const room = rooms.find((r) => r.id === k.roomId);
       rows.push([`${k.firstName} ${k.lastName}`, room?.name ?? "", checkedIn[k.id] ?? "", checkedIn[k.id] ? hoursFor(k.id) : ""]);
     }
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -290,28 +292,17 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   }
 
-  const scopeTitle = roomId ? `${ROOMS.find((r) => r.id === roomId)?.name} Room` : "All Classrooms";
+  const scopeTitle = roomId ? `${rooms.find((r) => r.id === roomId)?.name} Room` : "All Classrooms";
   const staffIn = Object.values(clockedIn).filter(Boolean).length;
 
   return (
-    <main className="pv-tad px-4 py-6 sm:px-8">
+    <main className="pv-tad pv-portal-bg min-h-[100dvh] px-4 py-6 sm:px-8">
       <div className="mx-auto w-full max-w-[1800px]">
-        {/* header (Tadpoles thin gray lowercase title) */}
-        <Link
-          href="/preview/office"
-          onClick={() => playClick()}
-          className="pv-target inline-flex items-center gap-1 text-sm font-bold"
-          style={{ color: "var(--pv-coral)" }}
-        >
-          ← office
-        </Link>
-        <h1 className="pv-tad-title mt-1 text-4xl sm:text-5xl">{scopeTitle}</h1>
+        {/* Branded header: the real screen title (center name is the watermark behind). */}
+        <h1 className="pv-tad-title text-4xl sm:text-5xl">{scopeTitle}</h1>
         <p className="mt-1 text-sm" style={{ color: "var(--tad-muted)" }}>
           Every room at a glance: who is here, the ratios, the day.
         </p>
-        <div className="mt-3">
-          <StepNote step={4} text="Tap a child in the OUT list to check them in, and watch the ratios and counts move." />
-        </div>
 
         {/* tabs: plain gray text, active is a filled red pill */}
         <div className="-mx-1 overflow-x-auto border-b" style={{ borderColor: "var(--tad-line)" }}>
@@ -377,8 +368,8 @@ export default function DashboardPage() {
                   playClick();
                   setRoomId(null);
                 }}
-                className="pv-press pv-target overflow-hidden rounded-md border-2 bg-white text-left"
-                style={{ borderColor: roomId === null ? "var(--pv-coral)" : "var(--tad-line)" }}
+                className="pv-tile pv-target overflow-hidden text-left"
+                style={roomId === null ? { borderColor: "var(--pv-coral)", borderWidth: 2 } : undefined}
                 aria-pressed={roomId === null}
               >
                 <div
@@ -399,7 +390,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
               </button>
-              {ROOMS.map((room) => (
+              {rooms.map((room) => (
                 <RoomCard key={room.id} room={room} selected={roomId === room.id} onSelect={() => setRoomId(room.id)} />
               ))}
             </div>
@@ -559,7 +550,7 @@ export default function DashboardPage() {
                       .filter((k) => matches(k.firstName, k.lastName))
                       .sort((a, b) => Number(Boolean(checkedIn[b.id])) - Number(Boolean(checkedIn[a.id])))
                       .map((k, i) => {
-                        const room = ROOMS.find((r) => r.id === k.roomId);
+                        const room = rooms.find((r) => r.id === k.roomId);
                         const here = Boolean(checkedIn[k.id]);
                         return (
                           <tr key={k.id} style={{ backgroundColor: i % 2 ? "#fafafa" : "#fff" }}>
@@ -617,6 +608,7 @@ function StudentsView({
   matches: (first: string, last: string) => boolean;
   hoursFor: (id: string) => string;
 }) {
+  const rooms = usePreviewStore((s) => s.rooms);
   const setKidPhoto = usePreviewStore((s) => s.setKidPhoto);
   const list = scopeKids.filter((k) => matches(k.firstName, k.lastName));
   return (
@@ -625,7 +617,7 @@ function StudentsView({
       <div className="mt-2 flex flex-col divide-y" style={{ borderColor: "var(--tad-line)" }}>
         {list.map((k) => {
           const here = Boolean(checkedIn[k.id]);
-          const room = ROOMS.find((r) => r.id === k.roomId);
+          const room = rooms.find((r) => r.id === k.roomId);
           const RoomIcon = ROOM_ICON[k.roomId] ?? Baby;
           return (
             <div key={k.id} className="flex items-center gap-3 py-2.5">
@@ -674,6 +666,7 @@ function StaffView({
   matches: (first: string, last: string) => boolean;
   onToggle: (id: string) => void;
 }) {
+  const rooms = usePreviewStore((s) => s.rooms);
   const staffPhotos = usePreviewStore((s) => s.staffPhotos);
   const setStaffPhoto = usePreviewStore((s) => s.setStaffPhoto);
   const list = scopeStaff.filter((s) => matches(s.firstName, s.lastName));
@@ -683,7 +676,7 @@ function StaffView({
       <div className="mt-2 flex flex-col divide-y" style={{ borderColor: "var(--tad-line)" }}>
         {list.map((s) => {
           const here = Boolean(clockedIn[s.id]);
-          const room = ROOMS.find((r) => r.id === s.roomId);
+          const room = rooms.find((r) => r.id === s.roomId);
           return (
             <div key={s.id} className="flex items-center gap-3 py-2.5">
               <span className="relative flex-shrink-0">

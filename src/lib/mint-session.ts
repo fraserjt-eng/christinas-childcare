@@ -13,6 +13,10 @@ export interface SessionUser {
   email: string;
   full_name: string;
   role: string;
+  /** The center this session is scoped to. Derived server-side at mint time
+   *  from the employee record. Null for cross-center identities (superadmin)
+   *  and for parents until the families table carries a center. */
+  center_id?: string | null;
 }
 
 export function mintSessionResponse(user: SessionUser): NextResponse {

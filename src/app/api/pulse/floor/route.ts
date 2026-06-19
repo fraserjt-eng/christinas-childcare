@@ -25,6 +25,11 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  // Scope the floor to the signed-in user's center. A center-bound admin sees
+  // only their center's clocked-in staff (the ratio monitor is a licensing
+  // screen and must never mix centers); the cross-center owner/superadmin
+  // (null center) sees everyone.
+  const centerId = session.user.center_id ?? null;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
@@ -33,12 +38,14 @@ export async function GET() {
   const date = todayDate();
 
   // Everyone currently clocked in: a time_entries row today, not yet closed.
-  const { data: open, error } = await supabase
+  let openQuery = supabase
     .from('time_entries')
     .select('employee_id, clock_in, classroom_id')
     .eq('date', date)
     .is('clock_out', null)
     .limit(5000);
+  if (centerId) openQuery = openQuery.eq('center_id', centerId);
+  const { data: open, error } = await openQuery;
 
   if (error) {
     return NextResponse.json(
@@ -65,10 +72,12 @@ export async function GET() {
   // Names for display. Filter the lookup in JS (PostgREST .in can drop rows).
   const names = new Map<string, string>();
   if (ids.length > 0) {
-    const { data: emps } = await supabase
+    let empQuery = supabase
       .from('employees')
       .select('id, first_name, last_name')
       .limit(5000);
+    if (centerId) empQuery = empQuery.eq('center_id', centerId);
+    const { data: emps } = await empQuery;
     for (const e of emps ?? []) {
       if (ids.includes(e.id as string)) {
         names.set(
@@ -80,10 +89,12 @@ export async function GET() {
   }
 
   // Total active staff = the honest denominator ("N of M on duty").
-  const { count: totalActiveStaff } = await supabase
+  let countQuery = supabase
     .from('employees')
     .select('id', { count: 'exact', head: true })
     .eq('employment_status', 'active');
+  if (centerId) countQuery = countQuery.eq('center_id', centerId);
+  const { count: totalActiveStaff } = await countQuery;
 
   const staff = ids.map((id) => {
     const v = byEmployee.get(id)!;

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, LogIn, UserPlus } from 'lucide-react';
+import { Users, LogIn, UserPlus, Heart, Shield, MapPin } from 'lucide-react';
 import { useT } from '@/contexts/LanguageContext';
 
 export default function ParentLoginPage() {
@@ -47,7 +47,7 @@ export default function ParentLoginPage() {
         return;
       }
 
-      router.push('/dashboard');
+      router.push('/preview/family');
     } catch {
       setSignInError(t('login.connError'));
       setLoading(false);
@@ -92,17 +92,35 @@ export default function ParentLoginPage() {
   }
 
   return (
-    <div className="py-16">
-      <div className="max-w-md mx-auto px-4">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-christina-blue flex items-center justify-center mx-auto mb-4">
-            <Users className="h-8 w-8 text-white" />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-b from-christina-red via-[#a51f1f] to-[#7d1818]">
+      {/* Soft brand wash: floating circles echo the home page hero */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-24 h-[420px] w-[420px] rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute top-1/3 -right-28 h-[380px] w-[380px] rounded-full bg-christina-yellow/20 blur-3xl" />
+        <div className="absolute -bottom-40 left-1/4 h-[460px] w-[460px] rounded-full bg-white/5 blur-3xl" />
+      </div>
+
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-16 sm:py-20">
+        {/* Branded masthead */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-white shadow-xl shadow-black/20">
+            <Heart className="h-10 w-10 text-christina-red" strokeWidth={2} fill="currentColor" />
           </div>
-          <h1 className="text-2xl font-bold">{t('login.portalTitle')}</h1>
-          <p className="text-muted-foreground">{t('login.portalSubtitle')}</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
+            Crystal &amp; Brooklyn Park, Minnesota
+          </p>
+          <h1 className="font-playful text-3xl leading-tight text-white sm:text-4xl md:text-5xl">
+            Christina&apos;s Child Care Center
+          </h1>
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 backdrop-blur-sm">
+            <Users className="h-4 w-4 text-white" />
+            <span className="font-heading text-sm font-semibold text-white">{t('login.portalTitle')}</span>
+          </div>
+          <p className="mx-auto mt-3 max-w-sm font-body text-sm text-white/80">{t('login.portalSubtitle')}</p>
         </div>
-        <Card>
-          <CardContent className="p-6">
+
+        <Card className="rounded-3xl border-0 shadow-2xl shadow-black/30">
+          <CardContent className="p-6 sm:p-8">
             {/* Google OAuth button */}
             <button
               type="button"
@@ -219,6 +237,18 @@ export default function ParentLoginPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Trust footer — same warm reassurance as the home page */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/70">
+          <span className="flex items-center gap-1.5">
+            <Shield className="h-3.5 w-3.5 text-christina-yellow" />
+            Licensed by Minnesota DCYF
+          </span>
+          <span className="flex items-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5 text-christina-yellow" />
+            Family-Owned Since 2020
+          </span>
+        </div>
       </div>
     </div>
   );

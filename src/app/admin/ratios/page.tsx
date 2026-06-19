@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useSessionUser } from '@/lib/use-session-user';
 
 // Minnesota licensing ratios
 const CLASSROOM_CONFIG = [
@@ -26,25 +27,37 @@ interface ClassroomData {
 }
 
 export default function RatiosPage() {
+  // The center to scope to. A center-bound admin sees only their center; the
+  // cross-center owner/superadmin (no employee center) sees all centers.
+  const { user, loading: sessionLoading } = useSessionUser();
+  const centerId = user?.center_id ?? null;
   const [classrooms, setClassrooms] = useState<ClassroomData[]>([]);
   const [staffOnDuty, setStaffOnDuty] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
+    // Wait for the session so we know which center to scope to. A center-bound
+    // admin must never even briefly count another center's children.
+    if (sessionLoading) return;
     const today = new Date().toISOString().split('T')[0];
 
-    // Get today's checked-in children (not checked out)
-    const { data: attendance } = await supabase
+    // Get today's checked-in children (not checked out), scoped to this
+    // admin's center (cross-center owner/superadmin: all centers).
+    let attQuery = supabase
       .from('attendance')
       .select('child_id, child_name')
       .eq('date', today)
       .is('check_out', null);
+    if (centerId) attQuery = attQuery.eq('center_id', centerId);
+    const { data: attendance } = await attQuery;
 
-    // Get children with their classrooms
-    const { data: children } = await supabase
+    // Get children with their classrooms, scoped to the same center.
+    let childQuery = supabase
       .from('family_children')
       .select('id, classroom');
+    if (centerId) childQuery = childQuery.eq('center_id', centerId);
+    const { data: children } = await childQuery;
 
     // Build classroom lookup
     const childClassroom = new Map<string, string>();
@@ -93,7 +106,7 @@ export default function RatiosPage() {
 
     setClassrooms(data);
     setLoading(false);
-  }, []);
+  }, [centerId, sessionLoading]);
 
   useEffect(() => {
     loadData();

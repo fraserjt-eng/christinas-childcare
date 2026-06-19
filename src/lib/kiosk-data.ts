@@ -82,23 +82,32 @@ async function callKiosk<T>(payload: Record<string, unknown>): Promise<T | null>
   }
 }
 
-export const liveKioskClient: KioskClient = {
-  lookupFamilyByPin: (pin) =>
-    callKiosk<KioskFamily>({ action: 'lookup', pin }),
-  getTodayAttendance: (childId) =>
-    callKiosk<AttendanceRow>({ action: 'attendance', childId }),
-  checkIn: async (child, familyId) => {
-    await callKiosk({
-      action: 'checkin',
-      childId: child.id,
-      childName: child.name,
-      familyId,
-    });
-  },
-  checkOut: async (childId) => {
-    await callKiosk({ action: 'checkout', childId });
-  },
-};
+// A center-bound live client. The center comes from the kiosk's per-device URL
+// and is sent with every call so the server scopes the lookup/attendance to it.
+export function makeLiveKioskClient(centerId?: string): KioskClient {
+  return {
+    lookupFamilyByPin: (pin) =>
+      callKiosk<KioskFamily>({ action: 'lookup', pin, centerId }),
+    getTodayAttendance: (childId) =>
+      callKiosk<AttendanceRow>({ action: 'attendance', childId, centerId }),
+    checkIn: async (child, familyId) => {
+      await callKiosk({
+        action: 'checkin',
+        childId: child.id,
+        childName: child.name,
+        familyId,
+        centerId,
+      });
+    },
+    checkOut: async (childId) => {
+      await callKiosk({ action: 'checkout', childId, centerId });
+    },
+  };
+}
+
+// Back-compat default: no explicit center, so the server falls back to the
+// operating center. A center-bound kiosk page uses makeLiveKioskClient(id).
+export const liveKioskClient: KioskClient = makeLiveKioskClient();
 
 // ============================================================
 // DEMO: anon key against demo_* tables (fabricated data only)

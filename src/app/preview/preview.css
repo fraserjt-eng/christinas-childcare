@@ -272,3 +272,98 @@
     display: none;
   }
 }
+
+/* ============================================================
+   Branded portal: an opaque Christina's-red wash over the canvas
+   (so the new design reads as branded, never flat gray) and the
+   FlowState card glow recolored to the brand red.
+   ============================================================ */
+
+/* The portal canvas. A soft red bloom from the top, a warm gold hint from the
+   corner, over the paper. Low opacity so content stays crisp; fixed so it
+   reads as a branded room you are standing in. */
+.pv-portal-bg {
+  position: relative;
+  background:
+    radial-gradient(125% 80% at 50% -12%, rgba(198, 40, 40, 0.12) 0%, rgba(198, 40, 40, 0.04) 40%, transparent 72%),
+    radial-gradient(90% 60% at 102% -8%, rgba(244, 167, 32, 0.08) 0%, transparent 55%),
+    var(--pv-paper);
+  background-attachment: fixed;
+}
+
+/* The center name as a HUGE faint watermark behind the content (fed by the
+   --pv-center CSS var that CenterWatermark sets from the active center). Sits
+   above the canvas wash but below the page content, so the center is
+   recognizable at all times without a chip on top. */
+.pv-portal-bg::before {
+  content: var(--pv-center, "");
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8vh;
+  pointer-events: none;
+  overflow: hidden;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  font-size: clamp(3.25rem, 15vw, 14rem);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  color: var(--pv-coral);
+  opacity: 0.06;
+  white-space: nowrap;
+  text-align: center;
+  user-select: none;
+}
+/* Keep the real content above the watermark. */
+.pv-portal-bg > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* A selection card that lifts off the branded background: white surface, a soft
+   red-tinted ring, layered depth, and a red glow that warms on hover. This is
+   the FlowState glow, in Christina's colors. */
+.pv-tile {
+  position: relative;
+  background: var(--pv-card);
+  border: 1px solid color-mix(in srgb, var(--pv-coral) 16%, var(--pv-line));
+  border-radius: 18px;
+  box-shadow:
+    0 1px 2px rgba(31, 41, 51, 0.04),
+    0 10px 24px -14px rgba(198, 40, 40, 0.20),
+    0 20px 44px -30px rgba(31, 41, 51, 0.30);
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.pv-tile:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--pv-coral) 36%, var(--pv-line));
+  box-shadow:
+    0 1px 2px rgba(31, 41, 51, 0.05),
+    0 16px 34px -14px rgba(198, 40, 40, 0.34),
+    0 28px 58px -32px rgba(31, 41, 51, 0.34);
+}
+
+/* The center identity chip carried at the top of every portal screen, so the
+   center is recognizable at all times. */
+.pv-center-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  background: color-mix(in srgb, var(--pv-coral) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--pv-coral) 22%, var(--pv-line));
+  color: var(--pv-coral);
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: -0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pv-tile { transition: none; }
+  .pv-tile:hover { transform: none; }
+  .pv-portal-bg { background-attachment: scroll; }
+}

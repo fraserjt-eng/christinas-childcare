@@ -11,15 +11,21 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  // Scope the dropdown to the signed-in admin's center so they only assign
+  // teachers/children to their own rooms. The cross-center owner/superadmin
+  // (null center) sees every center's rooms.
+  const centerId = session.user.center_id ?? null;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
 
-  const { data } = await supabase
+  let roomsQuery = supabase
     .from('classrooms')
     .select('id, name, age_group, center_id, is_active')
     .limit(5000);
+  if (centerId) roomsQuery = roomsQuery.eq('center_id', centerId);
+  const { data } = await roomsQuery;
 
   // Active rooms first, then by name. Sort in JS per the project's PostgREST rule.
   const classrooms = (data ?? [])

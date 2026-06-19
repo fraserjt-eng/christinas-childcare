@@ -17,18 +17,19 @@ import {
 } from "@/components/preview/ui";
 import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { AvatarUpload } from "@/components/preview/AvatarUpload";
-import { ROOMS, roomById, type PreviewStaff } from "@/lib/preview/fixtures";
+import type { PreviewRoom, PreviewStaff } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
 
-function staffSub(person: PreviewStaff): string {
+function staffSub(person: PreviewStaff, rooms: PreviewRoom[]): string {
   if (person.role === "owner") return "Owner";
-  const room = person.roomId ? roomById(person.roomId) : null;
+  const room = person.roomId ? rooms.find((r) => r.id === person.roomId) ?? null : null;
   return room ? `Teacher, ${room.name}` : "Teacher, floats between rooms";
 }
 
 export default function PeoplePage() {
   const mounted = useMounted();
+  const rooms = usePreviewStore((s) => s.rooms);
   const staff = usePreviewStore((s) => s.staff);
   const families = usePreviewStore((s) => s.families);
   const setStaffRoom = usePreviewStore((s) => s.setStaffRoom);
@@ -102,7 +103,7 @@ export default function PeoplePage() {
                           {person.firstName} {person.lastName}
                         </span>
                         <span className="block text-base" style={{ color: "var(--pv-muted)" }}>
-                          {staffSub(person)}
+                          {staffSub(person, rooms)}
                         </span>
                       </span>
                     </button>
@@ -119,7 +120,7 @@ export default function PeoplePage() {
                     <div className="mt-3 rounded-lg border p-4" style={{ backgroundColor: "#faf8f4", borderColor: "var(--pv-line)" }}>
                       <p className="pv-tad-label text-base">their room</p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {ROOMS.map((room) => (
+                        {rooms.map((room) => (
                           <Chip
                             key={room.id}
                             label={room.name}

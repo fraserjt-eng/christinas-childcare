@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
   // Confirm the child exists (clean FK error -> friendly message).
   const { data: child } = await supabase
     .from('family_children')
-    .select('id, classroom, classroom_id')
+    .select('id, classroom, classroom_id, center_id')
     .eq('id', childId)
     .maybeSingle();
   if (!child) {
@@ -171,6 +171,9 @@ export async function POST(request: NextRequest) {
   // The authoritative room for the entry is the child's, never a client value.
   const entryClassroomId =
     (child.classroom_id as string | null) ?? body.classroom_id ?? null;
+  // The entry's center is the child's, never a client value (a cross-center
+  // owner may be logging). Drives the portal feed + reporting scope.
+  const entryCenterId = (child.center_id as string | null) ?? null;
   const occurredAt = body.occurred_at || new Date().toISOString();
   const date = centerDateOf(occurredAt);
 
@@ -229,6 +232,7 @@ export async function POST(request: NextRequest) {
       // Secondary: classroom gallery. Best-effort; never blocks the report.
       try {
         await supabase.from('daily_photos').insert({
+          center_id: entryCenterId,
           classroom_id: entryClassroomId,
           photo_url: path,
           caption: noteText || null,
@@ -255,6 +259,7 @@ export async function POST(request: NextRequest) {
       occurred_at: occurredAt,
       recorded_by: employee?.id ?? null,
       classroom_id: entryClassroomId,
+      center_id: entryCenterId,
     })
     .select('id, child_id, date, type, detail, occurred_at, recorded_by, classroom_id')
     .single();

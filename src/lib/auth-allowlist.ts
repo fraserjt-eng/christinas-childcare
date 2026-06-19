@@ -12,6 +12,9 @@ export interface AllowlistResult {
   fullName?: string;
   employeeId?: string;
   familyId?: string;
+  /** The center the matched employee belongs to. Undefined for superadmin and
+   *  parents; stamped into the session so downstream queries can scope by it. */
+  centerId?: string | null;
 }
 
 // Bootstrap superadmin list — always allowed even if not in any table.
@@ -47,7 +50,7 @@ export async function lookupInvite(email: string): Promise<AllowlistResult> {
   try {
     const { data: employee } = await supabase
       .from('employees')
-      .select('id, first_name, last_name, role, email, employment_status')
+      .select('id, first_name, last_name, role, email, employment_status, center_id')
       .ilike('email', normalizedEmail)
       .maybeSingle();
 
@@ -62,6 +65,7 @@ export async function lookupInvite(email: string): Promise<AllowlistResult> {
         role: resolvedRole,
         fullName: `${employee.first_name} ${employee.last_name}`.trim(),
         employeeId: employee.id,
+        centerId: (employee.center_id as string | null) ?? null,
       };
     }
   } catch (e) {
@@ -96,14 +100,16 @@ export async function lookupInvite(email: string): Promise<AllowlistResult> {
  * Decide the redirect path after a successful allowlist match.
  */
 export function redirectPathForRole(role: AllowedRole): string {
+  // The new front-facing portal is the front door now. The deep backend
+  // (/admin) and the old staff portal (/employee) stay reachable directly.
   switch (role) {
     case 'superadmin':
     case 'admin':
-      return '/admin';
+      return '/preview/office';
     case 'teacher':
-      return '/employee';
+      return '/preview/room';
     case 'parent':
-      return '/dashboard';
+      return '/preview/family';
     default:
       return '/';
   }

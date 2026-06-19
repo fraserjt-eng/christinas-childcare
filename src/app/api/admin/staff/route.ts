@@ -16,6 +16,10 @@ export async function POST(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  // The center the new hire belongs to. A center-bound admin always creates
+  // staff in their OWN center; a cross-center owner/superadmin (null center)
+  // falls back to the legacy "reuse an existing center" behavior below.
+  const centerId = session.user.center_id ?? null;
 
   let body: {
     email?: string;
@@ -69,6 +73,12 @@ export async function POST(request: NextRequest) {
   }
 
   // Unique email + PIN not already in use by an active employee.
+  // These two checks are intentionally GLOBAL (not center-scoped): email is
+  // the durable login identity and PIN is the sole credential the door/login
+  // lookup matches on (it queries by pin + employment_status='active' with no
+  // center filter), so both must be unique across the whole system, not just
+  // within one center. A center-scoped check would let two centers mint the
+  // same PIN and make the login lookup ambiguous.
   const { data: emailClash } = await supabase
     .from('employees')
     .select('id')
@@ -94,23 +104,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // employees.center_id references centers(id). Reuse an existing center so
-  // the FK is satisfied (copy from any current employee, else first center).
-  let centerId: string | null = null;
-  const { data: anyEmp } = await supabase
-    .from('employees')
-    .select('center_id')
-    .not('center_id', 'is', null)
-    .limit(1)
-    .maybeSingle();
-  centerId = anyEmp?.center_id ?? null;
-  if (!centerId) {
-    const { data: center } = await supabase
-      .from('centers')
-      .select('id')
+  // employees.center_id references centers(id). When the admin is bound to a
+  // center, the new hire goes into THAT center (centerId from the session,
+  // resolved at the top). Only a cross-center owner/superadmin (null center)
+  // falls back to the legacy "reuse an existing center" behavior so the FK is
+  // still satisfied (copy from any current employee, else first center).
+  let resolvedCenterId: string | null = centerId;
+  if (!resolvedCenterId) {
+    const { data: anyEmp } = await supabase
+      .from('employees')
+      .select('center_id')
+      .not('center_id', 'is', null)
       .limit(1)
       .maybeSingle();
-    centerId = center?.id ?? null;
+    resolvedCenterId = anyEmp?.center_id ?? null;
+    if (!resolvedCenterId) {
+      const { data: center } = await supabase
+        .from('centers')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+      resolvedCenterId = center?.id ?? null;
+    }
   }
 
   const { data: created, error: insErr } = await supabase
@@ -127,7 +142,7 @@ export async function POST(request: NextRequest) {
       hire_date: body.hire_date || new Date().toISOString().slice(0, 10),
       employment_status: 'active',
       certifications: [],
-      center_id: centerId,
+      center_id: resolvedCenterId,
       emergency_contact_name: body.emergency_contact_name?.trim() || null,
       emergency_contact_phone: body.emergency_contact_phone?.trim() || null,
     })
@@ -176,6 +191,10 @@ export async function PATCH(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  // The center this admin is bound to. A center-bound admin may only edit
+  // staff in their own center (authz check after the row is resolved below);
+  // a cross-center owner/superadmin (null center) may edit anyone.
+  const centerId = session.user.center_id ?? null;
 
   let body: Record<string, unknown>;
   try {
@@ -257,22 +276,43 @@ export async function PATCH(request: NextRequest) {
   }
 
   // Resolve the row id once so subsequent uniqueness checks can exclude self.
+  // Also pull the target's center_id for the center-membership authz check.
   let resolvedId = id;
+  let targetCenterId: string | null = null;
   if (!resolvedId) {
     const lookup = emailLookup || emailAsLookup;
     const { data: byEmail } = await supabase
       .from('employees')
-      .select('id')
+      .select('id, center_id')
       .ilike('email', lookup)
       .maybeSingle();
     if (!byEmail) {
       return NextResponse.json({ error: 'Staff member not found' }, { status: 404 });
     }
     resolvedId = byEmail.id;
+    targetCenterId = byEmail.center_id ?? null;
+  } else {
+    const { data: byId } = await supabase
+      .from('employees')
+      .select('id, center_id')
+      .eq('id', resolvedId)
+      .maybeSingle();
+    if (!byId) {
+      return NextResponse.json({ error: 'Staff member not found' }, { status: 404 });
+    }
+    targetCenterId = byId.center_id ?? null;
+  }
+
+  // Center-membership authz: a center-bound admin may only edit staff in their
+  // own center. A cross-center owner/superadmin (null center) skips this.
+  if (centerId && targetCenterId !== centerId) {
+    return NextResponse.json({ error: 'Not your center' }, { status: 403 });
   }
 
   // PIN must remain unique among active employees so the login lookup is
   // deterministic. Excluding self lets the admin "set the same PIN" no-op.
+  // Kept GLOBAL (not center-scoped) on purpose: the login/door lookup matches
+  // on pin alone, so the same PIN in two centers would make it ambiguous.
   if (typeof updates.pin === 'string') {
     const { data: pinClash } = await supabase
       .from('employees')
@@ -290,7 +330,8 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  // Email uniqueness on rename.
+  // Email uniqueness on rename. Also GLOBAL on purpose: email is the durable
+  // login identity, unique system-wide, not per-center.
   if (typeof updates.email === 'string' && updates.email) {
     const { data: emailClash } = await supabase
       .from('employees')
@@ -336,6 +377,10 @@ export async function DELETE(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  // The center this admin is bound to. A center-bound admin may only
+  // deactivate staff in their own center; a cross-center owner/superadmin
+  // (null center) may deactivate anyone.
+  const centerId = session.user.center_id ?? null;
 
   const email = (new URL(request.url).searchParams.get('email') || '')
     .toLowerCase()
@@ -349,15 +394,51 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
 
+  // Resolve the target row(s) by email FIRST so the soft-delete can be scoped
+  // to specific ids and gated by center membership. The previous code ran a
+  // bare .ilike('email', email) UPDATE, which would deactivate a matching
+  // staff member in ANY center: a cross-center hazard. We fetch broad, then
+  // enforce center authz, then update by id.
+  const { data: matches, error: lookupErr } = await supabase
+    .from('employees')
+    .select('id, center_id, first_name, last_name')
+    .ilike('email', email)
+    .limit(5000);
+
+  if (lookupErr) {
+    return NextResponse.json(
+      { error: 'Could not deactivate the staff member' },
+      { status: 500 }
+    );
+  }
+  if (!matches || matches.length === 0) {
+    return NextResponse.json({ error: 'Staff member not found' }, { status: 404 });
+  }
+
+  // Center-membership authz: a center-bound admin may only act on staff in
+  // their own center. Filter the matched rows to that center; if nothing
+  // remains, the target is not theirs. A cross-center owner (null center)
+  // keeps every match.
+  const inScope = centerId
+    ? matches.filter((m) => (m.center_id ?? null) === centerId)
+    : matches;
+  if (inScope.length === 0) {
+    return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+  }
+
+  const ids = inScope.map((m) => m.id as string);
+
   // Soft delete: deactivate. PIN auth already filters on active, so the PIN
-  // stops working at the door without touching any referencing rows.
+  // stops working at the door without touching any referencing rows. Scoped
+  // to the in-scope ids (filter in JS already done; .in here on a tiny id set
+  // for a single staff email is safe, not a many-uuid query).
   const { data, error } = await supabase
     .from('employees')
     .update({
       employment_status: 'inactive',
       updated_at: new Date().toISOString(),
     })
-    .ilike('email', email)
+    .in('id', ids)
     .select('id, first_name, last_name, employment_status');
 
   if (error || !data || data.length === 0) {

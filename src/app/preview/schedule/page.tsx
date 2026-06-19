@@ -20,10 +20,10 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { BigButton, Card, Chip, ScreenHeader, StepNote, SuccessBanner, useMounted } from "@/components/preview/ui";
+import { BigButton, Chip, SuccessBanner, useMounted } from "@/components/preview/ui";
 import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { AvatarUpload } from "@/components/preview/AvatarUpload";
-import { DAY_LABELS, ROOMS, roomById } from "@/lib/preview/fixtures";
+import { DAY_LABELS } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
 
@@ -63,6 +63,7 @@ const TIME_OPTIONS = [
 
 export default function SchedulePage() {
   const mounted = useMounted();
+  const rooms = usePreviewStore((s) => s.rooms);
   const staff = usePreviewStore((s) => s.staff);
   const shifts = usePreviewStore((s) => s.shifts);
   const staffPhotos = usePreviewStore((s) => s.staffPhotos);
@@ -117,13 +118,14 @@ export default function SchedulePage() {
   }
 
   return (
-    <main className="px-4 py-6">
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
       <div className="mx-auto max-w-4xl">
-        <ScreenHeader
-          title="the week"
-          note="People as rows, days as columns. Most weeks are the same week."
-        />
-        <StepNote step={7} text="Tap a colored shift to change it, or tap + Add on an empty day." />
+        <header className="mb-6">
+          <h1 className="pv-tad-title text-3xl sm:text-4xl">The week</h1>
+          <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
+            People as rows, days as columns. Most weeks are the same week.
+          </p>
+        </header>
 
         <div className="pv-rise mb-5 flex flex-col gap-3 sm:flex-row" style={{ animationDelay: "60ms" }}>
           <BigButton
@@ -141,7 +143,7 @@ export default function SchedulePage() {
         </div>
 
         <div className="pv-rise" style={{ animationDelay: "120ms" }}>
-        <Card>
+        <div className="pv-tile p-5">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-separate border-spacing-2">
               <thead>
@@ -188,7 +190,7 @@ export default function SchedulePage() {
                             dayShifts.length > 0 ? (
                               <div className="flex flex-col gap-2">
                                 {dayShifts.map((shift) => {
-                                  const room = shift.roomId ? roomById(shift.roomId) : null;
+                                  const room = shift.roomId ? rooms.find((r) => r.id === shift.roomId) ?? null : null;
                                   const accent = room ? room.color : "var(--pv-gold)";
                                   const ShiftIcon = room ? ROOM_ICON[room.id] ?? Baby : Briefcase;
                                   return (
@@ -244,11 +246,11 @@ export default function SchedulePage() {
               </tbody>
             </table>
           </div>
-        </Card>
+        </div>
         </div>
 
         {editor && editorStaff ? (
-          <Card className="pv-rise mt-5">
+          <div className="pv-tile pv-rise mt-5 p-5">
             <h2 className="pv-tad-title flex items-center gap-2 text-2xl">
               <PhotoAvatar
                 id={editorStaff.id}
@@ -312,7 +314,7 @@ export default function SchedulePage() {
 
             <p className="mb-1 mt-4 text-sm font-semibold lowercase" style={{ color: "var(--pv-muted)" }}>room</p>
             <div className="flex flex-wrap gap-3">
-              {ROOMS.map((room) => (
+              {rooms.map((room) => (
                 <Chip
                   key={room.id}
                   label={room.name}
@@ -336,11 +338,11 @@ export default function SchedulePage() {
               ) : null}
               <BigButton icon={X} label="Cancel" color="#8a8378" onClick={() => setEditor(null)} />
             </div>
-          </Card>
+          </div>
         ) : null}
 
         <div className="pv-rise mt-5 flex flex-wrap items-center gap-x-5 gap-y-2" style={{ animationDelay: "180ms" }}>
-          {ROOMS.map((room) => {
+          {rooms.map((room) => {
             const RoomIcon = ROOM_ICON[room.id] ?? Baby;
             return (
               <span key={room.id} className="flex items-center gap-1.5">

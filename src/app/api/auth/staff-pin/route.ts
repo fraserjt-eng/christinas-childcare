@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
   const { data: employee } = await supabase
     .from('employees')
-    .select('id, first_name, last_name, email, role, employment_status')
+    .select('id, first_name, last_name, email, role, employment_status, center_id')
     .eq('pin', pin)
     .eq('employment_status', 'active')
     .limit(1)
@@ -75,5 +75,6 @@ export async function POST(request: NextRequest) {
     email: employee.email || `pin-${employee.id}`,
     full_name: `${employee.first_name} ${employee.last_name}`.trim(),
     role,
+    center_id: (employee.center_id as string | null) ?? null,
   });
 }

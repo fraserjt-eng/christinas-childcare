@@ -10,9 +10,11 @@ import { centerDate } from '@/lib/center-time';
 // route uses the service-role client and returns ONLY the fields the kiosk
 // renders — never pin or password_hash.
 
-// The single operating center (Brooklyn Park). Id retained from the original
-// seed record, which was renamed from "Crystal Center" to "Brooklyn Park" once
-// the business consolidated to one location.
+// Default center for a kiosk that does not send one (legacy single-center
+// kiosks). Each kiosk is bound to ONE center via its per-device URL and sends
+// that center, which scopes every lookup and write below so a kiosk can never
+// resolve or mutate another center's family or attendance row. This id is
+// Brooklyn Park (renamed from the original "Crystal Center" seed record).
 const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 
 function todayDate(): string {
@@ -42,6 +44,8 @@ export async function POST(request: NextRequest) {
     childId?: string;
     childName?: string;
     familyId?: string;
+    employeeId?: string;
+    centerId?: string;
   };
   try {
     body = await request.json();
@@ -53,6 +57,12 @@ export async function POST(request: NextRequest) {
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
+
+  // The kiosk is bound to one center (its per-device URL). Every lookup and
+  // write below is scoped to this center so a kiosk can never resolve or mutate
+  // another center's family or attendance row. Defaults to the operating center
+  // for legacy single-center kiosks that don't send one.
+  const centerId = body.centerId || OPERATING_CENTER_ID;
 
   // ---- lookup: PIN -> family (tightly rate limited; this is the abuse path) ----
   if (body.action === 'lookup') {
@@ -77,6 +87,7 @@ export async function POST(request: NextRequest) {
       .select('id, email, status')
       .eq('pin', pin)
       .eq('status', 'active')
+      .eq('center_id', centerId)
       .limit(1);
 
     if (!families || families.length === 0) {
@@ -114,6 +125,7 @@ export async function POST(request: NextRequest) {
       .select('id, child_id, child_name, date, check_in, check_out')
       .eq('child_id', body.childId)
       .eq('date', todayDate())
+      .eq('center_id', centerId)
       .limit(1);
     return NextResponse.json({ data: data?.[0] || null });
   }
@@ -130,6 +142,7 @@ export async function POST(request: NextRequest) {
       .select('id, check_in, check_out')
       .eq('child_id', body.childId)
       .eq('date', today)
+      .eq('center_id', centerId)
       .limit(1);
     const existing = existingRows?.[0];
 
@@ -150,7 +163,7 @@ export async function POST(request: NextRequest) {
       child_name: body.childName,
       date: today,
       check_in: new Date().toISOString(),
-      center_id: OPERATING_CENTER_ID,
+      center_id: centerId,
       notes: body.familyId ? `family:${body.familyId}` : null,
     });
     return NextResponse.json({ data: { ok: true } });
@@ -165,7 +178,77 @@ export async function POST(request: NextRequest) {
       .from('attendance')
       .update({ check_out: new Date().toISOString() })
       .eq('child_id', body.childId)
-      .eq('date', todayDate());
+      .eq('date', todayDate())
+      .eq('center_id', centerId);
+    return NextResponse.json({ data: { ok: true } });
+  }
+
+  // ---- staff clock status: is this employee clocked in today? ----
+  if (body.action === 'clockstatus') {
+    if (!body.employeeId) return NextResponse.json({ data: { clockedIn: false } });
+    const { data: openRows } = await supabase
+      .from('time_entries')
+      .select('id, clock_in')
+      .eq('employee_id', body.employeeId)
+      .eq('date', todayDate())
+      .is('clock_out', null)
+      .limit(5);
+    const open = openRows?.[0];
+    return NextResponse.json({ data: { clockedIn: !!open, since: (open?.clock_in as string) ?? null } });
+  }
+
+  // ---- staff clock in / out (server-side; validates the employee's center) ----
+  if (body.action === 'clockin' || body.action === 'clockout') {
+    if (!body.employeeId) {
+      return NextResponse.json({ error: 'employeeId required' }, { status: 400 });
+    }
+    // The employee must belong to this kiosk's center.
+    const { data: emp } = await supabase
+      .from('employees')
+      .select('id, center_id')
+      .eq('id', body.employeeId)
+      .maybeSingle();
+    if (!emp) return NextResponse.json({ error: 'Unknown staff' }, { status: 404 });
+    if (emp.center_id && emp.center_id !== centerId) {
+      return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+    }
+
+    const today = todayDate();
+    const { data: openRows } = await supabase
+      .from('time_entries')
+      .select('id, clock_in')
+      .eq('employee_id', body.employeeId)
+      .eq('date', today)
+      .is('clock_out', null)
+      .limit(5);
+    const open = openRows?.[0];
+
+    if (body.action === 'clockin') {
+      if (open) return NextResponse.json({ data: { ok: true, already: true } });
+      await supabase.from('time_entries').insert({
+        employee_id: body.employeeId,
+        date: today,
+        clock_in: new Date().toISOString(),
+        status: 'open',
+        center_id: centerId,
+        source: 'kiosk',
+      });
+      return NextResponse.json({ data: { ok: true } });
+    }
+
+    // clockout
+    if (!open) return NextResponse.json({ data: { ok: true } });
+    const clockOut = new Date();
+    const startedAt = open.clock_in ? new Date(open.clock_in as string).getTime() : null;
+    const hours = startedAt ? Math.max(0, (clockOut.getTime() - startedAt) / 3_600_000) : null;
+    await supabase
+      .from('time_entries')
+      .update({
+        clock_out: clockOut.toISOString(),
+        status: 'closed',
+        hours_worked: hours != null ? Number(hours.toFixed(2)) : null,
+      })
+      .eq('id', open.id);
     return NextResponse.json({ data: { ok: true } });
   }
 

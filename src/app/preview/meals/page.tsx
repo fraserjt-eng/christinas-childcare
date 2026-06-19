@@ -6,10 +6,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Armchair, Check, ShieldAlert } from "lucide-react";
-import { Card, Chip, EmptyState, ScreenHeader, StepNote, useMounted } from "@/components/preview/ui";
+import { Chip, EmptyState, useMounted } from "@/components/preview/ui";
 import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { AvatarUpload } from "@/components/preview/AvatarUpload";
-import { ROOMS, type MealMark } from "@/lib/preview/fixtures";
+import { type MealMark } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 
 const MEAL_NAMES = ["Breakfast", "Morning snack", "Lunch", "Afternoon snack"];
@@ -22,6 +22,7 @@ const MARK_CHOICES: Array<{ value: MealMark; label: string; color: string }> = [
 
 export default function MealsPage() {
   const mounted = useMounted();
+  const rooms = usePreviewStore((s) => s.rooms);
   const kids = usePreviewStore((s) => s.kids);
   const checkedIn = usePreviewStore((s) => s.checkedIn);
   const meals = usePreviewStore((s) => s.meals);
@@ -40,7 +41,7 @@ export default function MealsPage() {
     };
   }, []);
 
-  const roomName = ROOMS.find((r) => r.id === roomId)?.name ?? "Room";
+  const roomName = rooms.find((r) => r.id === roomId)?.name ?? "Room";
   const presentKids = mounted
     ? kids.filter((k) => k.roomId === roomId && checkedIn[k.id])
     : [];
@@ -55,18 +56,22 @@ export default function MealsPage() {
   }
 
   return (
-    <main className="px-4 py-6">
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
       <div className="mx-auto max-w-2xl">
-        <ScreenHeader
-          title="food counts"
-          note="One row per child. Two taps max. Done at the table."
-        />
-        <StepNote step={6} text="Pick a room and a meal, then tap one chip per child." />
+        {/* Branded header: the real screen title (center identity now lives in
+            the global watermark behind the content). */}
+        <header className="pv-rise mb-6">
+          <h1 className="pv-tad-title text-3xl sm:text-4xl">Food counts</h1>
+          <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
+            One row per child. Two taps max. Done at the table.
+          </p>
+        </header>
 
-        {/* Room picker maps ROOMS from fixtures. Never hardcode rooms here:
-            a fifth room added to fixtures shows up with no code change. */}
+        {/* Room picker maps rooms from the store (seeded from fixtures in demo
+            mode, replaced with the center's real classrooms when signed in).
+            Never hardcode rooms here: a new room shows up with no code change. */}
         <div className="pv-rise flex flex-wrap gap-2" style={{ animationDelay: "60ms" }}>
-          {ROOMS.map((r) => (
+          {rooms.map((r) => (
             <Chip
               key={r.id}
               label={r.name}
@@ -83,7 +88,7 @@ export default function MealsPage() {
         </div>
 
         <div className="pv-rise mt-5" style={{ animationDelay: "180ms" }}>
-        <Card>
+        <div className="pv-tile p-5">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="pv-tad-title text-2xl">
               {meal}, {roomName}
@@ -176,7 +181,7 @@ export default function MealsPage() {
               ))}
             </ul>
           )}
-        </Card>
+        </div>
         </div>
 
         <p className="mt-5 text-base" style={{ color: "var(--pv-muted)" }}>

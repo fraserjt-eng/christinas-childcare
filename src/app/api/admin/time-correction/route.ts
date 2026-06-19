@@ -26,6 +26,9 @@ export async function POST(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  // A center-bound admin may only correct rows in their own center. The
+  // cross-center owner/superadmin (null center) may correct any row.
+  const centerId = session.user.center_id ?? null;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
@@ -55,11 +58,14 @@ export async function POST(request: NextRequest) {
   if (body.kind === 'clock') {
     const { data: existing } = await supabase
       .from('time_entries')
-      .select('id, clock_in, clock_out, break_minutes')
+      .select('id, clock_in, clock_out, break_minutes, center_id')
       .eq('id', id)
       .maybeSingle();
     if (!existing) {
       return NextResponse.json({ error: 'Time entry not found' }, { status: 404 });
+    }
+    if (centerId && existing.center_id !== centerId) {
+      return NextResponse.json({ error: 'Not your center' }, { status: 403 });
     }
 
     const clockIn =
@@ -116,11 +122,14 @@ export async function POST(request: NextRequest) {
   if (body.kind === 'attendance') {
     const { data: existing } = await supabase
       .from('attendance')
-      .select('id, check_in, check_out')
+      .select('id, check_in, check_out, center_id')
       .eq('id', id)
       .maybeSingle();
     if (!existing) {
       return NextResponse.json({ error: 'Attendance record not found' }, { status: 404 });
+    }
+    if (centerId && existing.center_id !== centerId) {
+      return NextResponse.json({ error: 'Not your center' }, { status: 403 });
     }
 
     const checkIn =
@@ -172,6 +181,9 @@ export async function DELETE(request: NextRequest) {
       { status: 401 }
     );
   }
+  // A center-bound admin may only delete rows in their own center. The
+  // cross-center owner/superadmin (null center) may delete any row.
+  const centerId = session.user.center_id ?? null;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
@@ -197,6 +209,25 @@ export async function DELETE(request: NextRequest) {
       { error: 'kind must be attendance, clock, or entry' },
       { status: 400 }
     );
+  }
+
+  // Center-membership AUTHZ: a center-bound admin may only delete a row whose
+  // center matches their session. All three target tables (attendance,
+  // time_entries, child_daily_entries) carry center_id directly, so we read it
+  // off the target row before touching it. Owner/superadmin (null center) skips
+  // this check and may delete any row.
+  if (centerId) {
+    const { data: target } = await supabase
+      .from(table)
+      .select('id, center_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (!target) {
+      return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+    }
+    if (target.center_id !== centerId) {
+      return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+    }
   }
 
   const { error } = await supabase.from(table).delete().eq('id', id);

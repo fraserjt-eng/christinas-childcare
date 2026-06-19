@@ -22,33 +22,51 @@ export async function GET() {
       { status: 401 }
     );
   }
+  // Scope payroll to the signed-in admin's center. A center-bound admin sees
+  // only their own center's employees and clock entries (pay-stub accuracy is
+  // a licensing concern and must never mix centers); the cross-center
+  // owner/superadmin (null center) sees everyone.
+  const centerId = session.user.center_id ?? null;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
 
+  // employees has center_id directly; scope it when the admin is center-bound.
+  let employeesQuery = supabase
+    .from('employees')
+    .select(
+      'id, first_name, last_name, email, role, job_title, hourly_rate, employment_status'
+    )
+    .limit(5000);
+  if (centerId) employeesQuery = employeesQuery.eq('center_id', centerId);
+
+  // time_entries also has center_id, but this query already sorts by clock_in.
+  // Per the PostgREST gotcha, do NOT add .eq() onto an .order() chain (it can
+  // silently drop rows); instead fetch broad (selecting center_id) and filter
+  // in JS below.
   const [{ data: employees }, { data: timeEntries }, { data: payStubs }] =
     await Promise.all([
-      supabase
-        .from('employees')
-        .select(
-          'id, first_name, last_name, email, role, job_title, hourly_rate, employment_status'
-        )
-        .limit(5000),
+      employeesQuery,
       supabase
         .from('time_entries')
         .select(
-          'id, employee_id, date, clock_in, clock_out, hours_worked, break_minutes, status'
+          'id, employee_id, center_id, date, clock_in, clock_out, hours_worked, break_minutes, status'
         )
         .order('clock_in', { ascending: false })
         .limit(5000),
       supabase.from('pay_stubs').select('*').limit(5000),
     ]);
 
+  // Filter time_entries to the admin's center in JS (see note above).
+  const scopedTimeEntries = centerId
+    ? (timeEntries ?? []).filter((t) => t.center_id === centerId)
+    : (timeEntries ?? []);
+
   return NextResponse.json(
     {
       employees: employees ?? [],
-      timeEntries: timeEntries ?? [],
+      timeEntries: scopedTimeEntries,
       payStubs: payStubs ?? [],
     },
     { headers: { 'Cache-Control': 'no-store' } }
@@ -63,6 +81,7 @@ export async function POST(request: NextRequest) {
       { status: 401 }
     );
   }
+  const centerId = session.user.center_id ?? null;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
@@ -85,6 +104,24 @@ export async function POST(request: NextRequest) {
     const rate = Number(body.hourly_rate);
     if (!body.employeeId || !Number.isFinite(rate) || rate < 0) {
       return NextResponse.json({ error: 'Invalid rate' }, { status: 400 });
+    }
+    // Center-membership authz: a center-bound admin may only change pay rates
+    // for employees in their own center. Fetch the target's center_id first and
+    // reject a cross-center write explicitly (403), rather than silently
+    // updating another center's record. A null-center owner/superadmin skips
+    // this check (they manage everyone).
+    if (centerId) {
+      const { data: target } = await supabase
+        .from('employees')
+        .select('center_id')
+        .eq('id', body.employeeId)
+        .maybeSingle();
+      if (!target) {
+        return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+      }
+      if (target.center_id !== centerId) {
+        return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+      }
     }
     const { error } = await supabase
       .from('employees')

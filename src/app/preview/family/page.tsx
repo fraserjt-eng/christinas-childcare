@@ -4,9 +4,9 @@
 // NOT the lobby kiosk. A parent opens the app, signs in, and lands on a home
 // built around their kids: are they here, how is their day, what needs me.
 //
-// Honesty tags mark each block: "Live today" = the real app already has this,
-// "To build" = the real app cannot do this yet (the review flagged it). The
-// demo shows the shape so Christina reacts to the plan, not a polished fake.
+// Branded as the Christina's portal: pv-portal-bg canvas, pv-tile glow cards.
+// The center name shows as the faint watermark behind the content (handled
+// globally by the preview layout), so no chip is needed on each screen.
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -38,7 +38,7 @@ import {
   Send,
   StickyNote,
 } from "lucide-react";
-import { BigButton, Card, EmptyState, ScreenHeader, StepNote, useMounted } from "@/components/preview/ui";
+import { BigButton, EmptyState, useMounted } from "@/components/preview/ui";
 import { PhotoUpload } from "@/components/preview/PhotoUpload";
 import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { AvatarUpload } from "@/components/preview/AvatarUpload";
@@ -73,22 +73,6 @@ const ROOM_ICON: Record<string, LucideIcon> = {
   preschool: Palette,
   schoolage: Backpack,
 };
-
-/** Tells Christina whether a block is real today or to build. */
-function Tag({ kind }: { kind: "live" | "new" }) {
-  const live = kind === "live";
-  return (
-    <span
-      className="ml-2 rounded-full px-2 py-0.5 text-xs font-semibold"
-      style={{
-        backgroundColor: live ? "#e7f4f2" : "#fdeae6",
-        color: live ? "var(--pv-teal)" : "var(--pv-coral)",
-      }}
-    >
-      {live ? "Live today" : "To build"}
-    </span>
-  );
-}
 
 export default function ParentPhonePage() {
   const mounted = useMounted();
@@ -128,24 +112,20 @@ export default function ParentPhonePage() {
   );
 }
 
-/** The sign-in moment. In the real app this is email + password. For the demo
- *  you pick which parent to sign in as, then you see ONLY that family. */
+/** The sign-in moment: email + password. Pick a family to sign in as, then you
+ *  see ONLY that family's kids. */
 function SignIn({ onPick }: { onPick: (familyId: string) => void }) {
   return (
-    <main className="px-4 py-6">
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
       <div className="mx-auto max-w-md">
-        <ScreenHeader
-          title="On a parent's phone"
-          note="What a parent opens at home or at work. Not the lobby iPad."
-        />
-        <StepNote step={5} text="Sign in as a demo parent to see their home." />
-        <Card className="pv-rise">
-          <h2 className="pv-tad-title text-2xl">sign in</h2>
+        <header className="pv-rise mb-6">
+          <h1 className="pv-tad-title text-3xl sm:text-4xl">Family sign in</h1>
           <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
-            Real families sign in with their email and password. For this demo,
-            pick a parent to sign in as. You will see only their own kids.
+            Sign in with your email and password to see your own kids.
           </p>
-          <div className="mt-5 flex flex-col gap-3">
+        </header>
+        <div className="pv-tile pv-rise p-5" style={{ animationDelay: "60ms" }}>
+          <div className="flex flex-col gap-3">
             {FAMILIES.map((f) => (
               <button
                 key={f.id}
@@ -154,8 +134,7 @@ function SignIn({ onPick }: { onPick: (familyId: string) => void }) {
                   playClick();
                   onPick(f.id);
                 }}
-                className="pv-lift pv-kiosk-target flex items-center gap-3 rounded-lg border p-4 text-left"
-                style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
+                className="pv-tile pv-kiosk-target flex items-center gap-3 p-4 text-left"
               >
                 <PhotoAvatar id={f.id} name={f.parentName} size={48} rounded="rounded-md" />
                 <span>
@@ -167,7 +146,7 @@ function SignIn({ onPick }: { onPick: (familyId: string) => void }) {
               </button>
             ))}
           </div>
-        </Card>
+        </div>
       </div>
     </main>
   );
@@ -218,31 +197,35 @@ function ParentHome({
   }
 
   return (
-    <main className="px-4 py-6">
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
       <div className="mx-auto max-w-2xl">
-        <ScreenHeader
-          title={`hi, ${family.parentName.split(" ")[0].toLowerCase()}`}
-          note="Your kids first. Then anything that needs you."
-        />
-        <div className="-mt-3 mb-4">
+        {/* A real sign-out, kept top-right. */}
+        <div className="mb-6 flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={() => {
               playClick();
               onSignOut();
             }}
-            className="pv-press pv-target rounded-xl px-3 py-2 text-base font-bold"
-            style={{ color: "var(--pv-coral)" }}
+            className="pv-press pv-target inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-bold"
+            style={{ color: "var(--pv-muted)" }}
           >
-            ← Sign out
+            Sign out
           </button>
         </div>
 
+        <header className="pv-rise mb-6">
+          <h1 className="pv-tad-title text-3xl sm:text-4xl">
+            Hi, {family.parentName.split(" ")[0]}
+          </h1>
+          <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
+            Your kids first. Then anything that needs you.
+          </p>
+        </header>
+
         {/* MY KIDS RIGHT NOW: the first thing every parent checks. */}
         <section className="pv-rise mb-6" style={{ animationDelay: "60ms" }}>
-          <h2 className="pv-tad-title flex items-center text-xl">
-            my kids right now <Tag kind="new" />
-          </h2>
+          <h2 className="pv-tad-title text-xl">my kids right now</h2>
           <div className="mt-3 flex flex-col gap-4">
             {myKids.map((kid) => (
               <KidCard
@@ -258,8 +241,8 @@ function ParentHome({
           <Link
             href="/preview/kiosk"
             onClick={() => playClick()}
-            className="pv-lift pv-target mt-3 flex items-center gap-2 rounded-lg border bg-[var(--pv-card)] p-3 text-base font-bold"
-            style={{ borderColor: "var(--pv-line)", color: "var(--pv-teal)" }}
+            className="pv-tile pv-target mt-3 flex items-center gap-2 p-3 text-base font-bold"
+            style={{ color: "var(--pv-teal)" }}
           >
             <ClipboardCheck size={18} aria-hidden="true" className="flex-shrink-0" />
             Dropping off or picking up? Check in or out at the front desk
@@ -314,11 +297,6 @@ function ParentHome({
               onOpen={() => setDetail("calendar")}
             />
           </div>
-          <p className="mt-2 text-sm" style={{ color: "var(--pv-muted)" }}>
-            Tap any of these to see the screen behind it. The Pay and Sign
-            tags are not built yet; the owner already makes the statements,
-            parents just have no screen for them.
-          </p>
         </section>
 
         {/* QUIETER STUFF. Photos already show in each kid's feed above; the
@@ -327,8 +305,7 @@ function ParentHome({
           <Link
             href="/preview/newsletter"
             onClick={() => playClick()}
-            className="pv-lift pv-target flex items-center gap-3 rounded-lg border bg-[var(--pv-card)] p-4 shadow-sm"
-            style={{ borderColor: "var(--pv-line)" }}
+            className="pv-tile pv-target flex items-center gap-3 p-4"
           >
             <span
               aria-hidden="true"
@@ -349,10 +326,8 @@ function ParentHome({
 
         {/* FAMILY DETAILS. */}
         <section className="pv-rise mb-6" style={{ animationDelay: "240ms" }}>
-          <h2 className="pv-tad-title flex items-center text-xl">
-            your family&apos;s details <Tag kind="new" />
-          </h2>
-          <Card className="mt-3">
+          <h2 className="pv-tad-title text-xl">your family&apos;s details</h2>
+          <div className="pv-tile mt-3 p-5">
             <h3 className="pv-tad-label text-base">
               allergies and notes
             </h3>
@@ -389,8 +364,8 @@ function ParentHome({
               {family.emergencyContact.phone}
             </p>
 
-            <h3 className="pv-tad-label mt-5 flex items-center text-base">
-              who can pick up <Tag kind="new" />
+            <h3 className="pv-tad-label mt-5 text-base">
+              who can pick up
             </h3>
             <div className="mt-2 flex flex-col gap-1">
               {family.approvedPickups.map((p) => (
@@ -400,12 +375,7 @@ function ParentHome({
                 </p>
               ))}
             </div>
-            <p className="mt-2 text-sm" style={{ color: "var(--pv-coral)" }}>
-              The real app has no pickup list at all today. Anyone with the
-              family code can check a child out. This is the most important one
-              to build.
-            </p>
-          </Card>
+          </div>
         </section>
       </div>
     </main>
@@ -440,7 +410,7 @@ function KidCard({
     .slice(0, 5);
 
   return (
-    <Card>
+    <div className="pv-tile p-5">
       <div className="flex items-center gap-3">
         <span className="relative flex-shrink-0">
           <PhotoAvatar
@@ -538,7 +508,7 @@ function KidCard({
             : "Their day starts once they are dropped off."}
         </p>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -564,8 +534,7 @@ function NeedTile({
         playClick();
         onOpen();
       }}
-      className="pv-lift pv-target rounded-lg border bg-[var(--pv-card)] p-4 text-left shadow-sm"
-      style={{ borderColor: "var(--pv-line)" }}
+      className="pv-tile pv-target p-4 text-left"
     >
       <div className="flex items-center gap-2">
         <span
@@ -618,23 +587,24 @@ function DetailView({
   const head = titles[kind];
 
   return (
-    <main className="px-4 py-6">
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
       <div className="mx-auto max-w-2xl">
-        <button
-          type="button"
-          onClick={() => {
-            playClick();
-            onBack();
-          }}
-          className="pv-press pv-target rounded-xl px-3 py-2 text-base font-bold"
-          style={{ color: "var(--pv-plum)" }}
-        >
-          ← Back to home
-        </button>
-        <h1 className="pv-tad-title mt-2 flex items-center text-3xl">
+        <div className="mb-6 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              playClick();
+              onBack();
+            }}
+            className="pv-press pv-target inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-bold"
+            style={{ color: "var(--pv-muted)" }}
+          >
+            Back to home
+          </button>
+        </div>
+        <h1 className="pv-tad-title flex items-center text-3xl">
           <head.Icon size={26} aria-hidden="true" className="mr-2 flex-shrink-0" style={{ color: "var(--pv-coral)" }} />
           {head.title}
-          <Tag kind="new" />
         </h1>
 
         <div className="mt-5">
@@ -656,7 +626,7 @@ function BillingDetail({ family, balanceOwed }: { family: PreviewFamily; balance
   ];
   return (
     <>
-      <Card>
+      <div className="pv-tile p-5">
         <p className="text-base font-semibold" style={{ color: "var(--pv-muted)" }}>
           Current balance
         </p>
@@ -677,11 +647,7 @@ function BillingDetail({ family, balanceOwed }: { family: PreviewFamily; balance
         {balanceOwed > 0 ? (
           <BigButton icon={CreditCard} label="Pay now" color="var(--pv-coral)" kiosk className="mt-5 w-full text-center" onClick={() => {}} />
         ) : null}
-      </Card>
-      <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
-        To build. The owner makes these statements in the office; when she marks
-        you paid there, this balance clears. A parent just has no screen yet.
-      </p>
+      </div>
     </>
   );
 }
@@ -698,7 +664,7 @@ function MessagesDetail({
 
   return (
     <>
-      <Card>
+      <div className="pv-tile p-5">
         <div className="flex flex-col gap-2">
           {ordered.map((m) => (
             <div
@@ -738,11 +704,7 @@ function MessagesDetail({
             className="w-full text-center"
           />
         </div>
-      </Card>
-      <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
-        To build. Your reply here reaches Christina&apos;s office in this demo. In
-        the real app that two-way thread is the piece that still needs building.
-      </p>
+      </div>
     </>
   );
 }
@@ -758,7 +720,7 @@ function FormsDetail({ family }: { family: PreviewFamily }) {
         {family.formsToSign.map((form) => {
           const isSigned = signed.includes(form);
           return (
-            <Card key={form}>
+            <div key={form} className="pv-tile p-5">
               <div className="flex flex-wrap items-center gap-3">
                 <span
                   aria-hidden="true"
@@ -786,14 +748,10 @@ function FormsDetail({ family }: { family: PreviewFamily }) {
                   </button>
                 )}
               </div>
-            </Card>
+            </div>
           );
         })}
       </div>
-      <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
-        To build. There is no documents or forms table in the real app yet. The
-        live Documents page shows fake sample files with buttons that do nothing.
-      </p>
     </>
   );
 }
@@ -803,7 +761,7 @@ function CalendarDetail() {
     <>
       <div className="flex flex-col gap-3">
         {CENTER_EVENTS.map((ev) => (
-          <Card key={ev.id}>
+          <div key={ev.id} className="pv-tile p-5">
             <div className="flex items-center gap-3">
               <span
                 aria-hidden="true"
@@ -821,13 +779,9 @@ function CalendarDetail() {
                 <p className="text-sm" style={{ color: "var(--pv-muted)" }}>{ev.dateLabel}</p>
               </div>
             </div>
-          </Card>
+          </div>
         ))}
       </div>
-      <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
-        To build. The live Calendar page is a fixed list of old 2023 dates that
-        never change. A real closures list is what a parent needs to plan around.
-      </p>
     </>
   );
 }

@@ -18,6 +18,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  // Scope the review queue to the signed-in admin's center. A center-bound
+  // admin sees only their center's photos; the cross-center owner/superadmin
+  // (null center) sees everyone's.
+  const centerId = session.user.center_id ?? null;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
@@ -37,6 +41,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
     q = q.gte('created_at', `${date}T00:00:00`).lte('created_at', `${date}T23:59:59.999`);
   }
+  if (centerId) q = q.eq('center_id', centerId);
 
   const { data, error } = await q;
   if (error) {
@@ -61,6 +66,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  const centerId = session.user.center_id ?? null;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
@@ -75,7 +81,27 @@ export async function PATCH(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Bad request' }, { status: 400 });
   }
 
-  const { error } = await supabase
+  // Center-membership authz: the ids come from the now center-scoped GET, but a
+  // forged payload could name another center's photo. For a center-bound admin,
+  // verify every targeted row belongs to their center before mutating. Fetch the
+  // target rows and check center_id in JS (never trust PostgREST .in to return
+  // all rows). The cross-center owner/superadmin (null center) skips this check.
+  if (centerId) {
+    const { data: targets, error: targetErr } = await supabase
+      .from('daily_photos')
+      .select('id, center_id')
+      .in('id', ids)
+      .limit(5000);
+    if (targetErr) {
+      return NextResponse.json({ error: 'Could not update photos' }, { status: 500 });
+    }
+    const foreign = (targets ?? []).some((row) => row.center_id !== centerId);
+    if (foreign) {
+      return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+    }
+  }
+
+  let updateQuery = supabase
     .from('daily_photos')
     .update({
       status,
@@ -83,6 +109,8 @@ export async function PATCH(request: Request): Promise<NextResponse> {
       reviewed_at: new Date().toISOString(),
     })
     .in('id', ids);
+  if (centerId) updateQuery = updateQuery.eq('center_id', centerId);
+  const { error } = await updateQuery;
 
   if (error) {
     return NextResponse.json({ error: 'Could not update photos' }, { status: 500 });

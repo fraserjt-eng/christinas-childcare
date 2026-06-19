@@ -48,18 +48,29 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Too many children at once (max 100)' }, { status: 400 });
   }
 
+  // Resolve who is acting first, so the classroom-by-name lookup can be scoped
+  // to their center. Classroom names are NOT center-unique: two centers can
+  // both have a "Toddlers" room, so an unscoped .eq('name', ...) could resolve
+  // the wrong center's room. Prefer the session center; fall back to the
+  // employee's own center. Null (cross-center owner/superadmin) stays unscoped.
+  const employee = await resolveSessionEmployee(session);
+  const centerId = session.user.center_id ?? employee?.center_id ?? null;
+
   // Resolve classroom_id from the name for metadata (nullable; never blocks).
+  // Scoped to the acting center so the right room is matched; sort/filter in JS
+  // is unnecessary here (single-name lookup). maybeSingle stays correct because
+  // the (center_id, name) pair is what identifies one room.
   let classroomId: string | null = null;
   if (classroomName) {
-    const { data: room } = await supabase
+    let roomQuery = supabase
       .from('classrooms')
       .select('id')
-      .eq('name', classroomName)
-      .maybeSingle();
+      .eq('name', classroomName);
+    if (centerId) roomQuery = roomQuery.eq('center_id', centerId);
+    const { data: room } = await roomQuery.maybeSingle();
     classroomId = (room?.id as string) ?? null;
   }
 
-  const employee = await resolveSessionEmployee(session);
   const occurredAt = new Date().toISOString();
   const date = centerDateOf(occurredAt);
 

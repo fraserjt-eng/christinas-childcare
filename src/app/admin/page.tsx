@@ -286,7 +286,10 @@ function ComingUpSection({
 // ─── Main Page ──────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
-  const { user: sessionUser } = useSessionUser();
+  // The center to scope to. A center-bound admin sees only their center's
+  // counts; the cross-center owner/superadmin (no employee center) sees all.
+  const { user: sessionUser, loading: sessionLoading } = useSessionUser();
+  const centerId = sessionUser?.center_id ?? null;
   const [zone, setZone] = useState<TimeZone>('core');
   const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
   const [snapshot, setSnapshot] = useState<TodaySnapshot>({
@@ -382,15 +385,18 @@ export default function AdminDashboard() {
     const ratioOk = (children: number, staff: number) =>
       children === 0 ? true : staff >= Math.ceil(children / 4);
 
-    // Children present right now: real, not-checked-out attendance.
+    // Children present right now: real, not-checked-out attendance, scoped to
+    // this admin's center (cross-center owner/superadmin: all centers).
     async function fetchAttendance() {
       try {
         const { supabase } = await import('@/lib/supabase');
         const today = new Date().toISOString().split('T')[0];
-        const { data } = await supabase
+        let attQuery = supabase
           .from('attendance')
           .select('id, child_name, check_in, check_out')
           .eq('date', today);
+        if (centerId) attQuery = attQuery.eq('center_id', centerId);
+        const { data } = await attQuery;
         if (data) {
           const checkedIn = data.filter((r: { check_out: string | null }) => !r.check_out).length;
           setSnapshot((prev) => ({
@@ -442,7 +448,12 @@ export default function AdminDashboard() {
       }
     }
 
-    fetchAttendance();
+    // Gate the center-scoped attendance read on the session so a center-bound
+    // admin never even briefly counts another center's children. The spine
+    // pulses (floor/meals) are already center-derived server-side.
+    if (!sessionLoading) {
+      fetchAttendance();
+    }
     fetchFloor();
     fetchMeals();
     setActions(getQuickActions(currentZone));
@@ -453,7 +464,7 @@ export default function AdminDashboard() {
     (async () => {
       const { subscribeToTable } = await import('@/lib/supabase/realtime');
       unsubscribe = subscribeToTable('attendance', () => {
-        fetchAttendance();
+        if (!sessionLoading) fetchAttendance();
       });
     })();
 
@@ -499,7 +510,9 @@ export default function AdminDashboard() {
         // localStorage read failure must not crash the dashboard
       }
     });
-  }, []);
+    // Re-run once the session resolves so the center-scoped attendance read
+    // uses the right center (null -> center, or stays null for superadmin).
+  }, [centerId, sessionLoading]);
 
   // Filter alerts by current zone
   const zoneAlerts = useMemo(

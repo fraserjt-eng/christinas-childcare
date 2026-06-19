@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LogIn, LogOut, RefreshCw, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useSessionUser } from '@/lib/use-session-user';
 
 // ISO <-> <input type="datetime-local"> (browser local time).
 function isoToLocal(iso: string | null): string {
@@ -62,6 +63,10 @@ function formatTime(iso: string): string {
 }
 
 export default function AttendancePage() {
+  // The center to scope to. A center-bound admin sees only their center; the
+  // cross-center owner/superadmin (no employee center) sees all centers.
+  const { user, loading: sessionLoading } = useSessionUser();
+  const centerId = user?.center_id ?? null;
   const [records, setRecords] = useState<ChildWithAttendance[]>([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -73,19 +78,26 @@ export default function AttendancePage() {
   const [editError, setEditError] = useState('');
 
   const loadData = useCallback(async () => {
+    // Wait for the session so we know which center to scope to. A center-bound
+    // admin must never even briefly see another center's children.
+    if (sessionLoading) return;
     const today = new Date().toISOString().split('T')[0];
 
-    // Get all children from Supabase
-    const { data: children, error: childErr } = await supabase
+    // Children for this admin's center (cross-center owner/superadmin: all).
+    let childQuery = supabase
       .from('family_children')
       .select('id, name, classroom, family_id');
+    if (centerId) childQuery = childQuery.eq('center_id', centerId);
+    const { data: children, error: childErr } = await childQuery;
     if (childErr) console.error('Children fetch error:', childErr.message);
 
-    // Get today's attendance
-    const { data: attendance } = await supabase
+    // Today's attendance, scoped to the same center.
+    let attQuery = supabase
       .from('attendance')
       .select('id, child_id, child_name, check_in, check_out, notes')
       .eq('date', today);
+    if (centerId) attQuery = attQuery.eq('center_id', centerId);
+    const { data: attendance } = await attQuery;
 
     const attendanceMap = new Map<string, AttendanceRecord>();
     if (attendance) {
@@ -132,7 +144,7 @@ export default function AttendancePage() {
 
     setRecords(merged);
     setLoading(false);
-  }, []);
+  }, [centerId, sessionLoading]);
 
   useEffect(() => {
     loadData();
@@ -184,7 +196,7 @@ export default function AttendancePage() {
       child_name: child.child_name,
       date: today,
       check_in: new Date().toISOString(),
-      center_id: OPERATING_CENTER_ID,
+      center_id: centerId ?? OPERATING_CENTER_ID,
     });
     await loadData();
   }

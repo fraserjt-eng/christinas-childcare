@@ -34,6 +34,7 @@ import {
   type OfficeTileId,
   type PreviewFamily,
   type PreviewKid,
+  type PreviewRoom,
   type PreviewShift,
   type PreviewStaff,
 } from "./fixtures";
@@ -73,7 +74,27 @@ export interface PreviewMessage {
   unread: boolean;
 }
 
+/** The live, real-data payload the front-facing portal hydrates from
+ *  (/api/portal/center-data). Same shape the fixtures define, but real rows
+ *  with real UUIDs and the center's actual classrooms as rooms. */
+export interface LivePayload {
+  centerId: string;
+  centerName: string | null;
+  centers: { id: string; name: string }[];
+  rooms: PreviewRoom[];
+  kids: PreviewKid[];
+  staff: PreviewStaff[];
+  families: PreviewFamily[];
+  checkedIn: Record<string, string | null>;
+  clockedIn: Record<string, string | null>;
+  feed: FeedEvent[];
+}
+
 export interface PreviewState {
+  /** The live center this portal is showing (null in the fixtures demo). */
+  centerId: string | null;
+  centerName: string | null;
+  rooms: PreviewRoom[];
   kids: PreviewKid[];
   staff: PreviewStaff[];
   families: PreviewFamily[];
@@ -122,11 +143,15 @@ export interface PreviewState {
   addOfficeTile: (tile: OfficeTileId) => void;
   removeOfficeTile: (tile: OfficeTileId) => void;
   toggleSound: () => void;
+  hydrateFromLive: (payload: LivePayload) => void;
   resetDemo: () => void;
 }
 
 function buildSeed() {
   return {
+    centerId: null as string | null,
+    centerName: null as string | null,
+    rooms: ROOMS.map((r) => ({ ...r })),
     kids: KIDS.map((k) => ({ ...k })),
     staff: STAFF.map((s) => ({ ...s })),
     families: FAMILIES.map((f) => ({ ...f, kidIds: [...f.kidIds] })),
@@ -437,6 +462,24 @@ export const usePreviewStore = create<PreviewState>()(
         set({ soundOn: next });
       },
 
+      hydrateFromLive: (payload) => {
+        set((state) => ({
+          centerId: payload.centerId,
+          centerName: payload.centerName,
+          rooms: payload.rooms,
+          kids: payload.kids,
+          staff: payload.staff,
+          families: payload.families,
+          checkedIn: payload.checkedIn,
+          clockedIn: payload.clockedIn,
+          feed: payload.feed,
+          balances: Object.fromEntries(payload.families.map((f) => [f.id, f.balanceOwed])),
+          threads: Object.fromEntries(payload.families.map((f) => [f.id, state.threads[f.id] ?? []])),
+          meals: {},
+          shifts: [],
+        }));
+      },
+
       resetDemo: () => {
         set(buildSeed());
         setSoundEnabled(true);
@@ -471,10 +514,10 @@ export interface RoomStatus {
  *  Call it OUTSIDE a zustand selector (it returns a fresh object every
  *  call, which zustand v5 reads as an endless snapshot change). */
 export function getRoomStatus(
-  state: Pick<PreviewState, "kids" | "staff" | "checkedIn" | "clockedIn">,
+  state: Pick<PreviewState, "kids" | "staff" | "checkedIn" | "clockedIn"> & { rooms?: PreviewRoom[] },
   roomId: string,
 ): RoomStatus {
-  const room = ROOMS.find((r) => r.id === roomId);
+  const room = (state.rooms ?? ROOMS).find((r) => r.id === roomId);
   const limit = room?.ratioLimit ?? 10;
   const present = state.kids.filter(
     (k) => k.roomId === roomId && state.checkedIn[k.id],

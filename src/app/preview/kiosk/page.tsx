@@ -24,7 +24,7 @@ import {
   Sun,
   Utensils,
 } from "lucide-react";
-import { BigButton, Card, ScreenHeader, StepNote, SuccessBanner, cx } from "@/components/preview/ui";
+import { BigButton, SuccessBanner, cx } from "@/components/preview/ui";
 import { PhotoUpload } from "@/components/preview/PhotoUpload";
 import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { roomById } from "@/lib/preview/fixtures";
@@ -63,6 +63,7 @@ export default function KioskPage() {
   const kidPhotos = usePreviewStore((s) => s.kidPhotos);
   const staffPhotos = usePreviewStore((s) => s.staffPhotos);
   const setStaffPhoto = usePreviewStore((s) => s.setStaffPhoto);
+  const centerId = usePreviewStore((s) => s.centerId);
 
   const [pin, setPin] = useState("");
   const [mode, setMode] = useState<Mode>({ kind: "pad" });
@@ -76,7 +77,17 @@ export default function KioskPage() {
     [activeFamily, kids],
   );
 
-  function submitPin(value: string) {
+  function failPin() {
+    playError();
+    setShake(true);
+    setTimeout(() => {
+      setShake(false);
+      setPin("");
+    }, 450);
+  }
+
+  async function submitPin(value: string) {
+    // Staff codes match this center's staff (the store carries them).
     const hitStaff = staff.find((s) => s.pin === value);
     if (hitStaff) {
       if (hitStaff.role === "owner") {
@@ -87,18 +98,26 @@ export default function KioskPage() {
       setPin("");
       return;
     }
-    const hitFamily = families.find((f) => f.pin === value);
-    if (hitFamily) {
-      setMode({ kind: "family", familyId: hitFamily.id });
-      setPin("");
-      return;
+    // Family codes are validated SERVER-SIDE (the PIN is never matched in the
+    // browser): the secure /api/kiosk route checks it against this center and
+    // returns the family id. We then render that family from the loaded data.
+    try {
+      const res = await fetch("/api/kiosk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "lookup", pin: value, centerId }),
+      });
+      const json = await res.json().catch(() => null);
+      const famId = json?.data?.id as string | undefined;
+      if (famId && families.some((f) => f.id === famId)) {
+        setMode({ kind: "family", familyId: famId });
+        setPin("");
+        return;
+      }
+    } catch {
+      /* fall through to the error shake */
     }
-    playError();
-    setShake(true);
-    setTimeout(() => {
-      setShake(false);
-      setPin("");
-    }, 450);
+    failPin();
   }
 
   function pressKey(key: string) {
@@ -121,28 +140,27 @@ export default function KioskPage() {
   }
 
   return (
-    <main className="px-4 py-6">
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
       <div className="mx-auto max-w-2xl">
-        <ScreenHeader
-          title="The kiosk"
-          backHref="/preview/door"
-          backLabel="Front door"
-          note="One pad for everyone. The code decides what happens next."
-        />
-        <StepNote step={2} text="Try staff code 7321, family code 1234, or office code 9999." />
+        <header className="pv-rise mb-8 text-center" style={{ animationDelay: "30ms" }}>
+          <h1 className="pv-tad-title text-4xl sm:text-5xl">Christina&apos;s Child Care</h1>
+          <p className="mt-3 text-lg font-semibold" style={{ color: "var(--pv-muted)" }}>
+            One pad for everyone. The code decides what happens next.
+          </p>
+        </header>
 
         {mode.kind === "pad" ? (
           <div className="pv-rise" style={{ animationDelay: "60ms" }}>
-          <Card className={cx("mx-auto max-w-md text-center", shake && "pv-shake")}>
+          <div className={cx("pv-tile mx-auto max-w-md p-7 text-center sm:p-8", shake && "pv-shake")}>
             <span
-              className="mx-auto flex h-11 w-11 items-center justify-center rounded-full"
-              style={{ backgroundColor: "rgba(198,40,40,0.10)" }}
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+              style={{ backgroundColor: "color-mix(in srgb, var(--pv-coral) 12%, white)" }}
               aria-hidden="true"
             >
-              <KeyRound size={20} style={{ color: "var(--pv-coral)" }} />
+              <KeyRound size={26} style={{ color: "var(--pv-coral)" }} />
             </span>
-            <h2 className="pv-tad-title mt-3 text-2xl">Enter your code</h2>
-            <div className="mt-5 flex justify-center gap-4" aria-label={`${pin.length} of 4 digits entered`}>
+            <h2 className="pv-tad-title mt-4 text-3xl">Enter your code</h2>
+            <div className="mt-6 flex justify-center gap-4" aria-label={`${pin.length} of 4 digits entered`}>
               {[0, 1, 2, 3].map((i) => (
                 <span
                   key={i}
@@ -154,31 +172,31 @@ export default function KioskPage() {
                 />
               ))}
             </div>
-            <div className="mx-auto mt-7 grid w-fit grid-cols-3 gap-4">
+            <div className="mx-auto mt-8 grid w-fit grid-cols-3 gap-4">
               {KEYS.map((key, i) =>
                 key ? (
                   <button
                     key={`${key}-${i}`}
                     type="button"
                     onClick={() => pressKey(key)}
-                    className="pv-press flex h-[72px] w-[72px] items-center justify-center rounded-xl border text-3xl font-semibold"
+                    className="pv-press flex h-[76px] w-[76px] items-center justify-center rounded-2xl border text-3xl font-semibold"
                     style={{ backgroundColor: "#fbfaf8", borderColor: "var(--pv-line)", color: "var(--pv-ink)" }}
                     aria-label={key === "⌫" ? "Delete a digit" : key}
                   >
                     {key === "⌫" ? <Delete size={28} aria-hidden="true" /> : key}
                   </button>
                 ) : (
-                  <span key={`blank-${i}`} className="h-[72px] w-[72px]" />
+                  <span key={`blank-${i}`} className="h-[76px] w-[76px]" />
                 ),
               )}
             </div>
-          </Card>
+          </div>
           </div>
         ) : null}
 
         {mode.kind === "staff" && activeStaff ? (
           <div className="pv-rise" style={{ animationDelay: "60ms" }}>
-          <Card className="mx-auto max-w-md text-center">
+          <div className="pv-tile mx-auto max-w-md p-6 text-center sm:p-7">
             <span className="inline-block">
               <PhotoAvatar
                 id={activeStaff.id}
@@ -202,6 +220,11 @@ export default function KioskPage() {
                   label="Clock out"
                   color="var(--pv-plum)"
                   onClick={() => {
+                    fetch("/api/kiosk", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "clockout", employeeId: activeStaff.id, centerId }),
+                    }).catch(() => {});
                     clockOutStaff(activeStaff.id);
                     setSuccess(`Bye ${activeStaff.firstName}. You are clocked out. See you tomorrow!`);
                   }}
@@ -213,6 +236,11 @@ export default function KioskPage() {
                   label="Clock in"
                   color="var(--pv-teal)"
                   onClick={() => {
+                    fetch("/api/kiosk", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "clockin", employeeId: activeStaff.id, centerId }),
+                    }).catch(() => {});
                     clockInStaff(activeStaff.id);
                     setSuccess(`Hi ${activeStaff.firstName}. You are clocked in. Have a great day!`);
                   }}
@@ -293,13 +321,13 @@ export default function KioskPage() {
             <div className="mt-6">
               <BigButton icon={Check} label="Done" color="#8a8378" onClick={backToPad} className="w-full text-center" />
             </div>
-          </Card>
+          </div>
           </div>
         ) : null}
 
         {mode.kind === "family" && activeFamily ? (
           <div className="pv-rise" style={{ animationDelay: "60ms" }}>
-          <Card className="mx-auto max-w-lg">
+          <div className="pv-tile mx-auto max-w-lg p-6 sm:p-7">
             <div className="text-center">
               <span className="inline-block">
                 <PhotoAvatar id={activeFamily.id} name={activeFamily.name} size={80} rounded="rounded-2xl" />
@@ -328,6 +356,19 @@ export default function KioskPage() {
                       type="button"
                       onClick={() => {
                         playClick();
+                        const action = inAt ? "checkout" : "checkin";
+                        // Persist to the real attendance table, center-scoped.
+                        fetch("/api/kiosk", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            action,
+                            childId: kid.id,
+                            childName: `${kid.firstName} ${kid.lastName}`.trim(),
+                            familyId: activeFamily.id,
+                            centerId,
+                          }),
+                        }).catch(() => {});
                         if (inAt) {
                           checkOutKid(kid.id, activeFamily.name);
                           setSuccess(`${kid.firstName} is checked out. See you tomorrow!`);
@@ -390,7 +431,7 @@ export default function KioskPage() {
             <div className="mt-6">
               <BigButton icon={Check} label="Done" color="var(--pv-plum)" onClick={backToPad} className="w-full text-center" />
             </div>
-          </Card>
+          </div>
           </div>
         ) : null}
       </div>

@@ -25,18 +25,15 @@ import {
 } from "lucide-react";
 import {
   BigButton,
-  Card,
   Chip,
   EmptyState,
-  ScreenHeader,
-  StepNote,
   SuccessBanner,
   useMounted,
 } from "@/components/preview/ui";
 import { PhotoUpload } from "@/components/preview/PhotoUpload";
 import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { AvatarUpload } from "@/components/preview/AvatarUpload";
-import { DEMO_PHOTOS, ROOMS } from "@/lib/preview/fixtures";
+import { DEMO_PHOTOS } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
 
@@ -195,6 +192,7 @@ const INFANT_ACTIONS: RoomAction[] = [
 
 export default function RoomPage() {
   const mounted = useMounted();
+  const rooms = usePreviewStore((s) => s.rooms);
   const kids = usePreviewStore((s) => s.kids);
   const checkedIn = usePreviewStore((s) => s.checkedIn);
   const kidPhotos = usePreviewStore((s) => s.kidPhotos);
@@ -220,7 +218,7 @@ export default function RoomPage() {
   const awayKids = mounted ? roomKids.filter((k) => !checkedIn[k.id]) : roomKids;
   const actions = roomId === "infants" ? INFANT_ACTIONS : STANDARD_ACTIONS;
   const activeAction = actions.find((a) => a.kind === activeKind) ?? null;
-  const activeRoom = ROOMS.find((r) => r.id === roomId) ?? null;
+  const activeRoom = rooms.find((r) => r.id === roomId) ?? null;
   const todaysLog = mounted
     ? feed.filter(
         (e) =>
@@ -292,6 +290,25 @@ export default function RoomPage() {
       photoId: uploadedUrl ? null : photoId,
       photoUrl: uploadedUrl,
     });
+    // Persist each child's entry to the real daily report (the teacher is
+    // signed in, so the secure child-entries route stamps it to their session
+    // + the child's room, and the family feed reads it back). A real uploaded
+    // photo is sent as photo_data so the route stores it in the photo bucket.
+    const isPhoto = action.kind === "photo";
+    for (const kidId of selectedKidIds) {
+      fetch("/api/child-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          child_id: kidId,
+          type: action.kind,
+          detail: detail ? { note: detail } : {},
+          ...(isPhoto && uploadedUrl && uploadedUrl.startsWith("data:")
+            ? { photo_data: uploadedUrl }
+            : {}),
+        }),
+      }).catch(() => {});
+    }
     closePanel();
     setSuccess("Saved. Families will see this in their feed.");
   }
@@ -299,13 +316,14 @@ export default function RoomPage() {
   const ActiveRoomIcon = activeRoom ? ROOM_ICON[activeRoom.id] ?? Baby : Baby;
 
   return (
-    <main className="pv-tad px-4 py-6">
+    <main className="pv-tad pv-portal-bg min-h-[100dvh] px-4 py-6">
       <div className="mx-auto max-w-3xl">
-        <ScreenHeader
-          title="room log"
-          note="Pick a room, log the day, fix anything you need to. Any teacher, any room."
-        />
-        <StepNote step={4} text="Pick a room, tap an action. Every kid here starts selected, so saving takes two taps." />
+        <header className="mb-6">
+          <h1 className="pv-tad-title text-3xl sm:text-4xl">Room log</h1>
+          <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
+            Pick a room, log the day, fix anything you need to. Any teacher, any room.
+          </p>
+        </header>
 
         <div className="pv-rise" style={{ animationDelay: "60ms" }}>
           <p className="flex items-center gap-1.5 text-base font-bold">
@@ -318,7 +336,7 @@ export default function RoomPage() {
             ) : null}
           </p>
           <div className="mt-2 flex flex-wrap gap-3">
-            {ROOMS.map((room) => (
+            {rooms.map((room) => (
               <Chip
                 key={room.id}
                 label={room.name}
@@ -331,7 +349,7 @@ export default function RoomPage() {
         </div>
 
         <div className="pv-rise mt-5" style={{ animationDelay: "120ms" }}>
-        <Card>
+        <div className="pv-tile p-5">
           {presentKids.length > 0 ? (
             <>
               <h2 className="text-2xl">
@@ -374,7 +392,7 @@ export default function RoomPage() {
               Not here yet: {awayKids.map((k) => k.firstName).join(", ")}
             </p>
           ) : null}
-        </Card>
+        </div>
         </div>
 
         <div className="pv-rise" style={{ animationDelay: "180ms" }}>
@@ -394,7 +412,7 @@ export default function RoomPage() {
         </div>
 
         {activeAction ? (
-          <Card className="mt-6">
+          <div className="pv-tile mt-6 p-5">
             <h2 className="pv-tad-title text-2xl">{activeAction.panelTitle.toLowerCase()}</h2>
 
             {activeAction.quickChips.length > 0 ? (
@@ -514,7 +532,7 @@ export default function RoomPage() {
               />
               <BigButton icon={Undo2} label="Cancel" color="#8a8378" onClick={closePanel} className="w-full" />
             </div>
-          </Card>
+          </div>
         ) : null}
 
         {/* TODAY'S LOG: edit the wording or remove an entry. Any teacher. */}
@@ -531,7 +549,7 @@ export default function RoomPage() {
             todaysLog.map((e) => {
               const KindIcon = KIND_ICON[e.kind] ?? StickyNote;
               return (
-              <Card key={e.id}>
+              <div key={e.id} className="pv-tile p-5">
                 {editingId === e.id ? (
                   <div className="flex flex-col gap-3">
                     <p className="flex items-center gap-1.5 text-base font-extrabold">
@@ -608,7 +626,7 @@ export default function RoomPage() {
                     </div>
                   </div>
                 )}
-              </Card>
+              </div>
               );
             })
           )}

@@ -28,6 +28,11 @@ export async function GET(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  // Center scoping: a center-bound admin/teacher sees only their center's
+  // entries. centerId === null means a cross-center owner/superadmin, who
+  // sees every center (query stays unscoped). child_daily_entries carries
+  // center_id directly (migration 030).
+  const centerId = session.user.center_id ?? null;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
@@ -37,15 +42,21 @@ export async function GET(request: NextRequest) {
   const date =
     searchParams.get('date') || centerDate();
 
-  const { data: kids } = await supabase
+  // family_children also carries center_id (verified table). Scope the roster
+  // too so a center-bound admin never sees another center's children listed
+  // (even with empty entries). Unscoped for cross-center owner/superadmin.
+  let kidsQuery = supabase
     .from('family_children')
-    .select('id, name, classroom')
-    .limit(5000);
+    .select('id, name, classroom');
+  if (centerId) kidsQuery = kidsQuery.eq('center_id', centerId);
+  const { data: kids } = await kidsQuery.limit(5000);
 
-  const { data: entries } = await supabase
+  let entriesQuery = supabase
     .from('child_daily_entries')
     .select('id, child_id, type, detail, occurred_at, date')
-    .eq('date', date)
+    .eq('date', date);
+  if (centerId) entriesQuery = entriesQuery.eq('center_id', centerId);
+  const { data: entries } = await entriesQuery
     .order('occurred_at', { ascending: false })
     .limit(5000);
 

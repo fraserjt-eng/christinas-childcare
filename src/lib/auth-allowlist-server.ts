@@ -34,7 +34,7 @@ export async function lookupInviteServer(email: string): Promise<AllowlistResult
   try {
     const { data: employee } = await supabase
       .from('employees')
-      .select('id, first_name, last_name, role, email, employment_status')
+      .select('id, first_name, last_name, role, email, employment_status, center_id')
       .ilike('email', normalizedEmail)
       .maybeSingle();
 
@@ -49,6 +49,7 @@ export async function lookupInviteServer(email: string): Promise<AllowlistResult
         role: resolvedRole,
         fullName: `${employee.first_name} ${employee.last_name}`.trim(),
         employeeId: employee.id,
+        centerId: (employee.center_id as string | null) ?? null,
       };
     }
   } catch (e) {

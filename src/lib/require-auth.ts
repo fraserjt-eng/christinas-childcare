@@ -19,6 +19,9 @@ export interface SessionUser {
   email: string;
   full_name?: string;
   role: string;
+  /** The center this session is scoped to (server-derived at mint time). Null
+   *  for superadmin (cross-center) and parents until families carry a center. */
+  center_id?: string | null;
 }
 
 export interface AuthedSession {

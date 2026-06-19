@@ -12,7 +12,7 @@
 
 **Production readiness + kiosk + family/employee management completed.** Supabase backend is live with 6 migrations and 22+ tables. iPad kiosk reads/writes directly to Supabase (zero localStorage). Attendance and ratio monitor show live kiosk data. Family management with approval flow. Employee registration with CSV bulk upload. Enrollment notifications (in-app + email + push) built. 97 pages, 13 commits this session.
 
-**Crystal Center ID:** `3104ae69-4f26-4c1e-a767-3ff45b534860` (use this for all attendance inserts)
+**Operating center (Brooklyn Park) ID:** `3104ae69-4f26-4c1e-a767-3ff45b534860` (the single live center today; this ID is Brooklyn Park, not Crystal. Multi-center work derives center_id from the session/kiosk, not this constant. Crystal is the new center being added.)
 **Demo PINs:** 1234 (Brown family: Noah + Ava), 5678 (Garcia family: Sofia)
 
 ## What This Is
@@ -147,7 +147,7 @@ christina-coral: #FF7043 (alerts, destructive)
 
 1. **Set spread fails:** Use `Array.from(new Set(...))` not `[...new Set(...)]`. The tsconfig target doesn't support downlevelIteration.
 2. **Migration timestamps must be unique dates:** Two migrations on YYYYMMDD cause `duplicate key` errors. Bump the date.
-3. **`attendance` table requires `center_id`:** Crystal Center ID is `3104ae69-4f26-4c1e-a767-3ff45b534860`. Always include it.
+3. **`attendance` table requires `center_id`:** the operating center (Brooklyn Park) is `3104ae69-4f26-4c1e-a767-3ff45b534860`. Going multi-center, derive center_id from the session/kiosk rather than hardcoding this constant.
 4. **`authenticateFamily` returns `{ family, pending }`** not `FamilyAccount | null`. Destructure the result.
 5. **ENFILE during local builds:** Too many parallel processes. Just deploy with `vercel --prod` instead.
 6. **Kiosk uses Supabase directly.** No localStorage. Any kiosk feature must query/write Supabase, not storage modules.

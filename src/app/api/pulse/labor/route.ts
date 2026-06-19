@@ -26,6 +26,11 @@ export async function GET(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  // Scope the labor pulse to the signed-in user's center. A center-bound admin
+  // sees only their center's rates, hours, and open clocks (payroll actuals
+  // must never mix centers); the cross-center owner/superadmin (null center)
+  // sees everyone.
+  const centerId = session.user.center_id ?? null;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
@@ -38,10 +43,12 @@ export async function GET(request: NextRequest) {
   const yearStart = `${new Date().getFullYear()}-01-01`;
 
   // Real hourly rates.
-  const { data: emps } = await supabase
+  let empQuery = supabase
     .from('employees')
     .select('id, first_name, last_name, hourly_rate')
     .limit(5000);
+  if (centerId) empQuery = empQuery.eq('center_id', centerId);
+  const { data: emps } = await empQuery;
   const rate = new Map<string, number>();
   const name = new Map<string, string>();
   for (const e of emps ?? []) {
@@ -53,12 +60,14 @@ export async function GET(request: NextRequest) {
   }
 
   // Every closed entry from the start of the year (covers byMonth + range).
-  const { data: entries, error } = await supabase
+  let entriesQuery = supabase
     .from('time_entries')
     .select('employee_id, date, hours_worked, clock_out')
     .gte('date', yearStart < start ? yearStart : start)
     .not('hours_worked', 'is', null)
     .limit(5000);
+  if (centerId) entriesQuery = entriesQuery.eq('center_id', centerId);
+  const { data: entries, error } = await entriesQuery;
   if (error) {
     return NextResponse.json(
       { error: 'Could not read labor' },
@@ -142,12 +151,14 @@ export async function GET(request: NextRequest) {
     Math.round(by_employee.reduce((s, e) => s + e.total_hours, 0) * 100) / 100;
 
   // Stale: still clocked in from a day before today (forgot to clock out).
-  const { data: stale } = await supabase
+  let staleQuery = supabase
     .from('time_entries')
     .select('employee_id, date')
     .is('clock_out', null)
     .lt('date', today)
     .limit(5000);
+  if (centerId) staleQuery = staleQuery.eq('center_id', centerId);
+  const { data: stale } = await staleQuery;
   const staleOpen = (stale ?? []).map((s) => ({
     employee_id: s.employee_id as string,
     employee_name: name.get(s.employee_id as string) || 'Staff',
