@@ -33,9 +33,22 @@ Promoting the new `/preview/*` design (the "Summer Version 1" portal: office, ro
 - **Dual-write** = cloud-first read + localStorage fallback, cloud write then local cache (`src/lib/supabase/service.ts`).
 - **PostgREST:** fetch broad, filter in JS, always `.limit(5000)`; avoid `.order()+.eq()` and `.in()` with many uuids (they drop rows).
 
-## Security status
-- **Advisor:** zero errors. The `rls_policy_always_true` warnings are the app's structural posture (app-layer auth, not RLS), not a regression. Migration 040 dropped the dead `authenticated` allow-all policies on the 9 new tables (latent landmine removed).
-- **Adversarial pre-cutover gate** (`pre-cutover-security-gate` workflow): route-auth, anon-exposure, and PII-leak dimensions completed; the secrets-build dimension + the synthesized verdict were re-run after a transient rate-limit. See the gate verdict (appended to this file / the wrap-up report) for the MUST-FIX vs SHOULD-FIX list. The headline should-fix: deny anon on any allow-all table that holds PII and route it through the service role.
+## Security status — GATE VERDICT: NO-GO until the blockers below are fixed
+The advisor is clean (zero errors), but the adversarial pre-cutover gate found
+five real blockers. **Do not cut over to production until A-E are done.** Two
+are already fixed.
+
+**MUST-FIX before cutover:**
+- **A. Backup endpoints (`/api/.../backup` + restore) only check "logged in," not admin.** Any parent/teacher can export AND overwrite/delete the entire DB (employees, families, children, financials, HR, incidents, pay). Worst finding. Fix: require admin on every backup/restore handler. STILL OPEN.
+- **B. center-data leaked staff PINs.** FIXED + verified (commit on branch): pin no longer selected/returned.
+- **C. center-data let a parent read any center's family data via ?center.** FIXED + verified: requireSession('teacher') + center-bound users locked to their own center; only owner/superadmin may pick.
+- **D. Anon publishable key can read/write "allow anyone" PII tables directly.** Sharpest: a writable user-directory/roster + security-settings table (flip parent to admin). Also parent message threads, contact prefs, subsidy status, substitutes. Fix: route these through server (service role), THEN remove the anon policy (repoint first or the feature breaks). Minimum set: user directory, notification_prefs, parent_conversations, comms, authorizations, substitutes, sub_assignments. STILL OPEN.
+- **E. `/preview` is a "demo" label over REAL data.** Staff make real, irreversible changes thinking they are fake. Fix is a DECISION (J's): make `/preview` the real portal (drop the demo banner + Reset-demo + passcode gate, real login, protect the routes) or cut its live-data connection. This is the same call as Phase 5. STILL OPEN.
+- **Operational:** confirm prod has `SESSION_SECRET` + service role + Supabase URL/anon set, and `NEXT_PUBLIC_DEMO_MODE` / `NEXT_PUBLIC_SEED_DEMO_DATA` are OFF.
+
+**SHOULD-FIX (fast follow, not blockers):** lock the newsletter send + generate endpoints to admin; tighten the cross-center admin role-change + teacher schedule-edit edge cases; lock the remaining non-PII allow-anyone tables (cacfp, meetings, knowledge, lessons, supplies, announcements, news, newsletters); add login to the daily-reports/staffing-alerts/training-digest reads; drop the internal staff id from the parent timeline.
+
+**Already solid (gate-confirmed):** no secrets in code/git; sessions fail closed without SESSION_SECRET; parent routes (me/children/photos/messages) derive the family from the session (no cross-family peek); the kiosk is locked + never returns pins; most admin/staff routes are center-scoped; signed photo URLs; public intake forms are write-only. The correct pattern already exists in the codebase (staff-employees strips pins), so the fixes are surgical.
 
 ## The cutover (Phase 8)
 Runbook: `PRODUCTION-CUTOVER.md` (this folder). Migration bundle: `030-041-prod-bundle.sql` (additive, idempotent, non-destructive; backfills existing data to Brooklyn Park). No new prod env vars needed.
@@ -48,10 +61,13 @@ Runbook: `PRODUCTION-CUTOVER.md` (this folder). Migration bundle: `030-041-prod-
 4. Add the Crystal center (rooms, staff, families) when opening it.
 5. Optionally rotate the test DB key after the staging week.
 
-**Build should-fixes (after J's go on the gate):**
-- Deny anon + server-route any allow-all table holding PII (from the gate).
-- Production banner/gate cleanup (the "Demo data only" preview chrome).
-- The legacy `employees` anon-RLS pattern is now bridged for the board; consider the same for other admin pages that still rely on a local cache.
+**Next-session build (the gate blockers, see Security status):** these gate the
+cutover.
+- **A.** Admin-gate the backup/restore endpoints. (Open.)
+- **D.** Route the PII allow-anyone tables (user directory, notification_prefs, parent_conversations, comms, authorizations, substitutes, sub_assignments) through the service role, then drop their anon policy. (Open.)
+- **E.** Decide + apply the `/preview` production treatment (this IS the Phase 5 route decision). (Open, needs J.)
+- B + C (center-data) are DONE.
+- Then the should-fixes (newsletter admin-gate, cross-center edge cases, the remaining non-PII tables, the staff-id in the parent timeline).
 
 ## Critical gotchas (cost real time this session)
 - `vercel link` rewrites `.env.local` (wiped the test service_role key). Back it up first.
