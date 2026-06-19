@@ -23,6 +23,7 @@ import {
   createShift,
   updateShift,
   deleteShift,
+  syncShiftsFromCloud,
   getRatioCompliance,
   backfillShiftClassrooms,
   CENTER_LABELS,
@@ -326,7 +327,14 @@ export function ScheduleOptimizer() {
   }, [mondayKey]);
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    (async () => {
+      await syncShiftsFromCloud();
+      if (!cancelled) loadData();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [loadData]);
 
   const weekLabel = `${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${

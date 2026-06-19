@@ -28,6 +28,7 @@ import {
   createShift,
   updateShift,
   deleteShift,
+  syncShiftsFromCloud,
   CENTER_LABELS,
   type ScheduleShift,
 } from '@/lib/schedule-optimizer-storage';
@@ -397,7 +398,12 @@ export default function DragScheduleBoard() {
       const mapped: StaffMember[] = active.map((e: Employee) => ({
         id: e.id,
         name: `${e.first_name} ${e.last_name}`,
-        center: 'crystal' as const, // Default center; can be extended
+        // Real center from the employee record (Crystal vs Brooklyn Park),
+        // not a hardcoded default, so the board groups staff correctly.
+        center: ((e as { center_id?: string }).center_id ===
+        'b2000000-0000-0000-0000-000000000002'
+          ? 'crystal'
+          : 'brooklyn_park') as 'crystal' | 'brooklyn_park',
       }));
       if (mapped.length > 0) {
         setStaff(mapped);
@@ -406,8 +412,18 @@ export default function DragScheduleBoard() {
     loadStaff();
   }, [mounted]);
 
+  // Pull this center's cloud shifts (what the portal recorded) into the local
+  // cache, then render. Re-runs when the week changes so the board stays fresh.
   useEffect(() => {
-    if (mounted) loadShifts();
+    if (!mounted) return;
+    let cancelled = false;
+    (async () => {
+      await syncShiftsFromCloud();
+      if (!cancelled) loadShifts();
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [mounted, loadShifts]);
 
   const sensors = useSensors(

@@ -1,5 +1,13 @@
 // Schedule Optimizer Storage Module for Christina's Child Care Center
-// localStorage persistence, designed for Supabase migration
+// localStorage persistence with cloud sync to staff_schedules (the table the
+// new portal writes shifts to), so the admin drag board and the portal schedule
+// share one source of truth. staff_schedules is RLS service-role-only, so cloud
+// reads/writes go through the session-gated /api/staff/schedule route, never the
+// anon client.
+
+import { currentCenterId } from '@/lib/current-center';
+
+const CRYSTAL_CENTER_ID = 'b2000000-0000-0000-0000-000000000002';
 
 export interface ScheduleShift {
   id: string;
@@ -245,10 +253,80 @@ export function getShifts(filters?: {
   return shifts.sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
 }
 
+// ── Cloud sync (staff_schedules via the session-gated route) ────────────────
+
+const CENTER_API = '/api/staff/schedule';
+
+// A UUID so the local shift id matches the cloud row id (the route honors a
+// provided UUID), so a later sync reconciles cleanly with no duplicate.
+function newShiftId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return generateId();
+}
+
+// The current center as the board's label.
+function currentCenterLabel(): 'crystal' | 'brooklyn_park' {
+  return currentCenterId() === CRYSTAL_CENTER_ID ? 'crystal' : 'brooklyn_park';
+}
+
+// Pull THIS center's cloud shifts into the local cache so the board shows what
+// the portal recorded. Cloud is authoritative for the current center; the other
+// center's local shifts are left untouched. No-ops (keeps local as-is) when
+// there is no session or the fetch fails, so offline edits are never lost.
+export async function syncShiftsFromCloud(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  let cloud: ScheduleShift[];
+  try {
+    const res = await fetch(CENTER_API);
+    if (!res.ok) return;
+    const json = (await res.json()) as { shifts?: Array<Record<string, unknown>> };
+    const label = currentCenterLabel();
+    cloud = (json.shifts ?? []).map((r) => ({
+      id: r.id as string,
+      employee_id: r.employee_id as string,
+      employee_name: '',
+      center_id: label,
+      date: r.date as string,
+      start_time: (r.start_time as string) || '',
+      end_time: (r.end_time as string) || '',
+      classroom_id: (r.classroom_id as string | null) ?? undefined,
+      is_overtime: false,
+    }));
+  } catch {
+    return;
+  }
+  const label = currentCenterLabel();
+  const otherCenter = getFromStorage<ScheduleShift>(SHIFTS_KEY).filter(
+    (s) => s.center_id !== label
+  );
+  saveToStorage(SHIFTS_KEY, [...cloud, ...otherCenter]);
+}
+
+function pushShiftToCloud(shift: ScheduleShift): void {
+  if (typeof window === 'undefined') return;
+  void fetch(CENTER_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: shift.id,
+      employeeId: shift.employee_id,
+      date: shift.date,
+      start: shift.start_time,
+      end: shift.end_time,
+      classroomId: shift.classroom_id ?? null,
+    }),
+  }).catch(() => {});
+}
+
 export function createShift(data: Omit<ScheduleShift, 'id'>): ScheduleShift {
   const shifts = getFromStorage<ScheduleShift>(SHIFTS_KEY);
-  const shift: ScheduleShift = { ...data, id: generateId() };
+  const shift: ScheduleShift = { ...data, id: newShiftId() };
   saveToStorage(SHIFTS_KEY, [...shifts, shift]);
+  // Mirror to the cloud (same id) so the portal sees it. Fire-and-forget; the
+  // local write already updated the board.
+  pushShiftToCloud(shift);
   return shift;
 }
 
@@ -258,12 +336,29 @@ export function updateShift(id: string, updates: Partial<ScheduleShift>): Schedu
   if (idx === -1) return null;
   shifts[idx] = { ...shifts[idx], ...updates };
   saveToStorage(SHIFTS_KEY, shifts);
+  if (typeof window !== 'undefined') {
+    const patch: Record<string, unknown> = { id };
+    if (updates.date !== undefined) patch.date = updates.date;
+    if (updates.start_time !== undefined) patch.start = updates.start_time;
+    if (updates.end_time !== undefined) patch.end = updates.end_time;
+    if (updates.classroom_id !== undefined) patch.classroomId = updates.classroom_id;
+    void fetch(CENTER_API, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    }).catch(() => {});
+  }
   return shifts[idx];
 }
 
 export function deleteShift(id: string): void {
   const shifts = getFromStorage<ScheduleShift>(SHIFTS_KEY).filter(s => s.id !== id);
   saveToStorage(SHIFTS_KEY, shifts);
+  if (typeof window !== 'undefined') {
+    void fetch(`${CENTER_API}?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }).catch(() => {});
+  }
 }
 
 // ============================================================================

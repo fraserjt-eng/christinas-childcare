@@ -109,8 +109,10 @@ export async function POST(request: NextRequest) {
   if (!centerId) return fail('No center', 404);
 
   let body: {
+    id?: string;
     employeeId?: string;
     day?: number;
+    date?: string;
     start?: string;
     end?: string;
     classroomId?: string | null;
@@ -123,7 +125,16 @@ export async function POST(request: NextRequest) {
 
   const employeeId = (body.employeeId || '').trim();
   if (!employeeId) return fail('employeeId required', 400);
-  if (!isValidDay(body.day)) return fail('day must be 0 through 4', 400);
+  // Accept either a full date (the admin drag board schedules across arbitrary
+  // weeks) or a this-week day index 0-4 (the portal's single-week grid).
+  let date: string;
+  if (typeof body.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
+    date = body.date;
+  } else if (isValidDay(body.day)) {
+    date = dateForDay(body.day);
+  } else {
+    return fail('date (YYYY-MM-DD) or day (0 through 4) required', 400);
+  }
   const start = (body.start || '').trim();
   const end = (body.end || '').trim();
   if (!start || !end) return fail('start and end required', 400);
@@ -140,11 +151,16 @@ export async function POST(request: NextRequest) {
     return fail('Not your center', 403);
   }
 
-  const date = dateForDay(body.day);
+  // Honor a client-provided UUID so the admin board's local shift id matches
+  // the cloud row id (no divergence, no duplicate on the next cloud sync).
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const clientId =
+    typeof body.id === 'string' && UUID.test(body.id) ? body.id : undefined;
 
   const { data: inserted, error: insErr } = await supabase
     .from('staff_schedules')
     .insert({
+      ...(clientId ? { id: clientId } : {}),
       employee_id: employeeId,
       center_id: centerId,
       date,
@@ -215,6 +231,7 @@ export async function PATCH(request: NextRequest) {
   let body: {
     id?: string;
     day?: number;
+    date?: string;
     start?: string;
     end?: string;
     classroomId?: string | null;
@@ -242,7 +259,10 @@ export async function PATCH(request: NextRequest) {
 
   // Update only the provided fields.
   const patch: Record<string, unknown> = {};
-  if (body.day !== undefined) {
+  if (body.date !== undefined) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date || '')) return fail('invalid date', 400);
+    patch.date = body.date;
+  } else if (body.day !== undefined) {
     if (!isValidDay(body.day)) return fail('day must be 0 through 4', 400);
     patch.date = dateForDay(body.day);
   }
