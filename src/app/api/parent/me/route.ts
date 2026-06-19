@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionFamily } from '@/lib/parent-server';
+import { centerDate } from '@/lib/center-time';
 
 // The signed-in parent's REAL family record (profile + parents + children),
 // from the verified session email. Replaces the home page's stale
@@ -45,6 +46,32 @@ export async function GET() {
         .limit(200),
     ]);
 
+  // Today's presence for this family's own children (parent-scoped: we only
+  // ever query the kids resolved from the verified session, never a client id).
+  // "here since <time>" if checked in with no check-out, else null.
+  const kidIds = (kids ?? []).map((c) => c.id as string);
+  const presence: Record<string, string | null> = {};
+  if (kidIds.length) {
+    const { data: att } = await supabase
+      .from('attendance')
+      .select('child_id, check_in, check_out')
+      .in('child_id', kidIds)
+      .eq('date', centerDate())
+      .limit(5000);
+    for (const a of att ?? []) {
+      const cid = a.child_id as string;
+      if (a.check_out) {
+        presence[cid] = null;
+        continue;
+      }
+      const t = a.check_in ? new Date(a.check_in as string) : null;
+      presence[cid] =
+        t && !isNaN(t.getTime())
+          ? t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          : null;
+    }
+  }
+
   const family = {
     id: fam.family_id,
     email: (famRow?.email as string) || fam.email,
@@ -71,6 +98,7 @@ export async function GET() {
         allergies: (c.allergies as string[] | null) || [],
         medical_notes: (c.medical_notes as string | null) || undefined,
         emergency_contacts: [],
+        checked_in_at: presence[c.id as string] ?? null,
       })),
   };
 

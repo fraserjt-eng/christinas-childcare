@@ -9,7 +9,8 @@
 // globally by the preview layout), so no chip is needed on each screen.
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
 import {
   AlertTriangle,
   Apple,
@@ -75,6 +76,28 @@ const ROOM_ICON: Record<string, LucideIcon> = {
 };
 
 export default function ParentPhonePage() {
+  const { user, loading } = useSessionUser();
+
+  // A real signed-in parent sees their OWN family, pulled live from the server
+  // (their kids, their real daily reports). Staff previewing the design with no
+  // parent session fall through to the fixture picker below, so the demo still
+  // works without touching real data.
+  if (loading) {
+    return (
+      <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
+        <div className="mx-auto max-w-2xl pv-rise">
+          <p className="text-base" style={{ color: "var(--pv-muted)" }}>Loading your family…</p>
+        </div>
+      </main>
+    );
+  }
+  if (user && user.role === "parent") {
+    return <RealParentHome user={user} />;
+  }
+  return <PreviewParentPhone />;
+}
+
+function PreviewParentPhone() {
   const mounted = useMounted();
   const kids = usePreviewStore((s) => s.kids);
   const feed = usePreviewStore((s) => s.feed);
@@ -783,6 +806,398 @@ function CalendarDetail() {
         ))}
       </div>
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// REAL parent home: the signed-in parent's OWN family + live daily reports.
+// Pulls /api/parent/me (their kids, profile, today's presence) and each kid's
+// real per-child report from /api/child-entries (parent-scoped server-side, so
+// a parent can only ever see their own children). Only renders what has a real
+// source; billing, forms, and two-way messages have no parent-facing data yet,
+// so they are omitted rather than shown as fake numbers.
+// ---------------------------------------------------------------------------
+
+interface ApiParent {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  relationship: string;
+  is_primary: boolean;
+}
+interface ApiChild {
+  id: string;
+  name: string;
+  classroom: string;
+  allergies: string[];
+  medical_notes?: string;
+  checked_in_at: string | null;
+}
+interface ApiFamily {
+  id: string;
+  email: string;
+  address?: string;
+  parents: ApiParent[];
+  children: ApiChild[];
+}
+interface ApiEntry {
+  id: string;
+  type: string;
+  detail?: Record<string, unknown>;
+  occurred_at?: string;
+  classroom_id?: string | null;
+}
+
+const KNOWN_KINDS: FeedEvent["kind"][] = [
+  "meal",
+  "bottle",
+  "diaper",
+  "nap",
+  "activity",
+  "photo",
+  "note",
+];
+
+function entryToFeed(e: ApiEntry, kidId: string): FeedEvent {
+  const detail = e.detail ?? {};
+  const text =
+    (detail.note as string) ||
+    (detail.text as string) ||
+    (detail.summary as string) ||
+    "";
+  const type = (e.type || "note").toLowerCase();
+  const kind = (KNOWN_KINDS.includes(type as FeedEvent["kind"])
+    ? type
+    : "note") as FeedEvent["kind"];
+  const when = e.occurred_at ? new Date(e.occurred_at) : null;
+  const time =
+    when && !isNaN(when.getTime())
+      ? when.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+      : "";
+  return {
+    id: e.id,
+    kind,
+    roomId: (e.classroom_id as string) || "",
+    kidIds: [kidId],
+    title: type.charAt(0).toUpperCase() + type.slice(1),
+    detail: text,
+    time,
+    dayLabel: "Today",
+    photoId: null,
+    photoUrl: (detail.photo_url as string) || null,
+  };
+}
+
+async function realSignOut() {
+  try {
+    await fetch("/api/auth/session", { method: "DELETE" });
+  } catch {
+    /* best effort */
+  }
+  window.location.href = "/login";
+}
+
+function SignOutBar() {
+  return (
+    <div className="mb-6 flex items-center justify-end gap-3">
+      <button
+        type="button"
+        onClick={() => {
+          playClick();
+          realSignOut();
+        }}
+        className="pv-press pv-target inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-bold"
+        style={{ color: "var(--pv-muted)" }}
+      >
+        Sign out
+      </button>
+    </div>
+  );
+}
+
+function RealParentHome({ user }: { user: SessionUser }) {
+  const [family, setFamily] = useState<ApiFamily | null>(null);
+  const [feed, setFeed] = useState<FeedEvent[]>([]);
+  const [phase, setPhase] = useState<"loading" | "ready" | "empty" | "error">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const meRes = await fetch("/api/parent/me");
+        const meJson = meRes.ok ? await meRes.json() : null;
+        const fam: ApiFamily | null = meJson?.family ?? null;
+        if (cancelled) return;
+        if (!fam) {
+          setPhase("empty");
+          return;
+        }
+        setFamily(fam);
+        const lists = await Promise.all(
+          (fam.children ?? []).map((k) =>
+            fetch(`/api/child-entries?child_id=${encodeURIComponent(k.id)}`)
+              .then((r) => (r.ok ? r.json() : { entries: [] }))
+              .then((d) => ({ kidId: k.id, entries: (d.entries ?? []) as ApiEntry[] }))
+              .catch(() => ({ kidId: k.id, entries: [] as ApiEntry[] })),
+          ),
+        );
+        if (cancelled) return;
+        const events: FeedEvent[] = [];
+        for (const { kidId, entries } of lists) {
+          for (const e of entries) events.push(entryToFeed(e, kidId));
+        }
+        setFeed(events);
+        setPhase("ready");
+      } catch {
+        if (!cancelled) setPhase("error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (phase === "loading") {
+    return (
+      <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
+        <div className="mx-auto max-w-2xl pv-rise">
+          <p className="text-base" style={{ color: "var(--pv-muted)" }}>Loading your kids…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (phase === "error" || !family) {
+    return (
+      <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
+        <div className="mx-auto max-w-md pv-rise">
+          <SignOutBar />
+          <div className="pv-tile p-6">
+            <h1 className="pv-tad-title text-2xl">We could not find your family</h1>
+            <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
+              {phase === "error"
+                ? "Something went wrong loading your kids. Please try again."
+                : "Your account is not linked to a family yet. The office can connect it."}
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const fam = family;
+  const firstName = (user.full_name || fam.email).split(" ")[0];
+  const primary = fam.parents.find((p) => p.is_primary) ?? fam.parents[0];
+  const checkedIn: Record<string, string | null> = {};
+  for (const k of fam.children) checkedIn[k.id] = k.checked_in_at;
+
+  return (
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
+      <div className="mx-auto max-w-2xl">
+        <SignOutBar />
+
+        <header className="pv-rise mb-6">
+          <h1 className="pv-tad-title text-3xl sm:text-4xl">Hi, {firstName}</h1>
+          <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
+            Your kids first. Then anything that needs you.
+          </p>
+        </header>
+
+        <section className="pv-rise mb-6" style={{ animationDelay: "60ms" }}>
+          <h2 className="pv-tad-title text-xl">my kids right now</h2>
+          <div className="mt-3 flex flex-col gap-4">
+            {fam.children.map((kid) => (
+              <RealKidCard key={kid.id} kid={kid} feed={feed} checkedIn={checkedIn} />
+            ))}
+            {fam.children.length === 0 ? (
+              <EmptyState
+                icon={Baby}
+                title="No children on file yet"
+                detail="The office can add your kids to your account."
+              />
+            ) : null}
+          </div>
+          <Link
+            href="/preview/kiosk"
+            onClick={() => playClick()}
+            className="pv-tile pv-target mt-3 flex items-center gap-2 p-3 text-base font-bold"
+            style={{ color: "var(--pv-teal)" }}
+          >
+            <ClipboardCheck size={18} aria-hidden="true" className="flex-shrink-0" />
+            Dropping off or picking up? Check in or out at the front desk
+            <ArrowRight size={18} aria-hidden="true" className="ml-auto flex-shrink-0" />
+          </Link>
+        </section>
+
+        <section className="pv-rise mb-6" style={{ animationDelay: "120ms" }}>
+          <Link
+            href="/preview/newsletter"
+            onClick={() => playClick()}
+            className="pv-tile pv-target flex items-center gap-3 p-4"
+          >
+            <span
+              aria-hidden="true"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md"
+              style={{ backgroundColor: "#fdeae6" }}
+            >
+              <Newspaper size={20} style={{ color: "var(--pv-coral)" }} />
+            </span>
+            <span>
+              <span className="block text-base font-bold" style={{ color: "var(--pv-ink)" }}>This week&apos;s newsletter</span>
+              <span className="block text-xs font-semibold" style={{ color: "var(--pv-muted)" }}>
+                Photos and reminders from the room
+              </span>
+            </span>
+            <ArrowRight size={20} aria-hidden="true" className="ml-auto flex-shrink-0" style={{ color: "var(--pv-coral)" }} />
+          </Link>
+        </section>
+
+        <section className="pv-rise mb-6" style={{ animationDelay: "180ms" }}>
+          <h2 className="pv-tad-title text-xl">your family&apos;s details</h2>
+          <div className="pv-tile mt-3 p-5">
+            <h3 className="pv-tad-label text-base">allergies and notes</h3>
+            <div className="mt-2 flex flex-col gap-2">
+              {fam.children.map((kid) => (
+                <div key={kid.id} className="flex flex-wrap items-center gap-2">
+                  <span className="text-base font-bold" style={{ color: "var(--pv-ink)" }}>
+                    {kid.name.split(" ")[0]}
+                  </span>
+                  {kid.allergies.length ? (
+                    kid.allergies.map((a) => (
+                      <span
+                        key={a}
+                        className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold"
+                        style={{ backgroundColor: "#fdeae6", color: "var(--pv-red-bad)" }}
+                      >
+                        <AlertTriangle size={13} aria-hidden="true" /> {a}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm" style={{ color: "var(--pv-muted)" }}>No allergies on file</span>
+                  )}
+                  {kid.medical_notes ? (
+                    <span className="text-sm" style={{ color: "var(--pv-muted)" }}>{kid.medical_notes}</span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+
+            {primary ? (
+              <>
+                <h3 className="pv-tad-label mt-5 text-base">primary contact</h3>
+                <p className="mt-1 text-base">
+                  {primary.name}
+                  {primary.relationship ? ` (${primary.relationship})` : ""}
+                  {primary.phone ? `, ${primary.phone}` : ""}
+                </p>
+              </>
+            ) : null}
+
+            {fam.parents.length ? (
+              <>
+                <h3 className="pv-tad-label mt-5 text-base">who can pick up</h3>
+                <div className="mt-2 flex flex-col gap-1">
+                  {fam.parents.map((p) => (
+                    <p key={p.id} className="text-base">
+                      <span className="font-bold">{p.name}</span>{" "}
+                      <span style={{ color: "var(--pv-muted)" }}>({p.relationship || "guardian"})</span>
+                    </p>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function RealKidCard({
+  kid,
+  feed,
+  checkedIn,
+}: {
+  kid: ApiChild;
+  feed: FeedEvent[];
+  checkedIn: Record<string, string | null>;
+}) {
+  const here = checkedIn[kid.id];
+  const firstName = kid.name.split(" ")[0];
+  const today = feed
+    .filter((e) => e.kidIds.includes(kid.id) && e.kind !== "checkin" && e.kind !== "checkout")
+    .slice(0, 8);
+
+  return (
+    <div className="pv-tile p-5">
+      <div className="flex items-center gap-3">
+        <PhotoAvatar id={kid.id} name={kid.name} size={56} rounded="rounded-md" />
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xl font-bold" style={{ color: "var(--pv-ink)" }}>{firstName}</span>
+            {kid.allergies.slice(0, 1).map((a) => (
+              <span
+                key={a}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
+                style={{ backgroundColor: "#fdeae6", color: "var(--pv-red-bad)" }}
+              >
+                <AlertTriangle size={11} aria-hidden="true" /> {a}
+              </span>
+            ))}
+          </div>
+          {kid.classroom ? (
+            <span className="text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>{kid.classroom}</span>
+          ) : null}
+        </div>
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-center text-sm font-semibold"
+          style={{
+            backgroundColor: here ? "#e7f4f2" : "#f1ede6",
+            color: here ? "var(--pv-teal)" : "var(--pv-muted)",
+          }}
+        >
+          <span className="h-2 w-2 flex-shrink-0 rounded-full" aria-hidden="true" style={{ backgroundColor: here ? "var(--pv-teal)" : "#8a8378" }} />
+          {here ? `Here since ${here}` : "Not dropped off yet"}
+        </span>
+      </div>
+
+      {today.length > 0 ? (
+        <div className="mt-4 flex flex-col gap-2">
+          {today.map((e) => {
+            const look = KIND_LOOK[e.kind];
+            return (
+              <div key={e.id} className="rounded-lg border p-3" style={{ borderColor: "var(--pv-line)" }}>
+                <div className="flex items-start gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md"
+                    style={{ backgroundColor: look.bg }}
+                  >
+                    <look.Icon size={18} style={{ color: look.color }} />
+                  </span>
+                  <div className="flex-1">
+                    <span className="block text-base font-bold">{e.title}</span>
+                    {e.detail ? (
+                      <span className="block text-sm" style={{ color: "#4d473f" }}>{e.detail}</span>
+                    ) : null}
+                  </div>
+                  <span className="text-xs font-semibold" style={{ color: "var(--pv-muted)" }}>{e.time}</span>
+                </div>
+                {e.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={e.photoUrl} alt={e.title} className="mt-2 w-full rounded-lg" />
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="mt-4 text-base" style={{ color: "var(--pv-muted)" }}>
+          {here ? "Nothing logged yet today. Check back soon." : "Their day starts once they are dropped off."}
+        </p>
+      )}
+    </div>
   );
 }
 
