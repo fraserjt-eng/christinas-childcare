@@ -2,41 +2,114 @@
 
 // Christina's office home — the director's landing in the front-facing portal.
 // Identity comes from the real signed-in session (no second sign-in). The
-// center name rides at the top so the center is recognizable at all times.
-// The rooms card is the traffic-light glance; the tiles are her chosen buttons.
+// center name rides at the top as the page watermark so the center is
+// recognizable at all times. The rooms card is the traffic-light glance; the
+// tiles are her chosen buttons.
+//
+// The layout (which buttons, in what order) is owner-customizable and saved to
+// the cloud PER CENTER (src/lib/dashboard-layout-storage), so it survives a new
+// browser or a teammate. A center that never edits sees today's default screen.
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  AlertTriangle,
   ArrowRight,
+  ArrowUp,
+  ArrowDown,
   Backpack,
   Baby,
   Blocks,
+  BookOpen,
+  Briefcase,
   Calendar,
   Check,
+  ClipboardCheck,
   ClipboardList,
   DollarSign,
+  ExternalLink,
+  FileText,
+  GitBranch,
   GraduationCap,
-  Heart,
   LayoutGrid,
+  ListChecks,
   LogOut,
   type LucideIcon,
+  Megaphone,
   MessageSquare,
   Newspaper,
+  Package,
   Palette,
   Pencil,
+  PieChart,
   Plus,
+  ShieldCheck,
   TrafficCone,
   Users,
   Utensils,
+  UtensilsCrossed,
+  Wallet,
   X,
 } from "lucide-react";
 import { BigButton, EmptyState, cx } from "@/components/preview/ui";
-import { type OfficeTileId, type PreviewRoom } from "@/lib/preview/fixtures";
+import { type PreviewRoom } from "@/lib/preview/fixtures";
 import { usePreviewStore, getRoomStatus } from "@/lib/preview/store";
 import { useSessionUser, firstNameFrom } from "@/lib/use-session-user";
 import { playClick } from "@/lib/preview/sound";
+import {
+  TILE_CATALOG,
+  TILE_GROUPS,
+  DEFAULT_TILE_IDS,
+  tileById,
+  type TileCatalogEntry,
+} from "@/lib/tile-catalog";
+import { getLayout, saveLayout } from "@/lib/dashboard-layout-storage";
+
+/** Resolve a catalog icon name to the lucide component. Falls back to a neutral
+ *  glyph so a never-before-seen icon name never crashes the screen. */
+const ICONS: Record<string, LucideIcon> = {
+  AlertTriangle,
+  Briefcase,
+  BookOpen,
+  Calendar,
+  ClipboardCheck,
+  ClipboardList,
+  DollarSign,
+  FileText,
+  GitBranch,
+  GraduationCap,
+  ListChecks,
+  Megaphone,
+  MessageSquare,
+  Newspaper,
+  Package,
+  PieChart,
+  ShieldCheck,
+  TrafficCone,
+  Users,
+  Utensils,
+  UtensilsCrossed,
+  Wallet,
+};
+
+function iconFor(name: string): LucideIcon {
+  return ICONS[name] ?? LayoutGrid;
+}
+
+/** A calm, distinct tint per group, reused for the tile icon chip. */
+const GROUP_COLOR: Record<string, string> = {
+  Daily: "var(--pv-coral)",
+  Family: "var(--pv-plum)",
+  People: "var(--pv-sky)",
+  Money: "var(--pv-teal)",
+  Compliance: "var(--pv-gold)",
+  Admin: "var(--pv-muted)",
+};
+
+function colorFor(entry: TileCatalogEntry): string {
+  return GROUP_COLOR[entry.group] ?? "var(--pv-sky)";
+}
 
 /** Room icon by name keyword, so live classrooms (real names, UUID ids) still
  *  get a sensible glyph instead of all falling back to one. */
@@ -57,41 +130,35 @@ function greeting(): string {
   return "Good evening";
 }
 
-type TileDef =
-  | { kind: "rooms"; icon: LucideIcon; color: string; label: string; sub: string }
-  | { kind: "link"; icon: LucideIcon; color: string; label: string; sub: string; href: string }
-  | { kind: "stub"; icon: LucideIcon; color: string; label: string; sub: string; message: string };
-
-const TILES: Record<OfficeTileId, TileDef> = {
-  rooms: { kind: "rooms", icon: TrafficCone, color: "var(--pv-coral)", label: "Today's rooms", sub: "Who is in each room right now" },
-  people: { kind: "link", icon: Users, color: "var(--pv-sky)", label: "People", sub: "Add someone or reset a code", href: "/preview/office/people" },
-  newsletter: { kind: "link", icon: Newspaper, color: "var(--pv-plum)", label: "Newsletter", sub: "Three blocks, then send", href: "/preview/newsletter" },
-  schedule: { kind: "link", icon: Calendar, color: "var(--pv-sky)", label: "Schedule", sub: "The whole week on one screen", href: "/preview/schedule" },
-  reports: { kind: "stub", icon: ClipboardList, color: "var(--pv-muted)", label: "Reports", sub: "Sent to you weekly", message: "Reports are sent to you weekly. Nothing for you to do here." },
-  training: { kind: "link", icon: GraduationCap, color: "var(--pv-gold)", label: "Training", sub: "Who is current", href: "/preview/office/training" },
-  food: { kind: "link", icon: Utensils, color: "var(--pv-teal)", label: "Food counts", sub: "Tap who ate what", href: "/preview/meals" },
-  feed: { kind: "link", icon: Heart, color: "var(--pv-coral)", label: "Family feed", sub: "What families see", href: "/preview/family" },
-  messages: { kind: "link", icon: MessageSquare, color: "var(--pv-sky)", label: "Messages", sub: "Read and write families", href: "/preview/office/messages" },
-  billing: { kind: "link", icon: DollarSign, color: "var(--pv-teal)", label: "Billing", sub: "Who owes what", href: "/preview/office/billing" },
-};
-
 const TILE_SHELL = "pv-tile pv-target flex h-full w-full items-start gap-3 p-5 text-left";
 
-/** Tinted line icon, bold label, muted sub. */
-function TileBody({ def }: { def: TileDef }) {
-  const Icon = def.icon;
+/** Tinted line icon, bold label, muted description. Admin tiles get a subtle
+ *  "opens admin" hint so it is clear they cross into the back office. */
+function TileBody({ entry }: { entry: TileCatalogEntry }) {
+  const Icon = iconFor(entry.icon);
+  const color = colorFor(entry);
   return (
     <>
       <span
         aria-hidden="true"
         className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl"
-        style={{ backgroundColor: `color-mix(in srgb, ${def.color} 14%, white)` }}
+        style={{ backgroundColor: `color-mix(in srgb, ${color} 14%, white)` }}
       >
-        <Icon size={22} style={{ color: def.color }} />
+        <Icon size={22} style={{ color }} />
       </span>
-      <span>
-        <span className="block text-xl font-bold" style={{ color: "var(--pv-ink)" }}>{def.label}</span>
-        <span className="mt-1 block text-base font-semibold" style={{ color: "var(--pv-muted)" }}>{def.sub}</span>
+      <span className="min-w-0">
+        <span className="flex items-center gap-1.5">
+          <span className="block text-xl font-bold" style={{ color: "var(--pv-ink)" }}>{entry.label}</span>
+          {entry.kind === "admin" ? (
+            <ExternalLink size={14} aria-hidden="true" style={{ color: "var(--pv-muted)" }} />
+          ) : null}
+        </span>
+        <span className="mt-1 block text-base font-semibold" style={{ color: "var(--pv-muted)" }}>{entry.description}</span>
+        {entry.kind === "admin" ? (
+          <span className="mt-1 block text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--pv-muted)" }}>
+            Opens admin
+          </span>
+        ) : null}
       </span>
     </>
   );
@@ -129,13 +196,14 @@ function RoomRow({ room }: { room: PreviewRoom }) {
 /** The double-height rooms card. Color answers "are we okay" at a glance. */
 function RoomsCard() {
   const rooms = usePreviewStore((s) => s.rooms);
+  const roomsTile = tileById("rooms");
   return (
     <div className="pv-tile h-full p-5">
       <h2 className="pv-tad-title flex items-center gap-2 text-2xl">
         <span aria-hidden="true" className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: "color-mix(in srgb, var(--pv-coral) 14%, white)" }}>
           <TrafficCone size={18} style={{ color: "var(--pv-coral)" }} />
         </span>
-        {TILES.rooms.label}
+        {roomsTile?.label ?? "Today's rooms"}
       </h2>
       <p className="mt-1 text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
         Green means all good. Gold means near the limit. Red needs you.
@@ -161,15 +229,71 @@ export default function OfficePage() {
   const router = useRouter();
   const { user } = useSessionUser();
   const checkedIn = usePreviewStore((s) => s.checkedIn);
-  const officeTiles = usePreviewStore((s) => s.officeTiles);
-  const addOfficeTile = usePreviewStore((s) => s.addOfficeTile);
-  const removeOfficeTile = usePreviewStore((s) => s.removeOfficeTile);
 
+  // The owner's saved layout for this center. Starts as the default so the
+  // first paint matches the server render; the saved layout loads in after.
+  const [tiles, setTiles] = useState<string[]>(DEFAULT_TILE_IDS);
+  const [loaded, setLoaded] = useState(false);
   const [editing, setEditing] = useState(false);
+  // The working copy while editing, so a Cancel-by-navigation never persists.
+  const [draft, setDraft] = useState<string[]>(DEFAULT_TILE_IDS);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    getLayout().then((ids) => {
+      if (!alive) return;
+      setTiles(ids);
+      setLoaded(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const name = firstNameFrom(user?.full_name) === "there" ? "" : firstNameFrom(user?.full_name);
   const kidsHere = Object.values(checkedIn).filter(Boolean).length;
-  const missingTiles = (Object.keys(TILES) as OfficeTileId[]).filter((id) => !officeTiles.includes(id));
+
+  const startEditing = useCallback(() => {
+    playClick();
+    setDraft(tiles);
+    setEditing(true);
+  }, [tiles]);
+
+  const cancelEditing = useCallback(() => {
+    playClick();
+    setEditing(false);
+  }, []);
+
+  const addTile = useCallback((id: string) => {
+    playClick();
+    setDraft((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  }, []);
+
+  const removeTile = useCallback((id: string) => {
+    playClick();
+    setDraft((prev) => prev.filter((t) => t !== id));
+  }, []);
+
+  const moveTile = useCallback((index: number, dir: -1 | 1) => {
+    playClick();
+    setDraft((prev) => {
+      const target = index + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }, []);
+
+  const saveAndExit = useCallback(async () => {
+    playClick();
+    setSaving(true);
+    setTiles(draft);
+    await saveLayout(draft);
+    setSaving(false);
+    setEditing(false);
+  }, [draft]);
 
   const signOut = useCallback(async () => {
     playClick();
@@ -180,6 +304,18 @@ export default function OfficePage() {
     }
     router.push("/employee-login");
   }, [router]);
+
+  // What renders: the working draft while editing, the saved tiles otherwise.
+  const shown = editing ? draft : tiles;
+  const shownEntries = shown
+    .map((id) => tileById(id))
+    .filter((e): e is TileCatalogEntry => e !== null);
+
+  // Catalog tiles not currently on the draft, grouped for the "Add" picker.
+  const missingByGroup = TILE_GROUPS.map((group) => ({
+    group,
+    entries: TILE_CATALOG.filter((e) => e.group === group && !draft.includes(e.id)),
+  })).filter((g) => g.entries.length > 0);
 
   return (
     <main className="pv-portal-bg min-h-[100dvh] px-4 py-6 sm:px-8">
@@ -209,44 +345,62 @@ export default function OfficePage() {
 
         {/* Tiles */}
         <div className="pv-rise grid grid-cols-1 gap-4 sm:grid-cols-2" style={{ animationDelay: "120ms" }}>
-          {officeTiles.map((id) => {
-            const def = TILES[id];
-            return (
-              <div key={id} className={cx("relative", editing && "pv-wiggle", def.kind === "rooms" && "sm:row-span-2")}>
-                {def.kind === "rooms" ? (
-                  <RoomsCard />
-                ) : editing ? (
-                  <div className={TILE_SHELL}>
-                    <TileBody def={def} />
-                  </div>
-                ) : def.kind === "link" ? (
-                  <Link href={def.href} onClick={() => playClick()} className={TILE_SHELL}>
-                    <TileBody def={def} />
-                  </Link>
-                ) : (
-                  <Link href="/preview/office" onClick={(e) => { e.preventDefault(); playClick(); }} className={TILE_SHELL}>
-                    <TileBody def={def} />
-                  </Link>
-                )}
-                {editing ? (
+          {shownEntries.map((entry, index) => (
+            <div key={entry.id} className={cx("relative", editing && "pv-wiggle", entry.kind === "rooms" && "sm:row-span-2")}>
+              {entry.kind === "rooms" ? (
+                <RoomsCard />
+              ) : editing ? (
+                <div className={TILE_SHELL}>
+                  <TileBody entry={entry} />
+                </div>
+              ) : (
+                <Link href={entry.href} onClick={() => playClick()} className={TILE_SHELL}>
+                  <TileBody entry={entry} />
+                </Link>
+              )}
+
+              {editing ? (
+                <>
                   <button
                     type="button"
-                    aria-label={`Remove ${def.label}`}
-                    onClick={() => { playClick(); removeOfficeTile(id); }}
+                    aria-label={`Remove ${entry.label}`}
+                    onClick={() => removeTile(entry.id)}
                     className="pv-press pv-target absolute -right-2 -top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-md"
                     style={{ backgroundColor: "var(--pv-coral)" }}
                   >
                     <X size={18} aria-hidden="true" />
                   </button>
-                ) : null}
-              </div>
-            );
-          })}
+                  <div className="absolute -left-2 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1">
+                    <button
+                      type="button"
+                      aria-label={`Move ${entry.label} up`}
+                      disabled={index === 0}
+                      onClick={() => moveTile(index, -1)}
+                      className="pv-press pv-target flex h-9 w-9 items-center justify-center rounded-full bg-white text-[var(--pv-ink)] shadow-md disabled:opacity-40"
+                      style={{ border: "1px solid var(--pv-line)" }}
+                    >
+                      <ArrowUp size={16} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Move ${entry.label} down`}
+                      disabled={index === shownEntries.length - 1}
+                      onClick={() => moveTile(index, 1)}
+                      className="pv-press pv-target flex h-9 w-9 items-center justify-center rounded-full bg-white text-[var(--pv-ink)] shadow-md disabled:opacity-40"
+                      style={{ border: "1px solid var(--pv-line)" }}
+                    >
+                      <ArrowDown size={16} aria-hidden="true" />
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          ))}
         </div>
 
-        {officeTiles.length === 0 && !editing ? (
+        {loaded && shownEntries.length === 0 && !editing ? (
           <div className="mt-4">
-            <EmptyState icon={LayoutGrid} title="No buttons on your screen yet" detail="Tap Edit my buttons below to add the ones you want." />
+            <EmptyState icon={LayoutGrid} title="No buttons on your screen yet" detail="Tap Edit my screen below to add the ones you want." />
           </div>
         ) : null}
 
@@ -258,26 +412,79 @@ export default function OfficePage() {
                 <h2 className="pv-tad-title flex items-center gap-2 text-xl">
                   <Plus size={18} aria-hidden="true" style={{ color: "var(--pv-coral)" }} /> Add a button
                 </h2>
-                {missingTiles.length > 0 ? (
-                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {missingTiles.map((id) => {
-                      const def = TILES[id];
-                      return (
-                        <BigButton key={id} icon={def.icon} label={def.label} sub={def.sub} color="var(--pv-sky)" onClick={() => addOfficeTile(id)} />
-                      );
-                    })}
+                {missingByGroup.length > 0 ? (
+                  <div className="mt-4 flex flex-col gap-5">
+                    {missingByGroup.map(({ group, entries }) => (
+                      <div key={group}>
+                        <h3 className="text-sm font-bold uppercase tracking-wide" style={{ color: "var(--pv-muted)" }}>
+                          {group}
+                        </h3>
+                        <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {entries.map((entry) => (
+                            <button
+                              key={entry.id}
+                              type="button"
+                              aria-label={`Add ${entry.label}`}
+                              onClick={() => addTile(entry.id)}
+                              className="pv-press pv-target flex w-full items-start gap-3 rounded-xl border bg-white p-3 text-left"
+                              style={{ borderColor: "var(--pv-line)" }}
+                            >
+                              <span
+                                aria-hidden="true"
+                                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
+                                style={{ backgroundColor: `color-mix(in srgb, ${colorFor(entry)} 14%, white)` }}
+                              >
+                                <PlusIcon entry={entry} />
+                              </span>
+                              <span className="min-w-0">
+                                <span className="flex items-center gap-1.5">
+                                  <span className="block text-base font-bold" style={{ color: "var(--pv-ink)" }}>{entry.label}</span>
+                                  {entry.kind === "admin" ? (
+                                    <ExternalLink size={13} aria-hidden="true" style={{ color: "var(--pv-muted)" }} />
+                                  ) : null}
+                                </span>
+                                <span className="mt-0.5 block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>{entry.description}</span>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <p className="mt-3 text-base font-semibold" style={{ color: "var(--pv-muted)" }}>Every button is already on your screen.</p>
                 )}
               </div>
-              <BigButton icon={Check} label="Done editing" color="var(--pv-teal)" onClick={() => setEditing(false)} />
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <BigButton
+                  icon={Check}
+                  label={saving ? "Saving..." : "Save my screen"}
+                  color="var(--pv-teal)"
+                  disabled={saving}
+                  onClick={saveAndExit}
+                  className="flex-1"
+                />
+                <BigButton
+                  icon={X}
+                  label="Cancel"
+                  color="var(--pv-muted)"
+                  disabled={saving}
+                  onClick={cancelEditing}
+                  className="sm:flex-none"
+                />
+              </div>
             </>
           ) : (
-            <BigButton icon={Pencil} label="Edit my buttons" sub="Add or remove. Your call." color="var(--pv-coral)" onClick={() => setEditing(true)} />
+            <BigButton icon={Pencil} label="Edit my screen" sub="Add, remove, or reorder. Your call." color="var(--pv-coral)" onClick={startEditing} />
           )}
         </div>
       </div>
     </main>
   );
+}
+
+/** The icon chip glyph for an "Add" row. Kept tiny and local. */
+function PlusIcon({ entry }: { entry: TileCatalogEntry }) {
+  const Icon = iconFor(entry.icon);
+  return <Icon size={20} style={{ color: colorFor(entry) }} aria-hidden="true" />;
 }
