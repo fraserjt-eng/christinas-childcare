@@ -1,6 +1,12 @@
 // Lesson Storage Module for Christina's Child Care Center
-// Uses localStorage for persistence, designed for easy Supabase migration
+// Supabase-first with localStorage as fallback cache
 
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+  supabaseDelete,
+} from '@/lib/supabase/service';
 import {
   Lesson,
   LessonFilters,
@@ -13,6 +19,15 @@ import {
 } from '@/types/curriculum';
 
 const STORAGE_KEY = 'christinas_lessons';
+
+// Supabase table backing the lesson records. Single-kind table: each row's
+// typed fields live in a JSONB `data` column (see migration 036).
+const LESSONS_TABLE = 'lessons';
+
+// Operating center (Brooklyn Park). The lesson module has no center context, so
+// every cloud row is stamped with this id, matching how supply-inventory and the
+// other dual-write modules default center_id.
+const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 
 // ============================================================================
 // Storage Interface (Database-ready)
@@ -30,7 +45,45 @@ export interface LessonStorage {
 }
 
 // ============================================================================
-// localStorage Implementation
+// Cloud Row Helpers
+// ============================================================================
+
+// Shape of a row in the `lessons` table.
+interface LessonRow {
+  id: string;
+  center_id: string | null;
+  data: Record<string, unknown>;
+}
+
+// Drop the id key so it lives only as the row's primary-key column, not inside data.
+function stripId(lesson: Lesson): Record<string, unknown> {
+  const { id: _id, ...rest } = lesson;
+  return rest as Record<string, unknown>;
+}
+
+// Build the cloud row payload for an insert from a typed lesson object.
+function toRow(lesson: Lesson): Record<string, unknown> {
+  return {
+    id: lesson.id,
+    center_id: OPERATING_CENTER_ID,
+    data: stripId(lesson),
+  };
+}
+
+// Unwrap a cloud row back into the typed lesson object.
+function fromRow(row: LessonRow): Lesson {
+  return { id: row.id, ...(row.data as object) } as Lesson;
+}
+
+// Fetch all lesson rows from the cloud; null when not configured/on error.
+async function cloudFetch(): Promise<Lesson[] | null> {
+  const rows = await supabaseSelect<LessonRow>(LESSONS_TABLE, {});
+  if (rows === null) return null;
+  return rows.map((r) => fromRow(r));
+}
+
+// ============================================================================
+// localStorage Cache Helpers
 // ============================================================================
 
 function getAllLessonsFromStorage(): Lesson[] {
@@ -55,12 +108,31 @@ function saveLessonsToStorage(lessons: Lesson[]): void {
   }
 }
 
+// Raw read with no seeding: cloud-first, localStorage fallback. Used to check
+// existence (so seeding cannot recurse) and as the base for readAllLessons.
+async function readAllLessonsRaw(): Promise<Lesson[]> {
+  const cloudData = await cloudFetch();
+  return cloudData !== null ? cloudData : getAllLessonsFromStorage();
+}
+
+// Read all lessons: cloud-first, with a localStorage fallback + seed-on-empty.
+async function readAllLessons(): Promise<Lesson[]> {
+  let lessons = await readAllLessonsRaw();
+
+  if (lessons.length === 0) {
+    await seedSampleLessons();
+    lessons = await readAllLessonsRaw();
+  }
+
+  return lessons;
+}
+
 // ============================================================================
 // CRUD Operations
 // ============================================================================
 
 export async function getLessons(filters?: LessonFilters): Promise<Lesson[]> {
-  let lessons = getAllLessonsFromStorage();
+  let lessons = await readAllLessons();
 
   // Apply filters
   if (filters) {
@@ -109,14 +181,13 @@ export async function getLessons(filters?: LessonFilters): Promise<Lesson[]> {
 }
 
 export async function getLesson(id: string): Promise<Lesson | null> {
-  const lessons = getAllLessonsFromStorage();
+  const lessons = await readAllLessons();
   return lessons.find((l) => l.id === id) || null;
 }
 
 export async function saveLesson(
   lessonData: Omit<Lesson, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<Lesson> {
-  const lessons = getAllLessonsFromStorage();
   const now = new Date().toISOString();
 
   const newLesson: Lesson = {
@@ -126,6 +197,10 @@ export async function saveLesson(
     updatedAt: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<LessonRow>(LESSONS_TABLE, toRow(newLesson));
+
+  const lessons = getAllLessonsFromStorage();
   lessons.push(newLesson);
   saveLessonsToStorage(lessons);
 
@@ -136,33 +211,48 @@ export async function updateLesson(
   id: string,
   updates: Partial<Lesson>
 ): Promise<Lesson | null> {
-  const lessons = getAllLessonsFromStorage();
-  const index = lessons.findIndex((l) => l.id === id);
+  const lessons = await readAllLessons();
+  const existing = lessons.find((l) => l.id === id);
 
-  if (index === -1) return null;
+  if (!existing) return null;
 
   const updatedLesson: Lesson = {
-    ...lessons[index],
+    ...existing,
     ...updates,
-    id: lessons[index].id, // Prevent id from being changed
-    createdAt: lessons[index].createdAt, // Preserve original creation date
+    id: existing.id, // Prevent id from being changed
+    createdAt: existing.createdAt, // Preserve original creation date
     updatedAt: new Date().toISOString(),
   };
 
-  lessons[index] = updatedLesson;
-  saveLessonsToStorage(lessons);
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<LessonRow>(LESSONS_TABLE, id, {
+    center_id: OPERATING_CENTER_ID,
+    data: stripId(updatedLesson),
+  });
+
+  const cache = getAllLessonsFromStorage();
+  const index = cache.findIndex((l) => l.id === id);
+  if (index === -1) {
+    cache.push(updatedLesson);
+  } else {
+    cache[index] = updatedLesson;
+  }
+  saveLessonsToStorage(cache);
 
   return updatedLesson;
 }
 
 export async function deleteLesson(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete(LESSONS_TABLE, id);
+
   const lessons = getAllLessonsFromStorage();
   const index = lessons.findIndex((l) => l.id === id);
 
-  if (index === -1) return false;
-
-  lessons.splice(index, 1);
-  saveLessonsToStorage(lessons);
+  if (index !== -1) {
+    lessons.splice(index, 1);
+    saveLessonsToStorage(lessons);
+  }
 
   return true;
 }
@@ -183,7 +273,7 @@ export async function toggleFavorite(id: string): Promise<Lesson | null> {
 // ============================================================================
 
 export async function getAnalytics(): Promise<LessonAnalytics> {
-  const lessons = getAllLessonsFromStorage();
+  const lessons = await readAllLessons();
   const now = new Date();
   const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -219,21 +309,31 @@ export async function getAnalytics(): Promise<LessonAnalytics> {
 // ============================================================================
 
 export async function importLessons(lessons: Lesson[]): Promise<number> {
-  const existing = getAllLessonsFromStorage();
+  const existing = await readAllLessons();
   const existingIds = new Set(existing.map((l) => l.id));
 
   // Filter out duplicates
   const newLessons = lessons.filter((l) => !existingIds.has(l.id));
 
-  saveLessonsToStorage([...existing, ...newLessons]);
+  // Write to Supabase first, then cache locally
+  for (const lesson of newLessons) {
+    await supabaseInsert<LessonRow>(LESSONS_TABLE, toRow(lesson));
+  }
+
+  const cache = getAllLessonsFromStorage();
+  saveLessonsToStorage([...cache, ...newLessons]);
   return newLessons.length;
 }
 
 export async function exportLessons(): Promise<Lesson[]> {
-  return getAllLessonsFromStorage();
+  return readAllLessons();
 }
 
 export async function clearAllLessons(): Promise<void> {
+  const lessons = await readAllLessons();
+  for (const lesson of lessons) {
+    await supabaseDelete(LESSONS_TABLE, lesson.id);
+  }
   saveLessonsToStorage([]);
 }
 
@@ -374,14 +474,28 @@ export const SAMPLE_LESSONS: Omit<Lesson, 'id' | 'createdAt' | 'updatedAt'>[] = 
 ];
 
 export async function seedSampleLessons(): Promise<number> {
-  const existing = await getLessons();
+  // Use the raw (non-seeding) read so this check cannot recurse back into seed.
+  const existing = await readAllLessonsRaw();
   if (existing.length > 0) {
     return 0; // Don't seed if lessons already exist
   }
 
   let count = 0;
+  const now = new Date().toISOString();
   for (const lesson of SAMPLE_LESSONS) {
-    await saveLesson(lesson);
+    const newLesson: Lesson = {
+      ...lesson,
+      id: generateLessonId(),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    // Write to Supabase first, then cache locally
+    await supabaseInsert<LessonRow>(LESSONS_TABLE, toRow(newLesson));
+
+    const cache = getAllLessonsFromStorage();
+    cache.push(newLesson);
+    saveLessonsToStorage(cache);
     count++;
   }
   return count;

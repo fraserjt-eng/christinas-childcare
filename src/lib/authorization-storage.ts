@@ -1,5 +1,20 @@
 // Authorization Storage Module — Tool 04: State Authorization Tracking
-// localStorage for demo mode, designed for Supabase migration
+// Supabase-first with localStorage as the synchronous fallback cache.
+//
+// Dual-write pattern (mirrors supply-inventory-storage): the cloud `authorizations`
+// table is the source of truth, the localStorage cache is what the synchronous
+// callers read. Reads serve the local cache immediately (seed-on-empty) and kick
+// off a background hydration from Supabase that refreshes the cache for the next
+// render. Writes update the local cache synchronously and fire the cloud write in
+// the background. Every cloud row stamps center_id and stores the typed fields in
+// a JSONB `data` column (see migration 032). Public signatures stay synchronous so
+// the existing callers keep compiling unchanged.
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+} from '@/lib/supabase/service';
 
 export type AuthType = 'county_authorization' | 'state_subsidy' | 'ccap' | 'other';
 export type AuthStatus = 'active' | 'expiring_soon' | 'expired' | 'pending' | 'renewal_pending';
@@ -38,6 +53,32 @@ export const AUTH_STATUS_LABELS: Record<AuthStatus, string> = {
 const AUTHORIZATIONS_KEY = 'christinas_authorizations';
 const AVG_MONTHLY_RATE = 1200;
 
+// Supabase table backing the authorization records. Single record kind, so no
+// `record_type` discriminator: typed fields live in a JSONB `data` column
+// (see migration 032).
+const AUTHORIZATIONS_TABLE = 'authorizations';
+
+// Operating center (Brooklyn Park). Default when there is no center context,
+// matching how the other dual-write modules stamp center_id.
+const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Resolve a usable center_id for the cloud row: keep a real UUID if provided,
+// otherwise fall back to the operating center.
+function resolveCenterId(center_id?: string): string {
+  return center_id && UUID_PATTERN.test(center_id)
+    ? center_id
+    : OPERATING_CENTER_ID;
+}
+
+// Shape of a row in the `authorizations` table.
+interface AuthorizationRow {
+  id: string;
+  center_id: string | null;
+  data: Record<string, unknown>;
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────
 
 function getFromStorage<T>(key: string): T[] {
@@ -56,6 +97,83 @@ function saveToStorage<T>(key: string, data: T[]): void {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
     console.error(`Error saving ${key}:`, error);
+  }
+}
+
+// Drop the id key so it lives only as the row's primary-key column, not inside data.
+function stripId<T extends { id: string }>(record: T): Record<string, unknown> {
+  const { id: _id, ...rest } = record;
+  return rest as Record<string, unknown>;
+}
+
+// Build the cloud row payload for an insert from a typed authorization object.
+function toRow(record: ChildAuthorization): Record<string, unknown> {
+  return {
+    id: record.id,
+    center_id: resolveCenterId(record.center_id),
+    data: stripId(record),
+  };
+}
+
+// Unwrap a cloud row back into the typed authorization object.
+function fromRow(row: AuthorizationRow): ChildAuthorization {
+  return { id: row.id, ...(row.data as object) } as ChildAuthorization;
+}
+
+// ─── Cloud sync (background, non-blocking) ──────────────────────────
+
+// Hydrate the local cache from Supabase. Runs in the background so the
+// synchronous read functions can serve the cache without awaiting. No-op when
+// Supabase is not configured (supabaseSelect returns null) or on error.
+async function cloudHydrate(): Promise<void> {
+  const rows = await supabaseSelect<AuthorizationRow>(AUTHORIZATIONS_TABLE);
+  if (rows === null) return;
+  const auths = rows.map((r) => fromRow(r));
+  if (auths.length === 0) return;
+  saveToStorage(AUTHORIZATIONS_KEY, auths);
+}
+
+// Fire-and-forget background sync. Swallows errors so a cloud hiccup never
+// breaks the synchronous local read/write path.
+function syncFromCloud(): void {
+  if (typeof window === 'undefined') return;
+  void cloudHydrate().catch(() => {
+    /* cloud unavailable; local cache remains authoritative */
+  });
+}
+
+// Push a freshly created authorization to the cloud, then seed any locally
+// generated records (e.g. seed data) that aren't there yet.
+function cloudInsert(auth: ChildAuthorization): void {
+  if (typeof window === 'undefined') return;
+  void supabaseInsert<AuthorizationRow>(AUTHORIZATIONS_TABLE, toRow(auth)).catch(
+    () => {
+      /* cloud unavailable; local cache remains authoritative */
+    }
+  );
+}
+
+// Push an update to the cloud row for an existing authorization.
+function cloudUpdate(auth: ChildAuthorization): void {
+  if (typeof window === 'undefined') return;
+  void supabaseUpdate<AuthorizationRow>(AUTHORIZATIONS_TABLE, auth.id, {
+    center_id: resolveCenterId(auth.center_id),
+    data: stripId(auth),
+  }).catch(() => {
+    /* cloud unavailable; local cache remains authoritative */
+  });
+}
+
+// Seed the cloud table from the local cache (first run only).
+function cloudSeed(auths: ChildAuthorization[]): void {
+  if (typeof window === 'undefined') return;
+  for (const auth of auths) {
+    void supabaseInsert<AuthorizationRow>(
+      AUTHORIZATIONS_TABLE,
+      toRow(auth)
+    ).catch(() => {
+      /* cloud unavailable; local cache remains authoritative */
+    });
   }
 }
 
@@ -226,6 +344,26 @@ function buildSeedData(): ChildAuthorization[] {
   });
 }
 
+// Read the local cache, seeding on first load. Triggers a background cloud
+// hydration so the next read reflects the cloud source of truth. Keeps the
+// public read functions synchronous for the existing callers.
+function loadCache(): ChildAuthorization[] {
+  let auths = getFromStorage<ChildAuthorization>(AUTHORIZATIONS_KEY);
+
+  // Seed on first load (local cache empty)
+  if (auths.length === 0) {
+    auths = buildSeedData();
+    saveToStorage(AUTHORIZATIONS_KEY, auths);
+    // Seed the cloud table from the same data (first run only)
+    cloudSeed(auths);
+  } else {
+    // Refresh the cache from the cloud in the background for the next render
+    syncFromCloud();
+  }
+
+  return auths;
+}
+
 // ─── CRUD ───────────────────────────────────────────────────────────
 
 export function getAuthorizations(filters?: {
@@ -233,13 +371,7 @@ export function getAuthorizations(filters?: {
   auth_type?: AuthType;
   center_id?: string;
 }): ChildAuthorization[] {
-  let auths = getFromStorage<ChildAuthorization>(AUTHORIZATIONS_KEY);
-
-  // Seed on first load
-  if (auths.length === 0) {
-    auths = buildSeedData();
-    saveToStorage(AUTHORIZATIONS_KEY, auths);
-  }
+  let auths = loadCache();
 
   // Recompute statuses on every read to stay current
   auths = auths.map((a) => ({ ...a, status: computeStatus(a) }));
@@ -271,8 +403,11 @@ export function createAuthorization(
     updated_at: new Date().toISOString(),
   };
   auth.status = computeStatus(auth);
+
+  // Update the local cache synchronously, then write to Supabase in the background
   auths.push(auth);
   saveToStorage(AUTHORIZATIONS_KEY, auths);
+  cloudInsert(auth);
   return auth;
 }
 
@@ -291,7 +426,9 @@ export function updateAuthorization(
   };
   auths[index].status = computeStatus(auths[index]);
 
+  // Update the local cache synchronously, then write to Supabase in the background
   saveToStorage(AUTHORIZATIONS_KEY, auths);
+  cloudUpdate(auths[index]);
   return auths[index];
 }
 

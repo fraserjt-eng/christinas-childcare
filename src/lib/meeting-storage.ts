@@ -1,5 +1,19 @@
-// Meeting Efficiency Storage Module
-// localStorage for persistence, designed for easy Supabase migration
+// Meeting Efficiency Storage Module for Christina's Child Care Center
+// Supabase-backed dual-write with localStorage as the synchronous cache.
+//
+// The public API stays synchronous so every existing caller keeps compiling and
+// the UI reads instantly from the local cache. Supabase is the system of record:
+// reads hydrate the cache cloud-first on load (seed-on-empty), and writes update
+// the local cache and mirror to the cloud in the background. Each cloud row
+// follows the migration-037 shape: a `record_type` discriminator plus the typed
+// meeting object (with its nested agenda, decisions, and action items) in a JSONB
+// `data` column, stamped with `center_id`.
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+} from '@/lib/supabase/service';
 
 const STORAGE_KEY = 'christinas_meetings_v2';
 
@@ -69,6 +83,59 @@ export interface MeetingStats {
   pending_action_items: number;
   overdue_action_items: number;
   completion_rate: number;
+}
+
+// ============================================================================
+// Supabase backing
+// ============================================================================
+
+// Supabase table backing the meeting records. Each row carries a `record_type`
+// discriminator and a JSONB `data` payload (see migration 037).
+const MEETINGS_TABLE = 'meetings';
+type MeetingRecordType = 'meeting';
+const MEETING_RECORD_TYPE: MeetingRecordType = 'meeting';
+
+// Operating center (Brooklyn Park). Default when there is no center context,
+// matching how the other dual-write modules stamp center_id.
+const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Resolve a usable center_id for the cloud row: keep a real UUID if provided,
+// otherwise fall back to the operating center.
+function resolveCenterId(center_id?: string): string {
+  return center_id && UUID_PATTERN.test(center_id)
+    ? center_id
+    : OPERATING_CENTER_ID;
+}
+
+// Shape of a row in the `meetings` table.
+interface MeetingRow {
+  id: string;
+  center_id: string | null;
+  record_type: MeetingRecordType;
+  data: Record<string, unknown>;
+}
+
+// Drop the id key so it lives only as the row's primary-key column, not inside data.
+function stripId<T extends { id: string }>(record: T): Record<string, unknown> {
+  const { id: _id, ...rest } = record;
+  return rest as Record<string, unknown>;
+}
+
+// Build the cloud row payload for an insert from a typed meeting object.
+function toRow(meeting: Meeting): Record<string, unknown> {
+  return {
+    id: meeting.id,
+    center_id: resolveCenterId(),
+    record_type: MEETING_RECORD_TYPE,
+    data: stripId(meeting),
+  };
+}
+
+// Unwrap a cloud row back into the typed meeting object.
+function fromRow(row: MeetingRow): Meeting {
+  return { id: row.id, ...(row.data as object) } as Meeting;
 }
 
 // ============================================================================
@@ -344,7 +411,7 @@ function buildSeedData(): Meeting[] {
 }
 
 // ============================================================================
-// Storage helpers
+// Storage helpers (synchronous localStorage cache)
 // ============================================================================
 
 function load(): Meeting[] {
@@ -354,6 +421,8 @@ function load(): Meeting[] {
     if (raw) return JSON.parse(raw) as Meeting[];
     const seed = buildSeedData();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+    // Mirror the freshly seeded meetings to the cloud in the background.
+    for (const m of seed) cloudInsert(m);
     return seed;
   } catch {
     return buildSeedData();
@@ -370,6 +439,48 @@ function save(meetings: Meeting[]): void {
 }
 
 // ============================================================================
+// Background cloud sync (fire-and-forget; the cache stays the synchronous truth)
+// ============================================================================
+
+// Hydrate the local cache cloud-first on load. Runs once per session; if the
+// cloud has rows they become the cache, seeding the cloud when it is empty.
+let hydrated = false;
+
+function hydrateFromCloud(): void {
+  if (hydrated || typeof window === 'undefined') return;
+  hydrated = true;
+  void (async () => {
+    try {
+      const rows = await supabaseSelect<MeetingRow>(MEETINGS_TABLE, {
+        filters: { record_type: MEETING_RECORD_TYPE },
+      });
+      if (rows === null) return; // Supabase not configured or errored: keep cache.
+      if (rows.length === 0) {
+        // Cloud empty: seed it from whatever the cache holds (incl. seed data).
+        for (const m of load()) cloudInsert(m);
+        return;
+      }
+      const meetings = rows.map((r) => fromRow(r));
+      save(meetings);
+    } catch (error) {
+      console.error('Error hydrating meetings from cloud:', error);
+    }
+  })();
+}
+
+function cloudInsert(meeting: Meeting): void {
+  void supabaseInsert<MeetingRow>(MEETINGS_TABLE, toRow(meeting)).catch(() => {});
+}
+
+function cloudUpdate(meeting: Meeting): void {
+  void supabaseUpdate<MeetingRow>(MEETINGS_TABLE, meeting.id, {
+    center_id: resolveCenterId(),
+    record_type: MEETING_RECORD_TYPE,
+    data: stripId(meeting),
+  }).catch(() => {});
+}
+
+// ============================================================================
 // Public API
 // ============================================================================
 
@@ -380,6 +491,7 @@ export interface MeetingFilters {
 }
 
 export function getMeetings(filters?: MeetingFilters): Meeting[] {
+  hydrateFromCloud();
   let meetings = load();
   if (filters?.status) {
     meetings = meetings.filter(m => m.status === filters.status);
@@ -394,6 +506,7 @@ export function getMeetings(filters?: MeetingFilters): Meeting[] {
 }
 
 export function getMeetingById(id: string): Meeting | undefined {
+  hydrateFromCloud();
   return load().find(m => m.id === id);
 }
 
@@ -411,6 +524,7 @@ export function createMeeting(data: Omit<Meeting, 'id' | 'status' | 'decisions' 
   };
   meetings.push(meeting);
   save(meetings);
+  cloudInsert(meeting);
   return meeting;
 }
 
@@ -420,6 +534,7 @@ export function updateMeeting(id: string, updates: Partial<Meeting>): Meeting | 
   if (idx === -1) return null;
   meetings[idx] = { ...meetings[idx], ...updates, updated_at: new Date().toISOString() };
   save(meetings);
+  cloudUpdate(meetings[idx]);
   return meetings[idx];
 }
 
@@ -454,6 +569,7 @@ export function addDecision(meetingId: string, data: Omit<Decision, 'id' | 'made
   meeting.decisions.push(decision);
   meeting.updated_at = new Date().toISOString();
   save(meetings);
+  cloudUpdate(meeting);
   return decision;
 }
 
@@ -471,6 +587,7 @@ export function addActionItem(meetingId: string, data: Omit<ActionItem, 'id' | '
   meeting.action_items.push(item);
   meeting.updated_at = new Date().toISOString();
   save(meetings);
+  cloudUpdate(meeting);
   return item;
 }
 
@@ -484,6 +601,7 @@ export function completeActionItem(meetingId: string, actionItemId: string): boo
   item.completed_at = new Date().toISOString();
   meeting.updated_at = new Date().toISOString();
   save(meetings);
+  cloudUpdate(meeting);
   return true;
 }
 
@@ -496,6 +614,7 @@ export function completeActionItemGlobal(actionItemId: string): boolean {
       item.completed_at = new Date().toISOString();
       meeting.updated_at = new Date().toISOString();
       save(meetings);
+      cloudUpdate(meeting);
       return true;
     }
   }

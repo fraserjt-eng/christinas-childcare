@@ -1,5 +1,12 @@
 // Knowledge Base Storage Module for Christina's Child Care Center
-// localStorage for demo mode, designed for Supabase migration
+// Supabase-first with localStorage as fallback cache
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+  supabaseDelete,
+} from '@/lib/supabase/service';
 
 export type KnowledgeCategory =
   | 'strategic_foundation'
@@ -75,6 +82,58 @@ const ENTRIES_KEY = 'christinas_knowledge_base';
 const VERSIONS_KEY = 'christinas_knowledge_versions';
 const READS_KEY = 'christinas_knowledge_reads';
 
+// Supabase table backing all three knowledge record kinds. Each row carries a
+// `record_type` discriminator and a JSONB `data` payload (see migration 035).
+const KNOWLEDGE_TABLE = 'knowledge';
+type KnowledgeRecordType = 'entry' | 'version' | 'read';
+
+// Operating center (Brooklyn Park). The knowledge module has no center context,
+// so every row is stamped with this id, matching how the other dual-write
+// modules stamp center_id.
+const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
+
+// Shape of a row in the `knowledge` table.
+interface KnowledgeRow {
+  id: string;
+  center_id: string | null;
+  record_type: KnowledgeRecordType;
+  data: Record<string, unknown>;
+}
+
+// Build the cloud row payload for an insert/update from a typed knowledge object.
+function toRow<T extends { id: string }>(
+  record: T,
+  recordType: KnowledgeRecordType
+): Record<string, unknown> {
+  const { id, ...rest } = record;
+  return {
+    id,
+    center_id: OPERATING_CENTER_ID,
+    record_type: recordType,
+    data: rest as Record<string, unknown>,
+  };
+}
+
+// Unwrap a cloud row back into the typed knowledge object.
+function fromRow<T>(row: KnowledgeRow): T {
+  return { id: row.id, ...(row.data as object) } as T;
+}
+
+// Drop the id key so it lives only as the row's primary-key column, not inside data.
+function stripId<T extends { id: string }>(record: T): Record<string, unknown> {
+  const { id: _id, ...rest } = record;
+  return rest as Record<string, unknown>;
+}
+
+// Fetch all rows of one record type from the cloud; null when not configured/error.
+async function cloudFetch<T>(recordType: KnowledgeRecordType): Promise<T[] | null> {
+  const rows = await supabaseSelect<KnowledgeRow>(KNOWLEDGE_TABLE, {
+    filters: { record_type: recordType },
+  });
+  if (rows === null) return null;
+  return rows.map((r) => fromRow<T>(r));
+}
+
 function getFromStorage<T>(key: string): T[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -98,10 +157,7 @@ function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-function seedIfEmpty(): void {
-  const existing = getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
-  if (existing.length > 0) return;
-
+const SEED_ENTRIES: KnowledgeEntry[] = (() => {
   const now = new Date().toISOString();
   const strategicSeed: KnowledgeEntry[] = [
     {
@@ -161,7 +217,7 @@ function seedIfEmpty(): void {
     },
   ];
 
-  const seed: KnowledgeEntry[] = [
+  return [
     ...strategicSeed,
     {
       id: 'kb_seed_1',
@@ -208,8 +264,17 @@ function seedIfEmpty(): void {
       updated_at: now,
     },
   ];
+})();
 
-  saveToStorage(ENTRIES_KEY, seed);
+async function seedIfEmpty(): Promise<void> {
+  const existing = getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
+  if (existing.length > 0) return;
+
+  // Persist the seed to the cloud (best-effort) and cache locally.
+  for (const entry of SEED_ENTRIES) {
+    await supabaseInsert<KnowledgeRow>(KNOWLEDGE_TABLE, toRow(entry, 'entry'));
+  }
+  saveToStorage(ENTRIES_KEY, SEED_ENTRIES);
 }
 
 // ─── Entries CRUD ─────────────────────────────────────────────────────────────
@@ -219,8 +284,14 @@ export async function getEntries(filters?: {
   status?: 'draft' | 'published';
   is_onboarding_required?: boolean;
 }): Promise<KnowledgeEntry[]> {
-  seedIfEmpty();
-  let entries = getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<KnowledgeEntry>('entry');
+  let entries = cloudData !== null ? cloudData : getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
+
+  if (entries.length === 0) {
+    await seedIfEmpty();
+    entries = getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
+  }
 
   if (filters) {
     if (filters.category) {
@@ -241,8 +312,6 @@ export async function getEntries(filters?: {
 export async function createEntry(
   data: Omit<KnowledgeEntry, 'id' | 'created_at' | 'updated_at'>
 ): Promise<KnowledgeEntry> {
-  seedIfEmpty();
-  const entries = getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
   const now = new Date().toISOString();
 
   const entry: KnowledgeEntry = {
@@ -252,6 +321,10 @@ export async function createEntry(
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<KnowledgeRow>(KNOWLEDGE_TABLE, toRow(entry, 'entry'));
+
+  const entries = getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
   entries.push(entry);
   saveToStorage(ENTRIES_KEY, entries);
   return entry;
@@ -270,18 +343,23 @@ export async function updateEntry(
 
   // Save version before overwriting content
   if (updates.content_html && updates.content_html !== previous.content_html) {
-    const versions = getFromStorage<KnowledgeVersion>(VERSIONS_KEY);
-    versions.push({
+    const version: KnowledgeVersion = {
       id: generateId('kbv'),
       entry_id: id,
       content_html: previous.content_html,
       edited_by: edited_by || 'Unknown',
       edited_at: new Date().toISOString(),
-    });
+    };
+
+    // Write the version to Supabase first, then cache locally
+    await supabaseInsert<KnowledgeRow>(KNOWLEDGE_TABLE, toRow(version, 'version'));
+
+    const versions = getFromStorage<KnowledgeVersion>(VERSIONS_KEY);
+    versions.push(version);
     saveToStorage(VERSIONS_KEY, versions);
   }
 
-  entries[index] = {
+  const updated: KnowledgeEntry = {
     ...previous,
     ...updates,
     id: previous.id,
@@ -289,11 +367,22 @@ export async function updateEntry(
     updated_at: new Date().toISOString(),
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<KnowledgeRow>(KNOWLEDGE_TABLE, id, {
+    center_id: OPERATING_CENTER_ID,
+    record_type: 'entry',
+    data: stripId(updated),
+  });
+
+  entries[index] = updated;
   saveToStorage(ENTRIES_KEY, entries);
   return entries[index];
 }
 
 export async function deleteEntry(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete(KNOWLEDGE_TABLE, id);
+
   const entries = getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
   const filtered = entries.filter(e => e.id !== id);
   if (filtered.length === entries.length) return false;
@@ -308,7 +397,12 @@ export async function publishEntry(id: string): Promise<KnowledgeEntry | null> {
 // ─── Version history ──────────────────────────────────────────────────────────
 
 export async function getVersions(entryId: string): Promise<KnowledgeVersion[]> {
-  const versions = getFromStorage<KnowledgeVersion>(VERSIONS_KEY);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<KnowledgeVersion>('version');
+  const versions = cloudData !== null
+    ? cloudData
+    : getFromStorage<KnowledgeVersion>(VERSIONS_KEY);
+
   return versions
     .filter(v => v.entry_id === entryId)
     .sort((a, b) => b.edited_at.localeCompare(a.edited_at));
@@ -329,25 +423,34 @@ export async function trackRead(entryId: string, employeeId: string): Promise<vo
   const exists = reads.find(r => r.entry_id === entryId && r.employee_id === employeeId);
   if (exists) return;
 
-  reads.push({
+  const read: KnowledgeRead = {
     id: generateId('kbr'),
     entry_id: entryId,
     employee_id: employeeId,
     read_at: new Date().toISOString(),
-  });
+  };
+
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<KnowledgeRow>(KNOWLEDGE_TABLE, toRow(read, 'read'));
+
+  reads.push(read);
   saveToStorage(READS_KEY, reads);
 }
 
 export async function getReadStatus(entryId: string): Promise<KnowledgeRead[]> {
-  const reads = getFromStorage<KnowledgeRead>(READS_KEY);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<KnowledgeRead>('read');
+  const reads = cloudData !== null
+    ? cloudData
+    : getFromStorage<KnowledgeRead>(READS_KEY);
+
   return reads.filter(r => r.entry_id === entryId);
 }
 
 // ─── Search ───────────────────────────────────────────────────────────────────
 
 export async function searchEntries(query: string): Promise<KnowledgeEntry[]> {
-  seedIfEmpty();
-  const entries = getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
+  const entries = await getEntries();
   const q = query.toLowerCase();
   return entries
     .filter(e =>

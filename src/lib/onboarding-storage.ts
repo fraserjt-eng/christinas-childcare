@@ -1,5 +1,12 @@
 // Onboarding Storage Module for Christina's Child Care Center
-// localStorage for demo mode, designed for Supabase migration
+// Supabase-first with localStorage as fallback cache
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+  supabaseDelete,
+} from '@/lib/supabase/service';
 
 export type OnboardingPhaseKey = 'pre_start' | 'day_1' | 'week_1' | 'month_1';
 
@@ -68,6 +75,57 @@ export interface AssignmentProgress {
 
 const TEMPLATES_KEY = 'christinas_onboarding_templates';
 const ASSIGNMENTS_KEY = 'christinas_onboarding_assignments';
+
+// Supabase table backing both onboarding record kinds. Each row carries a
+// `record_type` discriminator and a JSONB `data` payload (see migration 039).
+const ONBOARDING_TABLE = 'onboarding';
+type OnboardingRecordType = 'template' | 'assignment';
+
+// Operating center (Brooklyn Park). Default when there is no center context,
+// matching how the other dual-write modules stamp center_id.
+const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
+
+// Shape of a row in the `onboarding` table.
+interface OnboardingRow {
+  id: string;
+  center_id: string | null;
+  record_type: OnboardingRecordType;
+  data: Record<string, unknown>;
+}
+
+// Build the cloud row payload for an insert from a typed onboarding object.
+function toRow<T extends { id: string }>(
+  record: T,
+  recordType: OnboardingRecordType
+): Record<string, unknown> {
+  const { id, ...rest } = record;
+  return {
+    id,
+    center_id: OPERATING_CENTER_ID,
+    record_type: recordType,
+    data: rest as Record<string, unknown>,
+  };
+}
+
+// Unwrap a cloud row back into the typed onboarding object.
+function fromRow<T>(row: OnboardingRow): T {
+  return { id: row.id, ...(row.data as object) } as T;
+}
+
+// Drop the id key so it lives only as the row's primary-key column, not inside data.
+function stripId<T extends { id: string }>(record: T): Record<string, unknown> {
+  const { id: _id, ...rest } = record;
+  return rest as Record<string, unknown>;
+}
+
+// Fetch all rows of one record type from the cloud; null when not configured/error.
+async function cloudFetch<T>(recordType: OnboardingRecordType): Promise<T[] | null> {
+  const rows = await supabaseSelect<OnboardingRow>(ONBOARDING_TABLE, {
+    filters: { record_type: recordType },
+  });
+  if (rows === null) return null;
+  return rows.map((r) => fromRow<T>(r));
+}
 
 function getFromStorage<T>(key: string): T[] {
   if (typeof window === 'undefined') return [];
@@ -246,13 +304,17 @@ function getDefaultTemplate(): OnboardingTemplate {
   };
 }
 
-function seedIfEmpty(): void {
+async function seedIfEmpty(): Promise<void> {
   const existing = getFromStorage<OnboardingTemplate>(TEMPLATES_KEY);
   if (existing.length > 0) return;
-  saveToStorage(TEMPLATES_KEY, [getDefaultTemplate()]);
+
+  const template = getDefaultTemplate();
+  // Write the seed to the cloud first, then cache locally.
+  await supabaseInsert<OnboardingRow>(ONBOARDING_TABLE, toRow(template, 'template'));
+  saveToStorage(TEMPLATES_KEY, [template]);
 }
 
-function seedAssignmentsIfEmpty(): void {
+async function seedAssignmentsIfEmpty(): Promise<void> {
   const existing = getFromStorage<OnboardingAssignment>(ASSIGNMENTS_KEY);
   if (existing.length > 0) return;
 
@@ -276,21 +338,35 @@ function seedAssignmentsIfEmpty(): void {
     created_at: new Date(startDate.getTime() - 4 * 86400000).toISOString(),
   };
 
+  // Write the seed to the cloud first, then cache locally.
+  await supabaseInsert<OnboardingRow>(ONBOARDING_TABLE, toRow(assignment, 'assignment'));
   saveToStorage(ASSIGNMENTS_KEY, [assignment]);
 }
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
 export async function getTemplates(): Promise<OnboardingTemplate[]> {
-  seedIfEmpty();
-  return getFromStorage<OnboardingTemplate>(TEMPLATES_KEY);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<OnboardingTemplate>('template');
+  let templates = cloudData !== null
+    ? cloudData
+    : getFromStorage<OnboardingTemplate>(TEMPLATES_KEY);
+
+  if (templates.length === 0) {
+    await seedIfEmpty();
+    templates = getFromStorage<OnboardingTemplate>(TEMPLATES_KEY);
+  } else {
+    // Keep the local cache in sync with the cloud read.
+    saveToStorage(TEMPLATES_KEY, templates);
+  }
+
+  return templates;
 }
 
 export async function createTemplate(
   data: Omit<OnboardingTemplate, 'id' | 'created_at' | 'updated_at'>
 ): Promise<OnboardingTemplate> {
-  seedIfEmpty();
-  const templates = getFromStorage<OnboardingTemplate>(TEMPLATES_KEY);
+  await seedIfEmpty();
   const now = new Date().toISOString();
 
   const template: OnboardingTemplate = {
@@ -300,6 +376,10 @@ export async function createTemplate(
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<OnboardingRow>(ONBOARDING_TABLE, toRow(template, 'template'));
+
+  const templates = getFromStorage<OnboardingTemplate>(TEMPLATES_KEY);
   templates.push(template);
   saveToStorage(TEMPLATES_KEY, templates);
   return template;
@@ -313,7 +393,7 @@ export async function updateTemplate(
   const index = templates.findIndex(t => t.id === id);
   if (index === -1) return null;
 
-  templates[index] = {
+  const updated: OnboardingTemplate = {
     ...templates[index],
     ...updates,
     id: templates[index].id,
@@ -321,11 +401,22 @@ export async function updateTemplate(
     updated_at: new Date().toISOString(),
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<OnboardingRow>(ONBOARDING_TABLE, id, {
+    center_id: OPERATING_CENTER_ID,
+    record_type: 'template',
+    data: stripId(updated),
+  });
+
+  templates[index] = updated;
   saveToStorage(TEMPLATES_KEY, templates);
   return templates[index];
 }
 
 export async function deleteTemplate(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete(ONBOARDING_TABLE, id);
+
   const templates = getFromStorage<OnboardingTemplate>(TEMPLATES_KEY);
   const filtered = templates.filter(t => t.id !== id);
   if (filtered.length === templates.length) return false;
@@ -338,9 +429,21 @@ export async function deleteTemplate(id: string): Promise<boolean> {
 export async function getAssignments(filters?: {
   status?: 'active' | 'completed';
 }): Promise<OnboardingAssignment[]> {
-  seedIfEmpty();
-  seedAssignmentsIfEmpty();
-  let assignments = getFromStorage<OnboardingAssignment>(ASSIGNMENTS_KEY);
+  await seedIfEmpty();
+
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<OnboardingAssignment>('assignment');
+  let assignments = cloudData !== null
+    ? cloudData
+    : getFromStorage<OnboardingAssignment>(ASSIGNMENTS_KEY);
+
+  if (assignments.length === 0) {
+    await seedAssignmentsIfEmpty();
+    assignments = getFromStorage<OnboardingAssignment>(ASSIGNMENTS_KEY);
+  } else {
+    // Keep the local cache in sync with the cloud read.
+    saveToStorage(ASSIGNMENTS_KEY, assignments);
+  }
 
   if (filters?.status) {
     assignments = assignments.filter(a => a.status === filters.status);
@@ -353,7 +456,6 @@ export async function getAssignments(filters?: {
 export async function createAssignment(
   data: Omit<OnboardingAssignment, 'id' | 'task_completions' | 'status' | 'created_at'>
 ): Promise<OnboardingAssignment> {
-  const assignments = getFromStorage<OnboardingAssignment>(ASSIGNMENTS_KEY);
   const now = new Date().toISOString();
 
   const assignment: OnboardingAssignment = {
@@ -364,6 +466,10 @@ export async function createAssignment(
     created_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<OnboardingRow>(ONBOARDING_TABLE, toRow(assignment, 'assignment'));
+
+  const assignments = getFromStorage<OnboardingAssignment>(ASSIGNMENTS_KEY);
   assignments.push(assignment);
   saveToStorage(ASSIGNMENTS_KEY, assignments);
   return assignment;
@@ -383,7 +489,7 @@ export async function completeTask(
   };
   if (verified_by) completion.verified_by = verified_by;
 
-  assignments[index] = {
+  const updated: OnboardingAssignment = {
     ...assignments[index],
     task_completions: {
       ...assignments[index].task_completions,
@@ -391,6 +497,13 @@ export async function completeTask(
     },
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<OnboardingRow>(ONBOARDING_TABLE, assignmentId, {
+    record_type: 'assignment',
+    data: stripId(updated),
+  });
+
+  assignments[index] = updated;
   saveToStorage(ASSIGNMENTS_KEY, assignments);
   return assignments[index];
 }
@@ -406,11 +519,18 @@ export async function uncompleteTask(
   const completions = { ...assignments[index].task_completions };
   delete completions[taskId];
 
-  assignments[index] = {
+  const updated: OnboardingAssignment = {
     ...assignments[index],
     task_completions: completions,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<OnboardingRow>(ONBOARDING_TABLE, assignmentId, {
+    record_type: 'assignment',
+    data: stripId(updated),
+  });
+
+  assignments[index] = updated;
   saveToStorage(ASSIGNMENTS_KEY, assignments);
   return assignments[index];
 }
@@ -431,7 +551,15 @@ export async function markAssignmentComplete(
   const index = assignments.findIndex(a => a.id === assignmentId);
   if (index === -1) return null;
 
-  assignments[index] = { ...assignments[index], status: 'completed' };
+  const updated: OnboardingAssignment = { ...assignments[index], status: 'completed' };
+
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<OnboardingRow>(ONBOARDING_TABLE, assignmentId, {
+    record_type: 'assignment',
+    data: stripId(updated),
+  });
+
+  assignments[index] = updated;
   saveToStorage(ASSIGNMENTS_KEY, assignments);
   return assignments[index];
 }

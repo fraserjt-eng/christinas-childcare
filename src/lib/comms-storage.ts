@@ -1,5 +1,12 @@
 // Communications Storage Module for Christina's Child Care Center
-// localStorage for demo mode, designed for Supabase migration
+// Supabase-first with localStorage as fallback cache
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+  supabaseDelete,
+} from '@/lib/supabase/service';
 
 export type CommunicationType = 'announcement' | 'individual' | 'daily_update' | 'template';
 export type AudienceType = 'all' | 'classroom' | 'individual';
@@ -52,6 +59,68 @@ const COMMS_KEY = 'christinas_communications';
 const READS_KEY = 'christinas_comm_reads';
 const TEMPLATES_KEY = 'christinas_comm_templates';
 
+// Supabase table backing all three comms record kinds. Each row carries a
+// `record_type` discriminator and a JSONB `data` payload (see migration 034).
+const COMMS_TABLE = 'comms';
+type CommsRecordType = 'communication' | 'read' | 'template';
+
+// Operating center (Brooklyn Park). Default when there is no center context,
+// matching how the other dual-write modules stamp center_id.
+const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Resolve a usable center_id for the cloud row: keep a real UUID if provided,
+// otherwise fall back to the operating center.
+function resolveCenterId(center_id?: string): string {
+  return center_id && UUID_PATTERN.test(center_id)
+    ? center_id
+    : OPERATING_CENTER_ID;
+}
+
+// Shape of a row in the `comms` table.
+interface CommsRow {
+  id: string;
+  center_id: string | null;
+  record_type: CommsRecordType;
+  data: Record<string, unknown>;
+}
+
+// Build the cloud row payload for an insert/update from a typed comms object.
+function toRow<T extends { id: string }>(
+  record: T,
+  recordType: CommsRecordType,
+  centerId?: string
+): Record<string, unknown> {
+  const { id, ...rest } = record;
+  return {
+    id,
+    center_id: resolveCenterId(centerId),
+    record_type: recordType,
+    data: rest as Record<string, unknown>,
+  };
+}
+
+// Drop the id key so it lives only as the row's primary-key column, not inside data.
+function stripId<T extends { id: string }>(record: T): Record<string, unknown> {
+  const { id: _id, ...rest } = record;
+  return rest as Record<string, unknown>;
+}
+
+// Unwrap a cloud row back into the typed comms object.
+function fromRow<T>(row: CommsRow): T {
+  return { id: row.id, ...(row.data as object) } as T;
+}
+
+// Fetch all rows of one record type from the cloud; null when not configured/error.
+async function cloudFetch<T>(recordType: CommsRecordType): Promise<T[] | null> {
+  const rows = await supabaseSelect<CommsRow>(COMMS_TABLE, {
+    filters: { record_type: recordType },
+  });
+  if (rows === null) return null;
+  return rows.map((r) => fromRow<T>(r));
+}
+
 function getFromStorage<T>(key: string): T[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -82,7 +151,11 @@ export async function getCommunications(filters?: {
   status?: CommunicationStatus;
   search?: string;
 }): Promise<Communication[]> {
-  let comms = getFromStorage<Communication>(COMMS_KEY);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<Communication>('communication');
+  let comms = cloudData !== null
+    ? cloudData
+    : getFromStorage<Communication>(COMMS_KEY);
 
   if (filters) {
     if (filters.type) {
@@ -113,7 +186,6 @@ export async function getCommunications(filters?: {
 export async function createCommunication(
   data: Omit<Communication, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Communication> {
-  const comms = getFromStorage<Communication>(COMMS_KEY);
   const now = new Date().toISOString();
 
   const comm: Communication = {
@@ -123,6 +195,13 @@ export async function createCommunication(
     updated_at: now,
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<CommsRow>(
+    COMMS_TABLE,
+    toRow(comm, 'communication', comm.center_id)
+  );
+
+  const comms = getFromStorage<Communication>(COMMS_KEY);
   comms.push(comm);
   saveToStorage(COMMS_KEY, comms);
   return comm;
@@ -136,7 +215,7 @@ export async function updateCommunication(
   const index = comms.findIndex(c => c.id === id);
   if (index === -1) return null;
 
-  comms[index] = {
+  const updated: Communication = {
     ...comms[index],
     ...updates,
     id: comms[index].id,
@@ -144,6 +223,14 @@ export async function updateCommunication(
     updated_at: new Date().toISOString(),
   };
 
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<CommsRow>(COMMS_TABLE, id, {
+    center_id: resolveCenterId(updated.center_id),
+    record_type: 'communication',
+    data: stripId(updated),
+  });
+
+  comms[index] = updated;
   saveToStorage(COMMS_KEY, comms);
   return comms[index];
 }
@@ -153,6 +240,9 @@ export async function sendCommunication(id: string): Promise<Communication | nul
 }
 
 export async function deleteCommunication(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete(COMMS_TABLE, id);
+
   const comms = getFromStorage<Communication>(COMMS_KEY);
   const filtered = comms.filter(c => c.id !== id);
   if (filtered.length === comms.length) return false;
@@ -167,17 +257,27 @@ export async function markAsRead(communicationId: string, parentId: string): Pro
   const exists = reads.find(r => r.communication_id === communicationId && r.parent_id === parentId);
   if (exists) return;
 
-  reads.push({
+  const read: CommunicationRead = {
     id: generateId('read'),
     communication_id: communicationId,
     parent_id: parentId,
     read_at: new Date().toISOString(),
-  });
+  };
+
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<CommsRow>(COMMS_TABLE, toRow(read, 'read'));
+
+  reads.push(read);
   saveToStorage(READS_KEY, reads);
 }
 
 export async function getReadCounts(commIds: string[]): Promise<Record<string, number>> {
-  const reads = getFromStorage<CommunicationRead>(READS_KEY);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<CommunicationRead>('read');
+  const reads = cloudData !== null
+    ? cloudData
+    : getFromStorage<CommunicationRead>(READS_KEY);
+
   const counts: Record<string, number> = {};
   for (const id of commIds) {
     counts[id] = reads.filter(r => r.communication_id === id).length;
@@ -188,10 +288,15 @@ export async function getReadCounts(commIds: string[]): Promise<Record<string, n
 // Templates
 
 export async function getTemplates(): Promise<MessageTemplate[]> {
-  let templates = getFromStorage<MessageTemplate>(TEMPLATES_KEY);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<MessageTemplate>('template');
+  let templates = cloudData !== null
+    ? cloudData
+    : getFromStorage<MessageTemplate>(TEMPLATES_KEY);
+
   if (templates.length === 0) {
-    templates = getDefaultTemplates();
-    saveToStorage(TEMPLATES_KEY, templates);
+    await seedTemplates();
+    templates = getFromStorage<MessageTemplate>(TEMPLATES_KEY);
   }
   return templates;
 }
@@ -199,12 +304,16 @@ export async function getTemplates(): Promise<MessageTemplate[]> {
 export async function createTemplate(
   data: Omit<MessageTemplate, 'id' | 'created_at'>
 ): Promise<MessageTemplate> {
-  const templates = getFromStorage<MessageTemplate>(TEMPLATES_KEY);
   const template: MessageTemplate = {
     ...data,
     id: generateId('tmpl'),
     created_at: new Date().toISOString(),
   };
+
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<CommsRow>(COMMS_TABLE, toRow(template, 'template'));
+
+  const templates = getFromStorage<MessageTemplate>(TEMPLATES_KEY);
   templates.push(template);
   saveToStorage(TEMPLATES_KEY, templates);
   return template;
@@ -259,4 +368,15 @@ function getDefaultTemplates(): MessageTemplate[] {
       created_at: now,
     },
   ];
+}
+
+async function seedTemplates(): Promise<void> {
+  const templates = getDefaultTemplates();
+
+  // Push the seed templates to the cloud so subsequent reads come back populated
+  for (const template of templates) {
+    await supabaseInsert<CommsRow>(COMMS_TABLE, toRow(template, 'template'));
+  }
+
+  saveToStorage(TEMPLATES_KEY, templates);
 }
