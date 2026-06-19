@@ -10,8 +10,38 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  Apple,
+  ArrowRight,
+  Baby,
+  Backpack,
+  Blocks,
+  CalendarDays,
+  CheckCircle2,
+  CircleSlash,
+  Droplet,
+  FileText,
+  type LucideIcon,
+  Milk,
+  Moon,
+  Newspaper,
+  Palette,
+  PartyPopper,
+  Camera as CameraIcon,
+  Car,
+  ClipboardCheck,
+  CreditCard,
+  DollarSign,
+  Home,
+  MessageSquare,
+  Send,
+  StickyNote,
+} from "lucide-react";
 import { BigButton, Card, EmptyState, ScreenHeader, StepNote, useMounted } from "@/components/preview/ui";
 import { PhotoUpload } from "@/components/preview/PhotoUpload";
+import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
+import { AvatarUpload } from "@/components/preview/AvatarUpload";
 import {
   CENTER_EVENTS,
   FAMILIES,
@@ -24,16 +54,24 @@ import {
 import { usePreviewStore, type PreviewMessage } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
 
-const KIND_LOOK: Record<FeedEvent["kind"], { emoji: string; bg: string }> = {
-  meal: { emoji: "🍎", bg: "#fdebd2" },
-  bottle: { emoji: "🍼", bg: "#eaf4fd" },
-  diaper: { emoji: "🧷", bg: "#f1ede6" },
-  nap: { emoji: "😴", bg: "#dff0ee" },
-  activity: { emoji: "🎨", bg: "#ece5f1" },
-  photo: { emoji: "📷", bg: "#fdeae6" },
-  note: { emoji: "📝", bg: "#fdf8ef" },
-  checkin: { emoji: "🚗", bg: "#e7f4f2" },
-  checkout: { emoji: "🏠", bg: "#f1ede6" },
+const KIND_LOOK: Record<FeedEvent["kind"], { Icon: LucideIcon; color: string; bg: string }> = {
+  meal: { Icon: Apple, color: "var(--pv-gold)", bg: "#fdebd2" },
+  bottle: { Icon: Milk, color: "var(--pv-sky)", bg: "#eaf4fd" },
+  diaper: { Icon: Droplet, color: "#8a8378", bg: "#f1ede6" },
+  nap: { Icon: Moon, color: "var(--pv-teal)", bg: "#dff0ee" },
+  activity: { Icon: Palette, color: "var(--pv-plum)", bg: "#ece5f1" },
+  photo: { Icon: CameraIcon, color: "var(--pv-coral)", bg: "#fdeae6" },
+  note: { Icon: StickyNote, color: "var(--pv-gold)", bg: "#fdf8ef" },
+  checkin: { Icon: Car, color: "var(--pv-teal)", bg: "#e7f4f2" },
+  checkout: { Icon: Home, color: "#8a8378", bg: "#f1ede6" },
+};
+
+/** Room glyph (small lucide line icon) keyed by room id, replaces room emoji. */
+const ROOM_ICON: Record<string, LucideIcon> = {
+  infants: Baby,
+  toddlers: Blocks,
+  preschool: Palette,
+  schoolage: Backpack,
 };
 
 /** Tells Christina whether a block is real today or to build. */
@@ -41,7 +79,7 @@ function Tag({ kind }: { kind: "live" | "new" }) {
   const live = kind === "live";
   return (
     <span
-      className="ml-2 rounded-full px-2 py-0.5 text-xs font-extrabold"
+      className="ml-2 rounded-full px-2 py-0.5 text-xs font-semibold"
       style={{
         backgroundColor: live ? "#e7f4f2" : "#fdeae6",
         color: live ? "var(--pv-teal)" : "var(--pv-coral)",
@@ -98,12 +136,11 @@ function SignIn({ onPick }: { onPick: (familyId: string) => void }) {
       <div className="mx-auto max-w-md">
         <ScreenHeader
           title="On a parent's phone"
-          emoji="📱"
           note="What a parent opens at home or at work. Not the lobby iPad."
         />
         <StepNote step={5} text="Sign in as a demo parent to see their home." />
-        <Card>
-          <h2 className="text-2xl">Sign in</h2>
+        <Card className="pv-rise">
+          <h2 className="pv-tad-title text-2xl">sign in</h2>
           <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
             Real families sign in with their email and password. For this demo,
             pick a parent to sign in as. You will see only their own kids.
@@ -117,12 +154,12 @@ function SignIn({ onPick }: { onPick: (familyId: string) => void }) {
                   playClick();
                   onPick(f.id);
                 }}
-                className="pv-press pv-kiosk-target flex items-center gap-3 rounded-2xl border-2 p-4 text-left"
+                className="pv-lift pv-kiosk-target flex items-center gap-3 rounded-lg border p-4 text-left"
                 style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
               >
-                <span aria-hidden="true" className="text-4xl">{f.avatar}</span>
+                <PhotoAvatar id={f.id} name={f.parentName} size={48} rounded="rounded-md" />
                 <span>
-                  <span className="block text-lg font-extrabold">{f.parentName}</span>
+                  <span className="block text-lg font-bold" style={{ color: "var(--pv-ink)" }}>{f.parentName}</span>
                   <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
                     {f.email}
                   </span>
@@ -184,8 +221,7 @@ function ParentHome({
     <main className="px-4 py-6">
       <div className="mx-auto max-w-2xl">
         <ScreenHeader
-          title={`Hi, ${family.parentName.split(" ")[0]}`}
-          emoji="📱"
+          title={`hi, ${family.parentName.split(" ")[0].toLowerCase()}`}
           note="Your kids first. Then anything that needs you."
         />
         <div className="-mt-3 mb-4">
@@ -196,16 +232,16 @@ function ParentHome({
               onSignOut();
             }}
             className="pv-press pv-target rounded-xl px-3 py-2 text-base font-bold"
-            style={{ color: "var(--pv-plum)" }}
+            style={{ color: "var(--pv-coral)" }}
           >
             ← Sign out
           </button>
         </div>
 
         {/* MY KIDS RIGHT NOW: the first thing every parent checks. */}
-        <section className="mb-6">
-          <h2 className="flex items-center text-xl">
-            My kids right now <Tag kind="new" />
+        <section className="pv-rise mb-6" style={{ animationDelay: "60ms" }}>
+          <h2 className="pv-tad-title flex items-center text-xl">
+            my kids right now <Tag kind="new" />
           </h2>
           <div className="mt-3 flex flex-col gap-4">
             {myKids.map((kid) => (
@@ -222,22 +258,22 @@ function ParentHome({
           <Link
             href="/preview/kiosk"
             onClick={() => playClick()}
-            className="pv-press pv-target mt-3 flex items-center gap-2 rounded-xl border p-3 text-base font-bold"
+            className="pv-lift pv-target mt-3 flex items-center gap-2 rounded-lg border bg-[var(--pv-card)] p-3 text-base font-bold"
             style={{ borderColor: "var(--pv-line)", color: "var(--pv-teal)" }}
           >
-            <span aria-hidden="true">✅</span>
+            <ClipboardCheck size={18} aria-hidden="true" className="flex-shrink-0" />
             Dropping off or picking up? Check in or out at the front desk
-            <span aria-hidden="true" className="ml-auto">→</span>
+            <ArrowRight size={18} aria-hidden="true" className="ml-auto flex-shrink-0" />
           </Link>
         </section>
 
         {/* THINGS THAT NEED ME. */}
-        <section className="mb-6">
-          <h2 className="text-xl">Things that need you</h2>
+        <section className="pv-rise mb-6" style={{ animationDelay: "120ms" }}>
+          <h2 className="pv-tad-title text-xl">things that need you</h2>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {message ? (
               <NeedTile
-                emoji="💬"
+                Icon={MessageSquare}
                 title="Message from the room"
                 body={`${message.fromOffice ? message.from : "You"}: ${message.body}`}
                 tag={message.unread && message.fromOffice ? "1 new" : null}
@@ -246,7 +282,7 @@ function ParentHome({
               />
             ) : null}
             <NeedTile
-              emoji="💵"
+              Icon={DollarSign}
               title={balanceOwed > 0 ? `You owe $${balanceOwed}` : "Paid up"}
               body={balanceOwed > 0 ? family.balanceDueLabel : "Thank you"}
               tag={balanceOwed > 0 ? "Pay" : null}
@@ -254,7 +290,7 @@ function ParentHome({
               onOpen={() => setDetail("billing")}
             />
             <NeedTile
-              emoji="📝"
+              Icon={FileText}
               title={
                 family.formsToSign.length > 0
                   ? `${family.formsToSign.length} form${family.formsToSign.length === 1 ? "" : "s"} to sign`
@@ -270,7 +306,7 @@ function ParentHome({
               onOpen={() => setDetail("forms")}
             />
             <NeedTile
-              emoji={nextEvent.kind === "closure" ? "🚫" : "📅"}
+              Icon={nextEvent.kind === "closure" ? CircleSlash : CalendarDays}
               title={nextEvent.kind === "closure" ? "Next closure" : "Coming up"}
               body={`${nextEvent.title}, ${nextEvent.dateLabel}`}
               tag={null}
@@ -287,43 +323,49 @@ function ParentHome({
 
         {/* QUIETER STUFF. Photos already show in each kid's feed above; the
             newsletter is a real page, so it links out. */}
-        <section className="mb-6">
+        <section className="pv-rise mb-6" style={{ animationDelay: "180ms" }}>
           <Link
             href="/preview/newsletter"
             onClick={() => playClick()}
-            className="pv-press pv-target flex items-center gap-3 rounded-2xl border bg-[var(--pv-card)] p-4"
+            className="pv-lift pv-target flex items-center gap-3 rounded-lg border bg-[var(--pv-card)] p-4 shadow-sm"
             style={{ borderColor: "var(--pv-line)" }}
           >
-            <span aria-hidden="true" className="text-2xl">📰</span>
+            <span
+              aria-hidden="true"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md"
+              style={{ backgroundColor: "#fdeae6" }}
+            >
+              <Newspaper size={20} style={{ color: "var(--pv-coral)" }} />
+            </span>
             <span>
-              <span className="block text-base font-extrabold">This week&apos;s newsletter</span>
-              <span className="block text-xs font-semibold" style={{ color: "var(--pv-teal)" }}>
+              <span className="block text-base font-bold" style={{ color: "var(--pv-ink)" }}>This week&apos;s newsletter</span>
+              <span className="block text-xs font-semibold" style={{ color: "var(--pv-muted)" }}>
                 Photos and reminders from the room
               </span>
             </span>
-            <span aria-hidden="true" className="ml-auto text-xl" style={{ color: "var(--pv-coral)" }}>→</span>
+            <ArrowRight size={20} aria-hidden="true" className="ml-auto flex-shrink-0" style={{ color: "var(--pv-coral)" }} />
           </Link>
         </section>
 
         {/* FAMILY DETAILS. */}
-        <section className="mb-6">
-          <h2 className="flex items-center text-xl">
-            Your family&apos;s details <Tag kind="new" />
+        <section className="pv-rise mb-6" style={{ animationDelay: "240ms" }}>
+          <h2 className="pv-tad-title flex items-center text-xl">
+            your family&apos;s details <Tag kind="new" />
           </h2>
           <Card className="mt-3">
-            <h3 className="text-base font-extrabold" style={{ color: "var(--pv-muted)" }}>
-              Allergies and notes
+            <h3 className="pv-tad-label text-base">
+              allergies and notes
             </h3>
             <div className="mt-2 flex flex-col gap-2">
               {myKids.map((kid) => (
                 <div key={kid.id} className="flex flex-wrap items-center gap-2">
-                  <span className="text-base font-bold">{kid.firstName}</span>
+                  <span className="text-base font-bold" style={{ color: "var(--pv-ink)" }}>{kid.firstName}</span>
                   {kid.allergy ? (
                     <span
-                      className="rounded-full px-3 py-1 text-sm font-bold text-white"
-                      style={{ backgroundColor: "var(--pv-red-bad)" }}
+                      className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold"
+                      style={{ backgroundColor: "#fdeae6", color: "var(--pv-red-bad)" }}
                     >
-                      ⚠️ {kid.allergy}
+                      <AlertTriangle size={13} aria-hidden="true" /> {kid.allergy}
                     </span>
                   ) : (
                     <span className="text-sm" style={{ color: "var(--pv-muted)" }}>
@@ -339,16 +381,16 @@ function ParentHome({
               ))}
             </div>
 
-            <h3 className="mt-5 text-base font-extrabold" style={{ color: "var(--pv-muted)" }}>
-              Emergency contact
+            <h3 className="pv-tad-label mt-5 text-base">
+              emergency contact
             </h3>
             <p className="mt-1 text-base">
               {family.emergencyContact.name} ({family.emergencyContact.relationship}),{" "}
               {family.emergencyContact.phone}
             </p>
 
-            <h3 className="mt-5 flex items-center text-base font-extrabold" style={{ color: "var(--pv-muted)" }}>
-              Who can pick up <Tag kind="new" />
+            <h3 className="pv-tad-label mt-5 flex items-center text-base">
+              who can pick up <Tag kind="new" />
             </h3>
             <div className="mt-2 flex flex-col gap-1">
               {family.approvedPickups.map((p) => (
@@ -386,6 +428,7 @@ function KidCard({
 }) {
   const here = checkedIn[kid.id];
   const room = roomById(kid.roomId);
+  const RoomIcon = ROOM_ICON[kid.roomId] ?? Baby;
   const today = feed
     .filter(
       (e) =>
@@ -399,36 +442,46 @@ function KidCard({
   return (
     <Card>
       <div className="flex items-center gap-3">
-        {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+        <span className="relative flex-shrink-0">
+          <PhotoAvatar
+            id={kid.id}
+            name={`${kid.firstName} ${kid.lastName}`}
             src={photo}
-            alt={`${kid.firstName}`}
-            className="h-14 w-14 flex-shrink-0 rounded-2xl object-cover"
+            size={56}
+            rounded="rounded-md"
           />
-        ) : (
-          <span aria-hidden="true" className="text-4xl">{kid.avatar}</span>
-        )}
+          <AvatarUpload
+            label={`Upload a photo for ${kid.firstName}`}
+            onPhoto={onAddPhoto}
+            className="absolute -bottom-1 -right-1"
+          />
+        </span>
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xl font-extrabold">{kid.firstName}</span>
+            <span className="text-xl font-bold" style={{ color: "var(--pv-ink)" }}>{kid.firstName}</span>
             {kid.allergy ? (
               <span
-                className="rounded-full px-2 py-0.5 text-xs font-bold text-white"
-                style={{ backgroundColor: "var(--pv-red-bad)" }}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
+                style={{ backgroundColor: "#fdeae6", color: "var(--pv-red-bad)" }}
               >
-                ⚠️ {kid.allergy}
+                <AlertTriangle size={11} aria-hidden="true" /> {kid.allergy}
               </span>
             ) : null}
           </div>
-          <span className="text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
-            {room ? `${room.emoji} ${room.name}` : ""}
-          </span>
+          {room ? (
+            <span className="flex items-center gap-1 text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
+              <RoomIcon size={13} aria-hidden="true" /> {room.name}
+            </span>
+          ) : null}
         </div>
         <span
-          className="rounded-full px-3 py-2 text-center text-sm font-extrabold text-white"
-          style={{ backgroundColor: here ? "var(--pv-teal)" : "#8a8378" }}
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-center text-sm font-semibold"
+          style={{
+            backgroundColor: here ? "#e7f4f2" : "#f1ede6",
+            color: here ? "var(--pv-teal)" : "var(--pv-muted)",
+          }}
         >
+          <span className="h-2 w-2 flex-shrink-0 rounded-full" aria-hidden="true" style={{ backgroundColor: here ? "var(--pv-teal)" : "#8a8378" }} />
           {here ? `Here since ${here}` : "Not dropped off yet"}
         </span>
       </div>
@@ -451,16 +504,16 @@ function KidCard({
             return (
               <div
                 key={e.id}
-                className="rounded-xl border p-3"
+                className="rounded-lg border p-3"
                 style={{ borderColor: "var(--pv-line)" }}
               >
                 <div className="flex items-start gap-3">
                   <span
                     aria-hidden="true"
-                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg"
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md"
                     style={{ backgroundColor: look.bg }}
                   >
-                    {look.emoji}
+                    <look.Icon size={18} style={{ color: look.color }} />
                   </span>
                   <div className="flex-1">
                     <span className="block text-base font-bold">{e.title}</span>
@@ -490,14 +543,14 @@ function KidCard({
 }
 
 function NeedTile({
-  emoji,
+  Icon,
   title,
   body,
   tag,
   accent,
   onOpen,
 }: {
-  emoji: string;
+  Icon: LucideIcon;
   title: string;
   body: string;
   tag: string | null;
@@ -511,16 +564,22 @@ function NeedTile({
         playClick();
         onOpen();
       }}
-      className="pv-press pv-target rounded-2xl border bg-[var(--pv-card)] p-4 text-left"
+      className="pv-lift pv-target rounded-lg border bg-[var(--pv-card)] p-4 text-left shadow-sm"
       style={{ borderColor: "var(--pv-line)" }}
     >
       <div className="flex items-center gap-2">
-        <span aria-hidden="true" className="text-2xl">{emoji}</span>
-        <span className="text-base font-extrabold" style={{ color: accent }}>{title}</span>
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md"
+          style={{ backgroundColor: `color-mix(in srgb, ${accent} 14%, white)` }}
+        >
+          <Icon size={18} style={{ color: accent }} />
+        </span>
+        <span className="text-base font-bold" style={{ color: "var(--pv-ink)" }}>{title}</span>
         {tag ? (
           <span
-            className="ml-auto rounded-full px-2 py-0.5 text-xs font-extrabold text-white"
-            style={{ backgroundColor: "var(--pv-coral)" }}
+            className="ml-auto rounded-full px-2 py-0.5 text-xs font-semibold"
+            style={{ backgroundColor: "#fdeae6", color: "var(--pv-coral)" }}
           >
             {tag}
           </span>
@@ -550,11 +609,11 @@ function DetailView({
   onReply: (body: string) => void;
   onBack: () => void;
 }) {
-  const titles: Record<DetailKind, { title: string; emoji: string }> = {
-    billing: { title: "What you owe", emoji: "💵" },
-    messages: { title: "Messages with the room", emoji: "💬" },
-    forms: { title: "Forms to sign", emoji: "📝" },
-    calendar: { title: "Closures and events", emoji: "📅" },
+  const titles: Record<DetailKind, { title: string; Icon: LucideIcon }> = {
+    billing: { title: "What you owe", Icon: DollarSign },
+    messages: { title: "Messages with the room", Icon: MessageSquare },
+    forms: { title: "Forms to sign", Icon: FileText },
+    calendar: { title: "Closures and events", Icon: CalendarDays },
   };
   const head = titles[kind];
 
@@ -572,8 +631,8 @@ function DetailView({
         >
           ← Back to home
         </button>
-        <h1 className="mt-2 flex items-center text-3xl">
-          <span aria-hidden="true" className="mr-2">{head.emoji}</span>
+        <h1 className="pv-tad-title mt-2 flex items-center text-3xl">
+          <head.Icon size={26} aria-hidden="true" className="mr-2 flex-shrink-0" style={{ color: "var(--pv-coral)" }} />
           {head.title}
           <Tag kind="new" />
         </h1>
@@ -616,7 +675,7 @@ function BillingDetail({ family, balanceOwed }: { family: PreviewFamily; balance
             : <p className="text-base" style={{ color: "var(--pv-muted)" }}>Nothing due. You are paid through the end of June.</p>}
         </div>
         {balanceOwed > 0 ? (
-          <BigButton emoji="💳" label="Pay now" color="var(--pv-coral)" kiosk className="mt-5 w-full text-center" onClick={() => {}} />
+          <BigButton icon={CreditCard} label="Pay now" color="var(--pv-coral)" kiosk className="mt-5 w-full text-center" onClick={() => {}} />
         ) : null}
       </Card>
       <p className="mt-3 text-sm" style={{ color: "var(--pv-coral)" }}>
@@ -644,7 +703,7 @@ function MessagesDetail({
           {ordered.map((m) => (
             <div
               key={m.id}
-              className={`max-w-[85%] rounded-2xl p-3 ${m.fromOffice ? "" : "ml-auto text-white"}`}
+              className={`max-w-[85%] rounded-lg p-3 ${m.fromOffice ? "" : "ml-auto text-white"}`}
               style={{ backgroundColor: m.fromOffice ? "#eef1f4" : "var(--pv-teal)" }}
             >
               <p className="text-base">{m.body}</p>
@@ -664,11 +723,11 @@ function MessagesDetail({
             placeholder="Write back to the room"
             rows={2}
             aria-label="Write a reply to the room"
-            className="rounded-xl border-2 px-4 py-3 text-base"
+            className="rounded-lg border px-4 py-3 text-base"
             style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
           />
           <BigButton
-            emoji="➤"
+            icon={Send}
             label="Send"
             color="var(--pv-sky)"
             disabled={!reply.trim()}
@@ -691,7 +750,7 @@ function MessagesDetail({
 function FormsDetail({ family }: { family: PreviewFamily }) {
   const [signed, setSigned] = useState<string[]>([]);
   if (family.formsToSign.length === 0) {
-    return <EmptyState emoji="✅" title="Nothing to sign" detail="You are all caught up on forms." />;
+    return <EmptyState icon={CheckCircle2} title="Nothing to sign" detail="You are all caught up on forms." />;
   }
   return (
     <>
@@ -701,11 +760,17 @@ function FormsDetail({ family }: { family: PreviewFamily }) {
           return (
             <Card key={form}>
               <div className="flex flex-wrap items-center gap-3">
-                <span aria-hidden="true" className="text-2xl">📄</span>
-                <span className="text-base font-extrabold">{form}</span>
+                <span
+                  aria-hidden="true"
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md"
+                  style={{ backgroundColor: "#fdf8ef" }}
+                >
+                  <FileText size={18} style={{ color: "var(--pv-gold)" }} />
+                </span>
+                <span className="text-base font-bold" style={{ color: "var(--pv-ink)" }}>{form}</span>
                 {isSigned ? (
-                  <span className="ml-auto rounded-full px-3 py-1 text-sm font-bold text-white" style={{ backgroundColor: "var(--pv-teal)" }}>
-                    ✓ Signed
+                  <span className="ml-auto inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold" style={{ backgroundColor: "#e7f4f2", color: "var(--pv-teal)" }}>
+                    <CheckCircle2 size={14} aria-hidden="true" /> Signed
                   </span>
                 ) : (
                   <button
@@ -714,8 +779,8 @@ function FormsDetail({ family }: { family: PreviewFamily }) {
                       playClick();
                       setSigned((s) => [...s, form]);
                     }}
-                    className="pv-press pv-target ml-auto rounded-full px-4 py-2 text-sm font-extrabold text-white"
-                    style={{ backgroundColor: "var(--pv-gold)" }}
+                    className="pv-press pv-target ml-auto rounded-full border px-4 py-2 text-sm font-bold"
+                    style={{ borderColor: "var(--pv-line)", color: "var(--pv-coral)" }}
                   >
                     Review and sign
                   </button>
@@ -742,13 +807,17 @@ function CalendarDetail() {
             <div className="flex items-center gap-3">
               <span
                 aria-hidden="true"
-                className="flex h-12 w-12 items-center justify-center rounded-xl text-2xl"
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md"
                 style={{ backgroundColor: ev.kind === "closure" ? "#fdeae6" : "#ece5f1" }}
               >
-                {ev.kind === "closure" ? "🚫" : "🎉"}
+                {ev.kind === "closure" ? (
+                  <CircleSlash size={22} style={{ color: "var(--pv-coral)" }} />
+                ) : (
+                  <PartyPopper size={22} style={{ color: "var(--pv-plum)" }} />
+                )}
               </span>
               <div>
-                <p className="text-base font-extrabold">{ev.title}</p>
+                <p className="text-base font-bold" style={{ color: "var(--pv-ink)" }}>{ev.title}</p>
                 <p className="text-sm" style={{ color: "var(--pv-muted)" }}>{ev.dateLabel}</p>
               </div>
             </div>

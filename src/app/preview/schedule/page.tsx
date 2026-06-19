@@ -7,10 +7,33 @@
 // out by accident.
 
 import { useState } from "react";
+import {
+  Backpack,
+  Baby,
+  Blocks,
+  Briefcase,
+  Check,
+  Copy,
+  Palette,
+  Send,
+  Trash2,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { BigButton, Card, Chip, ScreenHeader, StepNote, SuccessBanner, useMounted } from "@/components/preview/ui";
+import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
+import { AvatarUpload } from "@/components/preview/AvatarUpload";
 import { DAY_LABELS, ROOMS, roomById } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
+
+// Small line icons for each room, tinted with the room color (Tadpoles look).
+const ROOM_ICON: Record<string, LucideIcon> = {
+  infants: Baby,
+  toddlers: Blocks,
+  preschool: Palette,
+  schoolage: Backpack,
+};
 
 interface ShiftEditor {
   staffId: string;
@@ -42,6 +65,8 @@ export default function SchedulePage() {
   const mounted = useMounted();
   const staff = usePreviewStore((s) => s.staff);
   const shifts = usePreviewStore((s) => s.shifts);
+  const staffPhotos = usePreviewStore((s) => s.staffPhotos);
+  const setStaffPhoto = usePreviewStore((s) => s.setStaffPhoto);
   const addShift = usePreviewStore((s) => s.addShift);
   const updateShift = usePreviewStore((s) => s.updateShift);
   const removeShift = usePreviewStore((s) => s.removeShift);
@@ -95,27 +120,27 @@ export default function SchedulePage() {
     <main className="px-4 py-6">
       <div className="mx-auto max-w-4xl">
         <ScreenHeader
-          title="The week"
-          emoji="📅"
+          title="the week"
           note="People as rows, days as columns. Most weeks are the same week."
         />
         <StepNote step={7} text="Tap a colored shift to change it, or tap + Add on an empty day." />
 
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row">
+        <div className="pv-rise mb-5 flex flex-col gap-3 sm:flex-row" style={{ animationDelay: "60ms" }}>
           <BigButton
-            emoji="⟳"
+            icon={Copy}
             label="Copy last week"
             color="var(--pv-teal)"
             onClick={() => setSuccess("Last week is copied in. Adjust anything, then publish.")}
           />
           <BigButton
-            emoji="📣"
+            icon={Send}
             label="Publish"
             color="var(--pv-coral)"
             onClick={() => setSuccess("Published. Your team will see their week.")}
           />
         </div>
 
+        <div className="pv-rise" style={{ animationDelay: "120ms" }}>
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-separate border-spacing-2">
@@ -125,7 +150,7 @@ export default function SchedulePage() {
                     <span className="sr-only">Person</span>
                   </th>
                   {DAY_LABELS.map((day) => (
-                    <th key={day} className="min-w-[104px] pb-1 text-base font-extrabold" style={{ color: "var(--pv-ink)" }}>
+                    <th key={day} className="min-w-[104px] pb-1 text-sm font-semibold lowercase" style={{ color: "var(--pv-muted)" }}>
                       {day}
                     </th>
                   ))}
@@ -136,8 +161,21 @@ export default function SchedulePage() {
                   <tr key={member.id}>
                     <th scope="row" className="pr-2 text-left align-top">
                       <span className="flex items-center gap-2 whitespace-nowrap pt-2">
-                        <span aria-hidden="true" className="text-2xl">{member.avatar}</span>
-                        <span className="text-base font-extrabold">{member.firstName}</span>
+                        <span className="relative flex-shrink-0">
+                          <PhotoAvatar
+                            id={member.id}
+                            name={`${member.firstName} ${member.lastName}`}
+                            src={staffPhotos[member.id]}
+                            size={36}
+                            rounded="rounded-md"
+                          />
+                          <AvatarUpload
+                            label={`Upload a photo for ${member.firstName}`}
+                            onPhoto={(d) => setStaffPhoto(member.id, d)}
+                            className="absolute -bottom-1 -right-1"
+                          />
+                        </span>
+                        <span className="text-base font-semibold" style={{ color: "var(--pv-ink)" }}>{member.firstName}</span>
                       </span>
                     </th>
                     {DAY_LABELS.map((day, dayIndex) => {
@@ -151,6 +189,8 @@ export default function SchedulePage() {
                               <div className="flex flex-col gap-2">
                                 {dayShifts.map((shift) => {
                                   const room = shift.roomId ? roomById(shift.roomId) : null;
+                                  const accent = room ? room.color : "var(--pv-gold)";
+                                  const ShiftIcon = room ? ROOM_ICON[room.id] ?? Baby : Briefcase;
                                   return (
                                     <button
                                       key={shift.id}
@@ -166,12 +206,15 @@ export default function SchedulePage() {
                                           roomId: shift.roomId,
                                         });
                                       }}
-                                      className="pv-press pv-target w-full rounded-lg px-2 py-2 text-center font-bold text-white"
-                                      style={{ backgroundColor: room ? room.color : "var(--pv-gold)" }}
+                                      className="pv-lift pv-target w-full rounded-md border bg-white py-2 pl-3 pr-2 text-left shadow-sm"
+                                      style={{ borderColor: "var(--pv-line)", borderLeft: `3px solid ${accent}` }}
                                       aria-label={`${member.firstName}, ${day}, ${shift.start} to ${shift.end} in ${room ? room.name : "the office"}. Tap to change.`}
                                     >
-                                      <span className="block text-base">{shift.start}-{shift.end}</span>
-                                      <span className="block text-sm font-semibold opacity-90">
+                                      <span className="block text-base font-bold" style={{ color: "var(--pv-ink)" }}>
+                                        {shift.start}-{shift.end}
+                                      </span>
+                                      <span className="mt-0.5 flex items-center gap-1 text-sm font-semibold" style={{ color: accent }}>
+                                        <ShiftIcon size={13} aria-hidden="true" className="flex-shrink-0" />
                                         {room ? room.name : "Office"}
                                       </span>
                                     </button>
@@ -202,12 +245,19 @@ export default function SchedulePage() {
             </table>
           </div>
         </Card>
+        </div>
 
         {editor && editorStaff ? (
-          <Card className="mt-5">
-            <h2 className="text-2xl">
-              <span aria-hidden="true" className="mr-2">{editorStaff.avatar}</span>
-              {editorStaff.firstName} on {DAY_LABELS[editor.day]}
+          <Card className="pv-rise mt-5">
+            <h2 className="pv-tad-title flex items-center gap-2 text-2xl">
+              <PhotoAvatar
+                id={editorStaff.id}
+                name={`${editorStaff.firstName} ${editorStaff.lastName}`}
+                src={staffPhotos[editorStaff.id]}
+                size={40}
+                rounded="rounded-md"
+              />
+              <span>{editorStaff.firstName} on {DAY_LABELS[editor.day]}</span>
             </h2>
             <p className="mt-1 text-base" style={{ color: "var(--pv-muted)" }}>
               {editor.shiftId
@@ -217,8 +267,8 @@ export default function SchedulePage() {
 
             <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="shift-start" className="mb-1 block text-base font-bold">
-                  Starts
+                <label htmlFor="shift-start" className="mb-1 block text-sm font-semibold lowercase" style={{ color: "var(--pv-muted)" }}>
+                  starts
                 </label>
                 <select
                   id="shift-start"
@@ -227,7 +277,7 @@ export default function SchedulePage() {
                     playClick();
                     setEditor({ ...editor, start: e.target.value });
                   }}
-                  className="pv-target h-12 w-full rounded-xl border-2 px-3 text-lg font-semibold"
+                  className="pv-target h-12 w-full rounded-md border px-3 text-lg font-semibold"
                   style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)", color: "var(--pv-ink)" }}
                 >
                   {TIME_OPTIONS.map((time) => (
@@ -238,8 +288,8 @@ export default function SchedulePage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="shift-end" className="mb-1 block text-base font-bold">
-                  Ends
+                <label htmlFor="shift-end" className="mb-1 block text-sm font-semibold lowercase" style={{ color: "var(--pv-muted)" }}>
+                  ends
                 </label>
                 <select
                   id="shift-end"
@@ -248,7 +298,7 @@ export default function SchedulePage() {
                     playClick();
                     setEditor({ ...editor, end: e.target.value });
                   }}
-                  className="pv-target h-12 w-full rounded-xl border-2 px-3 text-lg font-semibold"
+                  className="pv-target h-12 w-full rounded-md border px-3 text-lg font-semibold"
                   style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)", color: "var(--pv-ink)" }}
                 >
                   {TIME_OPTIONS.map((time) => (
@@ -260,19 +310,19 @@ export default function SchedulePage() {
               </div>
             </div>
 
-            <p className="mt-4 mb-1 text-base font-bold">Room</p>
+            <p className="mb-1 mt-4 text-sm font-semibold lowercase" style={{ color: "var(--pv-muted)" }}>room</p>
             <div className="flex flex-wrap gap-3">
               {ROOMS.map((room) => (
                 <Chip
                   key={room.id}
-                  label={`${room.emoji} ${room.name}`}
+                  label={room.name}
                   on={editor.roomId === room.id}
                   onClick={() => setEditor({ ...editor, roomId: room.id })}
                   onColor={room.color}
                 />
               ))}
               <Chip
-                label="🗂️ Office"
+                label="Office"
                 on={editor.roomId === null}
                 onClick={() => setEditor({ ...editor, roomId: null })}
                 onColor="var(--pv-gold)"
@@ -280,25 +330,28 @@ export default function SchedulePage() {
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <BigButton emoji="✅" label="Save shift" color="var(--pv-teal)" onClick={saveShift} />
+              <BigButton icon={Check} label="Save shift" color="var(--pv-teal)" onClick={saveShift} />
               {editor.shiftId ? (
-                <BigButton emoji="🗑️" label="Remove shift" color="var(--pv-plum)" onClick={removeCurrentShift} />
+                <BigButton icon={Trash2} label="Remove shift" color="var(--pv-plum)" onClick={removeCurrentShift} />
               ) : null}
-              <BigButton emoji="↩️" label="Cancel" color="#8a8378" onClick={() => setEditor(null)} />
+              <BigButton icon={X} label="Cancel" color="#8a8378" onClick={() => setEditor(null)} />
             </div>
           </Card>
         ) : null}
 
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
-          {ROOMS.map((room) => (
-            <span key={room.id} className="flex items-center gap-2">
-              <span aria-hidden="true" className="h-4 w-4 rounded" style={{ backgroundColor: room.color }} />
-              <span className="text-sm font-bold">{room.name}</span>
-            </span>
-          ))}
-          <span className="flex items-center gap-2">
-            <span aria-hidden="true" className="h-4 w-4 rounded" style={{ backgroundColor: "var(--pv-gold)" }} />
-            <span className="text-sm font-bold">Office</span>
+        <div className="pv-rise mt-5 flex flex-wrap items-center gap-x-5 gap-y-2" style={{ animationDelay: "180ms" }}>
+          {ROOMS.map((room) => {
+            const RoomIcon = ROOM_ICON[room.id] ?? Baby;
+            return (
+              <span key={room.id} className="flex items-center gap-1.5">
+                <RoomIcon size={14} style={{ color: room.color }} />
+                <span className="text-sm font-semibold" style={{ color: "var(--pv-ink)" }}>{room.name}</span>
+              </span>
+            );
+          })}
+          <span className="flex items-center gap-1.5">
+            <Briefcase size={14} style={{ color: "var(--pv-gold)" }} />
+            <span className="text-sm font-semibold" style={{ color: "var(--pv-ink)" }}>Office</span>
           </span>
         </div>
       </div>

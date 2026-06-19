@@ -6,8 +6,10 @@
 // too, which is the two-way thread the real app does not have yet.
 
 import { useState } from "react";
+import { Send } from "lucide-react";
 import { Card, ScreenHeader, StepNote, SuccessBanner } from "@/components/preview/ui";
 import { useMounted } from "@/components/preview/ui";
+import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { FAMILIES, type PreviewFamily } from "@/lib/preview/fixtures";
 import { usePreviewStore, type PreviewMessage } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
@@ -40,15 +42,16 @@ export default function OfficeMessagesPage() {
     <main className="px-4 py-6">
       <div className="mx-auto max-w-2xl">
         <ScreenHeader
-          title="Messages"
-          emoji="💬"
+          title="messages"
           backHref="/preview/office"
           backLabel="The office"
           note="Read each family's thread and write back. They see it on their phone."
         />
-        <StepNote step={9} text="Open the Brown family, send a note, then open their phone to see it." />
+        <div className="pv-rise" style={{ animationDelay: "60ms" }}>
+          <StepNote step={9} text="Open the Brown family, send a note, then open their phone to see it." />
+        </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="pv-rise flex flex-col gap-3" style={{ animationDelay: "120ms" }}>
           {FAMILIES.map((family) => {
             const thread: PreviewMessage[] = mounted ? threads[family.id] ?? [] : [];
             const latest = thread[0];
@@ -61,16 +64,16 @@ export default function OfficeMessagesPage() {
                   onClick={() => openThread(family.id)}
                   className="pv-press pv-target flex w-full items-center gap-3 text-left"
                 >
-                  <span aria-hidden="true" className="text-3xl">{family.avatar}</span>
+                  <PhotoAvatar id={family.id} name={family.name} size={48} rounded="rounded-md" />
                   <div className="flex-1">
-                    <p className="text-lg font-extrabold">{family.name}</p>
+                    <p className="text-lg font-semibold" style={{ color: "var(--pv-ink)" }}>{family.name}</p>
                     <p className="text-sm" style={{ color: "var(--pv-muted)" }}>
                       {latest ? `${latest.fromOffice ? "You" : "They"}: ${latest.body}` : "No messages yet"}
                     </p>
                   </div>
                   {unread > 0 ? (
                     <span
-                      className="rounded-full px-2 py-0.5 text-xs font-extrabold text-white"
+                      className="rounded-full px-2 py-0.5 text-xs font-bold text-white"
                       style={{ backgroundColor: "var(--pv-coral)" }}
                     >
                       {unread} new
@@ -84,9 +87,10 @@ export default function OfficeMessagesPage() {
                       {thread.map((m) => (
                         <div
                           key={m.id}
-                          className={`max-w-[85%] rounded-2xl p-3 ${m.fromOffice ? "ml-auto text-white" : ""}`}
+                          className={`max-w-[85%] rounded-lg border p-3 ${m.fromOffice ? "ml-auto text-white" : ""}`}
                           style={{
-                            backgroundColor: m.fromOffice ? "var(--pv-sky)" : "#eef1f4",
+                            backgroundColor: m.fromOffice ? "var(--pv-coral)" : "var(--pv-card)",
+                            borderColor: m.fromOffice ? "var(--pv-coral)" : "var(--pv-line)",
                           }}
                         >
                           <p className="text-base">{m.body}</p>
@@ -103,7 +107,7 @@ export default function OfficeMessagesPage() {
                         placeholder={`Write to the ${family.name}`}
                         rows={2}
                         aria-label={`Write to the ${family.name}`}
-                        className="rounded-xl border-2 px-4 py-3 text-base"
+                        className="rounded-md border px-4 py-3 text-base"
                         style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
                       />
                       <button
@@ -113,10 +117,10 @@ export default function OfficeMessagesPage() {
                           playClick();
                           send(family);
                         }}
-                        className="pv-press pv-target rounded-xl px-4 py-3 text-base font-extrabold text-white disabled:opacity-50"
-                        style={{ backgroundColor: "var(--pv-sky)" }}
+                        className="pv-press pv-target inline-flex items-center justify-center gap-2 rounded-md px-4 py-3 text-base font-semibold text-white shadow-sm disabled:opacity-50"
+                        style={{ backgroundColor: "var(--pv-coral)" }}
                       >
-                        Send
+                        <Send size={16} aria-hidden="true" /> Send
                       </button>
                     </div>
                   </div>
@@ -126,7 +130,7 @@ export default function OfficeMessagesPage() {
           })}
         </div>
 
-        <p className="mt-4 text-sm" style={{ color: "var(--pv-coral)" }}>
+        <p className="pv-rise mt-4 text-sm" style={{ color: "var(--pv-coral)", animationDelay: "180ms" }}>
           To build. The center can send a one-way message today, but a parent
           writing back does not reach staff yet. This is the two-way thread.
         </p>

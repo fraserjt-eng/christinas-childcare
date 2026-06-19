@@ -10,6 +10,29 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import {
+  ArrowRight,
+  Baby,
+  Backpack,
+  Blocks,
+  Calendar,
+  Check,
+  ClipboardList,
+  DollarSign,
+  GraduationCap,
+  Heart,
+  LayoutGrid,
+  type LucideIcon,
+  MessageSquare,
+  Newspaper,
+  Palette,
+  Pencil,
+  Plus,
+  TrafficCone,
+  Users,
+  Utensils,
+  X,
+} from "lucide-react";
+import {
   BigButton,
   Card,
   EmptyState,
@@ -18,81 +41,99 @@ import {
   SuccessBanner,
   cx,
 } from "@/components/preview/ui";
+import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { ROOMS, type OfficeTileId } from "@/lib/preview/fixtures";
 import { usePreviewStore, getRoomStatus } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
 
+const ROOM_ICON: Record<string, LucideIcon> = {
+  infants: Baby,
+  toddlers: Blocks,
+  preschool: Palette,
+  schoolage: Backpack,
+};
+
 type TileDef =
-  | { kind: "rooms"; emoji: string; label: string; sub: string }
-  | { kind: "link"; emoji: string; label: string; sub: string; href: string }
-  | { kind: "stub"; emoji: string; label: string; sub: string; message: string };
+  | { kind: "rooms"; icon: LucideIcon; color: string; label: string; sub: string }
+  | { kind: "link"; icon: LucideIcon; color: string; label: string; sub: string; href: string }
+  | { kind: "stub"; icon: LucideIcon; color: string; label: string; sub: string; message: string };
 
 const TILES: Record<OfficeTileId, TileDef> = {
   rooms: {
     kind: "rooms",
-    emoji: "🚦",
+    icon: TrafficCone,
+    color: "var(--pv-coral)",
     label: "Today's rooms",
     sub: "Who is in each room right now",
   },
   people: {
     kind: "link",
-    emoji: "🧑🏾‍🤝‍🧑🏾",
+    icon: Users,
+    color: "var(--pv-sky)",
     label: "People",
     sub: "Add someone or reset a code",
     href: "/preview/office/people",
   },
   newsletter: {
     kind: "link",
-    emoji: "📰",
+    icon: Newspaper,
+    color: "var(--pv-plum)",
     label: "Newsletter",
     sub: "Three blocks, then send",
     href: "/preview/newsletter",
   },
   schedule: {
     kind: "link",
-    emoji: "📅",
+    icon: Calendar,
+    color: "var(--pv-sky)",
     label: "Schedule",
     sub: "The whole week on one screen",
     href: "/preview/schedule",
   },
   reports: {
     kind: "stub",
-    emoji: "📊",
+    icon: ClipboardList,
+    color: "var(--pv-muted)",
     label: "Reports",
     sub: "Josh sends these weekly",
     message: "Josh sends these weekly. Nothing for you to do here.",
   },
   training: {
     kind: "link",
-    emoji: "🎓",
+    icon: GraduationCap,
+    color: "var(--pv-gold)",
     label: "Training",
     sub: "Who is current",
     href: "/preview/office/training",
   },
   food: {
     kind: "link",
-    emoji: "🍽️",
+    icon: Utensils,
+    color: "var(--pv-teal)",
     label: "Food counts",
     sub: "Tap who ate what",
     href: "/preview/meals",
   },
   feed: {
     kind: "link",
-    emoji: "💛",
+    icon: Heart,
+    color: "var(--pv-coral)",
     label: "Family feed",
     sub: "What families see",
     href: "/preview/family",
   },
   messages: {
     kind: "link",
-    emoji: "💬",
+    icon: MessageSquare,
+    color: "var(--pv-sky)",
     label: "Messages",
     sub: "Read and write families",
     href: "/preview/office/messages",
   },
   billing: {
     kind: "link",
-    emoji: "💵",
+    icon: DollarSign,
+    color: "var(--pv-teal)",
     label: "Billing",
     sub: "Who owes what",
     href: "/preview/office/billing",
@@ -100,21 +141,26 @@ const TILES: Record<OfficeTileId, TileDef> = {
 };
 
 const TILE_SHELL =
-  "pv-target flex h-full w-full items-start gap-3 rounded-2xl border p-5 text-left shadow-sm";
+  "pv-target flex h-full w-full items-start gap-3 rounded-lg border p-5 text-left shadow-sm";
 const TILE_STYLE = {
   backgroundColor: "var(--pv-card)",
   borderColor: "var(--pv-line)",
 } as const;
 
-/** Emoji, bold label, muted sub. Shared by link, stub, and inert tiles. */
+/** Tinted line icon, bold label, muted sub. Shared by link, stub, inert tiles. */
 function TileBody({ def }: { def: TileDef }) {
+  const Icon = def.icon;
   return (
     <>
-      <span aria-hidden="true" className="text-3xl">
-        {def.emoji}
+      <span
+        aria-hidden="true"
+        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md"
+        style={{ backgroundColor: `color-mix(in srgb, ${def.color} 14%, white)` }}
+      >
+        <Icon size={22} style={{ color: def.color }} />
       </span>
       <span>
-        <span className="block text-xl font-extrabold" style={{ color: "var(--pv-ink)" }}>
+        <span className="block text-xl font-bold" style={{ color: "var(--pv-ink)" }}>
           {def.label}
         </span>
         <span className="mt-1 block text-base font-semibold" style={{ color: "var(--pv-muted)" }}>
@@ -140,19 +186,34 @@ function RoomRow({ room }: { room: (typeof ROOMS)[number] }) {
       : status.level === "near"
         ? "var(--pv-gold)"
         : "var(--pv-red-bad)";
+  const RoomIcon = ROOM_ICON[room.id] ?? Baby;
   return (
-    <div className="rounded-xl p-4 text-white" style={{ backgroundColor: bg }}>
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-lg font-extrabold">
-          <span aria-hidden="true" className="mr-1">
-            {room.emoji}
+    <div
+      className="pv-lift flex items-start gap-3 rounded-md border bg-white p-3 shadow-sm"
+      style={{ borderColor: "var(--pv-line)" }}
+    >
+      <span
+        aria-hidden="true"
+        className="mt-0.5 h-2.5 w-2.5 flex-shrink-0 rounded-full"
+        style={{ backgroundColor: bg }}
+      />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-2 text-lg font-bold" style={{ color: "var(--pv-ink)" }}>
+            <RoomIcon size={18} aria-hidden="true" style={{ color: "var(--pv-muted)" }} />
+            {room.name}
           </span>
-          {room.name}
+          <span className="text-3xl font-extrabold" style={{ color: bg }}>
+            {status.ratioText}
+          </span>
         </span>
-        <span className="text-3xl font-extrabold">{status.ratioText}</span>
-      </div>
-      <p className="mt-1 text-base font-bold">{status.message}</p>
-      <p className="text-sm font-semibold opacity-90">{status.limitText}</p>
+        <p className="mt-1 text-base font-bold" style={{ color: "var(--pv-ink)" }}>
+          {status.message}
+        </p>
+        <p className="text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
+          {status.limitText}
+        </p>
+      </span>
     </div>
   );
 }
@@ -161,9 +222,13 @@ function RoomRow({ room }: { room: (typeof ROOMS)[number] }) {
 function RoomsCard() {
   return (
     <Card className="h-full">
-      <h2 className="text-xl">
-        <span aria-hidden="true" className="mr-2">
-          {TILES.rooms.emoji}
+      <h2 className="pv-tad-title flex items-center gap-2 text-2xl">
+        <span
+          aria-hidden="true"
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md"
+          style={{ backgroundColor: "color-mix(in srgb, var(--pv-coral) 14%, white)" }}
+        >
+          <TrafficCone size={18} style={{ color: "var(--pv-coral)" }} />
         </span>
         {TILES.rooms.label}
       </h2>
@@ -175,6 +240,14 @@ function RoomsCard() {
           <RoomRow key={room.id} room={room} />
         ))}
       </div>
+      <Link
+        href="/preview/dashboard"
+        onClick={() => playClick()}
+        className="pv-press pv-target mt-4 flex items-center justify-center gap-2 rounded-md border px-4 py-3 text-base font-bold"
+        style={{ borderColor: "var(--pv-line)", color: "var(--pv-coral)" }}
+      >
+        Open the full center dashboard <ArrowRight size={18} aria-hidden="true" />
+      </Link>
     </Card>
   );
 }
@@ -193,15 +266,14 @@ export default function OfficePage() {
 type OfficeAccount = {
   name: string;
   role: string;
-  avatar: string;
   password: string | null;
 };
 
 const OFFICE_ACCOUNTS: OfficeAccount[] = [
-  { name: "Christina", role: "Owner and director", avatar: "👩🏾‍💼", password: "summer2026" },
-  { name: "Ophelia", role: "Office", avatar: "👩🏿‍💼", password: null },
-  { name: "Stephan", role: "Office", avatar: "👨🏾‍💼", password: null },
-  { name: "Garhjuan", role: "Office", avatar: "👨🏿‍💼", password: null },
+  { name: "Christina", role: "Owner and director", password: "summer2026" },
+  { name: "Ophelia", role: "Office", password: null },
+  { name: "Stephan", role: "Office", password: null },
+  { name: "Garhjuan", role: "Office", password: null },
 ];
 
 function OfficeSignIn({ onSignIn }: { onSignIn: (name: string) => void }) {
@@ -239,7 +311,6 @@ function OfficeSignIn({ onSignIn }: { onSignIn: (name: string) => void }) {
       <div className="mx-auto max-w-md">
         <ScreenHeader
           title="The office"
-          emoji="🗝️"
           backHref="/preview/door"
           backLabel="Front door"
           note="The office account: who is here, billing, messages, the whole center."
@@ -257,10 +328,10 @@ function OfficeSignIn({ onSignIn }: { onSignIn: (name: string) => void }) {
                   key={a.name}
                   type="button"
                   onClick={() => pick(a.name)}
-                  className="pv-press pv-kiosk-target flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left"
+                  className="pv-press pv-kiosk-target flex w-full items-center gap-3 rounded-lg border p-4 text-left"
                   style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
                 >
-                  <span aria-hidden="true" className="text-4xl">{a.avatar}</span>
+                  <PhotoAvatar id={`office-${a.name}`} name={a.name} size={48} rounded="rounded-md" />
                   <span>
                     <span className="block text-lg font-extrabold">{a.name}</span>
                     <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
@@ -283,7 +354,7 @@ function OfficeSignIn({ onSignIn }: { onSignIn: (name: string) => void }) {
             </button>
 
             <div className="mt-4 flex items-center gap-3">
-              <span aria-hidden="true" className="text-4xl">{account.avatar}</span>
+              <PhotoAvatar id={`office-${account.name}`} name={account.name} size={48} rounded="rounded-md" />
               <span>
                 <span className="block text-xl font-extrabold">{account.name}</span>
                 <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
@@ -293,7 +364,7 @@ function OfficeSignIn({ onSignIn }: { onSignIn: (name: string) => void }) {
             </div>
 
             {account.password === null ? (
-              <p className="mt-5 rounded-2xl border-2 p-4 text-base" style={{ borderColor: "var(--pv-line)", color: "var(--pv-muted)" }}>
+              <p className="mt-5 rounded-lg border p-4 text-base" style={{ borderColor: "var(--pv-line)", color: "var(--pv-muted)" }}>
                 This account does not have a password set up yet. For now only
                 Christina can sign in to the office.
               </p>
@@ -315,7 +386,7 @@ function OfficeSignIn({ onSignIn }: { onSignIn: (name: string) => void }) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") submit();
                   }}
-                  className="mt-2 w-full rounded-2xl border-2 px-5 py-4 text-2xl tracking-widest"
+                  className="mt-2 w-full rounded-lg border px-5 py-4 text-2xl tracking-widest"
                   style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-paper)" }}
                 />
                 {error ? (
@@ -363,7 +434,6 @@ function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }
       <div className="mx-auto max-w-3xl">
         <ScreenHeader
           title="The office"
-          emoji="🗝️"
           backHref="/preview/door"
           backLabel="Front door"
           note="Exactly the buttons you asked for. Nothing else."
@@ -386,9 +456,9 @@ function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }
           text="Check a kid in at the kiosk and watch the number and room colors move here."
         />
 
-        <section className="mb-6">
-          <h2 className="text-2xl sm:text-3xl">Good morning, {name}.</h2>
-          <p className="mt-1 text-lg font-semibold">
+        <section className="pv-rise mb-6" style={{ animationDelay: "60ms" }}>
+          <h2 className="pv-tad-title text-2xl sm:text-3xl">Good morning, {name}.</h2>
+          <p className="mt-1 text-lg font-semibold" style={{ color: "var(--pv-muted)" }}>
             <span className="text-2xl font-extrabold" style={{ color: "var(--pv-coral)" }}>
               {kidsHere}
             </span>{" "}
@@ -396,7 +466,7 @@ function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }
           </p>
         </section>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="pv-rise grid grid-cols-1 gap-4 sm:grid-cols-2" style={{ animationDelay: "120ms" }}>
           {officeTiles.map((id) => {
             const def = TILES[id];
             return (
@@ -418,7 +488,7 @@ function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }
                   <Link
                     href={def.href}
                     onClick={() => playClick()}
-                    className={cx("pv-press", TILE_SHELL)}
+                    className={cx("pv-lift", TILE_SHELL)}
                     style={TILE_STYLE}
                   >
                     <TileBody def={def} />
@@ -430,7 +500,7 @@ function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }
                       playClick();
                       setSuccess(def.message);
                     }}
-                    className={cx("pv-press", TILE_SHELL)}
+                    className={cx("pv-lift", TILE_SHELL)}
                     style={TILE_STYLE}
                   >
                     <TileBody def={def} />
@@ -444,10 +514,10 @@ function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }
                       playClick();
                       removeOfficeTile(id);
                     }}
-                    className="pv-press pv-target absolute -right-2 -top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full text-xl font-bold text-white shadow-md"
+                    className="pv-press pv-target absolute -right-2 -top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full text-white shadow-md"
                     style={{ backgroundColor: "var(--pv-coral)" }}
                   >
-                    ✕
+                    <X size={18} aria-hidden="true" />
                   </button>
                 ) : null}
               </div>
@@ -458,18 +528,21 @@ function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }
         {officeTiles.length === 0 && !editing ? (
           <div className="mt-4">
             <EmptyState
-              emoji="🧺"
+              icon={LayoutGrid}
               title="No buttons on your screen yet"
               detail="Tap Edit my buttons below to add the ones you want."
             />
           </div>
         ) : null}
 
-        <div className="mt-6 flex flex-col gap-4">
+        <div className="pv-rise mt-6 flex flex-col gap-4" style={{ animationDelay: "180ms" }}>
           {editing ? (
             <>
               <Card>
-                <h2 className="text-xl">＋ Add a button</h2>
+                <h2 className="pv-tad-title flex items-center gap-2 text-xl">
+                  <Plus size={18} aria-hidden="true" style={{ color: "var(--pv-coral)" }} />
+                  add a button
+                </h2>
                 {missingTiles.length > 0 ? (
                   <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {missingTiles.map((id) => {
@@ -477,7 +550,7 @@ function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }
                       return (
                         <BigButton
                           key={id}
-                          emoji={def.emoji}
+                          icon={def.icon}
                           label={def.label}
                           sub={def.sub}
                           color="var(--pv-sky)"
@@ -493,6 +566,7 @@ function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }
                 )}
               </Card>
               <BigButton
+                icon={Check}
                 label="Done editing"
                 color="var(--pv-teal)"
                 onClick={() => setEditing(false)}
@@ -500,10 +574,10 @@ function OfficeHome({ name, onSignOut }: { name: string; onSignOut: () => void }
             </>
           ) : (
             <BigButton
-              emoji="✏️"
+              icon={Pencil}
               label="Edit my buttons"
               sub="Add or remove. Your call."
-              color="var(--pv-plum)"
+              color="var(--pv-coral)"
               onClick={() => setEditing(true)}
             />
           )}

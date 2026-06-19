@@ -8,12 +8,36 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import {
+  Backpack,
+  Baby,
+  Blocks,
+  Calendar,
+  Check,
+  ChevronRight,
+  ClipboardList,
+  Delete,
+  Hand,
+  KeyRound,
+  type LucideIcon,
+  Palette,
+  Sun,
+  Utensils,
+} from "lucide-react";
 import { BigButton, Card, ScreenHeader, StepNote, SuccessBanner, cx } from "@/components/preview/ui";
 import { PhotoUpload } from "@/components/preview/PhotoUpload";
+import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { roomById } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { useMounted } from "@/components/preview/ui";
 import { playClick, playError } from "@/lib/preview/sound";
+
+const ROOM_ICON: Record<string, LucideIcon> = {
+  infants: Baby,
+  toddlers: Blocks,
+  preschool: Palette,
+  schoolage: Backpack,
+};
 
 type Mode =
   | { kind: "pad" }
@@ -101,7 +125,6 @@ export default function KioskPage() {
       <div className="mx-auto max-w-2xl">
         <ScreenHeader
           title="The kiosk"
-          emoji="🔢"
           backHref="/preview/door"
           backLabel="Front door"
           note="One pad for everyone. The code decides what happens next."
@@ -109,16 +132,24 @@ export default function KioskPage() {
         <StepNote step={2} text="Try staff code 7321, family code 1234, or office code 9999." />
 
         {mode.kind === "pad" ? (
+          <div className="pv-rise" style={{ animationDelay: "60ms" }}>
           <Card className={cx("mx-auto max-w-md text-center", shake && "pv-shake")}>
-            <h2 className="text-2xl">Enter your code</h2>
+            <span
+              className="mx-auto flex h-11 w-11 items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(198,40,40,0.10)" }}
+              aria-hidden="true"
+            >
+              <KeyRound size={20} style={{ color: "var(--pv-coral)" }} />
+            </span>
+            <h2 className="pv-tad-title mt-3 text-2xl">Enter your code</h2>
             <div className="mt-5 flex justify-center gap-4" aria-label={`${pin.length} of 4 digits entered`}>
               {[0, 1, 2, 3].map((i) => (
                 <span
                   key={i}
                   className="h-5 w-5 rounded-full border-2"
                   style={{
-                    borderColor: "var(--pv-ink)",
-                    backgroundColor: i < pin.length ? "var(--pv-ink)" : "transparent",
+                    borderColor: "var(--pv-coral)",
+                    backgroundColor: i < pin.length ? "var(--pv-coral)" : "transparent",
                   }}
                 />
               ))}
@@ -130,11 +161,11 @@ export default function KioskPage() {
                     key={`${key}-${i}`}
                     type="button"
                     onClick={() => pressKey(key)}
-                    className="pv-press flex h-[72px] w-[72px] items-center justify-center rounded-full text-3xl font-bold"
-                    style={{ backgroundColor: "#f4f0e9", color: "var(--pv-ink)" }}
+                    className="pv-press flex h-[72px] w-[72px] items-center justify-center rounded-xl border text-3xl font-semibold"
+                    style={{ backgroundColor: "#fbfaf8", borderColor: "var(--pv-line)", color: "var(--pv-ink)" }}
                     aria-label={key === "⌫" ? "Delete a digit" : key}
                   >
-                    {key}
+                    {key === "⌫" ? <Delete size={28} aria-hidden="true" /> : key}
                   </button>
                 ) : (
                   <span key={`blank-${i}`} className="h-[72px] w-[72px]" />
@@ -142,21 +173,22 @@ export default function KioskPage() {
               )}
             </div>
           </Card>
+          </div>
         ) : null}
 
         {mode.kind === "staff" && activeStaff ? (
+          <div className="pv-rise" style={{ animationDelay: "60ms" }}>
           <Card className="mx-auto max-w-md text-center">
-            {mounted && staffPhotos[activeStaff.id] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={staffPhotos[activeStaff.id]}
-                alt={activeStaff.firstName}
-                className="mx-auto h-24 w-24 rounded-full object-cover"
+            <span className="inline-block">
+              <PhotoAvatar
+                id={activeStaff.id}
+                name={`${activeStaff.firstName} ${activeStaff.lastName}`}
+                src={mounted ? staffPhotos[activeStaff.id] : undefined}
+                size={96}
+                rounded="rounded-2xl"
               />
-            ) : (
-              <div aria-hidden="true" className="text-6xl">{activeStaff.avatar}</div>
-            )}
-            <h2 className="mt-3 text-3xl">Hi {activeStaff.firstName}!</h2>
+            </span>
+            <h2 className="pv-tad-title mt-3 text-3xl">Hi {activeStaff.firstName}!</h2>
             <p className="mt-2 text-lg" style={{ color: "var(--pv-muted)" }}>
               {mounted && clockedIn[activeStaff.id]
                 ? `You clocked in at ${clockedIn[activeStaff.id]}.`
@@ -166,7 +198,7 @@ export default function KioskPage() {
               {mounted && clockedIn[activeStaff.id] ? (
                 <BigButton
                   kiosk
-                  emoji="👋"
+                  icon={Hand}
                   label="Clock out"
                   color="var(--pv-plum)"
                   onClick={() => {
@@ -177,7 +209,7 @@ export default function KioskPage() {
               ) : (
                 <BigButton
                   kiosk
-                  emoji="☀️"
+                  icon={Sun}
                   label="Clock in"
                   color="var(--pv-teal)"
                   onClick={() => {
@@ -200,57 +232,79 @@ export default function KioskPage() {
               />
             </div>
             <div className="mt-7 text-left">
-              <h3 className="text-lg font-extrabold">Your tools</h3>
+              <h3 className="pv-tad-label text-base">Your tools</h3>
               <div className="mt-3 grid grid-cols-1 gap-3">
-                <Link
-                  href="/preview/room"
-                  onClick={() => playClick()}
-                  className="pv-press pv-kiosk-target flex items-center gap-3 rounded-2xl px-5 py-4 text-lg font-extrabold text-white shadow-md"
-                  style={{ backgroundColor: "var(--pv-teal)" }}
-                >
-                  <span aria-hidden="true" className="text-2xl">📋</span>
-                  <span>
-                    Log the day
-                    <span className="block text-sm font-semibold opacity-90">Any room: meals, naps, photos, notes</span>
-                  </span>
-                </Link>
-                <Link
-                  href="/preview/meals"
-                  onClick={() => playClick()}
-                  className="pv-press pv-kiosk-target flex items-center gap-3 rounded-2xl px-5 py-4 text-lg font-extrabold text-white shadow-md"
-                  style={{ backgroundColor: "var(--pv-gold)" }}
-                >
-                  <span aria-hidden="true" className="text-2xl">🍽️</span>
-                  <span>
-                    Food counts
-                    <span className="block text-sm font-semibold opacity-90">Two taps per child at the table</span>
-                  </span>
-                </Link>
-                <Link
-                  href="/preview/schedule"
-                  onClick={() => playClick()}
-                  className="pv-press pv-kiosk-target flex items-center gap-3 rounded-2xl px-5 py-4 text-lg font-extrabold text-white shadow-md"
-                  style={{ backgroundColor: "var(--pv-sky)" }}
-                >
-                  <span aria-hidden="true" className="text-2xl">📅</span>
-                  <span>
-                    Your week
-                    <span className="block text-sm font-semibold opacity-90">See your shifts</span>
-                  </span>
-                </Link>
+                {[
+                  {
+                    href: "/preview/room",
+                    icon: ClipboardList,
+                    title: "Log the day",
+                    sub: "Any room: meals, naps, photos, notes",
+                    color: "var(--pv-teal)",
+                    tint: "rgba(0,150,136,0.12)",
+                  },
+                  {
+                    href: "/preview/meals",
+                    icon: Utensils,
+                    title: "Food counts",
+                    sub: "Two taps per child at the table",
+                    color: "var(--pv-gold)",
+                    tint: "rgba(255,179,0,0.14)",
+                  },
+                  {
+                    href: "/preview/schedule",
+                    icon: Calendar,
+                    title: "Your week",
+                    sub: "See your shifts",
+                    color: "var(--pv-sky)",
+                    tint: "rgba(3,155,229,0.12)",
+                  },
+                ].map((tool) => {
+                  const ToolIcon = tool.icon;
+                  return (
+                    <Link
+                      key={tool.href}
+                      href={tool.href}
+                      onClick={() => playClick()}
+                      className="pv-lift pv-kiosk-target flex items-center gap-3 rounded-lg border bg-white px-5 py-4 shadow-sm"
+                      style={{ borderColor: "var(--pv-line)" }}
+                    >
+                      <span
+                        className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg"
+                        style={{ backgroundColor: tool.tint }}
+                        aria-hidden="true"
+                      >
+                        <ToolIcon size={24} style={{ color: tool.color }} />
+                      </span>
+                      <span className="flex-1">
+                        <span className="block text-lg font-bold" style={{ color: "var(--pv-ink)" }}>
+                          {tool.title}
+                        </span>
+                        <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
+                          {tool.sub}
+                        </span>
+                      </span>
+                      <ChevronRight size={20} aria-hidden="true" style={{ color: "var(--pv-muted)" }} className="flex-shrink-0" />
+                    </Link>
+                  );
+                })}
               </div>
             </div>
             <div className="mt-6">
-              <BigButton emoji="✅" label="Done" color="#8a8378" onClick={backToPad} className="w-full text-center" />
+              <BigButton icon={Check} label="Done" color="#8a8378" onClick={backToPad} className="w-full text-center" />
             </div>
           </Card>
+          </div>
         ) : null}
 
         {mode.kind === "family" && activeFamily ? (
+          <div className="pv-rise" style={{ animationDelay: "60ms" }}>
           <Card className="mx-auto max-w-lg">
             <div className="text-center">
-              <div aria-hidden="true" className="text-5xl">{activeFamily.avatar}</div>
-              <h2 className="mt-2 text-3xl">{activeFamily.name}</h2>
+              <span className="inline-block">
+                <PhotoAvatar id={activeFamily.id} name={activeFamily.name} size={80} rounded="rounded-2xl" />
+              </span>
+              <h2 className="pv-tad-title mt-2 text-3xl">{activeFamily.name}</h2>
               <p className="mt-1 text-lg" style={{ color: "var(--pv-muted)" }}>
                 Tap a child to check them in or out.
               </p>
@@ -260,10 +314,11 @@ export default function KioskPage() {
                 const inAt = mounted ? checkedIn[kid.id] : null;
                 const photo = mounted ? kidPhotos[kid.id] : undefined;
                 const room = roomById(kid.roomId);
+                const RoomIcon = ROOM_ICON[kid.roomId] ?? Baby;
                 return (
                   <div
                     key={kid.id}
-                    className="rounded-2xl border-2 p-4 text-center"
+                    className="pv-lift rounded-lg border p-4 text-center"
                     style={{
                       borderColor: inAt ? "var(--pv-teal)" : "var(--pv-line)",
                       backgroundColor: inAt ? "#e7f4f2" : "var(--pv-card)",
@@ -283,15 +338,23 @@ export default function KioskPage() {
                       }}
                       className="pv-press pv-kiosk-target w-full"
                     >
-                      {photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={photo} alt={kid.firstName} className="mx-auto h-20 w-20 rounded-2xl object-cover" />
-                      ) : (
-                        <span aria-hidden="true" className="block text-5xl">{kid.avatar}</span>
-                      )}
-                      <span className="mt-2 block text-xl font-extrabold">{kid.firstName}</span>
-                      <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
-                        {room ? `${room.emoji} ${room.name}` : ""}
+                      <span className="block">
+                        <PhotoAvatar
+                          id={kid.id}
+                          name={`${kid.firstName} ${kid.lastName}`}
+                          src={photo}
+                          size={80}
+                          rounded="rounded-lg"
+                          className={cx("mx-auto", inAt ? "" : "opacity-75 grayscale")}
+                        />
+                      </span>
+                      <span className="mt-2 block text-xl font-bold">{kid.firstName}</span>
+                      <span className="flex items-center justify-center gap-1 text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
+                        {room ? (
+                          <>
+                            <RoomIcon size={13} aria-hidden="true" style={{ color: room.color }} /> {room.name}
+                          </>
+                        ) : null}
                       </span>
                       <span
                         className="mt-2 inline-block rounded-full px-3 py-1 text-sm font-bold text-white"
@@ -325,9 +388,10 @@ export default function KioskPage() {
               })}
             </div>
             <div className="mt-6">
-              <BigButton emoji="✅" label="Done" color="var(--pv-plum)" onClick={backToPad} className="w-full text-center" />
+              <BigButton icon={Check} label="Done" color="var(--pv-plum)" onClick={backToPad} className="w-full text-center" />
             </div>
           </Card>
+          </div>
         ) : null}
       </div>
 

@@ -7,7 +7,9 @@
 // real app (the owner already makes these; this gives her the screen).
 
 import { useState } from "react";
+import { CheckCircle2, DollarSign, Mail, Users } from "lucide-react";
 import { Card, ScreenHeader, StepNote, SuccessBanner } from "@/components/preview/ui";
+import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { FAMILIES } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { useMounted } from "@/components/preview/ui";
@@ -30,44 +32,80 @@ export default function OfficeBillingPage() {
     <main className="px-4 py-6">
       <div className="mx-auto max-w-2xl">
         <ScreenHeader
-          title="Billing"
-          emoji="💵"
+          title="billing"
           backHref="/preview/office"
           backLabel="The office"
           note="Who owes what, at a glance. Mark a family paid and their phone updates."
         />
-        <StepNote step={9} text="Mark the Williams family paid, then open their phone to see it clear." />
+        <div className="pv-rise">
+          <StepNote step={9} text="Mark the Williams family paid, then open their phone to see it clear." />
+        </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="pv-rise grid grid-cols-2 gap-3" style={{ animationDelay: "60ms" }}>
           <Card>
-            <p className="text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>Outstanding</p>
-            <p className="text-3xl font-extrabold" style={{ color: totalOwed > 0 ? "var(--pv-coral)" : "var(--pv-teal)" }}>
+            <p className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
+              <span
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md"
+                style={{ backgroundColor: "color-mix(in srgb, var(--pv-coral) 12%, transparent)" }}
+                aria-hidden="true"
+              >
+                <DollarSign size={15} style={{ color: "var(--pv-coral)" }} />
+              </span>
+              Outstanding
+            </p>
+            <p className="mt-1 text-3xl font-bold" style={{ color: totalOwed > 0 ? "var(--pv-coral)" : "var(--pv-teal)" }}>
               ${totalOwed}
             </p>
           </Card>
           <Card>
-            <p className="text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>Families with a balance</p>
-            <p className="text-3xl font-extrabold">{pastDueCount}</p>
+            <p className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
+              <span
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md"
+                style={{ backgroundColor: "color-mix(in srgb, var(--pv-sky) 14%, transparent)" }}
+                aria-hidden="true"
+              >
+                <Users size={15} style={{ color: "var(--pv-sky)" }} />
+              </span>
+              Families with a balance
+            </p>
+            <p className="mt-1 text-3xl font-bold" style={{ color: "var(--pv-ink)" }}>{pastDueCount}</p>
           </Card>
         </div>
 
         <div className="mt-4 flex flex-col gap-3">
-          {rows.map(({ family, owed }) => (
-            <Card key={family.id}>
+          {rows.map(({ family, owed }, i) => (
+            <div key={family.id} className="pv-rise" style={{ animationDelay: `${120 + Math.min(i, 6) * 40}ms` }}>
+            <Card>
               <div className="flex flex-wrap items-center gap-3">
-                <span aria-hidden="true" className="text-3xl">{family.avatar}</span>
+                <PhotoAvatar id={family.id} name={family.name} size={48} rounded="rounded-md" />
                 <div className="flex-1">
-                  <p className="text-lg font-extrabold">{family.name}</p>
+                  <p className="text-lg font-bold" style={{ color: "var(--pv-ink)" }}>{family.name}</p>
                   <p className="text-sm" style={{ color: "var(--pv-muted)" }}>
                     {owed > 0 ? family.balanceDueLabel : "Paid up"}
                   </p>
                 </div>
-                <span
-                  className="rounded-full px-3 py-1 text-base font-extrabold text-white"
-                  style={{ backgroundColor: owed > 0 ? "var(--pv-coral)" : "var(--pv-teal)" }}
-                >
-                  {owed > 0 ? `$${owed}` : "Paid"}
-                </span>
+                {owed > 0 ? (
+                  <span
+                    className="inline-flex items-center rounded-md px-2.5 py-1 text-base font-bold"
+                    style={{
+                      color: "var(--pv-coral)",
+                      backgroundColor: "color-mix(in srgb, var(--pv-coral) 12%, transparent)",
+                    }}
+                  >
+                    ${owed}
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-sm font-bold"
+                    style={{
+                      color: "var(--pv-teal)",
+                      backgroundColor: "color-mix(in srgb, var(--pv-teal) 12%, transparent)",
+                    }}
+                  >
+                    <CheckCircle2 size={14} aria-hidden="true" />
+                    Paid
+                  </span>
+                )}
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
@@ -76,9 +114,10 @@ export default function OfficeBillingPage() {
                     playClick();
                     setSuccess(`Statement sent to the ${family.name}. In the real app this emails them.`);
                   }}
-                  className="pv-press pv-target rounded-xl px-4 py-2 text-base font-bold text-white"
-                  style={{ backgroundColor: "var(--pv-sky)" }}
+                  className="pv-press pv-target inline-flex items-center gap-1.5 rounded-lg border px-4 py-2 text-base font-bold shadow-sm"
+                  style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)", color: "var(--pv-ink)" }}
                 >
+                  <Mail size={16} style={{ color: "var(--pv-sky)" }} aria-hidden="true" />
                   Send statement
                 </button>
                 {owed > 0 ? (
@@ -89,18 +128,20 @@ export default function OfficeBillingPage() {
                       markFamilyPaid(family.id);
                       setSuccess(`Marked the ${family.name} paid. Their phone shows Paid up now.`);
                     }}
-                    className="pv-press pv-target rounded-xl px-4 py-2 text-base font-bold text-white"
-                    style={{ backgroundColor: "var(--pv-teal)" }}
+                    className="pv-press pv-target inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-base font-bold text-white shadow-sm"
+                    style={{ backgroundColor: "var(--pv-coral)" }}
                   >
+                    <CheckCircle2 size={16} aria-hidden="true" />
                     Mark paid
                   </button>
                 ) : null}
               </div>
             </Card>
+            </div>
           ))}
         </div>
 
-        <p className="mt-4 text-sm" style={{ color: "var(--pv-coral)" }}>
+        <p className="pv-rise mt-4 text-sm" style={{ color: "var(--pv-coral)", animationDelay: "200ms" }}>
           To build. The owner already creates these statements today; this is the
           screen that lets her see balances and act on them, and lets a parent
           see and pay from their phone.

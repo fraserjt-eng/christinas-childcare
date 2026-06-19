@@ -5,7 +5,10 @@
 // Marks live in the shared store, so the rest of the preview sees them too.
 
 import { useEffect, useRef, useState } from "react";
+import { Armchair, Check, ShieldAlert } from "lucide-react";
 import { Card, Chip, EmptyState, ScreenHeader, StepNote, useMounted } from "@/components/preview/ui";
+import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
+import { AvatarUpload } from "@/components/preview/AvatarUpload";
 import { ROOMS, type MealMark } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 
@@ -23,6 +26,8 @@ export default function MealsPage() {
   const checkedIn = usePreviewStore((s) => s.checkedIn);
   const meals = usePreviewStore((s) => s.meals);
   const setMealMark = usePreviewStore((s) => s.setMealMark);
+  const kidPhotos = usePreviewStore((s) => s.kidPhotos);
+  const setKidPhoto = usePreviewStore((s) => s.setKidPhoto);
 
   const [roomId, setRoomId] = useState("toddlers");
   const [meal, setMeal] = useState("Lunch");
@@ -53,45 +58,57 @@ export default function MealsPage() {
     <main className="px-4 py-6">
       <div className="mx-auto max-w-2xl">
         <ScreenHeader
-          title="Food counts"
-          emoji="🍽️"
+          title="food counts"
           note="One row per child. Two taps max. Done at the table."
         />
         <StepNote step={6} text="Pick a room and a meal, then tap one chip per child." />
 
         {/* Room picker maps ROOMS from fixtures. Never hardcode rooms here:
             a fifth room added to fixtures shows up with no code change. */}
-        <div className="flex flex-wrap gap-2">
+        <div className="pv-rise flex flex-wrap gap-2" style={{ animationDelay: "60ms" }}>
           {ROOMS.map((r) => (
             <Chip
               key={r.id}
-              label={`${r.emoji} ${r.name}`}
+              label={r.name}
               on={r.id === roomId}
               onClick={() => setRoomId(r.id)}
               onColor={r.color}
             />
           ))}
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="pv-rise mt-3 flex flex-wrap gap-2" style={{ animationDelay: "120ms" }}>
           {MEAL_NAMES.map((m) => (
             <Chip key={m} label={m} on={m === meal} onClick={() => setMeal(m)} />
           ))}
         </div>
 
-        <Card className="mt-5">
+        <div className="pv-rise mt-5" style={{ animationDelay: "180ms" }}>
+        <Card>
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-2xl">
+            <h2 className="pv-tad-title text-2xl">
               {meal}, {roomName}
             </h2>
             <span
-              className="rounded-full px-3 py-1 text-sm font-bold text-white"
-              style={{ backgroundColor: "var(--pv-teal)" }}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold"
+              style={{
+                backgroundColor: "color-mix(in srgb, var(--pv-teal) 12%, #fff)",
+                color: "var(--pv-teal)",
+              }}
             >
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: "var(--pv-teal)" }}
+                aria-hidden="true"
+              />
               {presentKids.length} here now
             </span>
             {saved ? (
-              <span role="status" className="text-sm font-bold" style={{ color: "var(--pv-teal)" }}>
-                Saved ✓
+              <span
+                role="status"
+                className="inline-flex items-center gap-1 text-sm font-semibold"
+                style={{ color: "var(--pv-teal)" }}
+              >
+                <Check size={14} aria-hidden="true" /> Saved
               </span>
             ) : null}
           </div>
@@ -99,7 +116,7 @@ export default function MealsPage() {
           {!mounted ? null : presentKids.length === 0 ? (
             <div className="mt-5">
               <EmptyState
-                emoji="🪑"
+                icon={Armchair}
                 title="Nobody is here yet"
                 detail="Check kids in at the kiosk and they appear on this roster."
               />
@@ -114,18 +131,32 @@ export default function MealsPage() {
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span aria-hidden="true" className="text-3xl">
-                        {kid.avatar}
+                      <span className="relative flex-shrink-0">
+                        <PhotoAvatar
+                          id={kid.id}
+                          name={`${kid.firstName} ${kid.lastName}`}
+                          src={kidPhotos[kid.id]}
+                          size={44}
+                          rounded="rounded-md"
+                        />
+                        <AvatarUpload
+                          label={`Upload a photo for ${kid.firstName}`}
+                          onPhoto={(d) => setKidPhoto(kid.id, d)}
+                          className="absolute -bottom-1 -right-1"
+                        />
                       </span>
                       <span className="min-w-[90px] text-lg font-bold">{kid.firstName}</span>
                       {/* Allergy badge is data-driven from kid.allergy, so
                           Luca Garcia (Infants, Dairy) shows it once checked in. */}
                       {kid.allergy ? (
                         <span
-                          className="rounded-full px-3 py-1 text-sm font-bold text-white"
-                          style={{ backgroundColor: "var(--pv-red-bad)" }}
+                          className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-semibold"
+                          style={{
+                            backgroundColor: "color-mix(in srgb, var(--pv-red-bad) 12%, #fff)",
+                            color: "var(--pv-red-bad)",
+                          }}
                         >
-                          ⚠️ {kid.allergy}
+                          <ShieldAlert size={14} aria-hidden="true" /> {kid.allergy}
                         </span>
                       ) : null}
                     </div>
@@ -146,6 +177,7 @@ export default function MealsPage() {
             </ul>
           )}
         </Card>
+        </div>
 
         <p className="mt-5 text-base" style={{ color: "var(--pv-muted)" }}>
           The CACFP paperwork math runs in the background after you tap. It never gets in your way

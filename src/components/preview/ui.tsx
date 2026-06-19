@@ -5,6 +5,7 @@
 // visible press feedback, plain-language success states, tap and scroll only.
 
 import Link from "next/link";
+import { type LucideIcon } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { playClick, playSuccess } from "@/lib/preview/sound";
 
@@ -14,15 +15,17 @@ export function cx(...parts: Array<string | false | null | undefined>): string {
 
 /** Big friendly action button. kiosk=true raises the floor to 56px. */
 export function BigButton({
-  emoji,
+  icon: Icon,
   label,
   sub,
   onClick,
-  color = "var(--pv-teal)",
+  color = "var(--pv-coral)",
   kiosk = false,
   className,
   disabled = false,
 }: {
+  /** Optional line icon. Emoji prop is accepted for back-compat but never rendered. */
+  icon?: LucideIcon;
   emoji?: string;
   label: string;
   sub?: string;
@@ -41,7 +44,7 @@ export function BigButton({
         onClick?.();
       }}
       className={cx(
-        "pv-press rounded-2xl px-5 py-4 text-left font-bold text-white shadow-md",
+        "pv-press rounded-lg px-5 py-4 text-left font-bold text-white shadow-sm",
         kiosk ? "pv-kiosk-target text-2xl" : "pv-target text-lg",
         disabled && "opacity-50",
         className,
@@ -49,7 +52,7 @@ export function BigButton({
       style={{ backgroundColor: color }}
     >
       <span className="flex items-center gap-3">
-        {emoji ? <span aria-hidden="true" className={kiosk ? "text-4xl" : "text-2xl"}>{emoji}</span> : null}
+        {Icon ? <Icon size={kiosk ? 28 : 22} aria-hidden="true" className="flex-shrink-0" /> : null}
         <span>
           <span className="block">{label}</span>
           {sub ? <span className="block text-sm font-semibold opacity-90">{sub}</span> : null}
@@ -69,7 +72,7 @@ export function Card({
 }) {
   return (
     <div
-      className={cx("rounded-2xl border bg-[var(--pv-card)] p-5 shadow-sm", className)}
+      className={cx("pv-lift pv-deep rounded-xl border bg-white p-5", className)}
       style={{ borderColor: "var(--pv-line)" }}
     >
       {children}
@@ -80,12 +83,12 @@ export function Card({
 /** Screen header: big title, optional back link, optional walkthrough note. */
 export function ScreenHeader({
   title,
-  emoji,
   backHref = "/preview",
   backLabel = "All screens",
   note,
 }: {
   title: string;
+  /** Accepted for backward compatibility; no longer rendered (Tadpoles header). */
   emoji?: string;
   backHref?: string;
   backLabel?: string;
@@ -96,15 +99,12 @@ export function ScreenHeader({
       <Link
         href={backHref}
         className="pv-target inline-flex items-center gap-2 rounded-xl px-3 py-2 text-base font-bold"
-        style={{ color: "var(--pv-plum)" }}
+        style={{ color: "var(--pv-coral)" }}
         onClick={() => playClick()}
       >
         <span aria-hidden="true">←</span> {backLabel}
       </Link>
-      <h1 className="mt-2 text-3xl sm:text-4xl">
-        {emoji ? <span aria-hidden="true" className="mr-2">{emoji}</span> : null}
-        {title}
-      </h1>
+      <h1 className="pv-tad-title mt-2 text-3xl sm:text-4xl">{title}</h1>
       {note ? (
         <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
           {note}
@@ -194,18 +194,24 @@ export function StepNote({ step, text }: { step: number; text: string }) {
 
 /** Friendly empty state with a next step, never a dead end. */
 export function EmptyState({
-  emoji,
+  icon: Icon,
   title,
   detail,
 }: {
-  emoji: string;
+  /** Optional line icon. Emoji prop is accepted for back-compat but never rendered. */
+  icon?: LucideIcon;
+  emoji?: string;
   title: string;
   detail: string;
 }) {
   return (
     <Card className="text-center">
-      <div aria-hidden="true" className="text-4xl">{emoji}</div>
-      <h3 className="mt-2 text-xl">{title}</h3>
+      {Icon ? (
+        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: "color-mix(in srgb, var(--pv-coral) 12%, white)" }}>
+          <Icon size={24} aria-hidden="true" style={{ color: "var(--pv-coral)" }} />
+        </span>
+      ) : null}
+      <h3 className="mt-3 text-xl">{title}</h3>
       <p className="mt-1 text-base" style={{ color: "var(--pv-muted)" }}>
         {detail}
       </p>

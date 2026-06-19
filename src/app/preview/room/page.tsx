@@ -8,6 +8,22 @@
 
 import { useState } from "react";
 import {
+  Apple,
+  Baby,
+  Backpack,
+  Blocks,
+  Camera,
+  Check,
+  ClipboardList,
+  type LucideIcon,
+  Milk,
+  Moon,
+  Palette,
+  StickyNote,
+  Sun,
+  Undo2,
+} from "lucide-react";
+import {
   BigButton,
   Card,
   Chip,
@@ -18,16 +34,37 @@ import {
   useMounted,
 } from "@/components/preview/ui";
 import { PhotoUpload } from "@/components/preview/PhotoUpload";
+import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
+import { AvatarUpload } from "@/components/preview/AvatarUpload";
 import { DEMO_PHOTOS, ROOMS } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
+
+/** Small lucide line icon per room, tinted with the room color. */
+const ROOM_ICON: Record<string, LucideIcon> = {
+  infants: Baby,
+  toddlers: Blocks,
+  preschool: Palette,
+  schoolage: Backpack,
+};
+
+/** Small lucide line icon per log kind (replaces the kind emoji glyphs). */
+const KIND_ICON: Record<string, LucideIcon> = {
+  meal: Apple,
+  bottle: Milk,
+  diaper: StickyNote,
+  nap: Moon,
+  activity: Palette,
+  photo: Camera,
+  note: StickyNote,
+};
 
 type ActionKind = "meal" | "bottle" | "diaper" | "nap" | "activity" | "photo" | "note";
 
 interface RoomAction {
   kind: ActionKind;
   label: string;
-  emoji: string;
+  icon: LucideIcon;
   color: string;
   panelTitle: string;
   defaultDetail: string;
@@ -44,7 +81,7 @@ const STANDARD_ACTIONS: RoomAction[] = [
   {
     kind: "meal",
     label: "Meal",
-    emoji: "🍎",
+    icon: Apple,
     color: "var(--pv-teal)",
     panelTitle: "Log a meal",
     defaultDetail: "Morning snack, ate most",
@@ -53,7 +90,7 @@ const STANDARD_ACTIONS: RoomAction[] = [
   {
     kind: "nap",
     label: "Nap",
-    emoji: "😴",
+    icon: Moon,
     color: "var(--pv-plum)",
     panelTitle: "Log a nap",
     defaultDetail: "Slept 12:30 to 2:05",
@@ -62,7 +99,7 @@ const STANDARD_ACTIONS: RoomAction[] = [
   {
     kind: "activity",
     label: "Activity",
-    emoji: "🎨",
+    icon: Palette,
     color: "var(--pv-gold)",
     panelTitle: "Log an activity",
     defaultDetail: "Outdoor play and big blocks",
@@ -71,7 +108,7 @@ const STANDARD_ACTIONS: RoomAction[] = [
   {
     kind: "photo",
     label: "Photo",
-    emoji: "📷",
+    icon: Camera,
     color: "var(--pv-sky)",
     panelTitle: "Log a photo",
     defaultDetail: "A moment from today",
@@ -80,7 +117,7 @@ const STANDARD_ACTIONS: RoomAction[] = [
   {
     kind: "note",
     label: "Note",
-    emoji: "📝",
+    icon: StickyNote,
     color: "var(--pv-coral)",
     panelTitle: "Log a note",
     defaultDetail: "A quick note from the room",
@@ -94,7 +131,7 @@ const INFANT_ACTIONS: RoomAction[] = [
   {
     kind: "bottle",
     label: "Bottle",
-    emoji: "🍼",
+    icon: Milk,
     color: "var(--pv-sky)",
     panelTitle: "Log a bottle",
     defaultDetail: "4 oz",
@@ -103,7 +140,7 @@ const INFANT_ACTIONS: RoomAction[] = [
   {
     kind: "diaper",
     label: "Diaper",
-    emoji: "🧷",
+    icon: StickyNote,
     color: "var(--pv-plum)",
     panelTitle: "Log a diaper change",
     defaultDetail: "Wet, changed",
@@ -112,7 +149,7 @@ const INFANT_ACTIONS: RoomAction[] = [
   {
     kind: "meal",
     label: "Meal",
-    emoji: "🍎",
+    icon: Apple,
     color: "var(--pv-teal)",
     panelTitle: "Log a meal",
     defaultDetail: "Baby food, ate most",
@@ -121,7 +158,7 @@ const INFANT_ACTIONS: RoomAction[] = [
   {
     kind: "nap",
     label: "Nap",
-    emoji: "😴",
+    icon: Moon,
     color: "var(--pv-gold)",
     panelTitle: "Log a nap",
     defaultDetail: "Morning nap, slept well",
@@ -130,7 +167,7 @@ const INFANT_ACTIONS: RoomAction[] = [
   {
     kind: "activity",
     label: "Activity",
-    emoji: "🎨",
+    icon: Palette,
     color: "var(--pv-coral)",
     panelTitle: "Log an activity",
     defaultDetail: "Tummy time and rattles",
@@ -139,7 +176,7 @@ const INFANT_ACTIONS: RoomAction[] = [
   {
     kind: "photo",
     label: "Photo",
-    emoji: "📷",
+    icon: Camera,
     color: "var(--pv-sky)",
     panelTitle: "Log a photo",
     defaultDetail: "A moment from today",
@@ -148,7 +185,7 @@ const INFANT_ACTIONS: RoomAction[] = [
   {
     kind: "note",
     label: "Note",
-    emoji: "📝",
+    icon: StickyNote,
     color: "var(--pv-plum)",
     panelTitle: "Log a note",
     defaultDetail: "A quick note from the room",
@@ -156,20 +193,12 @@ const INFANT_ACTIONS: RoomAction[] = [
   },
 ];
 
-const KIND_EMOJI: Record<string, string> = {
-  meal: "🍎",
-  bottle: "🍼",
-  diaper: "🧷",
-  nap: "😴",
-  activity: "🎨",
-  photo: "📷",
-  note: "📝",
-};
-
 export default function RoomPage() {
   const mounted = useMounted();
   const kids = usePreviewStore((s) => s.kids);
   const checkedIn = usePreviewStore((s) => s.checkedIn);
+  const kidPhotos = usePreviewStore((s) => s.kidPhotos);
+  const setKidPhoto = usePreviewStore((s) => s.setKidPhoto);
   const logEvent = usePreviewStore((s) => s.logEvent);
   const feed = usePreviewStore((s) => s.feed);
   const editEvent = usePreviewStore((s) => s.editEvent);
@@ -267,35 +296,42 @@ export default function RoomPage() {
     setSuccess("Saved. Families will see this in their feed.");
   }
 
+  const ActiveRoomIcon = activeRoom ? ROOM_ICON[activeRoom.id] ?? Baby : Baby;
+
   return (
-    <main className="px-4 py-6">
+    <main className="pv-tad px-4 py-6">
       <div className="mx-auto max-w-3xl">
         <ScreenHeader
-          title="Room log"
-          emoji="📋"
+          title="room log"
           note="Pick a room, log the day, fix anything you need to. Any teacher, any room."
         />
         <StepNote step={4} text="Pick a room, tap an action. Every kid here starts selected, so saving takes two taps." />
 
-        <p className="text-base font-bold">
-          Logging for:{" "}
-          <span style={{ color: activeRoom?.color ?? "var(--pv-ink)" }}>
-            {activeRoom ? `${activeRoom.emoji} ${activeRoom.name}` : ""}
-          </span>
-        </p>
-        <div className="mt-2 flex flex-wrap gap-3">
-          {ROOMS.map((room) => (
-            <Chip
-              key={room.id}
-              label={`${room.emoji} ${room.name}`}
-              on={room.id === roomId}
-              onColor={room.color}
-              onClick={() => pickRoom(room.id)}
-            />
-          ))}
+        <div className="pv-rise" style={{ animationDelay: "60ms" }}>
+          <p className="flex items-center gap-1.5 text-base font-bold">
+            <span style={{ color: "var(--pv-muted)" }}>Logging for:</span>
+            {activeRoom ? (
+              <span className="inline-flex items-center gap-1.5" style={{ color: activeRoom.color }}>
+                <ActiveRoomIcon size={18} aria-hidden="true" />
+                {activeRoom.name}
+              </span>
+            ) : null}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-3">
+            {ROOMS.map((room) => (
+              <Chip
+                key={room.id}
+                label={room.name}
+                on={room.id === roomId}
+                onColor={room.color}
+                onClick={() => pickRoom(room.id)}
+              />
+            ))}
+          </div>
         </div>
 
-        <Card className="mt-5">
+        <div className="pv-rise mt-5" style={{ animationDelay: "120ms" }}>
+        <Card>
           {presentKids.length > 0 ? (
             <>
               <h2 className="text-2xl">
@@ -303,9 +339,22 @@ export default function RoomPage() {
               </h2>
               <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
                 {presentKids.map((kid) => (
-                  <div key={kid.id} className="text-center">
-                    <span aria-hidden="true" className="block text-4xl">{kid.avatar}</span>
-                    <span className="mt-1 block text-lg font-bold">{kid.firstName}</span>
+                  <div key={kid.id} className="flex flex-col items-center text-center">
+                    <span className="relative inline-flex">
+                      <PhotoAvatar
+                        id={kid.id}
+                        name={`${kid.firstName} ${kid.lastName}`}
+                        src={kidPhotos[kid.id]}
+                        size={64}
+                        rounded="rounded-lg"
+                      />
+                      <AvatarUpload
+                        label={`Upload a photo for ${kid.firstName}`}
+                        onPhoto={(d) => setKidPhoto(kid.id, d)}
+                        className="absolute -bottom-1 -right-1"
+                      />
+                    </span>
+                    <span className="mt-2 block text-lg font-bold">{kid.firstName}</span>
                     <span className="block text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
                       since {checkedIn[kid.id]}
                     </span>
@@ -315,7 +364,7 @@ export default function RoomPage() {
             </>
           ) : (
             <EmptyState
-              emoji="🌅"
+              icon={Sun}
               title="No kids here yet"
               detail="Check someone in at the kiosk and they show up here."
             />
@@ -326,24 +375,27 @@ export default function RoomPage() {
             </p>
           ) : null}
         </Card>
+        </div>
 
-        <h2 className="mt-7 text-2xl">What just happened?</h2>
-        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {actions.map((action) => (
-            <BigButton
-              key={action.kind}
-              kiosk
-              emoji={action.emoji}
-              label={action.label}
-              color={action.color}
-              onClick={() => openAction(action)}
-            />
-          ))}
+        <div className="pv-rise" style={{ animationDelay: "180ms" }}>
+          <h2 className="pv-tad-title mt-7 text-2xl">what just happened?</h2>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {actions.map((action) => (
+              <BigButton
+                key={action.kind}
+                kiosk
+                icon={action.icon}
+                label={action.label}
+                color={action.color}
+                onClick={() => openAction(action)}
+              />
+            ))}
+          </div>
         </div>
 
         {activeAction ? (
           <Card className="mt-6">
-            <h2 className="text-2xl">{activeAction.panelTitle}</h2>
+            <h2 className="pv-tad-title text-2xl">{activeAction.panelTitle.toLowerCase()}</h2>
 
             {activeAction.quickChips.length > 0 ? (
               <>
@@ -372,7 +424,7 @@ export default function RoomPage() {
               type="text"
               value={detail}
               onChange={(e) => setDetail(e.target.value)}
-              className="mt-2 w-full rounded-xl border-2 px-4 py-3 text-lg"
+              className="mt-2 w-full rounded-lg border px-4 py-3 text-lg"
               style={{ borderColor: "var(--pv-line)", color: "var(--pv-ink)", backgroundColor: "var(--pv-card)" }}
             />
 
@@ -385,7 +437,7 @@ export default function RoomPage() {
                 {presentKids.map((kid) => (
                   <Chip
                     key={kid.id}
-                    label={`${kid.avatar} ${kid.firstName}`}
+                    label={kid.firstName}
                     on={selectedKidIds.includes(kid.id)}
                     onColor={activeAction.color}
                     onClick={() => toggleKid(kid.id)}
@@ -430,7 +482,7 @@ export default function RoomPage() {
                         setUploadedUrl(null);
                         setPhotoId((prev) => (prev === photo.id ? null : photo.id));
                       }}
-                      className="pv-press pv-target rounded-xl border-4 p-1 text-left"
+                      className="pv-press pv-target rounded-lg border-2 p-1 text-left"
                       style={{
                         borderColor: photoId === photo.id ? "var(--pv-sky)" : "var(--pv-line)",
                         backgroundColor: "var(--pv-card)",
@@ -453,34 +505,37 @@ export default function RoomPage() {
             <div className="mt-6 flex flex-col gap-3">
               <BigButton
                 kiosk
-                emoji="✅"
+                icon={Check}
                 label={`Save for ${selectedKidIds.length} ${selectedKidIds.length === 1 ? "kid" : "kids"}`}
                 color={activeAction.color}
                 disabled={selectedKidIds.length === 0}
                 onClick={() => save(activeAction)}
                 className="w-full"
               />
-              <BigButton emoji="↩️" label="Cancel" color="#8a8378" onClick={closePanel} className="w-full" />
+              <BigButton icon={Undo2} label="Cancel" color="#8a8378" onClick={closePanel} className="w-full" />
             </div>
           </Card>
         ) : null}
 
         {/* TODAY'S LOG: edit the wording or remove an entry. Any teacher. */}
-        <h2 className="mt-8 text-2xl">Today&apos;s log</h2>
+        <div className="pv-rise" style={{ animationDelay: "240ms" }}>
+        <h2 className="pv-tad-title mt-8 text-2xl">today&apos;s log</h2>
         <p className="mt-1 text-base" style={{ color: "var(--pv-muted)" }}>
           Tap Edit to fix the words, or Remove to take an entry off. Families see
           the change right away.
         </p>
         <div className="mt-3 flex flex-col gap-3">
           {todaysLog.length === 0 ? (
-            <EmptyState emoji="📋" title="Nothing logged here yet" detail="What you log shows up in this list to fix later." />
+            <EmptyState icon={ClipboardList} title="Nothing logged here yet" detail="What you log shows up in this list to fix later." />
           ) : (
-            todaysLog.map((e) => (
+            todaysLog.map((e) => {
+              const KindIcon = KIND_ICON[e.kind] ?? StickyNote;
+              return (
               <Card key={e.id}>
                 {editingId === e.id ? (
                   <div className="flex flex-col gap-3">
-                    <p className="text-base font-extrabold">
-                      <span aria-hidden="true" className="mr-1">{KIND_EMOJI[e.kind] ?? "📝"}</span>
+                    <p className="flex items-center gap-1.5 text-base font-extrabold">
+                      <KindIcon size={16} aria-hidden="true" style={{ color: "var(--pv-coral)" }} />
                       {e.title}
                     </p>
                     <textarea
@@ -488,7 +543,7 @@ export default function RoomPage() {
                       onChange={(ev) => setEditText(ev.target.value)}
                       rows={2}
                       aria-label="Edit the entry"
-                      className="rounded-xl border-2 px-4 py-3 text-base"
+                      className="rounded-lg border px-4 py-3 text-base"
                       style={{ borderColor: "var(--pv-line)", backgroundColor: "var(--pv-card)" }}
                     />
                     <div className="flex flex-wrap gap-2">
@@ -499,7 +554,7 @@ export default function RoomPage() {
                           saveEdit();
                         }}
                         disabled={!editText.trim()}
-                        className="pv-press pv-target rounded-xl px-4 py-2 text-base font-extrabold text-white disabled:opacity-50"
+                        className="pv-press pv-target rounded-lg px-4 py-2 text-base font-extrabold text-white disabled:opacity-50"
                         style={{ backgroundColor: "var(--pv-teal)" }}
                       >
                         Save
@@ -510,7 +565,7 @@ export default function RoomPage() {
                           playClick();
                           setEditingId(null);
                         }}
-                        className="pv-press pv-target rounded-xl px-4 py-2 text-base font-bold"
+                        className="pv-press pv-target rounded-lg px-4 py-2 text-base font-bold"
                         style={{ color: "var(--pv-muted)" }}
                       >
                         Cancel
@@ -521,10 +576,10 @@ export default function RoomPage() {
                   <div className="flex flex-wrap items-start gap-3">
                     <span
                       aria-hidden="true"
-                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg"
-                      style={{ backgroundColor: "#f1ede6" }}
+                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: "#f4ece9" }}
                     >
-                      {KIND_EMOJI[e.kind] ?? "📝"}
+                      <KindIcon size={18} style={{ color: "var(--pv-coral)" }} />
                     </span>
                     <div className="flex-1">
                       <p className="text-base font-extrabold">{e.title}</p>
@@ -537,7 +592,7 @@ export default function RoomPage() {
                       <button
                         type="button"
                         onClick={() => startEdit(e.id, e.detail)}
-                        className="pv-press pv-target rounded-xl px-3 py-2 text-sm font-bold"
+                        className="pv-press pv-target rounded-lg px-3 py-2 text-sm font-bold"
                         style={{ color: "var(--pv-sky)" }}
                       >
                         Edit
@@ -545,7 +600,7 @@ export default function RoomPage() {
                       <button
                         type="button"
                         onClick={() => handleDelete(e.id)}
-                        className="pv-press pv-target rounded-xl px-3 py-2 text-sm font-bold"
+                        className="pv-press pv-target rounded-lg px-3 py-2 text-sm font-bold"
                         style={{ color: "var(--pv-coral)" }}
                       >
                         {confirmDeleteId === e.id ? "Tap to confirm" : "Remove"}
@@ -554,8 +609,10 @@ export default function RoomPage() {
                   </div>
                 )}
               </Card>
-            ))
+              );
+            })
           )}
+        </div>
         </div>
       </div>
 

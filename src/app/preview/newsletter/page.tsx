@@ -5,7 +5,8 @@
 // The owner types words and picks photos. The design is never her job.
 
 import { useEffect, useRef, useState } from "react";
-import { BigButton, Card, Chip, ScreenHeader, StepNote, SuccessBanner, useMounted } from "@/components/preview/ui";
+import { Camera, Check, type LucideIcon, Pin, Plus, Send, Sun } from "lucide-react";
+import { Card, Chip, ScreenHeader, StepNote, SuccessBanner, useMounted } from "@/components/preview/ui";
 import { DEMO_PHOTOS } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
@@ -25,12 +26,11 @@ export default function NewsletterPage() {
       <div className="mx-auto max-w-2xl">
         <ScreenHeader
           title="Newsletter Monday"
-          emoji="📰"
           note="Three blocks to fill. The design is never your job."
         />
         <StepNote step={8} text="Type in any block, then flip to see what families get." />
 
-        <div className="mb-6 flex flex-wrap gap-3">
+        <div className="pv-rise mb-6 flex flex-wrap gap-3" style={{ animationDelay: "60ms" }}>
           <Chip label="Editing" on={mode === "edit"} onClick={() => setMode("edit")} />
           <Chip
             label="How families see it"
@@ -41,22 +41,17 @@ export default function NewsletterPage() {
         </div>
 
         {mounted && mode === "edit" ? (
-          <div className="flex flex-col gap-4">
+          <div className="pv-rise flex flex-col gap-4" style={{ animationDelay: "120ms" }}>
             {newsletter.map((block) => (
               <Card key={block.id}>
-                <p
-                  className="text-sm font-bold uppercase tracking-wide"
-                  style={{ color: "var(--pv-muted)" }}
-                >
-                  {block.label}
-                </p>
+                <p className="pv-tad-label text-sm">{block.label}</p>
                 <DebouncedText
                   as="input"
                   value={block.title}
                   onCommit={(next) => updateNewsletterBlock(block.id, { title: next })}
                   placeholder="Give this block a title"
                   ariaLabel={`${block.label} title`}
-                  className="pv-target mt-2 w-full rounded-xl border-2 px-4 py-3 text-lg font-bold"
+                  className="pv-target mt-2 w-full rounded-lg border px-4 py-3 text-lg font-bold"
                 />
                 <DebouncedText
                   as="textarea"
@@ -64,7 +59,7 @@ export default function NewsletterPage() {
                   onCommit={(next) => updateNewsletterBlock(block.id, { body: next })}
                   placeholder="Write a line or two"
                   ariaLabel={`${block.label} body`}
-                  className="pv-target mt-3 w-full rounded-xl border-2 px-4 py-3 text-lg"
+                  className="pv-target mt-3 w-full rounded-lg border px-4 py-3 text-lg"
                 />
                 {block.kind === "photos" ? (
                   <div className="mt-4">
@@ -86,23 +81,23 @@ export default function NewsletterPage() {
                                 : [...block.photoIds, photo.id];
                               updateNewsletterBlock(block.id, { photoIds: next });
                             }}
-                            className="pv-press pv-target relative rounded-xl border-4 p-1 text-left"
+                            className="pv-press pv-target relative rounded-lg border-2 p-1 text-left"
                             style={{
-                              borderColor: inBlock ? "var(--pv-teal)" : "transparent",
+                              borderColor: inBlock ? "var(--pv-teal)" : "var(--pv-line)",
                               backgroundColor: "var(--pv-card)",
                             }}
                           >
                             <img
                               src={photo.src}
                               alt={photo.caption}
-                              className="h-24 w-full rounded-xl object-cover"
+                              className="h-24 w-full rounded-md object-cover"
                             />
                             {inBlock ? (
                               <span
-                                className="absolute right-2 top-2 rounded-full px-2 py-1 text-sm font-bold text-white"
+                                className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm font-bold text-white"
                                 style={{ backgroundColor: "var(--pv-teal)" }}
                               >
-                                ✓ In
+                                <Check size={13} /> In
                               </span>
                             ) : null}
                             <span
@@ -122,10 +117,10 @@ export default function NewsletterPage() {
 
             {chooserOpen ? (
               <Card>
-                <h2 className="text-xl">What kind of block?</h2>
+                <h2 className="pv-tad-label text-base">what kind of block?</h2>
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <BigButton
-                    emoji="🌞"
+                  <BlockChoice
+                    icon={Sun}
                     label="Header"
                     color="var(--pv-plum)"
                     onClick={() => {
@@ -133,8 +128,8 @@ export default function NewsletterPage() {
                       setChooserOpen(false);
                     }}
                   />
-                  <BigButton
-                    emoji="📷"
+                  <BlockChoice
+                    icon={Camera}
                     label="Photos from the week"
                     color="var(--pv-teal)"
                     onClick={() => {
@@ -142,8 +137,8 @@ export default function NewsletterPage() {
                       setChooserOpen(false);
                     }}
                   />
-                  <BigButton
-                    emoji="📌"
+                  <BlockChoice
+                    icon={Pin}
                     label="Reminders"
                     color="var(--pv-gold)"
                     onClick={() => {
@@ -154,18 +149,29 @@ export default function NewsletterPage() {
                 </div>
               </Card>
             ) : (
-              <BigButton
-                emoji="＋"
-                label="Add a block"
-                color="var(--pv-sky)"
-                onClick={() => setChooserOpen(true)}
-              />
+              <button
+                type="button"
+                onClick={() => {
+                  playClick();
+                  setChooserOpen(true);
+                }}
+                className="pv-press pv-target inline-flex items-center justify-center gap-2 rounded-lg border border-dashed bg-white px-5 py-4 text-lg font-bold shadow-sm"
+                style={{ borderColor: "var(--pv-line)", color: "var(--pv-ink)" }}
+              >
+                <span
+                  className="flex h-7 w-7 items-center justify-center rounded-md"
+                  style={{ backgroundColor: "color-mix(in srgb, var(--pv-sky) 12%, transparent)", color: "var(--pv-sky)" }}
+                >
+                  <Plus size={18} />
+                </span>
+                Add a block
+              </button>
             )}
           </div>
         ) : null}
 
         {mounted && mode === "preview" ? (
-          <Card className="mx-auto max-w-md">
+          <Card className="pv-rise mx-auto max-w-md">
             <div className="flex flex-col gap-6">
               {newsletter.map((block) => {
                 if (block.kind === "photos") {
@@ -173,7 +179,7 @@ export default function NewsletterPage() {
                   return (
                     <div key={block.id}>
                       {block.title ? (
-                        <h3 className="text-xl font-extrabold">{block.title}</h3>
+                        <h3 className="text-xl font-bold" style={{ color: "var(--pv-ink)" }}>{block.title}</h3>
                       ) : null}
                       {block.body ? <p className="mt-1 text-base">{block.body}</p> : null}
                       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -182,7 +188,7 @@ export default function NewsletterPage() {
                             <img
                               src={photo.src}
                               alt={photo.caption}
-                              className="h-20 w-full rounded-xl object-cover"
+                              className="h-20 w-full rounded-md object-cover"
                             />
                             <p
                               className="mt-1 text-sm font-semibold"
@@ -200,11 +206,11 @@ export default function NewsletterPage() {
                   return (
                     <div
                       key={block.id}
-                      className="rounded-xl border-l-4 p-4"
+                      className="rounded-lg border-l-4 p-4"
                       style={{ borderColor: "var(--pv-gold)", backgroundColor: "#fbf3df" }}
                     >
                       {block.title ? (
-                        <h3 className="text-xl font-extrabold">{block.title}</h3>
+                        <h3 className="text-xl font-bold" style={{ color: "var(--pv-ink)" }}>{block.title}</h3>
                       ) : null}
                       {block.body ? <p className="mt-1 text-base">{block.body}</p> : null}
                     </div>
@@ -213,7 +219,7 @@ export default function NewsletterPage() {
                 return (
                   <div key={block.id}>
                     {block.title ? (
-                      <h3 className="text-3xl font-extrabold">{block.title}</h3>
+                      <h3 className="text-3xl font-bold" style={{ color: "var(--pv-ink)" }}>{block.title}</h3>
                     ) : null}
                     {block.body ? <p className="mt-2 text-lg">{block.body}</p> : null}
                   </div>
@@ -223,22 +229,58 @@ export default function NewsletterPage() {
           </Card>
         ) : null}
 
-        <div className="mt-8">
-          <BigButton
-            kiosk
-            emoji="📨"
-            label="Send to families"
-            color="var(--pv-coral)"
-            className="w-full"
-            onClick={() =>
-              setSuccess("Sent. In the real version every family gets this by email and text.")
-            }
-          />
+        <div className="pv-rise mt-8" style={{ animationDelay: "180ms" }}>
+          <button
+            type="button"
+            onClick={() => {
+              playClick();
+              setSuccess("Sent. In the real version every family gets this by email and text.");
+            }}
+            className="pv-press pv-kiosk-target inline-flex w-full items-center justify-center gap-3 rounded-lg px-5 py-4 text-2xl font-bold text-white shadow-sm"
+            style={{ backgroundColor: "var(--pv-coral)" }}
+          >
+            <Send size={28} /> Send to families
+          </button>
         </div>
       </div>
 
       {success ? <SuccessBanner message={success} onDone={() => setSuccess(null)} /> : null}
     </main>
+  );
+}
+
+/** Flat block-type choice: a tinted lucide icon over a lowercase label. */
+function BlockChoice({
+  icon: Icon,
+  label,
+  color,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        playClick();
+        onClick();
+      }}
+      className="pv-press pv-target flex flex-col items-start gap-2 rounded-lg border bg-white p-4 text-left shadow-sm"
+      style={{ borderColor: "var(--pv-line)" }}
+    >
+      <span
+        className="flex h-9 w-9 items-center justify-center rounded-md"
+        style={{ backgroundColor: `${color}1a`, color }}
+      >
+        <Icon size={20} />
+      </span>
+      <span className="text-base font-bold" style={{ color: "var(--pv-ink)" }}>
+        {label}
+      </span>
+    </button>
   );
 }
 

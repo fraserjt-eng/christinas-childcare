@@ -5,6 +5,7 @@
 // whole screen. Reports and deeper settings live in Josh's layer.
 
 import { useState } from "react";
+import { Check, Plus } from "lucide-react";
 import {
   BigButton,
   Card,
@@ -14,6 +15,8 @@ import {
   SuccessBanner,
   useMounted,
 } from "@/components/preview/ui";
+import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
+import { AvatarUpload } from "@/components/preview/AvatarUpload";
 import { ROOMS, roomById, type PreviewStaff } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
@@ -31,6 +34,7 @@ export default function PeoplePage() {
   const setStaffRoom = usePreviewStore((s) => s.setStaffRoom);
   const addPerson = usePreviewStore((s) => s.addPerson);
   const staffPhotos = usePreviewStore((s) => s.staffPhotos);
+  const setStaffPhoto = usePreviewStore((s) => s.setStaffPhoto);
 
   const [openStaffId, setOpenStaffId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -59,42 +63,40 @@ export default function PeoplePage() {
       <div className="mx-auto max-w-2xl">
         <ScreenHeader
           title="People"
-          emoji="🧑🏾‍🤝‍🧑🏾"
           backHref="/preview/office"
           backLabel="The office"
           note="Add a person, reset a code, tap a row for their room. That is the whole screen."
         />
         <StepNote step={10} text="Tap a teacher's row to change their room, then try Add a person." />
 
-        <h2 className="text-2xl">Your team</h2>
+        <div className="pv-rise" style={{ animationDelay: "60ms" }}>
+        <h2 className="pv-tad-title mt-1 text-2xl">your team</h2>
         <Card className="mt-3">
           {mounted ? (
             <ul className="divide-y" style={{ borderColor: "var(--pv-line)" }}>
               {staff.map((person) => (
                 <li key={person.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex items-center gap-3">
+                    <span className="relative shrink-0">
+                      <PhotoAvatar
+                        id={person.id}
+                        name={`${person.firstName} ${person.lastName}`}
+                        src={staffPhotos[person.id]}
+                        size={44}
+                        rounded="rounded-md"
+                      />
+                      <AvatarUpload
+                        label={`Upload a photo for ${person.firstName}`}
+                        onPhoto={(d) => setStaffPhoto(person.id, d)}
+                        className="absolute -bottom-1 -right-1"
+                      />
+                    </span>
                     <button
                       type="button"
                       onClick={() => toggleRow(person.id)}
                       aria-expanded={openStaffId === person.id}
-                      className="pv-press pv-target flex flex-1 items-center gap-3 rounded-xl text-left"
+                      className="pv-press pv-target flex flex-1 items-center gap-3 rounded-lg text-left"
                     >
-                      {mounted && staffPhotos[person.id] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={staffPhotos[person.id]}
-                          alt={person.firstName}
-                          className="h-11 w-11 shrink-0 rounded-full object-cover"
-                        />
-                      ) : (
-                        <span
-                          aria-hidden="true"
-                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-2xl"
-                          style={{ backgroundColor: "#f4f0e9" }}
-                        >
-                          {person.avatar}
-                        </span>
-                      )}
                       <span>
                         <span className="block text-lg font-bold" style={{ color: "var(--pv-ink)" }}>
                           {person.firstName} {person.lastName}
@@ -107,22 +109,20 @@ export default function PeoplePage() {
                     <button
                       type="button"
                       onClick={resetCode}
-                      className="pv-press pv-target shrink-0 rounded-xl px-3 py-2 text-base font-bold"
+                      className="pv-press pv-target shrink-0 rounded-lg px-3 py-2 text-base font-bold"
                       style={{ color: "var(--pv-sky)" }}
                     >
                       Reset code
                     </button>
                   </div>
                   {openStaffId === person.id ? (
-                    <div className="mt-3 rounded-xl p-4" style={{ backgroundColor: "#f4f0e9" }}>
-                      <p className="text-base font-bold" style={{ color: "var(--pv-ink)" }}>
-                        Their room
-                      </p>
+                    <div className="mt-3 rounded-lg border p-4" style={{ backgroundColor: "#faf8f4", borderColor: "var(--pv-line)" }}>
+                      <p className="pv-tad-label text-base">their room</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {ROOMS.map((room) => (
                           <Chip
                             key={room.id}
-                            label={`${room.emoji} ${room.name}`}
+                            label={room.name}
                             on={person.roomId === room.id}
                             onColor={room.color}
                             onClick={() => setStaffRoom(person.id, room.id)}
@@ -144,20 +144,22 @@ export default function PeoplePage() {
             </ul>
           ) : null}
         </Card>
+        </div>
 
-        <h2 className="mt-8 text-2xl">Families</h2>
+        <div className="pv-rise" style={{ animationDelay: "120ms" }}>
+        <h2 className="pv-tad-title mt-8 text-2xl">families</h2>
         <Card className="mt-3">
           {mounted ? (
             <ul className="divide-y" style={{ borderColor: "var(--pv-line)" }}>
               {families.map((family) => (
                 <li key={family.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  <span
-                    aria-hidden="true"
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-2xl"
-                    style={{ backgroundColor: "#f4f0e9" }}
-                  >
-                    {family.avatar}
-                  </span>
+                  <PhotoAvatar
+                    id={family.id}
+                    name={family.name}
+                    size={44}
+                    rounded="rounded-md"
+                    className="shrink-0"
+                  />
                   <span className="flex-1">
                     <span className="block text-lg font-bold" style={{ color: "var(--pv-ink)" }}>
                       {family.name}
@@ -169,7 +171,7 @@ export default function PeoplePage() {
                   <button
                     type="button"
                     onClick={resetCode}
-                    className="pv-press pv-target shrink-0 rounded-xl px-3 py-2 text-base font-bold"
+                    className="pv-press pv-target shrink-0 rounded-lg px-3 py-2 text-base font-bold"
                     style={{ color: "var(--pv-sky)" }}
                   >
                     Reset code
@@ -179,10 +181,12 @@ export default function PeoplePage() {
             </ul>
           ) : null}
         </Card>
+        </div>
 
+        <div className="pv-rise" style={{ animationDelay: "180ms" }}>
         {adding ? (
           <Card className="mt-8">
-            <h2 className="text-2xl">Add a person</h2>
+            <h2 className="pv-tad-title text-2xl">add a person</h2>
             <p className="mt-1 text-base" style={{ color: "var(--pv-muted)" }}>
               Who are they?
             </p>
@@ -199,7 +203,7 @@ export default function PeoplePage() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder={newKind === "staff" ? "First and last name" : "Family name"}
-              className="pv-target mt-2 w-full rounded-xl border-2 px-4 py-3 text-lg"
+              className="pv-target mt-2 w-full rounded-lg border-2 px-4 py-3 text-lg"
               style={{
                 borderColor: "var(--pv-line)",
                 backgroundColor: "var(--pv-card)",
@@ -208,7 +212,7 @@ export default function PeoplePage() {
             />
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <BigButton
-                emoji="✅"
+                icon={Check}
                 label="Add them"
                 color="var(--pv-teal)"
                 disabled={!newName.trim()}
@@ -225,14 +229,15 @@ export default function PeoplePage() {
           <div className="mt-8">
             <BigButton
               kiosk
-              emoji="＋"
+              icon={Plus}
               label="Add a person"
-              color="var(--pv-teal)"
+              color="var(--pv-coral)"
               className="w-full"
               onClick={() => setAdding(true)}
             />
           </div>
         )}
+        </div>
 
         <p className="mt-8 text-center text-base" style={{ color: "var(--pv-muted)" }}>
           Reports, paperwork, and the deeper settings are Josh&apos;s layer. You never have to see them.
