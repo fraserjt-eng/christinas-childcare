@@ -44,7 +44,10 @@ const FEED_KIND: Record<string, string> = {
 };
 
 export async function GET(request: NextRequest) {
-  const session = await requireSession();
+  // Staff-only. Parents have their own scoped endpoints (/api/parent/*); this
+  // route carries the whole center (rooms, kids, staff, families) and must never
+  // be reachable by a parent session.
+  const session = await requireSession('teacher');
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -53,11 +56,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
 
-  // Which center to show. A director (admin/owner/superadmin) may CHOOSE a
-  // center via the picker (the cc_center cookie or ?center). A teacher is locked
-  // to their own center. A null-center cross-center user falls back to the pick.
+  // Which center to show. ONLY a cross-center role (owner/superadmin) may CHOOSE
+  // a center via the picker (cc_center cookie or ?center). A center-bound user
+  // (admin/teacher) is locked to their own session center and cannot read
+  // another center by passing a center id. This is the anti-cross-center-leak
+  // guarantee: the requested center is never trusted from a center-bound caller.
   const role = (session.user.role || '').toLowerCase();
-  const isDirector = role === 'admin' || role === 'owner' || role === 'superadmin';
+  const isCrossCenter = role === 'owner' || role === 'superadmin';
   const sessionCenter = session.user.center_id ?? null;
   const picked =
     request.cookies.get('cc_center')?.value ||
@@ -65,19 +70,19 @@ export async function GET(request: NextRequest) {
     null;
 
   let centerId: string | null;
-  if (isDirector && picked) {
-    centerId = picked;
-  } else if (sessionCenter) {
-    centerId = sessionCenter;
-  } else if (picked) {
-    centerId = picked;
+  if (isCrossCenter) {
+    centerId = picked || sessionCenter;
+    if (!centerId) {
+      const { data: first } = await supabase
+        .from('centers').select('id').order('name').limit(1).maybeSingle();
+      centerId = (first?.id as string) ?? null;
+    }
   } else {
-    const { data: first } = await supabase
-      .from('centers').select('id').order('name').limit(1).maybeSingle();
-    centerId = (first?.id as string) ?? null;
+    // admin / teacher: their own center only, never a picked one.
+    centerId = sessionCenter;
   }
   if (!centerId) {
-    return NextResponse.json({ error: 'No center' }, { status: 404 });
+    return NextResponse.json({ error: 'No center' }, { status: 403 });
   }
 
   const today = centerDate();
@@ -97,7 +102,7 @@ export async function GET(request: NextRequest) {
       supabase.from('centers').select('id, name').limit(5000),
       supabase.from('classrooms').select('id, name, age_group, capacity').eq('center_id', centerId).limit(5000),
       supabase.from('family_children').select('id, name, classroom_id, family_id, allergies, medical_notes').eq('center_id', centerId).limit(5000),
-      supabase.from('employees').select('id, first_name, last_name, role, classroom_id, pin, employment_status').eq('center_id', centerId).limit(5000),
+      supabase.from('employees').select('id, first_name, last_name, role, classroom_id, employment_status').eq('center_id', centerId).limit(5000),
       supabase.from('families').select('id, email, copay_default_amount').eq('center_id', centerId).limit(5000),
       supabase.from('family_parents').select('family_id, name, phone, relationship, is_primary').limit(5000),
       supabase.from('attendance').select('child_id, check_in, check_out').eq('center_id', centerId).eq('date', today).limit(5000),
@@ -145,7 +150,9 @@ export async function GET(request: NextRequest) {
         lastName: (s.last_name as string) ?? '',
         role: role === 'owner' || role === 'admin' || role === 'director' ? 'owner' : 'teacher',
         roomId: (s.classroom_id as string | null) ?? null,
-        pin: (s.pin as string) ?? '',
+        // Never return staff login PINs to the client (they are real
+        // credentials). The kiosk validates clock-in server-side.
+        pin: '',
         avatar: '🧑🏽‍🏫',
         color: '#4a90d9',
       };
