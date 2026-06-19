@@ -1,5 +1,12 @@
 // Supply & Inventory Storage Module for Christina's Child Care Center
-// Uses localStorage for persistence, designed for easy Supabase migration
+// Supabase-first with localStorage as fallback cache
+
+import {
+  supabaseSelect,
+  supabaseInsert,
+  supabaseUpdate,
+  supabaseDelete,
+} from '@/lib/supabase/service';
 
 // ============================================================================
 // Types
@@ -65,6 +72,62 @@ const KEYS = {
   orders: 'christinas_supply_orders',
 };
 
+// Supabase table backing all three supply record kinds. Each row carries a
+// `record_type` discriminator and a JSONB `data` payload (see migration 031).
+const SUPPLIES_TABLE = 'supplies';
+type SupplyRecordType = 'item' | 'request' | 'order';
+
+// Operating center (Brooklyn Park). Default when there is no center context,
+// matching how the other dual-write modules stamp center_id.
+const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Resolve a usable center_id for the cloud row: keep a real UUID if provided,
+// otherwise fall back to the operating center.
+function resolveCenterId(center_id?: string): string {
+  return center_id && UUID_PATTERN.test(center_id)
+    ? center_id
+    : OPERATING_CENTER_ID;
+}
+
+// Shape of a row in the `supplies` table.
+interface SupplyRow {
+  id: string;
+  center_id: string | null;
+  record_type: SupplyRecordType;
+  data: Record<string, unknown>;
+}
+
+// Build the cloud row payload for an insert/update from a typed supply object.
+function toRow<T extends { id: string }>(
+  record: T,
+  recordType: SupplyRecordType,
+  centerId?: string
+): Record<string, unknown> {
+  const { id, ...rest } = record;
+  return {
+    id,
+    center_id: resolveCenterId(centerId),
+    record_type: recordType,
+    data: rest as Record<string, unknown>,
+  };
+}
+
+// Unwrap a cloud row back into the typed supply object.
+function fromRow<T>(row: SupplyRow): T {
+  return { id: row.id, ...(row.data as object) } as T;
+}
+
+// Fetch all rows of one record type from the cloud; null when not configured/error.
+async function cloudFetch<T>(recordType: SupplyRecordType): Promise<T[] | null> {
+  const rows = await supabaseSelect<SupplyRow>(SUPPLIES_TABLE, {
+    filters: { record_type: recordType },
+  });
+  if (rows === null) return null;
+  return rows.map((r) => fromRow<T>(r));
+}
+
 // ============================================================================
 // Generic Helpers
 // ============================================================================
@@ -101,7 +164,9 @@ export async function getItems(filters?: {
   category?: SupplyCategory;
   lowStock?: boolean;
 }): Promise<SupplyItem[]> {
-  let items = getFromStorage<SupplyItem>(KEYS.items);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<SupplyItem>('item');
+  let items = cloudData !== null ? cloudData : getFromStorage<SupplyItem>(KEYS.items);
 
   if (items.length === 0) {
     await seedSupplyItems();
@@ -126,9 +191,16 @@ export async function getItems(filters?: {
 export async function createItem(
   data: Omit<SupplyItem, 'id' | 'updated_at'>
 ): Promise<SupplyItem> {
-  const items = getFromStorage<SupplyItem>(KEYS.items);
   const now = new Date().toISOString();
   const item: SupplyItem = { ...data, id: generateId('sup'), updated_at: now };
+
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<SupplyRow>(
+    SUPPLIES_TABLE,
+    toRow(item, 'item', item.center_id)
+  );
+
+  const items = getFromStorage<SupplyItem>(KEYS.items);
   items.push(item);
   saveToStorage(KEYS.items, items);
   return item;
@@ -141,12 +213,29 @@ export async function updateItem(
   const items = getFromStorage<SupplyItem>(KEYS.items);
   const index = items.findIndex((i) => i.id === id);
   if (index === -1) return null;
-  items[index] = { ...items[index], ...updates, id, updated_at: new Date().toISOString() };
+  const updated: SupplyItem = {
+    ...items[index],
+    ...updates,
+    id,
+    updated_at: new Date().toISOString(),
+  };
+
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<SupplyRow>(SUPPLIES_TABLE, id, {
+    center_id: resolveCenterId(updated.center_id),
+    record_type: 'item',
+    data: stripId(updated),
+  });
+
+  items[index] = updated;
   saveToStorage(KEYS.items, items);
   return items[index];
 }
 
 export async function deleteItem(id: string): Promise<boolean> {
+  // Delete from Supabase first
+  await supabaseDelete(SUPPLIES_TABLE, id);
+
   const items = getFromStorage<SupplyItem>(KEYS.items);
   const index = items.findIndex((i) => i.id === id);
   if (index === -1) return false;
@@ -159,11 +248,20 @@ export async function adjustQuantity(id: string, delta: number): Promise<SupplyI
   const items = getFromStorage<SupplyItem>(KEYS.items);
   const index = items.findIndex((i) => i.id === id);
   if (index === -1) return null;
-  items[index] = {
+  const updated: SupplyItem = {
     ...items[index],
     current_qty: Math.max(0, items[index].current_qty + delta),
     updated_at: new Date().toISOString(),
   };
+
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<SupplyRow>(SUPPLIES_TABLE, id, {
+    center_id: resolveCenterId(updated.center_id),
+    record_type: 'item',
+    data: stripId(updated),
+  });
+
+  items[index] = updated;
   saveToStorage(KEYS.items, items);
   return items[index];
 }
@@ -181,7 +279,11 @@ export async function getRequests(filters?: {
   status?: 'pending' | 'fulfilled' | 'denied';
   urgency?: 'today' | 'this_week' | 'routine';
 }): Promise<SupplyRequest[]> {
-  let requests = getFromStorage<SupplyRequest>(KEYS.requests);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<SupplyRequest>('request');
+  let requests = cloudData !== null
+    ? cloudData
+    : getFromStorage<SupplyRequest>(KEYS.requests);
 
   if (filters?.status) {
     requests = requests.filter((r) => r.status === filters.status);
@@ -205,13 +307,17 @@ export async function getRequests(filters?: {
 export async function createRequest(
   data: Omit<SupplyRequest, 'id' | 'status' | 'created_at'>
 ): Promise<SupplyRequest> {
-  const requests = getFromStorage<SupplyRequest>(KEYS.requests);
   const request: SupplyRequest = {
     ...data,
     id: generateId('req'),
     status: 'pending',
     created_at: new Date().toISOString(),
   };
+
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<SupplyRow>(SUPPLIES_TABLE, toRow(request, 'request'));
+
+  const requests = getFromStorage<SupplyRequest>(KEYS.requests);
   requests.push(request);
   saveToStorage(KEYS.requests, requests);
   return request;
@@ -221,7 +327,15 @@ export async function fulfillRequest(id: string): Promise<SupplyRequest | null> 
   const requests = getFromStorage<SupplyRequest>(KEYS.requests);
   const index = requests.findIndex((r) => r.id === id);
   if (index === -1) return null;
-  requests[index] = { ...requests[index], status: 'fulfilled' };
+  const updated: SupplyRequest = { ...requests[index], status: 'fulfilled' };
+
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<SupplyRow>(SUPPLIES_TABLE, id, {
+    record_type: 'request',
+    data: stripId(updated),
+  });
+
+  requests[index] = updated;
   saveToStorage(KEYS.requests, requests);
   return requests[index];
 }
@@ -230,7 +344,15 @@ export async function denyRequest(id: string): Promise<SupplyRequest | null> {
   const requests = getFromStorage<SupplyRequest>(KEYS.requests);
   const index = requests.findIndex((r) => r.id === id);
   if (index === -1) return null;
-  requests[index] = { ...requests[index], status: 'denied' };
+  const updated: SupplyRequest = { ...requests[index], status: 'denied' };
+
+  // Write to Supabase first, then cache locally
+  await supabaseUpdate<SupplyRow>(SUPPLIES_TABLE, id, {
+    record_type: 'request',
+    data: stripId(updated),
+  });
+
+  requests[index] = updated;
   saveToStorage(KEYS.requests, requests);
   return requests[index];
 }
@@ -240,7 +362,12 @@ export async function denyRequest(id: string): Promise<SupplyRequest | null> {
 // ============================================================================
 
 export async function getOrders(): Promise<SupplyOrder[]> {
-  const orders = getFromStorage<SupplyOrder>(KEYS.orders);
+  // Try Supabase first; fall back to localStorage if not configured or on error
+  const cloudData = await cloudFetch<SupplyOrder>('order');
+  const orders = cloudData !== null
+    ? cloudData
+    : getFromStorage<SupplyOrder>(KEYS.orders);
+
   orders.sort((a, b) => {
     const statusOrder = { draft: 0, ordered: 1, received: 2 };
     return statusOrder[a.status] - statusOrder[b.status];
@@ -251,7 +378,6 @@ export async function getOrders(): Promise<SupplyOrder[]> {
 export async function createOrder(
   items: { name: string; qty: number; unit_cost: number }[]
 ): Promise<SupplyOrder> {
-  const orders = getFromStorage<SupplyOrder>(KEYS.orders);
   const total_cost = items.reduce((sum, i) => sum + i.qty * i.unit_cost, 0);
   const order: SupplyOrder = {
     id: generateId('ord'),
@@ -259,6 +385,11 @@ export async function createOrder(
     total_cost,
     status: 'draft',
   };
+
+  // Write to Supabase first, then cache locally
+  await supabaseInsert<SupplyRow>(SUPPLIES_TABLE, toRow(order, 'order'));
+
+  const orders = getFromStorage<SupplyOrder>(KEYS.orders);
   orders.push(order);
   saveToStorage(KEYS.orders, orders);
   return order;
@@ -313,6 +444,16 @@ export async function generateReorderList(): Promise<
       estimated_cost: item.reorder_qty * item.unit_cost,
     }))
     .sort((a, b) => b.estimated_cost - a.estimated_cost);
+}
+
+// ============================================================================
+// Row helpers
+// ============================================================================
+
+// Drop the id key so it lives only as the row's primary-key column, not inside data.
+function stripId<T extends { id: string }>(record: T): Record<string, unknown> {
+  const { id: _id, ...rest } = record;
+  return rest as Record<string, unknown>;
 }
 
 // ============================================================================
