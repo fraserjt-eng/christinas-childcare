@@ -87,6 +87,25 @@ function saveToStorage<T>(key: string, data: T[]): void {
 // ============================================================================
 
 export async function getEmployees(): Promise<Employee[]> {
+  // employees is RLS service-role-only, so the anon client returns nothing.
+  // Prefer the session-gated server route (service role, scoped to the current
+  // center), and cache it locally for offline. Fall back to the old anon/local
+  // path server-side or when there is no session.
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/staff/employees');
+      if (res.ok) {
+        const json = (await res.json()) as { employees?: Employee[] };
+        const list = json.employees ?? [];
+        if (list.length > 0) {
+          saveToStorage(STORAGE_KEYS.employees, list);
+          return list;
+        }
+      }
+    } catch {
+      /* fall through to the anon/local path */
+    }
+  }
   // Try Supabase first; fall back to localStorage if not configured or on error
   const cloudData = await supabaseSelect<Employee>('employees');
   if (cloudData !== null && cloudData.length > 0) return cloudData;
