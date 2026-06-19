@@ -14,6 +14,7 @@ import {
   supabaseInsert,
   supabaseUpdate,
 } from '@/lib/supabase/service';
+import { currentCenterId } from '@/lib/current-center';
 
 const STORAGE_KEY = 'christinas_meetings_v2';
 
@@ -95,19 +96,17 @@ const MEETINGS_TABLE = 'meetings';
 type MeetingRecordType = 'meeting';
 const MEETING_RECORD_TYPE: MeetingRecordType = 'meeting';
 
-// Operating center (Brooklyn Park). Default when there is no center context,
-// matching how the other dual-write modules stamp center_id.
-const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 // Resolve a usable center_id for the cloud row: keep a real UUID if provided,
-// otherwise fall back to the operating center.
+// otherwise fall back to the current center (the cc_center cookie, else the
+// operating center).
 function resolveCenterId(center_id?: string): string {
   return center_id && UUID_PATTERN.test(center_id)
     ? center_id
-    : OPERATING_CENTER_ID;
+    : currentCenterId();
 }
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Shape of a row in the `meetings` table.
 interface MeetingRow {
@@ -452,7 +451,7 @@ function hydrateFromCloud(): void {
   void (async () => {
     try {
       const rows = await supabaseSelect<MeetingRow>(MEETINGS_TABLE, {
-        filters: { record_type: MEETING_RECORD_TYPE },
+        filters: { record_type: MEETING_RECORD_TYPE, center_id: currentCenterId() },
       });
       if (rows === null) return; // Supabase not configured or errored: keep cache.
       if (rows.length === 0) {

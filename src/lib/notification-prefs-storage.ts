@@ -15,6 +15,7 @@ import {
   supabaseUpsert,
   supabaseDelete,
 } from '@/lib/supabase/service';
+import { currentCenterId } from '@/lib/current-center';
 
 export type NotificationChannel = 'email' | 'sms' | 'call';
 
@@ -46,11 +47,6 @@ const STORAGE_KEY = 'christinas_notification_prefs';
 // row id is the family_id and the preference fields live in JSONB `data`.
 const NOTIFICATION_PREFS_TABLE = 'notification_prefs';
 
-// Operating center (Brooklyn Park). Notification prefs have no center context,
-// so every row stamps this default, matching how the other dual-write modules
-// stamp center_id.
-const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
-
 // Shape of a row in the `notification_prefs` table. `data` holds every
 // preference field except family_id (which is the primary-key column).
 interface NotificationPrefsRow {
@@ -64,7 +60,7 @@ function toRow(prefs: NotificationPreferences): Record<string, unknown> {
   const { family_id, ...rest } = prefs;
   return {
     id: family_id,
-    center_id: OPERATING_CENTER_ID,
+    center_id: currentCenterId(),
     data: rest as Record<string, unknown>,
   };
 }
@@ -103,7 +99,8 @@ function saveAllPrefsToStorage(prefs: Record<string, NotificationPreferences>): 
 // read; failures (not configured / offline) leave the existing cache intact.
 async function hydrateFromCloud(): Promise<void> {
   const rows = await supabaseSelect<NotificationPrefsRow>(
-    NOTIFICATION_PREFS_TABLE
+    NOTIFICATION_PREFS_TABLE,
+    { filters: { center_id: currentCenterId() } }
   );
   if (rows === null) return; // not configured or error: keep local cache
   const all: Record<string, NotificationPreferences> = {};

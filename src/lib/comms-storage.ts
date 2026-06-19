@@ -7,6 +7,7 @@ import {
   supabaseUpdate,
   supabaseDelete,
 } from '@/lib/supabase/service';
+import { currentCenterId } from '@/lib/current-center';
 
 export type CommunicationType = 'announcement' | 'individual' | 'daily_update' | 'template';
 export type AudienceType = 'all' | 'classroom' | 'individual';
@@ -64,18 +65,16 @@ const TEMPLATES_KEY = 'christinas_comm_templates';
 const COMMS_TABLE = 'comms';
 type CommsRecordType = 'communication' | 'read' | 'template';
 
-// Operating center (Brooklyn Park). Default when there is no center context,
-// matching how the other dual-write modules stamp center_id.
-const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Resolve a usable center_id for the cloud row: keep a real UUID if provided,
-// otherwise fall back to the operating center.
+// otherwise fall back to the current center (the cookie's center, else the
+// operating center).
 function resolveCenterId(center_id?: string): string {
   return center_id && UUID_PATTERN.test(center_id)
     ? center_id
-    : OPERATING_CENTER_ID;
+    : currentCenterId();
 }
 
 // Shape of a row in the `comms` table.
@@ -115,7 +114,7 @@ function fromRow<T>(row: CommsRow): T {
 // Fetch all rows of one record type from the cloud; null when not configured/error.
 async function cloudFetch<T>(recordType: CommsRecordType): Promise<T[] | null> {
   const rows = await supabaseSelect<CommsRow>(COMMS_TABLE, {
-    filters: { record_type: recordType },
+    filters: { record_type: recordType, center_id: currentCenterId() },
   });
   if (rows === null) return null;
   return rows.map((r) => fromRow<T>(r));

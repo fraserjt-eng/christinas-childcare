@@ -7,6 +7,7 @@ import {
   supabaseUpdate,
   supabaseDelete,
 } from '@/lib/supabase/service';
+import { currentCenterId } from '@/lib/current-center';
 
 export type OnboardingPhaseKey = 'pre_start' | 'day_1' | 'week_1' | 'month_1';
 
@@ -81,10 +82,6 @@ const ASSIGNMENTS_KEY = 'christinas_onboarding_assignments';
 const ONBOARDING_TABLE = 'onboarding';
 type OnboardingRecordType = 'template' | 'assignment';
 
-// Operating center (Brooklyn Park). Default when there is no center context,
-// matching how the other dual-write modules stamp center_id.
-const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
-
 // Shape of a row in the `onboarding` table.
 interface OnboardingRow {
   id: string;
@@ -101,7 +98,7 @@ function toRow<T extends { id: string }>(
   const { id, ...rest } = record;
   return {
     id,
-    center_id: OPERATING_CENTER_ID,
+    center_id: currentCenterId(),
     record_type: recordType,
     data: rest as Record<string, unknown>,
   };
@@ -121,7 +118,7 @@ function stripId<T extends { id: string }>(record: T): Record<string, unknown> {
 // Fetch all rows of one record type from the cloud; null when not configured/error.
 async function cloudFetch<T>(recordType: OnboardingRecordType): Promise<T[] | null> {
   const rows = await supabaseSelect<OnboardingRow>(ONBOARDING_TABLE, {
-    filters: { record_type: recordType },
+    filters: { record_type: recordType, center_id: currentCenterId() },
   });
   if (rows === null) return null;
   return rows.map((r) => fromRow<T>(r));
@@ -403,7 +400,7 @@ export async function updateTemplate(
 
   // Write to Supabase first, then cache locally
   await supabaseUpdate<OnboardingRow>(ONBOARDING_TABLE, id, {
-    center_id: OPERATING_CENTER_ID,
+    center_id: currentCenterId(),
     record_type: 'template',
     data: stripId(updated),
   });

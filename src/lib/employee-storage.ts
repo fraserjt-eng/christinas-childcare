@@ -542,6 +542,37 @@ export async function getScheduleEntries(filters?: {
   startDate?: string;
   endDate?: string;
 }): Promise<ScheduleEntry[]> {
+  // staff_schedules (the table the new portal writes shifts to) is RLS
+  // service-role-only, so the browser cannot read it with the anon key. Read it
+  // through the session-gated server route, which derives the current center
+  // server-side, so the admin's schedule-driven tools (labor, ratios, reports)
+  // correspond with what the portal recorded instead of only seeing this
+  // browser's local shifts. Cloud rows win on id dedup. Falls back to local
+  // cleanly when there is no session or this runs server-side.
+  let cloudEntries: ScheduleEntry[] = [];
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/staff/schedule');
+      if (res.ok) {
+        const json = (await res.json()) as {
+          shifts?: Array<Record<string, unknown>>;
+        };
+        cloudEntries = (json.shifts ?? []).map((r) => ({
+          id: r.id as string,
+          employee_id: r.employee_id as string,
+          date: r.date as string,
+          start_time: (r.start_time as string) || '',
+          end_time: (r.end_time as string) || '',
+          classroom_id: (r.classroom_id as string | null) ?? undefined,
+          created_at: (r.created_at as string) || new Date().toISOString(),
+          updated_at: (r.updated_at as string) || new Date().toISOString(),
+        }));
+      }
+    } catch {
+      /* fall back to local cache */
+    }
+  }
+
   // Read from the original schedule storage
   const originalEntries = getFromStorage<ScheduleEntry>(STORAGE_KEYS.schedules);
 
@@ -572,7 +603,7 @@ export async function getScheduleEntries(filters?: {
   // Merge both sources, dedup by id
   const idsSeen = new Set<string>();
   let entries: ScheduleEntry[] = [];
-  for (const entry of [...originalEntries, ...convertedShifts]) {
+  for (const entry of [...cloudEntries, ...originalEntries, ...convertedShifts]) {
     if (!idsSeen.has(entry.id)) {
       idsSeen.add(entry.id);
       entries.push(entry);

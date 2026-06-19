@@ -6,6 +6,7 @@ import {
   supabaseInsert,
   supabaseUpdate,
 } from '@/lib/supabase/service';
+import { currentCenterId } from '@/lib/current-center';
 
 // ============================================================================
 // Types
@@ -55,10 +56,6 @@ const REIMBURSEMENT_KEY = 'cacfp-reimbursements';
 const CACFP_TABLE = 'cacfp_records';
 type CACFPRecordType = 'compliance' | 'reimbursement';
 
-// Operating center (Brooklyn Park). Default when there is no center context,
-// matching how the other dual-write modules stamp center_id.
-const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
-
 // Shape of a row in the `cacfp_records` table.
 interface CACFPRow {
   id: string;
@@ -75,7 +72,7 @@ function toRow(
 ): Record<string, unknown> {
   return {
     id,
-    center_id: OPERATING_CENTER_ID,
+    center_id: currentCenterId(),
     record_type: recordType,
     data,
   };
@@ -94,7 +91,7 @@ function reimbursementRowId(month: string): string {
 // Fetch all rows of one record type from the cloud; null when not configured/error.
 async function cloudFetch<T>(recordType: CACFPRecordType): Promise<T[] | null> {
   const rows = await supabaseSelect<CACFPRow>(CACFP_TABLE, {
-    filters: { record_type: recordType },
+    filters: { record_type: recordType, center_id: currentCenterId() },
   });
   if (rows === null) return null;
   return rows.map((r) => r.data as T);
@@ -229,7 +226,7 @@ export async function updateChecklistItem(
 
   // Write to Supabase first, then cache locally
   await supabaseUpdate<CACFPRow>(CACFP_TABLE, complianceRowId(month), {
-    center_id: OPERATING_CENTER_ID,
+    center_id: currentCenterId(),
     record_type: 'compliance',
     data: record as unknown as Record<string, unknown>,
   });
@@ -291,7 +288,7 @@ export async function upsertReimbursement(record: ReimbursementRecord): Promise<
 
   if (existsInCloud) {
     await supabaseUpdate<CACFPRow>(CACFP_TABLE, reimbursementRowId(record.month), {
-      center_id: OPERATING_CENTER_ID,
+      center_id: currentCenterId(),
       record_type: 'reimbursement',
       data: record as unknown as Record<string, unknown>,
     });

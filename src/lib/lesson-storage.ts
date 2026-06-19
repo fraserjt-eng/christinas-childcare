@@ -17,17 +17,13 @@ import {
   AGE_GROUPS,
   generateLessonId,
 } from '@/types/curriculum';
+import { currentCenterId } from '@/lib/current-center';
 
 const STORAGE_KEY = 'christinas_lessons';
 
 // Supabase table backing the lesson records. Single-kind table: each row's
 // typed fields live in a JSONB `data` column (see migration 036).
 const LESSONS_TABLE = 'lessons';
-
-// Operating center (Brooklyn Park). The lesson module has no center context, so
-// every cloud row is stamped with this id, matching how supply-inventory and the
-// other dual-write modules default center_id.
-const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 
 // ============================================================================
 // Storage Interface (Database-ready)
@@ -65,7 +61,7 @@ function stripId(lesson: Lesson): Record<string, unknown> {
 function toRow(lesson: Lesson): Record<string, unknown> {
   return {
     id: lesson.id,
-    center_id: OPERATING_CENTER_ID,
+    center_id: currentCenterId(),
     data: stripId(lesson),
   };
 }
@@ -77,7 +73,9 @@ function fromRow(row: LessonRow): Lesson {
 
 // Fetch all lesson rows from the cloud; null when not configured/on error.
 async function cloudFetch(): Promise<Lesson[] | null> {
-  const rows = await supabaseSelect<LessonRow>(LESSONS_TABLE, {});
+  const rows = await supabaseSelect<LessonRow>(LESSONS_TABLE, {
+    filters: { center_id: currentCenterId() },
+  });
   if (rows === null) return null;
   return rows.map((r) => fromRow(r));
 }
@@ -226,7 +224,7 @@ export async function updateLesson(
 
   // Write to Supabase first, then cache locally
   await supabaseUpdate<LessonRow>(LESSONS_TABLE, id, {
-    center_id: OPERATING_CENTER_ID,
+    center_id: currentCenterId(),
     data: stripId(updatedLesson),
   });
 

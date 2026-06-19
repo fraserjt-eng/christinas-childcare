@@ -60,6 +60,43 @@ function isValidDay(day: unknown): day is number {
   return typeof day === 'number' && Number.isInteger(day) && day >= 0 && day <= 4;
 }
 
+// ---- GET: this center's shifts (the admin's schedule-data read path) ----
+// staff_schedules is RLS service-role-only, so the browser cannot read it with
+// the anon key. Admin schedule-consuming tools (labor, ratios, reports) fetch
+// this route instead, getting only the derived center's shifts. Session-gated.
+export async function GET(request: NextRequest) {
+  const session = await requireSession('teacher');
+  if (!session) return fail('Unauthorized', 401);
+
+  const supabase = getServerSupabase();
+  if (!supabase) return fail('Unavailable', 503);
+
+  const centerId = deriveCenterId(request, session);
+  if (!centerId) return NextResponse.json({ shifts: [] });
+
+  const { data } = await supabase
+    .from('staff_schedules')
+    .select('id, employee_id, date, start_time, end_time, classroom_id, created_at, updated_at')
+    .eq('center_id', centerId)
+    .limit(5000);
+
+  const shifts = (data ?? []).map((r) => ({
+    id: r.id as string,
+    employee_id: r.employee_id as string,
+    date: r.date as string,
+    start_time: ((r.start_time as string) || '').slice(0, 5),
+    end_time: ((r.end_time as string) || '').slice(0, 5),
+    classroom_id: (r.classroom_id as string | null) ?? null,
+    created_at: (r.created_at as string) || null,
+    updated_at: (r.updated_at as string) || null,
+  }));
+
+  return NextResponse.json(
+    { shifts },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
+}
+
 // ---- POST: add a shift ----
 export async function POST(request: NextRequest) {
   const session = await requireSession('teacher');

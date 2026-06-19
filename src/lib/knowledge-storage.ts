@@ -7,6 +7,7 @@ import {
   supabaseUpdate,
   supabaseDelete,
 } from '@/lib/supabase/service';
+import { currentCenterId } from '@/lib/current-center';
 
 export type KnowledgeCategory =
   | 'strategic_foundation'
@@ -87,11 +88,6 @@ const READS_KEY = 'christinas_knowledge_reads';
 const KNOWLEDGE_TABLE = 'knowledge';
 type KnowledgeRecordType = 'entry' | 'version' | 'read';
 
-// Operating center (Brooklyn Park). The knowledge module has no center context,
-// so every row is stamped with this id, matching how the other dual-write
-// modules stamp center_id.
-const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
-
 // Shape of a row in the `knowledge` table.
 interface KnowledgeRow {
   id: string;
@@ -108,7 +104,7 @@ function toRow<T extends { id: string }>(
   const { id, ...rest } = record;
   return {
     id,
-    center_id: OPERATING_CENTER_ID,
+    center_id: currentCenterId(),
     record_type: recordType,
     data: rest as Record<string, unknown>,
   };
@@ -128,7 +124,7 @@ function stripId<T extends { id: string }>(record: T): Record<string, unknown> {
 // Fetch all rows of one record type from the cloud; null when not configured/error.
 async function cloudFetch<T>(recordType: KnowledgeRecordType): Promise<T[] | null> {
   const rows = await supabaseSelect<KnowledgeRow>(KNOWLEDGE_TABLE, {
-    filters: { record_type: recordType },
+    filters: { record_type: recordType, center_id: currentCenterId() },
   });
   if (rows === null) return null;
   return rows.map((r) => fromRow<T>(r));
@@ -369,7 +365,7 @@ export async function updateEntry(
 
   // Write to Supabase first, then cache locally
   await supabaseUpdate<KnowledgeRow>(KNOWLEDGE_TABLE, id, {
-    center_id: OPERATING_CENTER_ID,
+    center_id: currentCenterId(),
     record_type: 'entry',
     data: stripId(updated),
   });

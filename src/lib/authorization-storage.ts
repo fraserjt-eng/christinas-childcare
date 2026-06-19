@@ -15,6 +15,7 @@ import {
   supabaseInsert,
   supabaseUpdate,
 } from '@/lib/supabase/service';
+import { currentCenterId } from '@/lib/current-center';
 
 export type AuthType = 'county_authorization' | 'state_subsidy' | 'ccap' | 'other';
 export type AuthStatus = 'active' | 'expiring_soon' | 'expired' | 'pending' | 'renewal_pending';
@@ -58,18 +59,15 @@ const AVG_MONTHLY_RATE = 1200;
 // (see migration 032).
 const AUTHORIZATIONS_TABLE = 'authorizations';
 
-// Operating center (Brooklyn Park). Default when there is no center context,
-// matching how the other dual-write modules stamp center_id.
-const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Resolve a usable center_id for the cloud row: keep a real UUID if provided,
-// otherwise fall back to the operating center.
+// otherwise fall back to the current center (cc_center cookie, else Brooklyn Park).
 function resolveCenterId(center_id?: string): string {
   return center_id && UUID_PATTERN.test(center_id)
     ? center_id
-    : OPERATING_CENTER_ID;
+    : currentCenterId();
 }
 
 // Shape of a row in the `authorizations` table.
@@ -126,7 +124,9 @@ function fromRow(row: AuthorizationRow): ChildAuthorization {
 // synchronous read functions can serve the cache without awaiting. No-op when
 // Supabase is not configured (supabaseSelect returns null) or on error.
 async function cloudHydrate(): Promise<void> {
-  const rows = await supabaseSelect<AuthorizationRow>(AUTHORIZATIONS_TABLE);
+  const rows = await supabaseSelect<AuthorizationRow>(AUTHORIZATIONS_TABLE, {
+    filters: { center_id: currentCenterId() },
+  });
   if (rows === null) return;
   const auths = rows.map((r) => fromRow(r));
   if (auths.length === 0) return;
