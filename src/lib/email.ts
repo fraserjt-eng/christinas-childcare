@@ -5,6 +5,13 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const NOTIFICATION_EMAIL = 'info@christinaschildcare.com';
 
+// Whether family-facing email can actually be sent. Until the owner verifies the
+// Resend sending domain and sets RESEND_API_KEY, communications stay in
+// draft-only mode (rendered + reviewable + printable, never sent).
+export function isEmailConfigured(): boolean {
+  return Boolean(RESEND_API_KEY);
+}
+
 export async function sendNotificationEmail(
   subject: string,
   htmlBody: string
