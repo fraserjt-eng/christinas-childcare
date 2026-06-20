@@ -59,7 +59,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireSession();
+  const session = await requireSession('admin');
   if (!session) return unauthorized();
 
   const { id } = await params;
@@ -79,7 +79,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireSession();
+  const session = await requireSession('admin');
   if (!session) return unauthorized();
 
   const supabase = getServerSupabase();
@@ -143,7 +143,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireSession();
+  const session = await requireSession('admin');
   if (!session) return unauthorized();
 
   const { id } = await params;

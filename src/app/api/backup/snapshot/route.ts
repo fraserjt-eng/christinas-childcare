@@ -33,7 +33,7 @@ function badConfig(reason: string) {
 // client, upload as JSON to Storage, write a metadata row.
 
 export async function POST(req: NextRequest) {
-  const session = await requireSession();
+  const session = await requireSession('admin');
   if (!session) return unauthorized();
 
   const supabase = getServerSupabase();
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
 // List all snapshots, newest first, joined with their metadata rows.
 
 export async function GET() {
-  const session = await requireSession();
+  const session = await requireSession('admin');
   if (!session) return unauthorized();
 
   const supabase = getServerSupabase();
