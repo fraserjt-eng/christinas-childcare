@@ -4,11 +4,8 @@ import { isDemoSeedEnabled } from '@/lib/demo-mode';
 // Users and security settings are stored in the app_settings table (migration 007)
 // Audit logs are stored in error_logs table (migration 004)
 
-import {
-  supabaseUpsert,
-  supabaseSelect,
-  isSupabaseConfigured,
-} from '@/lib/supabase/service';
+import { isSupabaseConfigured } from '@/lib/supabase/service';
+import { supabaseUpsert, supabaseSelect } from '@/lib/supabase/guarded';
 import { getSupabase } from '@/lib/supabase/client';
 import { UserRole } from '@/types/database';
 

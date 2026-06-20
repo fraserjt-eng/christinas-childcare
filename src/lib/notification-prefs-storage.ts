@@ -14,7 +14,7 @@ import {
   supabaseSelect,
   supabaseUpsert,
   supabaseDelete,
-} from '@/lib/supabase/service';
+} from '@/lib/supabase/guarded';
 import { currentCenterId } from '@/lib/current-center';
 
 export type NotificationChannel = 'email' | 'sms' | 'call';

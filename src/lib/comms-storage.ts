@@ -6,7 +6,7 @@ import {
   supabaseInsert,
   supabaseUpdate,
   supabaseDelete,
-} from '@/lib/supabase/service';
+} from '@/lib/supabase/guarded';
 import { currentCenterId } from '@/lib/current-center';
 
 export type CommunicationType = 'announcement' | 'individual' | 'daily_update' | 'template';

@@ -33,6 +33,7 @@ const STORAGE_KEY = 'christinas_parent_messages';
 const store = createDualWrite<ParentConversation>({
   table: 'parent_conversations',
   localKey: STORAGE_KEY,
+  guarded: true,
 });
 
 let hydrated = false;

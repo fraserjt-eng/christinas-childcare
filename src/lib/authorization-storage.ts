@@ -14,7 +14,7 @@ import {
   supabaseSelect,
   supabaseInsert,
   supabaseUpdate,
-} from '@/lib/supabase/service';
+} from '@/lib/supabase/guarded';
 import { currentCenterId } from '@/lib/current-center';
 
 export type AuthType = 'county_authorization' | 'state_subsidy' | 'ccap' | 'other';

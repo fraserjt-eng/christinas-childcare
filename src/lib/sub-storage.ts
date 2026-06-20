@@ -39,11 +39,13 @@ export interface SubAssignment {
 const subStore = createDualWrite<Substitute>({
   table: 'substitutes',
   localKey: 'christinas_substitutes',
+  guarded: true,
 });
 
 const assignmentStore = createDualWrite<SubAssignment>({
   table: 'sub_assignments',
   localKey: 'christinas_sub_assignments',
+  guarded: true,
 });
 
 function generateId(prefix: string): string {

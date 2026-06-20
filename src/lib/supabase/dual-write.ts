@@ -2,6 +2,11 @@
 // Used by storage modules that need cross-device sync.
 
 import { getSupabase } from './client';
+import {
+  supabaseSelect as guardedSelect,
+  supabaseUpsert as guardedUpsert,
+  supabaseDelete as guardedDelete,
+} from './guarded';
 
 export interface DualWriteItem {
   id: string;
@@ -19,6 +24,9 @@ export interface DualWriteAdapter<T extends DualWriteItem> {
 interface DualWriteConfig {
   table: string;
   localKey: string;
+  // Route cloud reads/writes through the session-gated /api/store (service role)
+  // instead of the anon key. Set for PII tables the browser key must not reach.
+  guarded?: boolean;
 }
 
 function getFromLocal<T>(localKey: string): T[] {
@@ -47,9 +55,19 @@ function saveToLocal<T>(localKey: string, items: T[]): void {
 export function createDualWrite<T extends DualWriteItem>(
   config: DualWriteConfig
 ): DualWriteAdapter<T> {
-  const { table, localKey } = config;
+  const { table, localKey, guarded } = config;
 
   async function readCloud(): Promise<T[] | null> {
+    if (guarded) {
+      const rows = await guardedSelect<{ id: string; data: unknown }>(table, {
+        orderBy: { column: 'updated_at', ascending: false },
+        limit: 2000,
+      });
+      if (rows === null) return null;
+      return rows.map(
+        (row) => ({ ...((row.data as T) || ({} as T)), id: row.id } as T)
+      );
+    }
     const supabase = getSupabase();
     if (!supabase) return null;
     try {
@@ -73,6 +91,14 @@ export function createDualWrite<T extends DualWriteItem>(
   }
 
   async function writeCloud(item: T): Promise<boolean> {
+    if (guarded) {
+      const res = await guardedUpsert(
+        table,
+        { id: item.id, data: item, updated_at: new Date().toISOString() },
+        'id'
+      );
+      return res !== null;
+    }
     const supabase = getSupabase();
     if (!supabase) return false;
     try {
@@ -96,6 +122,10 @@ export function createDualWrite<T extends DualWriteItem>(
   }
 
   async function deleteCloud(id: string): Promise<void> {
+    if (guarded) {
+      await guardedDelete(table, id);
+      return;
+    }
     const supabase = getSupabase();
     if (!supabase) return;
     try {
