@@ -39,11 +39,11 @@ five real blockers. **Do not cut over to production until A-E are done.** Two
 are already fixed.
 
 **MUST-FIX before cutover:**
-- **A. Backup endpoints (`/api/.../backup` + restore) only check "logged in," not admin.** Any parent/teacher can export AND overwrite/delete the entire DB (employees, families, children, financials, HR, incidents, pay). Worst finding. Fix: require admin on every backup/restore handler. STILL OPEN.
-- **B. center-data leaked staff PINs.** FIXED + verified (commit on branch): pin no longer selected/returned.
+- **A. Backup endpoints only checked "logged in," not admin** (any parent/teacher could export or wipe the whole DB). FIXED + verified: all 5 backup/restore handlers now requireSession('admin'); parent + teacher get 401, admin 200.
+- **B. center-data leaked staff PINs.** FIXED + verified: pin no longer selected/returned.
 - **C. center-data let a parent read any center's family data via ?center.** FIXED + verified: requireSession('teacher') + center-bound users locked to their own center; only owner/superadmin may pick.
-- **D. Anon publishable key can read/write "allow anyone" PII tables directly.** Sharpest: a writable user-directory/roster + security-settings table (flip parent to admin). Also parent message threads, contact prefs, subsidy status, substitutes. Fix: route these through server (service role), THEN remove the anon policy (repoint first or the feature breaks). Minimum set: user directory, notification_prefs, parent_conversations, comms, authorizations, substitutes, sub_assignments. STILL OPEN.
-- **E. `/preview` is a "demo" label over REAL data.** Staff make real, irreversible changes thinking they are fake. Fix is a DECISION (J's): make `/preview` the real portal (drop the demo banner + Reset-demo + passcode gate, real login, protect the routes) or cut its live-data connection. This is the same call as Phase 5. STILL OPEN.
+- **D. Anon publishable key could read/write "allow anyone" PII tables directly** (sharpest: the anon-writable user roster + security settings = flip parent to admin). FIXED + verified: a guarded server store (/api/store, service role, per-table role) + repointed modules off the anon client; migration 042 dropped the anon policies on notification_prefs/comms/authorizations/parent_conversations/substitutes/sub_assignments and narrowed app_settings (anon keeps non-sensitive keys, denied app_users/security_settings). Anon now reads 0 rows on all six; the anon roster-write is 401.
+- **E. `/preview` is a "demo" label over REAL data.** Staff make real, irreversible changes thinking they are fake. Fix is a DECISION (J's): make `/preview` the real portal (drop the demo banner + Reset-demo + passcode gate, real login, protect the routes) or cut its live-data connection. This is the same call as Phase 5. **STILL OPEN — the only remaining blocker.**
 - **Operational:** confirm prod has `SESSION_SECRET` + service role + Supabase URL/anon set, and `NEXT_PUBLIC_DEMO_MODE` / `NEXT_PUBLIC_SEED_DEMO_DATA` are OFF.
 
 **SHOULD-FIX (fast follow, not blockers):** lock the newsletter send + generate endpoints to admin; tighten the cross-center admin role-change + teacher schedule-edit edge cases; lock the remaining non-PII allow-anyone tables (cacfp, meetings, knowledge, lessons, supplies, announcements, news, newsletters); add login to the daily-reports/staffing-alerts/training-digest reads; drop the internal staff id from the parent timeline.
@@ -61,13 +61,14 @@ Runbook: `PRODUCTION-CUTOVER.md` (this folder). Migration bundle: `030-041-prod-
 4. Add the Crystal center (rooms, staff, families) when opening it.
 5. Optionally rotate the test DB key after the staging week.
 
-**Next-session build (the gate blockers, see Security status):** these gate the
-cutover.
-- **A.** Admin-gate the backup/restore endpoints. (Open.)
-- **D.** Route the PII allow-anyone tables (user directory, notification_prefs, parent_conversations, comms, authorizations, substitutes, sub_assignments) through the service role, then drop their anon policy. (Open.)
-- **E.** Decide + apply the `/preview` production treatment (this IS the Phase 5 route decision). (Open, needs J.)
-- B + C (center-data) are DONE.
-- Then the should-fixes (newsletter admin-gate, cross-center edge cases, the remaining non-PII tables, the staff-id in the parent timeline).
+**Gate blockers:** A, B, C, D are all DONE + verified (commits on the branch).
+**E is the only remaining blocker, and it is J's decision** = the Phase 5 route
+call: make `/preview` the real portal (drop the demo banner/Reset/passcode gate,
+real login, protect the routes) or cut its live-data wire. Once E is decided +
+applied, the gate is GO.
+Then the should-fixes (newsletter admin-gate, cross-center admin/teacher edge
+cases, the remaining non-PII allow-anyone tables, the staff-id in the parent
+timeline) as a fast follow.
 
 ## Critical gotchas (cost real time this session)
 - `vercel link` rewrites `.env.local` (wiped the test service_role key). Back it up first.
