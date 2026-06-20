@@ -34,3 +34,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# PII safety: roster data (child names / kiosk PINs) must never enter this PUBLIC repo.
+# The importer reads/writes these on the Desktop, not here. Defense in depth:
+*roster-assignments*
+*kiosk-pins*
+Attendance2026*
+*.roster.json

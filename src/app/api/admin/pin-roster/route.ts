@@ -1,7 +1,8 @@
 export const runtime = 'nodejs';
 
-// PIN ROSTER read endpoint. Returns family name + kiosk PIN + email, grouped by
-// center, for the branded printable roster admins hand to staff on Monday.
+// PIN ROSTER read endpoint. Returns family name + child names + kiosk PIN +
+// email, grouped by center, for the branded printable roster admins hand to
+// staff on Monday.
 //
 // Security: admin-gated (requireSession('admin')), service-role read ONLY. The
 // family `pin` is a real credential: it is RLS-locked off the anon key, so it
@@ -27,6 +28,7 @@ function fail(message: string, status: number) {
 export interface PinRosterRow {
   center: string;
   familyName: string;
+  children: string;
   pin: string;
   email: string;
 }
@@ -62,7 +64,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Fetch broad + filter in JS (PostgREST silently drops rows on .in()/filters).
-  const [centersRes, famRes, parentsRes] = await Promise.all([
+  const [centersRes, famRes, parentsRes, childrenRes] = await Promise.all([
     supabase.from('centers').select('id, name').limit(5000),
     supabase
       .from('families')
@@ -72,6 +74,7 @@ export async function GET(request: NextRequest) {
       .from('family_parents')
       .select('family_id, name, is_primary')
       .limit(5000),
+    supabase.from('family_children').select('family_id, name').limit(10000),
   ]);
 
   const centerNameById = new Map<string, string>();
@@ -93,6 +96,21 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // Child names per family (used for the Children column, and as the family
+  // label for kiosk-only student stubs that have no guardian record yet).
+  const childrenByFamily = new Map<string, string[]>();
+  for (const c of childrenRes.data ?? []) {
+    const fid = c.family_id as string;
+    const nm = (c.name as string) || '';
+    if (!nm) continue;
+    if (!childrenByFamily.has(fid)) childrenByFamily.set(fid, []);
+    childrenByFamily.get(fid)!.push(nm);
+  }
+
+  function childrenLabel(familyId: string): string {
+    return (childrenByFamily.get(familyId) ?? []).join(', ');
+  }
+
   function familyLabel(email: string, familyId: string): string {
     const parents = parentsByFamily.get(familyId) ?? [];
     const primary = parents.find((p) => p.is_primary) ?? parents[0];
@@ -102,7 +120,12 @@ export async function GET(request: NextRequest) {
       const last = name.split(/\s+/).slice(-1)[0];
       return last ? `${last} family` : name;
     }
-    return email || 'Family';
+    // No guardian yet (a kiosk-only student stub): label by the child name(s).
+    const kids = childrenLabel(familyId);
+    if (kids) return kids;
+    // Never print a placeholder roster email on a sheet.
+    if (email && !/@roster\.local$/i.test(email)) return email;
+    return 'Student';
   }
 
   const rows: PinRosterRow[] = [];
@@ -116,11 +139,14 @@ export async function GET(request: NextRequest) {
     const status = (f.status as string | null) ?? '';
     if (status && status !== 'active' && status !== 'approved') continue;
 
+    const rawEmail = (f.email as string) ?? '';
     rows.push({
       center: centerNameById.get(centerId) || 'Center',
-      familyName: familyLabel((f.email as string) ?? '', f.id as string),
+      familyName: familyLabel(rawEmail, f.id as string),
+      children: childrenLabel(f.id as string),
       pin,
-      email: (f.email as string) ?? '',
+      // Hide placeholder roster emails (kiosk-only stubs); show real ones.
+      email: /@roster\.local$/i.test(rawEmail) ? '' : rawEmail,
     });
   }
 

@@ -22,6 +22,7 @@ import { Printer, RefreshCw, LayoutList, IdCard } from 'lucide-react';
 interface PinRosterRow {
   center: string;
   familyName: string;
+  children: string;
   pin: string;
   email: string;
 }
@@ -282,6 +283,9 @@ function RosterTable({ rows }: { rows: PinRosterRow[] }) {
             Family
           </th>
           <th className="border-b-2 px-3 py-2 font-heading font-bold" style={{ borderColor: '#C62828' }}>
+            Children
+          </th>
+          <th className="border-b-2 px-3 py-2 font-heading font-bold" style={{ borderColor: '#C62828' }}>
             PIN
           </th>
           <th className="border-b-2 px-3 py-2 font-heading font-bold" style={{ borderColor: '#C62828' }}>
@@ -300,6 +304,12 @@ function RosterTable({ rows }: { rows: PinRosterRow[] }) {
               style={{ borderBottom: '1px solid #e5e7eb' }}
             >
               {r.familyName}
+            </td>
+            <td
+              className="px-3 py-2"
+              style={{ borderBottom: '1px solid #e5e7eb', color: '#374151' }}
+            >
+              {r.children}
             </td>
             <td
               className="px-3 py-2 font-mono text-base font-bold"
@@ -341,6 +351,11 @@ function SlipGrid({ rows }: { rows: PinRosterRow[] }) {
               {r.familyName}
             </span>
           </div>
+          {r.children && r.children !== r.familyName && (
+            <p className="mb-0.5 text-[11px]" style={{ color: '#6b7280' }}>
+              {r.children}
+            </p>
+          )}
           <p className="text-[11px] uppercase tracking-wide" style={{ color: '#6b7280' }}>
             Your kiosk PIN
           </p>
