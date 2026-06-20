@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { centerDate } from '@/lib/center-time';
+import { PRIVACY_NOTICE_VERSION, ATTESTATION_VALID_DAYS } from '@/lib/attestation';
 
 // The live kiosk's only data path. The browser never touches the family or
 // attendance tables directly (anon is denied on them by migration 017). This
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
     familyId?: string;
     employeeId?: string;
     centerId?: string;
+    agreedName?: string;
   };
   try {
     body = await request.json();
@@ -63,6 +65,44 @@ export async function POST(request: NextRequest) {
   // another center's family or attendance row. Defaults to the operating center
   // for legacy single-center kiosks that don't send one.
   const centerId = body.centerId || OPERATING_CENTER_ID;
+
+  // ---- privacy-notice attestation: is the family's agreement current? ----
+  // (right version, within the year). Gates check-in on the kiosk.
+  if (body.action === 'attest_status') {
+    const familyId = (body.familyId || '').trim();
+    if (!familyId) return NextResponse.json({ data: { current: false } });
+    const cutoff = new Date(
+      Date.now() - ATTESTATION_VALID_DAYS * 86400000
+    ).toISOString();
+    const { data } = await supabase
+      .from('kiosk_attestations')
+      .select('id')
+      .eq('subject_type', 'family')
+      .eq('subject_id', familyId)
+      .eq('attestation_type', 'privacy_notice')
+      .eq('version', PRIVACY_NOTICE_VERSION)
+      .gte('agreed_at', cutoff)
+      .limit(1);
+    return NextResponse.json({ data: { current: !!(data && data.length > 0) } });
+  }
+
+  // ---- record a family's privacy-notice agreement ----
+  if (body.action === 'record_attestation') {
+    const familyId = (body.familyId || '').trim();
+    if (!familyId) {
+      return NextResponse.json({ error: 'familyId required' }, { status: 400 });
+    }
+    await supabase.from('kiosk_attestations').insert({
+      subject_type: 'family',
+      subject_id: familyId,
+      attestation_type: 'privacy_notice',
+      version: PRIVACY_NOTICE_VERSION,
+      agreed_name: (body.agreedName || '').trim() || null,
+      center_id: centerId,
+      kiosk_device: request.headers.get('x-forwarded-for') || null,
+    });
+    return NextResponse.json({ data: { ok: true } });
+  }
 
   // ---- lookup: PIN -> family (tightly rate limited; this is the abuse path) ----
   if (body.action === 'lookup') {

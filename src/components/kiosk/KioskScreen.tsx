@@ -9,6 +9,7 @@ import type {
   FamilyChildRow,
   AttendanceRow,
 } from '@/lib/kiosk-data';
+import { PrivacyNotice, SeeStaffScreen } from './PrivacyNotice';
 
 // ============================================================
 // Helpers
@@ -419,6 +420,45 @@ export default function KioskScreen({
   isDemo?: boolean;
 }) {
   const [activeFamily, setActiveFamily] = useState<KioskFamily | null>(null);
+  const [pendingFamily, setPendingFamily] = useState<KioskFamily | null>(null);
+  const [declined, setDeclined] = useState(false);
+
+  // MN DCYF gate: a family must have a CURRENT privacy-notice agreement before
+  // they can check in. If not, show the notice first; they cannot reach the
+  // check-in screen until they agree.
+  async function handlePinSuccess(family: KioskFamily) {
+    const current = await client.getPrivacyAttestationStatus(family.id);
+    if (current) {
+      setActiveFamily(family);
+    } else {
+      setPendingFamily(family);
+    }
+  }
+
+  if (declined) {
+    return <SeeStaffScreen onDone={() => setDeclined(false)} />;
+  }
+
+  if (pendingFamily) {
+    return (
+      <PrivacyNotice
+        familyName={getPrimaryParentLastName(pendingFamily.parents)}
+        onAgree={async () => {
+          await client.recordPrivacyAttestation(
+            pendingFamily.id,
+            getPrimaryParentLastName(pendingFamily.parents)
+          );
+          const f = pendingFamily;
+          setPendingFamily(null);
+          setActiveFamily(f);
+        }}
+        onDecline={() => {
+          setPendingFamily(null);
+          setDeclined(true);
+        }}
+      />
+    );
+  }
 
   return activeFamily ? (
     <WelcomeScreen
@@ -427,10 +467,6 @@ export default function KioskScreen({
       onDone={() => setActiveFamily(null)}
     />
   ) : (
-    <PinScreen
-      client={client}
-      isDemo={isDemo}
-      onSuccess={(f) => setActiveFamily(f)}
-    />
+    <PinScreen client={client} isDemo={isDemo} onSuccess={handlePinSuccess} />
   );
 }

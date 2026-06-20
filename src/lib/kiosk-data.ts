@@ -52,6 +52,10 @@ export interface KioskClient {
   getTodayAttendance(childId: string): Promise<AttendanceRow | null>;
   checkIn(child: FamilyChildRow, familyId: string): Promise<void>;
   checkOut(childId: string): Promise<void>;
+  // MN DCYF privacy-notice gate: is the family's agreement current (right
+  // version, within the year)? And record an agreement.
+  getPrivacyAttestationStatus(familyId: string): Promise<boolean>;
+  recordPrivacyAttestation(familyId: string, agreedName: string): Promise<void>;
 }
 
 export function getTodayDate(): string {
@@ -101,6 +105,22 @@ export function makeLiveKioskClient(centerId?: string): KioskClient {
     },
     checkOut: async (childId) => {
       await callKiosk({ action: 'checkout', childId, centerId });
+    },
+    getPrivacyAttestationStatus: async (familyId) => {
+      const res = await callKiosk<{ current: boolean }>({
+        action: 'attest_status',
+        familyId,
+        centerId,
+      });
+      return res?.current ?? false;
+    },
+    recordPrivacyAttestation: async (familyId, agreedName) => {
+      await callKiosk({
+        action: 'record_attestation',
+        familyId,
+        agreedName,
+        centerId,
+      });
     },
   };
 }
@@ -187,5 +207,13 @@ export const demoKioskClient: KioskClient = {
       .update({ check_out: new Date().toISOString() })
       .eq('child_id', childId)
       .eq('date', getTodayDate());
+  },
+
+  // Demo always shows the notice (so the flow is visible) and never persists.
+  async getPrivacyAttestationStatus() {
+    return false;
+  },
+  async recordPrivacyAttestation() {
+    /* demo: no-op */
   },
 };
