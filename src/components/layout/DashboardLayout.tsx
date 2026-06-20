@@ -70,6 +70,7 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/intelligence', label: 'Intelligence', icon: Brain },
       { href: '/admin/news', label: 'News & Updates', icon: Newspaper },
       { href: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
+      { href: '/admin/attendance/hub', label: 'Attendance Hub', icon: CalendarDays },
       { href: '/admin/attendance/ccap-export', label: 'CCAP Export', icon: FileSpreadsheet },
       { href: '/admin/families/pin-roster', label: 'PIN Roster', icon: KeyRound },
       { href: '/admin/ratios', label: 'Ratio Monitor', icon: BarChart3 },
