@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
+import PrivacyNoticeBanner from "@/components/preview/PrivacyNoticeBanner";
 import {
   AlertTriangle,
   Apple,
@@ -1003,6 +1004,8 @@ function RealParentHome({ user }: { user: SessionUser }) {
             Your kids first. Then anything that needs you.
           </p>
         </header>
+
+        <PrivacyNoticeBanner />
 
         <section className="pv-rise mb-6" style={{ animationDelay: "60ms" }}>
           <h2 className="pv-tad-title text-xl">my kids right now</h2>

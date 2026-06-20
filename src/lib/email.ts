@@ -35,6 +35,59 @@ export async function sendNotificationEmail(
   }
 }
 
+// Generic single-message send via Resend. Used by family-facing communications
+// (the privacy-notice announcement) where each family gets its own rendered
+// email. Returns an honest { ok, reason } so callers can build a per-recipient
+// summary without throwing.
+//
+// IMPORTANT (owner action): the Resend sending domain in the `from` address
+// (christinaschildcare.com) must be VERIFIED in the Resend dashboard (SPF +
+// DKIM DNS records) before any of these emails will actually deliver. Until
+// then Resend accepts the request but mail will not reach families.
+export interface SendEmailInput {
+  to: string;
+  subject: string;
+  html: string;
+}
+
+export async function sendEmail(
+  input: SendEmailInput
+): Promise<{ ok: boolean; reason: string }> {
+  if (!RESEND_API_KEY) {
+    return {
+      ok: false,
+      reason: 'Email sending is not configured (no RESEND_API_KEY).',
+    };
+  }
+  if (!input.to || !input.to.includes('@')) {
+    return { ok: false, reason: 'No valid email address on file.' };
+  }
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: "Christina's Child Care Center <notifications@christinaschildcare.com>",
+        to: [input.to],
+        subject: input.subject,
+        html: input.html,
+      }),
+    });
+
+    if (!res.ok) {
+      // Do not leak the raw provider body; keep the reason short + safe.
+      return { ok: false, reason: `Email provider returned status ${res.status}.` };
+    }
+    return { ok: true, reason: 'sent' };
+  } catch {
+    return { ok: false, reason: 'Email send failed (network or provider error).' };
+  }
+}
+
 // Send a co-payment statement to a family. SINGLE wiring point for emailing
 // statements: today there is no family-facing email path (RESEND_API_KEY is
 // unset and the only sender above is owner-only), so this is a stub. When the

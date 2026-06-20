@@ -11,7 +11,7 @@ import {
   CreditCard, CalendarDays, UserCog, Briefcase, Package, CalendarRange, CalendarPlus,
   Newspaper, ChevronDown, type LucideIcon,
   Settings, ListTodo, AlertTriangle, Mail, UserPlus, Presentation, Bell, Brain,
-  LifeBuoy, Inbox
+  LifeBuoy, Inbox, ClipboardCheck, FileSpreadsheet, KeyRound
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -70,6 +70,8 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/intelligence', label: 'Intelligence', icon: Brain },
       { href: '/admin/news', label: 'News & Updates', icon: Newspaper },
       { href: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
+      { href: '/admin/attendance/ccap-export', label: 'CCAP Export', icon: FileSpreadsheet },
+      { href: '/admin/families/pin-roster', label: 'PIN Roster', icon: KeyRound },
       { href: '/admin/ratios', label: 'Ratio Monitor', icon: BarChart3 },
       { href: '/admin/food-counts', label: 'Food Counts', icon: UtensilsCrossed },
       { href: '/admin/subs', label: 'Subs', icon: UserPlus },
@@ -89,6 +91,7 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/salaried-scheduling', label: 'Salaried Staff', icon: Building2 },
       { href: '/admin/hr', label: 'HR & Onboarding', icon: UserPlus },
       { href: '/admin/compliance', label: 'Compliance', icon: ShieldCheck },
+      { href: '/admin/compliance/attestations', label: 'Attestations', icon: ClipboardCheck },
       { href: '/admin/data-requests', label: 'Data Requests', icon: FileText },
       { href: '/admin/payroll', label: 'Payroll', icon: CreditCard },
       { href: '/admin/inquiries', label: 'Inquiries', icon: FileText },
