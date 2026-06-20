@@ -7,11 +7,25 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 // from `src/middleware.ts`. A root-level `middleware.ts` is IGNORED here and
 // never ran — every protected page was open. This file is the real gate.
 
+// All signed-in roles. The production portal (/preview/*) redirects each role
+// to its correct home itself, so any valid session may reach these surfaces.
+const ALL_SIGNED_IN: UserRole[] = ['superadmin', 'owner', 'admin', 'teacher', 'parent'];
+
 // Route protection: maps route prefix to which roles may access it
 const protectedRoutes: Record<string, UserRole[]> = {
   '/admin': ['superadmin', 'owner', 'admin'],
   '/employee': ['superadmin', 'owner', 'admin', 'teacher'],
   '/dashboard': ['superadmin', 'owner', 'admin', 'teacher', 'parent'],
+  // The production portal's logged-in surfaces. The PUBLIC kiosk/landing/door
+  // surfaces below (/preview/kiosk, /preview/landing, /preview/door) are NOT
+  // listed here: the kiosk uses a family PIN, not a session.
+  '/preview/office': ALL_SIGNED_IN,
+  '/preview/room': ALL_SIGNED_IN,
+  '/preview/family': ALL_SIGNED_IN,
+  '/preview/dashboard': ALL_SIGNED_IN,
+  '/preview/schedule': ALL_SIGNED_IN,
+  '/preview/meals': ALL_SIGNED_IN,
+  '/preview/newsletter': ALL_SIGNED_IN,
 };
 
 // Public routes that never require a session check
@@ -33,6 +47,13 @@ const publicRoutes = [
   '/access-denied',
   '/auth/callback',
   '/demo',
+  // Public production-portal surfaces. The kiosk gates on a family PIN (not a
+  // session), so it must stay reachable with no session; landing/door are the
+  // public entry. These are listed before the /preview/* protected prefixes so
+  // they short-circuit as public.
+  '/preview/kiosk',
+  '/preview/landing',
+  '/preview/door',
   '/_next',
   '/favicon',
   '/images',
@@ -191,12 +212,21 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// The production-portal surfaces that are staff-facing: an unauthenticated hit
+// should land on the staff login, not the family one.
+const PREVIEW_STAFF_PREFIXES = ['/preview/office', '/preview/room', '/preview/schedule', '/preview/meals'];
+
 function redirectToLogin(request: NextRequest, pathname: string): NextResponse {
   let loginPath = '/login';
 
   if (pathname.startsWith('/admin')) {
     loginPath = '/admin-login';
   } else if (pathname.startsWith('/employee')) {
+    loginPath = '/employee-login';
+  } else if (PREVIEW_STAFF_PREFIXES.some((p) => pathname.startsWith(p))) {
+    // Office / room / schedule / meals are staff-operated; send them to the
+    // staff login. Family-facing /preview surfaces (family, dashboard,
+    // newsletter) fall through to the family /login below.
     loginPath = '/employee-login';
   }
 

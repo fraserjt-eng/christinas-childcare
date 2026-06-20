@@ -27,6 +27,7 @@ import {
 import { BigButton, SuccessBanner, cx } from "@/components/preview/ui";
 import { PhotoUpload } from "@/components/preview/PhotoUpload";
 import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
+import { PrivacyNotice, SeeStaffScreen } from "@/components/kiosk/PrivacyNotice";
 import { roomById } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { useMounted } from "@/components/preview/ui";
@@ -42,6 +43,10 @@ const ROOM_ICON: Record<string, LucideIcon> = {
 type Mode =
   | { kind: "pad" }
   | { kind: "staff"; staffId: string }
+  // MN DCYF gate: a resolved family must clear the privacy notice before the
+  // check-in screen. "privacy" shows the notice; "seeStaff" is the decline path.
+  | { kind: "privacy"; familyId: string }
+  | { kind: "seeStaff" }
   | { kind: "family"; familyId: string };
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
@@ -72,6 +77,7 @@ export default function KioskPage() {
 
   const activeStaff = mode.kind === "staff" ? staff.find((s) => s.id === mode.staffId) ?? null : null;
   const activeFamily = mode.kind === "family" ? families.find((f) => f.id === mode.familyId) ?? null : null;
+  const privacyFamily = mode.kind === "privacy" ? families.find((f) => f.id === mode.familyId) ?? null : null;
   const familyKids = useMemo(
     () => (activeFamily ? kids.filter((k) => activeFamily.kidIds.includes(k.id)) : []),
     [activeFamily, kids],
@@ -110,14 +116,49 @@ export default function KioskPage() {
       const json = await res.json().catch(() => null);
       const famId = json?.data?.id as string | undefined;
       if (famId && families.some((f) => f.id === famId)) {
-        setMode({ kind: "family", familyId: famId });
         setPin("");
+        // MN DCYF gate: before check-in is possible, confirm the family's
+        // privacy-notice agreement is current. If not, route to the notice;
+        // they cannot reach the check-in screen until they agree.
+        const current = await checkAttestation(famId);
+        setMode(current ? { kind: "family", familyId: famId } : { kind: "privacy", familyId: famId });
         return;
       }
     } catch {
       /* fall through to the error shake */
     }
     failPin();
+  }
+
+  // Is this family's privacy-notice agreement current for this center? Mirrors
+  // the live kiosk: /api/kiosk 'attest_status' returns { data: { current } }.
+  // Fail closed (treat as not current) on any error, so the notice is shown.
+  async function checkAttestation(familyId: string): Promise<boolean> {
+    try {
+      const res = await fetch("/api/kiosk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "attest_status", familyId, centerId }),
+      });
+      const json = await res.json().catch(() => null);
+      return Boolean(json?.data?.current);
+    } catch {
+      return false;
+    }
+  }
+
+  // Record the family's agreement, then proceed to the check-in screen.
+  async function recordAttestation(familyId: string, agreedName: string) {
+    try {
+      await fetch("/api/kiosk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "record_attestation", familyId, agreedName, centerId }),
+      });
+    } catch {
+      /* best effort; still let them through this session */
+    }
+    setMode({ kind: "family", familyId });
   }
 
   function pressKey(key: string) {
@@ -137,6 +178,24 @@ export default function KioskPage() {
   function backToPad() {
     setMode({ kind: "pad" });
     setPin("");
+  }
+
+  // MN DCYF privacy-notice gate (full-screen, reuses the live kiosk component so
+  // the notice text is never duplicated). Shown after a family is resolved and
+  // before check-in is possible; decline routes to the see-staff screen.
+  if (mode.kind === "privacy" && privacyFamily) {
+    const familyId = mode.familyId;
+    return (
+      <PrivacyNotice
+        familyName={privacyFamily.name}
+        onAgree={() => recordAttestation(familyId, privacyFamily.name)}
+        onDecline={() => setMode({ kind: "seeStaff" })}
+      />
+    );
+  }
+
+  if (mode.kind === "seeStaff") {
+    return <SeeStaffScreen onDone={backToPad} />;
   }
 
   return (

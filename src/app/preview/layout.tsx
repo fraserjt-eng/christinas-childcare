@@ -4,41 +4,36 @@ import "./preview.css";
 import { PreviewChrome } from "@/components/preview/PreviewChrome";
 import LivePortalHydrator from "@/components/preview/LivePortalHydrator";
 import CenterWatermark from "@/components/preview/CenterWatermark";
-import { GateForm } from "./GateForm";
 
-// Sealed preview namespace. Gated by PREVIEW_PASSCODE, fixtures only,
-// never indexed. See docs/preview/PLAN.md for the isolation contract.
+// The production portal. Logged-in surfaces require a real auth_session; the
+// route protection in src/middleware.ts redirects an unauthenticated visitor to
+// the login. The public kiosk/landing/door surfaces are left out of that map.
 export const metadata: Metadata = {
   title: {
-    default: "Summer Version 1 | Preview",
-    template: "%s | Preview",
-  },
-  robots: {
-    index: false,
-    follow: false,
+    default: "Christina's Child Care Center",
+    template: "%s | Christina's Child Care Center",
   },
 };
 
 export default function PreviewLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // Unlock for the demo passcode OR for a signed-in user. A staff member
-  // reviewing the real portal skips the demo veil; the live data behind it is
-  // still session-gated at /api/portal/center-data.
-  const unlocked =
-    cookies().get("cc_preview")?.value === "open" ||
-    Boolean(cookies().get("auth_session")?.value);
+  // The chrome (sign-out, brand) only makes sense for a signed-in user. The
+  // public surfaces (kiosk/landing/door) render their own bare layout, so the
+  // chrome here keys off a real session cookie. Middleware is the actual gate;
+  // this is presentation only.
+  const signedIn = Boolean(cookies().get("auth_session")?.value);
 
   return (
     <div className="pv-root">
-      {unlocked ? (
+      {signedIn ? (
         <>
           <LivePortalHydrator />
           <CenterWatermark />
           <PreviewChrome>{children}</PreviewChrome>
         </>
       ) : (
-        <GateForm />
+        children
       )}
     </div>
   );

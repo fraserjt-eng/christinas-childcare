@@ -184,6 +184,10 @@ export async function DELETE(request: NextRequest) {
   if (!supabase) return fail('Unavailable', 503);
 
   const centerId = deriveCenterId(request, session);
+  // Fail closed: a caller whose center cannot be resolved must not be able to
+  // mutate any row. Without this, a null derived center skipped the match check
+  // below and let the caller delete another center's shift.
+  if (!centerId) return fail('No center', 404);
 
   let id = request.nextUrl.searchParams.get('id') || '';
   if (!id) {
@@ -197,7 +201,9 @@ export async function DELETE(request: NextRequest) {
   id = id.trim();
   if (!id) return fail('id required', 400);
 
-  // Confirm the row is in the derived center before deleting it.
+  // Confirm the row is in the derived center before deleting it. The row's
+  // center must match; a row with a null center_id is rejected too (it cannot
+  // be proven to belong to this center).
   const { data: row, error: rowErr } = await supabase
     .from('staff_schedules')
     .select('id, center_id')
@@ -205,7 +211,7 @@ export async function DELETE(request: NextRequest) {
     .maybeSingle();
   if (rowErr) return fail('Could not remove the shift', 500);
   if (!row) return NextResponse.json({ ok: true }); // already gone
-  if (centerId && row.center_id && row.center_id !== centerId) {
+  if (row.center_id !== centerId) {
     return fail('Not your center', 403);
   }
 
@@ -227,6 +233,10 @@ export async function PATCH(request: NextRequest) {
   if (!supabase) return fail('Unavailable', 503);
 
   const centerId = deriveCenterId(request, session);
+  // Fail closed: a caller whose center cannot be resolved must not be able to
+  // mutate any row. Without this, a null derived center skipped the match check
+  // below and let the caller edit another center's shift.
+  if (!centerId) return fail('No center', 404);
 
   let body: {
     id?: string;
@@ -245,7 +255,9 @@ export async function PATCH(request: NextRequest) {
   const id = (body.id || '').trim();
   if (!id) return fail('id required', 400);
 
-  // Center-validate the row before touching it.
+  // Center-validate the row before touching it. The row's center must match; a
+  // row with a null center_id is rejected too (it cannot be proven to belong to
+  // this center).
   const { data: row, error: rowErr } = await supabase
     .from('staff_schedules')
     .select('id, center_id')
@@ -253,7 +265,7 @@ export async function PATCH(request: NextRequest) {
     .maybeSingle();
   if (rowErr) return fail('Could not update the shift', 500);
   if (!row) return fail('Unknown shift', 404);
-  if (centerId && row.center_id && row.center_id !== centerId) {
+  if (row.center_id !== centerId) {
     return fail('Not your center', 403);
   }
 

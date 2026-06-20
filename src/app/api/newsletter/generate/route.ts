@@ -1,6 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
+import { requireSession } from '@/lib/require-auth';
 import { callClaudeHaiku } from '@/lib/ai/claude-client';
 import { loadAIConfig } from '@/lib/ai-config';
 import { checkAIRateLimit, rateLimitedResponse } from '@/lib/ai-rate-limit';
@@ -115,6 +116,12 @@ Return ONLY this JSON shape:
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    // Admin-only: this spends AI tokens. Gate before any rate-limit or AI call.
+    const session = await requireSession('admin');
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Rate limit check
     const rateCheck = checkAIRateLimit(request, 'newsletter');
     if (!rateCheck.success) {

@@ -236,14 +236,33 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
 
-  // Resolve the target so we know its current role for the only-owner guard.
+  // Resolve the target so we know its current role (only-owner guard) and its
+  // center (cross-center guard).
   const { data: target } = await supabase
     .from('employees')
-    .select('id, role')
+    .select('id, role, center_id')
     .eq('id', id)
     .maybeSingle();
   if (!target) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  // Cross-center guard: an admin is bound to one center and may only manage
+  // users in that center. owner/superadmin span all centers and skip this.
+  // A center-bound admin with no resolvable center cannot manage anyone in
+  // another center (which, with a null session center, is everyone but their
+  // own null-center peers).
+  const callerRole = (session.user.role || '').toLowerCase();
+  const isCrossCenter = callerRole === 'owner' || callerRole === 'superadmin';
+  if (!isCrossCenter) {
+    const callerCenter = session.user.center_id ?? null;
+    const targetCenter = (target as { center_id?: string | null }).center_id ?? null;
+    if (callerCenter !== targetCenter) {
+      return NextResponse.json(
+        { error: 'You can only manage users in your own center.' },
+        { status: 403 }
+      );
+    }
   }
 
   // Only-owner safeguard: if this row is currently an owner and the change

@@ -12,7 +12,8 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireSession();
+  // Admin-only: this is an open mass-email path. Gate above a bare session.
+  const session = await requireSession('admin');
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }

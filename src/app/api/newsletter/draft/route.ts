@@ -24,7 +24,9 @@ import {
 // and grounds the draft in real recent center activity.
 
 export async function POST(request: NextRequest) {
-  const session = await requireSession();
+  // Admin-only: this path spends AI tokens (Opus). Do not let any signed-in
+  // user (incl. parents) trigger generation.
+  const session = await requireSession('admin');
   if (!session) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
