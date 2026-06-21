@@ -1,4 +1,3 @@
-import { supabaseSelect, supabaseInsert, supabaseUpsert } from '@/lib/supabase/service';
 import {
   TrainingProgress,
   TrainingKnowledgeCheck,
@@ -8,6 +7,11 @@ import {
   SectionType,
   CompetencyLevel,
 } from '@/types/training';
+
+// The training tables are RLS-locked (service-role only). All cloud access goes
+// through the session-gated /api/training route, NEVER the anon client (which
+// 401'd and silently dropped to per-device localStorage). localStorage remains
+// the offline / not-signed-in fallback + a local cache.
 
 const STORAGE_KEYS = {
   progress: 'training-progress',
@@ -36,19 +40,45 @@ function saveToStorage<T>(key: string, value: T[]): void {
   }
 }
 
+// Returns the rows from /api/training, or null on any failure (not signed in,
+// server-side, offline) so callers fall back to localStorage exactly as before.
+async function apiGet<T>(op: string, params: Record<string, string | undefined> = {}): Promise<T[] | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    const qs = new URLSearchParams({ op });
+    for (const [k, v] of Object.entries(params)) if (v) qs.set(k, v);
+    const res = await fetch(`/api/training?${qs.toString()}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const d = await res.json();
+    return Array.isArray(d.rows) ? (d.rows as T[]) : [];
+  } catch {
+    return null;
+  }
+}
+
+async function apiPost(op: string, payload: Record<string, unknown>): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  try {
+    const res = await fetch('/api/training', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ op, ...payload }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // --- Progress ---
 
 export async function getUserProgress(userId: string): Promise<TrainingProgress[]> {
-  const cloudData = await supabaseSelect<TrainingProgress>('training_progress', {
-    filters: { user_id: userId },
-  });
-  if (cloudData !== null) {
-    saveToStorage(STORAGE_KEYS.progress, cloudData);
-    return cloudData;
+  const cloud = await apiGet<TrainingProgress>('userProgress', { userId });
+  if (cloud !== null) {
+    saveToStorage(STORAGE_KEYS.progress, cloud);
+    return cloud;
   }
-  return getFromStorage<TrainingProgress>(STORAGE_KEYS.progress).filter(
-    p => p.user_id === userId
-  );
+  return getFromStorage<TrainingProgress>(STORAGE_KEYS.progress).filter((p) => p.user_id === userId);
 }
 
 export async function markSectionComplete(
@@ -57,6 +87,9 @@ export async function markSectionComplete(
   section: SectionType,
   score?: number
 ): Promise<void> {
+  await apiPost('markSectionComplete', { userId, moduleId, section, score: score ?? null });
+
+  // Update local cache
   const record = {
     user_id: userId,
     module_id: moduleId,
@@ -65,17 +98,9 @@ export async function markSectionComplete(
     score: score ?? null,
     completed_at: new Date().toISOString(),
   };
-
-  await supabaseUpsert<TrainingProgress>(
-    'training_progress',
-    record,
-    'user_id,module_id,section'
-  );
-
-  // Update local cache
   const local = getFromStorage<TrainingProgress>(STORAGE_KEYS.progress);
   const existingIdx = local.findIndex(
-    p => p.user_id === userId && p.module_id === moduleId && p.section === section
+    (p) => p.user_id === userId && p.module_id === moduleId && p.section === section
   );
   const fullRecord = {
     ...record,
@@ -99,6 +124,8 @@ export async function saveKnowledgeCheckAnswer(
   selectedAnswer: string,
   correct: boolean
 ): Promise<void> {
+  await apiPost('saveKnowledgeCheckAnswer', { userId, moduleId, questionId, selectedAnswer, correct });
+
   const record = {
     user_id: userId,
     module_id: moduleId,
@@ -107,9 +134,6 @@ export async function saveKnowledgeCheckAnswer(
     correct,
     attempted_at: new Date().toISOString(),
   };
-
-  await supabaseInsert<TrainingKnowledgeCheck>('training_knowledge_checks', record);
-
   const local = getFromStorage<TrainingKnowledgeCheck>(STORAGE_KEYS.knowledgeChecks);
   local.push({ ...record, id: crypto.randomUUID() });
   saveToStorage(STORAGE_KEYS.knowledgeChecks, local);
@@ -119,13 +143,10 @@ export async function getKnowledgeCheckHistory(
   userId: string,
   moduleId: string
 ): Promise<TrainingKnowledgeCheck[]> {
-  const cloudData = await supabaseSelect<TrainingKnowledgeCheck>('training_knowledge_checks', {
-    filters: { user_id: userId, module_id: moduleId },
-    orderBy: { column: 'attempted_at', ascending: true },
-  });
-  if (cloudData !== null) return cloudData;
+  const cloud = await apiGet<TrainingKnowledgeCheck>('knowledgeCheckHistory', { userId, moduleId });
+  if (cloud !== null) return cloud;
   return getFromStorage<TrainingKnowledgeCheck>(STORAGE_KEYS.knowledgeChecks).filter(
-    c => c.user_id === userId && c.module_id === moduleId
+    (c) => c.user_id === userId && c.module_id === moduleId
   );
 }
 
@@ -137,6 +158,8 @@ export async function saveGateAssessment(
   competencyId: string,
   selfRating: CompetencyLevel
 ): Promise<void> {
+  await apiPost('saveGateAssessment', { userId, unitId, competencyId, selfRating });
+
   const record = {
     user_id: userId,
     unit_id: unitId,
@@ -144,16 +167,9 @@ export async function saveGateAssessment(
     self_rating: selfRating,
     self_assessed_at: new Date().toISOString(),
   };
-
-  await supabaseUpsert<TrainingGateAssessment>(
-    'training_gate_assessments',
-    record,
-    'user_id,unit_id,competency_id'
-  );
-
   const local = getFromStorage<TrainingGateAssessment>(STORAGE_KEYS.gateAssessments);
   const idx = local.findIndex(
-    a => a.user_id === userId && a.unit_id === unitId && a.competency_id === competencyId
+    (a) => a.user_id === userId && a.unit_id === unitId && a.competency_id === competencyId
   );
   const full = {
     ...record,
@@ -175,26 +191,14 @@ export async function saveAdminRating(
   competencyId: string,
   adminRating: CompetencyLevel
 ): Promise<void> {
-  const record = {
-    user_id: userId,
-    unit_id: unitId,
-    competency_id: competencyId,
-    admin_rating: adminRating,
-    admin_assessed_at: new Date().toISOString(),
-  };
-
-  await supabaseUpsert<TrainingGateAssessment>(
-    'training_gate_assessments',
-    record,
-    'user_id,unit_id,competency_id'
-  );
+  await apiPost('saveAdminRating', { userId, unitId, competencyId, adminRating });
 
   const local = getFromStorage<TrainingGateAssessment>(STORAGE_KEYS.gateAssessments);
   const idx = local.findIndex(
-    a => a.user_id === userId && a.unit_id === unitId && a.competency_id === competencyId
+    (a) => a.user_id === userId && a.unit_id === unitId && a.competency_id === competencyId
   );
   if (idx >= 0) {
-    local[idx] = { ...local[idx], ...record };
+    local[idx] = { ...local[idx], admin_rating: adminRating, admin_assessed_at: new Date().toISOString() };
     saveToStorage(STORAGE_KEYS.gateAssessments, local);
   }
 }
@@ -203,18 +207,16 @@ export async function getGateAssessments(
   userId: string,
   unitId: string
 ): Promise<TrainingGateAssessment[]> {
-  const cloudData = await supabaseSelect<TrainingGateAssessment>('training_gate_assessments', {
-    filters: { user_id: userId, unit_id: unitId },
-  });
-  if (cloudData !== null) return cloudData;
+  const cloud = await apiGet<TrainingGateAssessment>('gateAssessments', { userId, unitId });
+  if (cloud !== null) return cloud;
   return getFromStorage<TrainingGateAssessment>(STORAGE_KEYS.gateAssessments).filter(
-    a => a.user_id === userId && a.unit_id === unitId
+    (a) => a.user_id === userId && a.unit_id === unitId
   );
 }
 
 export async function getAllGateAssessments(): Promise<TrainingGateAssessment[]> {
-  const cloudData = await supabaseSelect<TrainingGateAssessment>('training_gate_assessments');
-  if (cloudData !== null) return cloudData;
+  const cloud = await apiGet<TrainingGateAssessment>('allGateAssessments');
+  if (cloud !== null) return cloud;
   return getFromStorage<TrainingGateAssessment>(STORAGE_KEYS.gateAssessments);
 }
 
@@ -226,6 +228,8 @@ export async function saveGateOverride(
   overriddenBy: string,
   reason: string
 ): Promise<void> {
+  await apiPost('saveGateOverride', { userId, unitId, overriddenBy, reason });
+
   const record = {
     user_id: userId,
     unit_id: unitId,
@@ -233,21 +237,14 @@ export async function saveGateOverride(
     reason,
     created_at: new Date().toISOString(),
   };
-
-  await supabaseUpsert<TrainingGateOverride>(
-    'training_gate_overrides',
-    record,
-    'user_id,unit_id'
-  );
-
   const local = getFromStorage<TrainingGateOverride>(STORAGE_KEYS.gateOverrides);
   local.push({ ...record, id: crypto.randomUUID() });
   saveToStorage(STORAGE_KEYS.gateOverrides, local);
 }
 
 export async function getGateOverrides(): Promise<TrainingGateOverride[]> {
-  const cloudData = await supabaseSelect<TrainingGateOverride>('training_gate_overrides');
-  if (cloudData !== null) return cloudData;
+  const cloud = await apiGet<TrainingGateOverride>('gateOverrides');
+  if (cloud !== null) return cloud;
   return getFromStorage<TrainingGateOverride>(STORAGE_KEYS.gateOverrides);
 }
 
@@ -258,21 +255,16 @@ export async function toggleUnitUnlock(
   unlocked: boolean,
   unlockedBy: string
 ): Promise<void> {
+  await apiPost('toggleUnitUnlock', { unitId, unlocked, unlockedBy });
+
   const record = {
     unit_id: unitId,
     unlocked,
     unlocked_at: unlocked ? new Date().toISOString() : null,
     unlocked_by: unlocked ? unlockedBy : null,
   };
-
-  await supabaseUpsert<TrainingUnitUnlock>(
-    'training_unit_unlocks',
-    record,
-    'unit_id'
-  );
-
   const local = getFromStorage<TrainingUnitUnlock>(STORAGE_KEYS.unitUnlocks);
-  const idx = local.findIndex(u => u.unit_id === unitId);
+  const idx = local.findIndex((u) => u.unit_id === unitId);
   const full = { ...record, id: idx >= 0 ? local[idx].id : crypto.randomUUID() };
   if (idx >= 0) {
     local[idx] = full;
@@ -283,23 +275,23 @@ export async function toggleUnitUnlock(
 }
 
 export async function getUnitUnlocks(): Promise<TrainingUnitUnlock[]> {
-  const cloudData = await supabaseSelect<TrainingUnitUnlock>('training_unit_unlocks');
-  if (cloudData !== null && cloudData.length > 0) return cloudData;
+  const cloud = await apiGet<TrainingUnitUnlock>('unitUnlocks');
+  if (cloud !== null && cloud.length > 0) return cloud;
   const localData = getFromStorage<TrainingUnitUnlock>(STORAGE_KEYS.unitUnlocks);
   if (localData.length > 0) return localData;
-  return cloudData ?? [];
+  return cloud ?? [];
 }
 
-// --- All Progress (Admin) ---
+// --- All (Admin) ---
 
 export async function getAllProgress(): Promise<TrainingProgress[]> {
-  const cloudData = await supabaseSelect<TrainingProgress>('training_progress');
-  if (cloudData !== null) return cloudData;
+  const cloud = await apiGet<TrainingProgress>('allProgress');
+  if (cloud !== null) return cloud;
   return getFromStorage<TrainingProgress>(STORAGE_KEYS.progress);
 }
 
 export async function getAllKnowledgeChecks(): Promise<TrainingKnowledgeCheck[]> {
-  const cloudData = await supabaseSelect<TrainingKnowledgeCheck>('training_knowledge_checks');
-  if (cloudData !== null) return cloudData;
+  const cloud = await apiGet<TrainingKnowledgeCheck>('allKnowledgeChecks');
+  if (cloud !== null) return cloud;
   return getFromStorage<TrainingKnowledgeCheck>(STORAGE_KEYS.knowledgeChecks);
 }
