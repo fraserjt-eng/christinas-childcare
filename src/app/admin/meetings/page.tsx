@@ -44,6 +44,7 @@ import {
   generateActionItemId,
   generateAttendanceId,
 } from '@/types/meetings';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 // --- Constants ---
 const STORAGE_KEYS = {
@@ -53,16 +54,20 @@ const STORAGE_KEYS = {
   attendance: 'christinas_attendance',
 } as const;
 
-const STAFF_LIST = [
-  'Christina Fraser',
-  'Sarah Johnson',
-  'Maria Garcia',
-  'James Wilson',
-  'Emily Chen',
-  'David Kim',
-  'Ashley Brown',
-  'Michael Davis',
-];
+// Demo attendee roster only; real-data-only mode shows an empty attendee list
+// (the page renders 0-of-0 / no rows when empty) until real staff are wired in.
+const STAFF_LIST = isDemoSeedEnabled()
+  ? [
+      'Christina Fraser',
+      'Sarah Johnson',
+      'Maria Garcia',
+      'James Wilson',
+      'Emily Chen',
+      'David Kim',
+      'Ashley Brown',
+      'Michael Davis',
+    ]
+  : [];
 
 // --- Storage helpers ---
 function loadFromStorage<T>(key: string, fallback: T): T {
