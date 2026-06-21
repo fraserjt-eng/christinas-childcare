@@ -47,13 +47,21 @@ interface ChildSummary {
   hours: number;
   lastDate: string;
 }
+interface CenterRow {
+  center: string;
+  childrenPresent: number;
+  childDays: number;
+  hours: number;
+}
 interface Summary {
   centerName: string;
+  combined?: boolean;
   from: string;
   to: string;
   bucket: string;
   buckets: Bucket[];
   children: ChildSummary[];
+  byCenter?: CenterRow[];
   totals: { uniqueChildren: number; childDays: number; hours: number; daysOpen: number };
 }
 interface CycleStatus {
@@ -146,6 +154,7 @@ export default function AttendanceHubPage() {
   const today = useMemo(() => centerDate(), []);
   const [ref, setRef] = useState<string>(today);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [prevTotals, setPrevTotals] = useState<Summary['totals'] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -168,12 +177,21 @@ export default function AttendanceHubPage() {
       if (!res.ok) {
         setError(res.status === 401 ? 'Sign in as an admin to view attendance.' : 'Could not load attendance.');
         setSummary(null);
+        setPrevTotals(null);
         return;
       }
       setSummary((await res.json()) as Summary);
+      // Prior equal-length period, for the trend arrows. Best effort: a failure
+      // here just hides the arrows, it never blocks the view.
+      const pr = rangeFor(v, step(v, r, -1));
+      fetch(`/api/admin/attendance/summary?from=${pr.from}&to=${pr.to}&bucket=${pr.bucket}`, { cache: 'no-store' })
+        .then((rp) => (rp.ok ? rp.json() : null))
+        .then((d) => setPrevTotals(d?.totals ?? null))
+        .catch(() => setPrevTotals(null));
     } catch {
       setError('Could not load attendance.');
       setSummary(null);
+      setPrevTotals(null);
     } finally {
       setLoading(false);
     }
@@ -274,6 +292,7 @@ export default function AttendanceHubPage() {
   ];
 
   const maxBucket = summary ? Math.max(1, ...summary.buckets.map((b) => b.childrenPresent)) : 1;
+  const periodWord = view === 'daily' ? 'day' : view === 'weekly' ? 'week' : view === 'monthly' ? 'month' : 'year';
 
   return (
     <div className="container mx-auto space-y-6 p-4 md:p-6">
@@ -348,21 +367,61 @@ export default function AttendanceHubPage() {
             <>
               {/* totals — colored stat hubs (matches the back-office dashboard) */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {[
-                  { label: 'Children', value: summary.totals.uniqueChildren, Icon: Baby, badge: 'bg-blue-100 text-blue-600', num: 'text-blue-600' },
-                  { label: 'Child-days', value: summary.totals.childDays, Icon: ClipboardCheck, badge: 'bg-emerald-100 text-emerald-600', num: 'text-emerald-600' },
-                  { label: 'Hours', value: summary.totals.hours, Icon: Clock, badge: 'bg-amber-100 text-amber-600', num: 'text-amber-600' },
-                  { label: 'Days open', value: summary.totals.daysOpen, Icon: Sun, badge: 'bg-purple-100 text-purple-600', num: 'text-purple-600' },
-                ].map(({ label, value, Icon, badge, num }) => (
+                {([
+                  { label: 'Children', field: 'uniqueChildren', value: summary.totals.uniqueChildren, Icon: Baby, badge: 'bg-blue-100 text-blue-600', num: 'text-blue-600' },
+                  { label: 'Child-days', field: 'childDays', value: summary.totals.childDays, Icon: ClipboardCheck, badge: 'bg-emerald-100 text-emerald-600', num: 'text-emerald-600' },
+                  { label: 'Hours', field: 'hours', value: summary.totals.hours, Icon: Clock, badge: 'bg-amber-100 text-amber-600', num: 'text-amber-600' },
+                  { label: 'Days open', field: 'daysOpen', value: summary.totals.daysOpen, Icon: Sun, badge: 'bg-purple-100 text-purple-600', num: 'text-purple-600' },
+                ] as const).map(({ label, field, value, Icon, badge, num }) => {
+                  const prev = prevTotals ? prevTotals[field] : null;
+                  const delta = prev === null ? null : Math.round((value - prev) * 10) / 10;
+                  return (
                   <div key={label} className="flex flex-col items-center gap-1.5 rounded-2xl border bg-white p-4 text-center">
                     <span className={`flex h-11 w-11 items-center justify-center rounded-full ${badge}`}>
                       <Icon className="h-5 w-5" />
                     </span>
                     <p className={`text-2xl font-bold ${num}`}>{value}</p>
                     <p className="text-xs font-medium text-gray-600">{label}</p>
+                    {delta !== null && (
+                      <p className={`text-[10px] font-medium ${delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-christina-red' : 'text-gray-400'}`}>
+                        {delta > 0 ? `▲ ${delta}` : delta < 0 ? `▼ ${Math.abs(delta)}` : '— no change'} vs last {periodWord}
+                      </p>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
+
+              {/* per-center (Combined view only) */}
+              {summary.combined && summary.byCenter && summary.byCenter.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">By center</CardTitle>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b text-xs uppercase text-muted-foreground">
+                          <th className="py-2">Center</th>
+                          <th className="py-2">Children present</th>
+                          <th className="py-2">Child-days</th>
+                          <th className="py-2">Hours</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {summary.byCenter.map((c) => (
+                          <tr key={c.center} className="border-b last:border-0">
+                            <td className="py-2 font-medium">{c.center}</td>
+                            <td className="py-2">{c.childrenPresent}</td>
+                            <td className="py-2">{c.childDays}</td>
+                            <td className="py-2">{c.hours}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* buckets */}
               <Card>

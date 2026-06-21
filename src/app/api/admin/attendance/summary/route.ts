@@ -5,12 +5,12 @@ export const runtime = 'nodejs';
 //
 // Security + scope mirror /api/admin/ccap-export: admin-gated
 // (requireSession('admin')), service role only (attendance + roster are read
-// here, never via the anon client), and center-derived (a director may pick a
-// center via cc_center / ?center; a center-bound admin is locked to their own).
+// here, never via the anon client), and center-derived. Only a CROSS-center
+// director (owner/superadmin, or no home center) may pick a center or use the
+// Combined (all-centers) view; a center-bound admin is locked to their own.
 //
-// Returns, for [from..to] in the chosen center: time buckets at the requested
-// granularity (day/week/month), a per-child summary, and totals. The client
-// renders the four views from this and can download any of them as CSV.
+// Returns, for [from..to]: time buckets at the requested granularity, a per-child
+// summary, and totals. In Combined mode it also returns a per-center breakdown.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession, type AuthedSession } from '@/lib/require-auth';
@@ -66,6 +66,7 @@ function monthLabel(ym: string): string {
 interface AttRow {
   child_id: string | null;
   child_name: string | null;
+  center_id: string | null;
   date: string;
   check_in: string | null;
   check_out: string | null;
@@ -78,8 +79,14 @@ export async function GET(request: NextRequest) {
   const supabase = getServerSupabase();
   if (!supabase) return fail('Unavailable', 503);
 
-  const centerId = deriveCenterId(request, session);
-  if (!centerId) return fail('No center selected', 404);
+  // Combined (all-centers) is allowed ONLY for a cross-center director.
+  const role = (session.user.role || '').toLowerCase();
+  const sessionCenter = session.user.center_id ?? null;
+  const isCrossCenter = role === 'owner' || role === 'superadmin' || !sessionCenter;
+  const combined = isCrossCenter && request.cookies.get('cc_view')?.value === 'combined';
+
+  const centerId = combined ? null : deriveCenterId(request, session);
+  if (!combined && !centerId) return fail('No center selected', 404);
 
   const sp = request.nextUrl.searchParams;
   const from = (sp.get('from') || '').trim();
@@ -89,23 +96,29 @@ export async function GET(request: NextRequest) {
   if (from > to) return fail('from must be on or before to', 400);
   if (!['day', 'week', 'month'].includes(bucket)) return fail('bucket must be day, week, or month', 400);
 
-  // center name (for headers / CSV)
-  const { data: centerRow } = await supabase.from('centers').select('name').eq('id', centerId).maybeSingle();
-  const centerName = (centerRow?.name as string) || 'Center';
+  // center name(s)
+  let centerName = 'All centers';
+  const centerNames = new Map<string, string>();
+  {
+    const { data: cs } = await supabase.from('centers').select('id, name').limit(50);
+    for (const c of cs ?? []) centerNames.set(c.id as string, (c.name as string) || 'Center');
+    if (!combined && centerId) centerName = centerNames.get(centerId) || 'Center';
+  }
 
   // Page through attendance for the range (a year of a full center can exceed a
-  // single PostgREST page; never silently truncate).
+  // single PostgREST page; never silently truncate). Combined = all centers.
   const rows: AttRow[] = [];
   const PAGE = 1000;
   for (let offset = 0; ; offset += PAGE) {
-    const { data, error } = await supabase
+    let q = supabase
       .from('attendance')
-      .select('child_id, child_name, date, check_in, check_out')
-      .eq('center_id', centerId)
+      .select('child_id, child_name, center_id, date, check_in, check_out')
       .gte('date', from)
       .lte('date', to)
       .order('date', { ascending: true })
       .range(offset, offset + PAGE - 1);
+    if (!combined && centerId) q = q.eq('center_id', centerId);
+    const { data, error } = await q;
     if (error) return fail('Could not read attendance for that range', 500);
     const batch = (data ?? []) as AttRow[];
     rows.push(...batch);
@@ -116,7 +129,9 @@ export async function GET(request: NextRequest) {
   // roster names (source of truth; fall back to denormalized child_name)
   const nameById = new Map<string, string>();
   {
-    const { data: kids } = await supabase.from('family_children').select('id, name').eq('center_id', centerId).limit(10000);
+    let kq = supabase.from('family_children').select('id, name').limit(10000);
+    if (!combined && centerId) kq = kq.eq('center_id', centerId);
+    const { data: kids } = await kq;
     for (const k of kids ?? []) nameById.set(k.id as string, (k.name as string) || '');
   }
 
@@ -126,9 +141,10 @@ export async function GET(request: NextRequest) {
     return h > 0 && h < 24 ? h : 0;
   };
 
-  // aggregate into buckets + per-child
+  // aggregate into buckets + per-child (+ per-center when combined)
   const bucketMap = new Map<string, { label: string; start: string; end: string; present: Set<string>; childDays: number; hours: number; checkins: number }>();
   const childMap = new Map<string, { name: string; days: Set<string>; hours: number; lastDate: string }>();
+  const centerAgg = new Map<string, { present: Set<string>; childDays: number; hours: number }>();
   let totalHours = 0;
   const daysOpen = new Set<string>();
 
@@ -140,7 +156,6 @@ export async function GET(request: NextRequest) {
     totalHours += h;
     if (r.check_in) daysOpen.add(r.date);
 
-    // bucket key
     let key: string, label: string, start: string, end: string;
     if (bucket === 'day') {
       key = r.date; label = shortDate(r.date); start = r.date; end = r.date;
@@ -161,6 +176,15 @@ export async function GET(request: NextRequest) {
     c.days.add(r.date);
     c.hours += h;
     if (r.date > c.lastDate) c.lastDate = r.date;
+
+    if (combined) {
+      const ck = (r.center_id as string) || 'unknown';
+      if (!centerAgg.has(ck)) centerAgg.set(ck, { present: new Set(), childDays: 0, hours: 0 });
+      const ca = centerAgg.get(ck)!;
+      ca.present.add(cid);
+      ca.childDays += 1;
+      ca.hours += h;
+    }
   }
 
   const buckets = Array.from(bucketMap.entries())
@@ -178,15 +202,23 @@ export async function GET(request: NextRequest) {
     .map((c) => ({ name: c.name, daysPresent: c.days.size, hours: Math.round(c.hours * 10) / 10, lastDate: c.lastDate }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  const byCenter = combined
+    ? Array.from(centerAgg.entries())
+        .map(([id, a]) => ({ center: centerNames.get(id) || 'Center', childrenPresent: a.present.size, childDays: a.childDays, hours: Math.round(a.hours * 10) / 10 }))
+        .sort((a, b) => a.center.localeCompare(b.center))
+    : [];
+
   return NextResponse.json(
     {
-      centerId,
+      centerId: combined ? 'all' : centerId,
       centerName,
+      combined,
       from,
       to,
       bucket,
       buckets,
       children,
+      byCenter,
       totals: {
         uniqueChildren: childMap.size,
         childDays: rows.length,
