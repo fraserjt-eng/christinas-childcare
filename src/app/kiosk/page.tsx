@@ -17,6 +17,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { MapPin } from 'lucide-react';
 import KioskScreen from '@/components/kiosk/KioskScreen';
 import { makeLiveKioskClient } from '@/lib/kiosk-data';
+// The new kiosk design uses the portal (pv-*) design system. The kiosk runs
+// outside the /preview layout, so pull the stylesheet in here.
+import '../preview/preview.css';
 
 const CENTERS = [
   { id: '3104ae69-4f26-4c1e-a767-3ff45b534860', name: 'Brooklyn Park', address: '7000 Brooklyn Blvd' },
@@ -52,8 +55,9 @@ function KioskInner() {
   const params = useSearchParams();
   const center = params.get('center') || undefined;
   const client = useMemo(() => (center ? makeLiveKioskClient(center) : null), [center]);
+  const centerName = CENTERS.find((c) => c.id === center)?.name || '';
   if (!center || !client) return <CenterPicker />;
-  return <KioskScreen client={client} />;
+  return <KioskScreen client={client} centerName={centerName} />;
 }
 
 export default function KioskPage() {

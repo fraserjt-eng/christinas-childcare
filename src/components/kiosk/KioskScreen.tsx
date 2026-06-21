@@ -1,7 +1,28 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+// LIVE kiosk — the new front-facing (Tadpoles) design on REAL data.
+//
+// The kiosk runs OPEN on the lobby iPad (no session), so it cannot use the
+// preview store + LivePortalHydrator the signed-in /preview screens use. It
+// renders the SAME new design directly from the real, center-scoped /api/kiosk
+// client (lookup, attendance, check-in/out, privacy attestation). Photos are not
+// available open (no session), so avatars fall back to initials.
+//
+// Flow: PIN pad (with the center-name watermark) -> MN DCYF privacy gate -> the
+// family check-in grid. Auto-resets to the pad after inactivity.
+
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import {
+  Backpack,
+  Baby,
+  Blocks,
+  Check,
+  Delete,
+  KeyRound,
+  Palette,
+  type LucideIcon,
+} from 'lucide-react';
 import type {
   KioskClient,
   KioskFamily,
@@ -10,310 +31,269 @@ import type {
   AttendanceRow,
 } from '@/lib/kiosk-data';
 import { PrivacyNotice, SeeStaffScreen } from './PrivacyNotice';
+import { BigButton, SuccessBanner, cx } from '@/components/preview/ui';
+import { PhotoAvatar } from '@/components/preview/PhotoAvatar';
 
-// ============================================================
-// Helpers
-// ============================================================
-
-function formatTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+// ---- helpers ----
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return isNaN(d.getTime())
+    ? ''
+    : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
-function getChildAge(dateOfBirth: string | null): string {
-  if (!dateOfBirth) return '';
-  const today = new Date();
-  const dob = new Date(dateOfBirth);
-  const months =
-    (today.getFullYear() - dob.getFullYear()) * 12 +
-    (today.getMonth() - dob.getMonth());
-  if (months < 12) return `${months}mo`;
-  const years = Math.floor(months / 12);
-  const rem = months % 12;
-  if (rem === 0) return `${years}yr`;
-  return `${years}yr ${rem}mo`;
-}
-
-function getPrimaryParentLastName(parents: FamilyParent[]): string {
+function primaryLastName(parents: FamilyParent[]): string {
   const primary = parents.find((p) => p.is_primary) || parents[0];
-  if (!primary) return 'Family';
-  const parts = primary.name.trim().split(' ');
+  if (!primary?.name) return '';
+  const parts = primary.name.trim().split(/\s+/);
   return parts.length > 1 ? parts[parts.length - 1] : parts[0];
 }
 
-function ZLogo({ size = 56 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" className="flex-shrink-0">
-      <defs>
-        <linearGradient id="kioskZGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FFE082" />
-          <stop offset="50%" stopColor="#FFD54F" />
-          <stop offset="100%" stopColor="#FFC107" />
-        </linearGradient>
-      </defs>
-      <circle cx="20" cy="20" r="20" fill="#ffffff" fillOpacity="0.2" />
-      <path
-        d="M12,10 L28,10 Q30,10 29,12 L17,26 L28,26 Q30,26 30,28 Q30,30 28,30 L12,30 Q10,30 11,28 L23,14 L12,14 Q10,14 10,12 Q10,10 12,10 Z"
-        fill="url(#kioskZGrad)"
-      />
-      <circle cx="31" cy="9" r="1.5" fill="#FFE082" opacity="0.9" />
-    </svg>
-  );
+// A real child carries a free-text classroom, not a fixtures roomId. Map common
+// age-group words to the room look; default to the infant look. Keeps the new
+// design's color + icon language without depending on the demo fixtures.
+function roomLook(classroom: string | null): { icon: LucideIcon; color: string; label: string } {
+  const c = (classroom || '').toLowerCase();
+  if (/infant|baby|nursery/.test(c)) return { icon: Baby, color: 'var(--pv-sky)', label: classroom || 'Infants' };
+  if (/toddler/.test(c)) return { icon: Blocks, color: 'var(--pv-teal)', label: classroom || 'Toddlers' };
+  if (/pre|pk|preschool/.test(c)) return { icon: Palette, color: 'var(--pv-plum)', label: classroom || 'Preschool' };
+  if (/school|kinder|age/.test(c)) return { icon: Backpack, color: 'var(--pv-gold)', label: classroom || 'School age' };
+  return { icon: Baby, color: 'var(--pv-coral)', label: classroom || '' };
 }
 
 // ============================================================
-// PIN Pad Screen
+// PIN pad (with the center-name watermark behind the keypad)
 // ============================================================
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
 function PinScreen({
   client,
-  isDemo,
+  centerName,
   onSuccess,
 }: {
   client: KioskClient;
-  isDemo: boolean;
+  centerName: string;
   onSuccess: (family: KioskFamily) => void;
 }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
-  const [shaking, setShaking] = useState(false);
+  const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(false);
-  const MAX_PIN = 4;
 
-  const handleDigit = useCallback(
-    (digit: string) => {
-      if (loading || pin.length >= MAX_PIN) return;
-      setError('');
-      setPin((prev) => prev + digit);
+  const submit = useCallback(
+    async (value: string) => {
+      setLoading(true);
+      const family = await client.lookupFamilyByPin(value);
+      setLoading(false);
+      if (family) {
+        onSuccess(family);
+      } else {
+        setShake(true);
+        setError('That PIN was not found at this center.');
+        setTimeout(() => {
+          setShake(false);
+          setPin('');
+          setError('');
+        }, 700);
+      }
     },
-    [pin, loading]
+    [client, onSuccess]
   );
 
-  const handleBackspace = useCallback(() => {
+  function press(key: string) {
     if (loading) return;
-    setError('');
-    setPin((prev) => prev.slice(0, -1));
-  }, [loading]);
-
-  const handleSubmit = useCallback(async () => {
-    if (pin.length !== MAX_PIN || loading) return;
-    setLoading(true);
-
-    const family = await client.lookupFamilyByPin(pin);
-    if (family) {
-      onSuccess(family);
-    } else {
-      setShaking(true);
-      setError('Invalid PIN. Try again.');
-      setPin('');
-      setTimeout(() => setShaking(false), 600);
+    if (key === '⌫') {
+      setPin((p) => p.slice(0, -1));
+      return;
     }
-    setLoading(false);
-  }, [pin, loading, onSuccess, client]);
-
-  useEffect(() => {
-    if (pin.length === MAX_PIN) handleSubmit();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pin]);
-
-  const buttons = ['1', '2', '3', '4', '5', '6', '7', '8', '9', null, '0', 'back'];
+    if (!key) return;
+    const next = (pin + key).slice(0, 4);
+    setPin(next);
+    if (next.length === 4) setTimeout(() => submit(next), 120);
+  }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <div className="bg-christina-red text-white px-6 py-5 flex items-center gap-4">
-        <ZLogo size={56} />
-        <div className="flex-1">
-          <div className="text-2xl font-bold leading-tight">Christina&apos;s</div>
-          <div className="text-base opacity-90 leading-tight">Child Care Center</div>
-        </div>
-        {isDemo && (
-          <span className="text-xs font-semibold bg-white/20 rounded-full px-3 py-1">
-            DEMO
+    <main className="pv-portal-bg relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 py-6">
+      {/* Center-name watermark: faded + glowing, behind the keypad, centered. */}
+      {centerName ? (
+        <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center select-none">
+          <span
+            className="pv-tad-title text-center"
+            style={{
+              fontSize: 'clamp(3.5rem, 17vw, 13rem)',
+              lineHeight: 1,
+              color: 'var(--pv-coral)',
+              opacity: 0.09,
+              textShadow: '0 0 70px var(--pv-coral)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {centerName}
           </span>
-        )}
-      </div>
+        </div>
+      ) : null}
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 gap-8">
-        <div className="text-center">
-          <p className="text-3xl font-bold text-gray-800">Enter your family PIN</p>
-          <p className="text-gray-500 mt-2 text-lg">
-            {isDemo
-              ? 'Demo PINs: 1234, 5678, 9876'
-              : '4-digit number from your welcome letter'}
-          </p>
+      <div className="relative z-10 mx-auto w-full max-w-md">
+        <div className="pv-rise mb-6 text-center" style={{ animationDelay: '30ms' }}>
+          <h1 className="pv-tad-title text-4xl sm:text-5xl">Christina&apos;s Child Care</h1>
+          {centerName ? (
+            <p className="mt-2 text-lg font-semibold" style={{ color: 'var(--pv-muted)' }}>
+              {centerName}
+            </p>
+          ) : null}
         </div>
 
-        <div className={`flex gap-5 ${shaking ? 'animate-shake' : ''}`}>
-          {Array.from({ length: MAX_PIN }).map((_, i) => (
-            <div
-              key={i}
-              className={`w-6 h-6 rounded-full border-2 transition-all duration-150 ${
-                i < pin.length
-                  ? 'bg-christina-red border-christina-red scale-110'
-                  : 'bg-white border-gray-300'
-              }`}
-            />
-          ))}
-        </div>
-
-        {error && (
-          <p className="text-red-600 font-semibold text-xl -mt-4">{error}</p>
-        )}
-
-        <div className="grid grid-cols-3 gap-4 w-full max-w-xs">
-          {buttons.map((btn, idx) => {
-            if (btn === null) return <div key={idx} />;
-            if (btn === 'back') {
-              return (
+        <div className={cx('pv-tile p-7 text-center sm:p-8', shake && 'pv-shake')}>
+          <span
+            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+            style={{ backgroundColor: 'color-mix(in srgb, var(--pv-coral) 12%, white)' }}
+            aria-hidden="true"
+          >
+            <KeyRound size={26} style={{ color: 'var(--pv-coral)' }} />
+          </span>
+          <h2 className="pv-tad-title mt-4 text-3xl">Enter your family PIN</h2>
+          <div className="mt-6 flex justify-center gap-4" aria-label={`${pin.length} of 4 digits`}>
+            {[0, 1, 2, 3].map((i) => (
+              <span
+                key={i}
+                className="h-5 w-5 rounded-full border-2 transition-all"
+                style={{
+                  borderColor: 'var(--pv-coral)',
+                  backgroundColor: i < pin.length ? 'var(--pv-coral)' : 'transparent',
+                }}
+              />
+            ))}
+          </div>
+          {error ? (
+            <p className="mt-4 text-base font-bold" style={{ color: 'var(--pv-coral)' }}>
+              {error}
+            </p>
+          ) : null}
+          <div className="mx-auto mt-7 grid w-fit grid-cols-3 gap-4">
+            {KEYS.map((key, i) =>
+              key ? (
                 <button
-                  key="back"
-                  onClick={handleBackspace}
-                  disabled={loading || pin.length === 0}
-                  className="h-[72px] rounded-2xl bg-white border-2 border-gray-200 text-gray-600 text-2xl font-semibold shadow-sm active:scale-95 transition-transform disabled:opacity-40 flex items-center justify-center"
-                  aria-label="Backspace"
+                  key={`${key}-${i}`}
+                  type="button"
+                  onClick={() => press(key)}
+                  disabled={loading}
+                  className="pv-press flex h-[76px] w-[76px] items-center justify-center rounded-2xl border text-3xl font-semibold disabled:opacity-50"
+                  style={{ backgroundColor: '#fbfaf8', borderColor: 'var(--pv-line)', color: 'var(--pv-ink)' }}
+                  aria-label={key === '⌫' ? 'Delete a digit' : key}
                 >
-                  &#8592;
+                  {key === '⌫' ? <Delete size={28} aria-hidden="true" /> : key}
                 </button>
-              );
-            }
-            return (
-              <button
-                key={btn}
-                onClick={() => handleDigit(btn)}
-                disabled={loading || pin.length >= MAX_PIN}
-                className="h-[72px] rounded-2xl bg-white border-2 border-gray-200 text-gray-800 text-3xl font-bold shadow-sm hover:bg-gray-50 active:scale-95 active:bg-gray-100 transition-all disabled:opacity-40"
-              >
-                {btn}
-              </button>
-            );
-          })}
+              ) : (
+                <span key={`blank-${i}`} className="h-[76px] w-[76px]" />
+              )
+            )}
+          </div>
+          {loading ? (
+            <p className="mt-4 text-base" style={{ color: 'var(--pv-muted)' }}>
+              Checking...
+            </p>
+          ) : null}
         </div>
-
-        {loading && (
-          <p className="text-gray-400 text-lg animate-pulse">Checking PIN...</p>
-        )}
       </div>
 
-      <div className="text-right px-6 pb-4">
-        <Link
-          href="/admin-login"
-          className="text-xs text-gray-400 hover:text-gray-600"
-        >
+      <div className="absolute bottom-3 right-4 z-10">
+        <Link href="/admin-login" className="text-xs" style={{ color: 'var(--pv-muted)' }}>
           Admin
         </Link>
       </div>
-    </div>
+    </main>
   );
 }
 
 // ============================================================
-// Child Card
+// Child tile (real check-in / out)
 // ============================================================
-
-function ChildCard({
+function ChildTile({
   client,
   child,
   familyId,
-  onAction,
+  onToggled,
 }: {
   client: KioskClient;
   child: FamilyChildRow;
   familyId: string;
-  onAction: () => void;
+  onToggled: (msg: string) => void;
 }) {
-  const [attendance, setAttendance] = useState<AttendanceRow | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [att, setAtt] = useState<AttendanceRow | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    client.getTodayAttendance(child.id).then((rec) => {
-      setAttendance(rec);
+  const refresh = useCallback(() => {
+    client.getTodayAttendance(child.id).then((r) => {
+      setAtt(r);
       setLoaded(true);
     });
-  }, [child.id, client]);
+  }, [client, child.id]);
 
-  const isCheckedIn =
-    attendance !== null &&
-    attendance.check_in !== null &&
-    attendance.check_out === null;
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-  async function handleToggle() {
+  const inAt = att?.check_in && !att?.check_out ? att.check_in : null;
+  const look = roomLook(child.classroom);
+  const RoomIcon = look.icon;
+
+  async function toggle() {
+    if (busy) return;
     setBusy(true);
-    if (isCheckedIn) {
+    if (inAt) {
       await client.checkOut(child.id);
     } else {
       await client.checkIn(child, familyId);
     }
     const updated = await client.getTodayAttendance(child.id);
-    setAttendance(updated);
+    setAtt(updated);
     setBusy(false);
-    onAction();
+    const first = child.name.split(/\s+/)[0];
+    onToggled(inAt ? `${first} is checked out. See you tomorrow!` : `${first} is checked in. Have a great day!`);
   }
 
-  if (!loaded)
-    return (
-      <div className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-5 animate-pulse h-24" />
-    );
+  if (!loaded) return <div className="pv-tile h-44 animate-pulse" />;
 
+  const first = child.name.split(/\s+/)[0];
   return (
-    <div className="bg-white rounded-2xl border-2 border-gray-100 shadow-sm p-5 flex items-center gap-4">
-      <div className="w-14 h-14 rounded-full bg-christina-red flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-        {child.name.charAt(0)}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xl font-bold text-gray-800 truncate">{child.name}</p>
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
-          {child.date_of_birth && (
-            <span className="text-sm text-gray-500">
-              {getChildAge(child.date_of_birth)}
-            </span>
-          )}
-          {child.classroom && (
-            <>
-              <span className="text-gray-300">|</span>
-              <span className="text-sm text-gray-500 capitalize">
-                {child.classroom}
-              </span>
-            </>
-          )}
-        </div>
-        {isCheckedIn && attendance?.check_in ? (
-          <div className="mt-2 inline-flex items-center gap-1.5 bg-green-50 text-green-700 border border-green-200 rounded-full px-3 py-1 text-sm font-medium">
-            <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-            Checked in at {formatTime(attendance.check_in)}
-          </div>
-        ) : (
-          <div className="mt-2 inline-flex items-center gap-1.5 bg-gray-100 text-gray-500 rounded-full px-3 py-1 text-sm font-medium">
-            <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
-            Not checked in
-          </div>
-        )}
-      </div>
-      <button
-        onClick={handleToggle}
-        disabled={busy}
-        className={`flex-shrink-0 px-5 py-3 rounded-xl font-bold text-white text-lg min-w-[120px] text-center active:scale-95 transition-all disabled:opacity-50 ${
-          isCheckedIn
-            ? 'bg-red-500 hover:bg-red-600'
-            : 'bg-green-500 hover:bg-green-600'
-        }`}
-      >
-        {busy ? '...' : isCheckedIn ? 'Check Out' : 'Check In'}
+    <div
+      className="pv-lift rounded-lg border p-4 text-center"
+      style={{ borderColor: inAt ? 'var(--pv-teal)' : 'var(--pv-line)', backgroundColor: inAt ? '#e7f4f2' : 'var(--pv-card)' }}
+    >
+      <button type="button" onClick={toggle} disabled={busy} className="pv-press pv-kiosk-target w-full disabled:opacity-60">
+        <span className="block">
+          <PhotoAvatar
+            id={child.id}
+            name={child.name}
+            size={80}
+            rounded="rounded-lg"
+            className={cx('mx-auto', inAt ? '' : 'opacity-75 grayscale')}
+          />
+        </span>
+        <span className="mt-2 block text-xl font-bold">{first}</span>
+        {look.label ? (
+          <span className="flex items-center justify-center gap-1 text-sm font-semibold" style={{ color: 'var(--pv-muted)' }}>
+            <RoomIcon size={13} aria-hidden="true" style={{ color: look.color }} /> {look.label}
+          </span>
+        ) : null}
+        <span
+          className="mt-2 inline-block rounded-full px-3 py-1 text-sm font-bold text-white"
+          style={{ backgroundColor: inAt ? 'var(--pv-teal)' : '#8a8378' }}
+        >
+          {inAt ? `Here since ${formatTime(inAt)}` : 'Not here yet'}
+        </span>
       </button>
     </div>
   );
 }
 
 // ============================================================
-// Welcome Screen
+// Family check-in grid
 // ============================================================
+const AUTO_RESET_SECONDS = 20;
 
-const AUTO_RESET_SECONDS = 15;
-
-function WelcomeScreen({
+function FamilyScreen({
   client,
   family,
   onDone,
@@ -322,132 +302,107 @@ function WelcomeScreen({
   family: KioskFamily;
   onDone: () => void;
 }) {
+  const [success, setSuccess] = useState<string | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(AUTO_RESET_SECONDS);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const startTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
+  const start = useCallback(() => {
+    if (timer.current) clearInterval(timer.current);
     setSecondsLeft(AUTO_RESET_SECONDS);
-    timerRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
+    timer.current = setInterval(() => {
+      setSecondsLeft((p) => {
+        if (p <= 1) {
+          if (timer.current) clearInterval(timer.current);
           onDone();
           return 0;
         }
-        return prev - 1;
+        return p - 1;
       });
     }, 1000);
   }, [onDone]);
 
-  function resetTimer() {
-    startTimer();
-  }
-
   useEffect(() => {
-    startTimer();
+    start();
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timer.current) clearInterval(timer.current);
     };
-  }, [startTimer]);
+  }, [start]);
 
-  const lastName = getPrimaryParentLastName(family.parents);
+  const lastName = primaryLastName(family.parents);
 
   return (
-    <div
-      className="flex flex-col min-h-screen"
-      onPointerDown={resetTimer}
-      onKeyDown={resetTimer}
-    >
-      <div className="bg-christina-red text-white px-6 py-5 flex items-center gap-4">
-        <ZLogo size={56} />
-        <div className="flex-1">
-          <div className="text-2xl font-bold leading-tight">
-            Welcome, {lastName} family!
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6" onPointerDown={start}>
+      <div className="mx-auto max-w-lg">
+        <header className="pv-rise mb-6 flex items-center justify-between" style={{ animationDelay: '30ms' }}>
+          <div>
+            <h1 className="pv-tad-title text-3xl sm:text-4xl">{lastName ? `Welcome, ${lastName} family` : 'Welcome'}</h1>
+            <p className="mt-1 text-base" style={{ color: 'var(--pv-muted)' }}>
+              Tap a child to check them in or out.
+            </p>
           </div>
-          <div className="text-base opacity-90 leading-tight">
-            Christina&apos;s Child Care Center
-          </div>
-        </div>
-        <div className="text-right text-sm opacity-70 leading-tight">
-          <div>Auto-reset</div>
-          <div className="text-2xl font-bold opacity-90">{secondsLeft}s</div>
-        </div>
-      </div>
+          <span className="text-right text-sm" style={{ color: 'var(--pv-muted)' }}>
+            resets in
+            <span className="block text-2xl font-bold" style={{ color: 'var(--pv-ink)' }}>
+              {secondsLeft}s
+            </span>
+          </span>
+        </header>
 
-      <div className="flex-1 px-5 py-6 flex flex-col gap-4 overflow-auto">
-        <p className="text-gray-500 text-base px-1">
-          Tap Check In or Check Out for each child below.
-        </p>
-        {family.children.length === 0 ? (
-          <div className="text-center py-12 text-gray-400 text-lg">
-            No children on this account yet.
-          </div>
-        ) : (
-          family.children.map((child) => (
-            <ChildCard
-              key={child.id}
-              client={client}
-              child={child}
-              familyId={family.id}
-              onAction={resetTimer}
-            />
-          ))
-        )}
-      </div>
+        <div className="pv-rise" style={{ animationDelay: '60ms' }}>
+          {family.children.length === 0 ? (
+            <div className="pv-tile p-8 text-center" style={{ color: 'var(--pv-muted)' }}>
+              No children on this account yet. Please see staff.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {family.children.map((child) => (
+                <ChildTile key={child.id} client={client} child={child} familyId={family.id} onToggled={(m) => { setSuccess(m); start(); }} />
+              ))}
+            </div>
+          )}
+        </div>
 
-      <div className="px-5 pb-6">
-        <button
-          onClick={onDone}
-          className="w-full py-4 rounded-2xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-xl active:scale-[0.98] transition-all"
-        >
-          Done
-        </button>
+        <div className="mt-6">
+          <BigButton icon={Check} label="Done" color="var(--pv-plum)" onClick={onDone} className="w-full text-center" />
+        </div>
       </div>
-    </div>
+      {success ? <SuccessBanner message={success} onDone={() => setSuccess(null)} /> : null}
+    </main>
   );
 }
 
 // ============================================================
-// Root
+// Root — PIN -> privacy gate -> family grid
 // ============================================================
-
 export default function KioskScreen({
   client,
-  isDemo = false,
+  centerName = '',
 }: {
   client: KioskClient;
   isDemo?: boolean;
+  centerName?: string;
 }) {
   const [activeFamily, setActiveFamily] = useState<KioskFamily | null>(null);
   const [pendingFamily, setPendingFamily] = useState<KioskFamily | null>(null);
   const [declined, setDeclined] = useState(false);
 
   // MN DCYF gate: a family must have a CURRENT privacy-notice agreement before
-  // they can check in. If not, show the notice first; they cannot reach the
-  // check-in screen until they agree.
+  // check-in. If not, show the notice; they cannot reach the grid until they agree.
   async function handlePinSuccess(family: KioskFamily) {
     const current = await client.getPrivacyAttestationStatus(family.id);
-    if (current) {
-      setActiveFamily(family);
-    } else {
-      setPendingFamily(family);
-    }
+    if (current) setActiveFamily(family);
+    else setPendingFamily(family);
   }
 
-  if (declined) {
-    return <SeeStaffScreen onDone={() => setDeclined(false)} />;
-  }
+  if (declined) return <SeeStaffScreen onDone={() => setDeclined(false)} />;
 
   if (pendingFamily) {
+    const name = primaryLastName(pendingFamily.parents) || pendingFamily.children[0]?.name || 'Family';
     return (
       <PrivacyNotice
-        familyName={getPrimaryParentLastName(pendingFamily.parents)}
+        familyName={name}
         onAgree={async () => {
-          await client.recordPrivacyAttestation(
-            pendingFamily.id,
-            getPrimaryParentLastName(pendingFamily.parents)
-          );
+          await client.recordPrivacyAttestation(pendingFamily.id, name);
           const f = pendingFamily;
           setPendingFamily(null);
           setActiveFamily(f);
@@ -461,12 +416,8 @@ export default function KioskScreen({
   }
 
   return activeFamily ? (
-    <WelcomeScreen
-      client={client}
-      family={activeFamily}
-      onDone={() => setActiveFamily(null)}
-    />
+    <FamilyScreen client={client} family={activeFamily} onDone={() => setActiveFamily(null)} />
   ) : (
-    <PinScreen client={client} isDemo={isDemo} onSuccess={handlePinSuccess} />
+    <PinScreen client={client} centerName={centerName} onSuccess={handlePinSuccess} />
   );
 }
