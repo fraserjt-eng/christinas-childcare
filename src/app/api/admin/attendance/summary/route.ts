@@ -81,7 +81,6 @@ export async function GET(request: NextRequest) {
 
   // Combined (all-centers) is allowed ONLY for a cross-center director.
   const role = (session.user.role || '').toLowerCase();
-  const sessionCenter = session.user.center_id ?? null;
   const isCrossCenter = role === 'owner' || role === 'superadmin';
   const combined = isCrossCenter && request.cookies.get('cc_view')?.value === 'combined';
 
