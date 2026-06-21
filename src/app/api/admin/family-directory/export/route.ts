@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession, type AuthedSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const RED = 'FFC62828', YELLOW = 'FFFFD54F', CREAM = 'FFFAF6F0', GREY = 'FF6B7280';
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   wb.creator = "Christina's Child Care Center";
   let logoId: number | null = null;
   const logoPath = join(process.cwd(), 'public', 'images', 'icon-192.png');
-  if (existsSync(logoPath)) logoId = wb.addImage({ buffer: readFileSync(logoPath), extension: 'png' });
+  if (existsSync(logoPath)) logoId = wb.addImage({ filename: logoPath, extension: 'png' });
 
   function buildSheet(title: string, families: typeof fams) {
     const list = (families || []).filter((f) => (kidsBy[f.id as string] || []).length > 0)
