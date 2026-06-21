@@ -16,6 +16,7 @@ import {
   supabaseUpdate,
 } from '@/lib/supabase/guarded';
 import { currentCenterId } from '@/lib/current-center';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 export type AuthType = 'county_authorization' | 'state_subsidy' | 'ccap' | 'other';
 export type AuthStatus = 'active' | 'expiring_soon' | 'expired' | 'pending' | 'renewal_pending';
@@ -350,8 +351,10 @@ function buildSeedData(): ChildAuthorization[] {
 function loadCache(): ChildAuthorization[] {
   let auths = getFromStorage<ChildAuthorization>(AUTHORIZATIONS_KEY);
 
-  // Seed on first load (local cache empty)
-  if (auths.length === 0) {
+  // Seed on first load only in a demo environment. In production
+  // (NEXT_PUBLIC_SEED_DEMO_DATA unset) never fabricate rows; just refresh the
+  // cache from the cloud in the background so the next render shows real data.
+  if (auths.length === 0 && isDemoSeedEnabled()) {
     auths = buildSeedData();
     saveToStorage(AUTHORIZATIONS_KEY, auths);
     // Seed the cloud table from the same data (first run only)

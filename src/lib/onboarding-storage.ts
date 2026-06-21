@@ -312,32 +312,10 @@ async function seedIfEmpty(): Promise<void> {
 }
 
 async function seedAssignmentsIfEmpty(): Promise<void> {
-  const existing = getFromStorage<OnboardingAssignment>(ASSIGNMENTS_KEY);
-  if (existing.length > 0) return;
-
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 3);
-
-  const assignment: OnboardingAssignment = {
-    id: 'assign_demo_1',
-    employee_id: 'emp_demo_new',
-    employee_name: 'Alex Rivera',
-    template_id: 'tmpl_default',
-    start_date: startDate.toISOString().split('T')[0],
-    task_completions: {
-      task_ps_1: { completed_at: new Date(startDate.getTime() - 2 * 86400000).toISOString(), verified_by: 'Christina Fraser' },
-      task_ps_2: { completed_at: new Date(startDate.getTime() - 1 * 86400000).toISOString(), verified_by: 'Christina Fraser' },
-      task_ps_3: { completed_at: startDate.toISOString() },
-      task_d1_1: { completed_at: startDate.toISOString() },
-      task_d1_2: { completed_at: startDate.toISOString(), verified_by: 'Ophelia Zeogar' },
-    },
-    status: 'active',
-    created_at: new Date(startDate.getTime() - 4 * 86400000).toISOString(),
-  };
-
-  // Write the seed to the cloud first, then cache locally.
-  await supabaseInsert<OnboardingRow>(ONBOARDING_TABLE, toRow(assignment, 'assignment'));
-  saveToStorage(ASSIGNMENTS_KEY, [assignment]);
+  // No-op. A fabricated demo assignment (e.g. "Alex Rivera") must never appear
+  // in the live app. Real onboarding assignments come from createAssignment.
+  // The empty result is handled by the page's existing empty state.
+  return;
 }
 
 // ─── Templates ────────────────────────────────────────────────────────────────

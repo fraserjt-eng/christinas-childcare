@@ -6,6 +6,7 @@
 // anon client.
 
 import { currentCenterId } from '@/lib/current-center';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 const CRYSTAL_CENTER_ID = 'b2000000-0000-0000-0000-000000000002';
 
@@ -216,6 +217,13 @@ function buildSeedCoverageRequests(): CoverageRequest[] {
 function seedIfNeeded(): void {
   if (typeof window === 'undefined') return;
   if (localStorage.getItem(SEEDED_KEY)) return;
+
+  // Production default: do not fabricate staff/shifts/coverage requests. Mark
+  // seeded so empty stays empty and the board renders its real (empty) state.
+  if (!isDemoSeedEnabled()) {
+    localStorage.setItem(SEEDED_KEY, 'true');
+    return;
+  }
 
   saveToStorage(SHIFTS_KEY, buildSeedShifts());
   saveToStorage(COVERAGE_KEY, buildSeedCoverageRequests());

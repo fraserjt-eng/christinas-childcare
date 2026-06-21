@@ -6,6 +6,8 @@ import { TimeBlockSchedule } from '@/components/admin/TimeBlockSchedule';
 import { DelegationTracker } from '@/components/admin/DelegationTracker';
 import { TimeInsights } from '@/components/admin/TimeInsights';
 import { QuickAddTaskSheet, QuickTaskData } from '@/components/admin/QuickAddTaskSheet';
+import { getEmployees } from '@/lib/employee-storage';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 import {
   Task,
   TaskStatus,
@@ -45,16 +47,9 @@ const STORAGE_KEY = 'christinas_tasks';
 const DRIFT_STORAGE_KEY = 'christinas_drift_alerts';
 const CHRISTINA_RED = '#C62828';
 
-const STAFF_MEMBERS = [
-  'Christina Fraser',
-  'Sarah Johnson',
-  'Maria Garcia',
-  'James Wilson',
-  'Emily Chen',
-  'David Kim',
-  'Ashley Brown',
-  'Michael Davis',
-];
+// Real staff names are loaded from getEmployees() at runtime (see TaskBoardPage).
+// Empty default so the page never renders fabricated people before/without real data.
+const STAFF_MEMBERS: string[] = [];
 
 const STATUS_COLUMNS: { key: TaskStatus; label: string; icon: React.ReactNode; color: string }[] = [
   { key: 'backlog', label: 'Backlog', icon: <Archive className="h-4 w-4" />, color: '#6B7280' },
@@ -510,10 +505,12 @@ function TaskFormModal({
   editingTask,
   onSave,
   onClose,
+  staffMembers = STAFF_MEMBERS,
 }: {
   editingTask: Task | null;
   onSave: (data: TaskFormData, existingId?: string) => void;
   onClose: () => void;
+  staffMembers?: string[];
 }) {
   const [form, setForm] = useState<TaskFormData>(() => {
     if (editingTask) {
@@ -638,7 +635,7 @@ function TaskFormModal({
               className={`${inputClass} ${focusRing}`}
             >
               <option value="">Unassigned</option>
-              {STAFF_MEMBERS.map((name) => (
+              {staffMembers.map((name) => (
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
@@ -739,20 +736,20 @@ function TaskFormModal({
 
 // ─── Delegation Dashboard ───────────────────────────────────────────
 
-function DelegationDashboard({ tasks }: { tasks: Task[] }) {
+function DelegationDashboard({ tasks, staffMembers = STAFF_MEMBERS }: { tasks: Task[]; staffMembers?: string[] }) {
   const activeTasks = tasks.filter((t) => t.status !== 'done');
   const totalActive = activeTasks.length;
 
   const staffCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    STAFF_MEMBERS.forEach((name) => (counts[name] = 0));
+    staffMembers.forEach((name) => (counts[name] = 0));
     activeTasks.forEach((t) => {
       if (t.assigned_to && counts[t.assigned_to] !== undefined) {
         counts[t.assigned_to]++;
       }
     });
     return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [activeTasks]);
+  }, [activeTasks, staffMembers]);
 
   const unassigned = activeTasks.filter((t) => !t.assigned_to);
   const maxCount = Math.max(...staffCounts.map(([, c]) => c), 1);
@@ -985,6 +982,27 @@ export default function TaskBoardPage() {
   const [filterStaff, setFilterStaff] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [staffMembers, setStaffMembers] = useState<string[]>([]);
+
+  // Load real staff names for assignment dropdowns / delegation charts
+  useEffect(() => {
+    let cancelled = false;
+    getEmployees()
+      .then((employees) => {
+        if (cancelled) return;
+        const names = employees
+          .filter((e) => e.employment_status === 'active')
+          .map((e) => `${e.first_name} ${e.last_name}`.trim())
+          .filter(Boolean);
+        setStaffMembers(names);
+      })
+      .catch(() => {
+        if (!cancelled) setStaffMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Load from localStorage
   useEffect(() => {
@@ -992,24 +1010,27 @@ export default function TaskBoardPage() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         setTasks(JSON.parse(stored));
-      } else {
+      } else if (isDemoSeedEnabled()) {
         const seed = createSeedTasks();
         setTasks(seed);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+      } else {
+        setTasks([]);
       }
 
       const storedDrift = localStorage.getItem(DRIFT_STORAGE_KEY);
       if (storedDrift) {
         setDriftAlerts(JSON.parse(storedDrift));
-      } else {
+      } else if (isDemoSeedEnabled()) {
         const seedDrift = createSeedDriftAlerts();
         setDriftAlerts(seedDrift);
         localStorage.setItem(DRIFT_STORAGE_KEY, JSON.stringify(seedDrift));
+      } else {
+        setDriftAlerts([]);
       }
     } catch {
-      const seed = createSeedTasks();
-      setTasks(seed);
-      setDriftAlerts(createSeedDriftAlerts());
+      setTasks([]);
+      setDriftAlerts([]);
     }
     setIsLoaded(true);
   }, []);
@@ -1277,7 +1298,7 @@ export default function TaskBoardPage() {
               className="text-sm px-2 py-1.5 min-h-[44px] border border-gray-200 rounded-lg bg-white text-gray-700"
             >
               <option value="">All Staff</option>
-              {STAFF_MEMBERS.map((name) => (
+              {staffMembers.map((name) => (
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
@@ -1360,7 +1381,7 @@ export default function TaskBoardPage() {
       {/* Delegation View */}
       {activeTab === 'delegation' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <DelegationDashboard tasks={tasks} />
+          <DelegationDashboard tasks={tasks} staffMembers={staffMembers} />
           <NapTimeOptimizer tasks={tasks} />
         </div>
       )}
@@ -1484,6 +1505,7 @@ export default function TaskBoardPage() {
         <TaskFormModal
           editingTask={editingTask}
           onSave={handleSaveTask}
+          staffMembers={staffMembers}
           onClose={() => {
             setShowForm(false);
             setEditingTask(null);
@@ -1505,7 +1527,7 @@ export default function TaskBoardPage() {
       <QuickAddTaskSheet
         open={showQuickAdd}
         onOpenChange={setShowQuickAdd}
-        staffOptions={STAFF_MEMBERS}
+        staffOptions={staffMembers}
         onSave={(data: QuickTaskData) => {
           const firstCategory = CATEGORIES_WITH_IDS[0];
           const firstTimeBlock = TIME_BLOCKS_WITH_IDS[0];

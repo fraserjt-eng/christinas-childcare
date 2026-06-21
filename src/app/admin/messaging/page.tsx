@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { getEmployees } from '@/lib/employee-storage';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -97,18 +98,28 @@ const STORAGE_KEYS = {
 
 const EMOJI_OPTIONS = ['👍', '❤️', '😂', '👏', '🔥'];
 
-const STAFF: StaffMember[] = [
-  { id: 'staff-1', name: 'Christina Fraser', initials: 'CF', color: '#C62828', role: 'Owner / Director' },
-  { id: 'staff-2', name: 'Sarah Johnson', initials: 'SJ', color: '#1565C0', role: 'Lead Teacher, Crystal Center' },
-  { id: 'staff-3', name: 'Maria Garcia', initials: 'MG', color: '#2E7D32', role: 'Lead Teacher, Brooklyn Park' },
-  { id: 'staff-4', name: 'James Wilson', initials: 'JW', color: '#E65100', role: 'Assistant Teacher' },
-  { id: 'staff-5', name: 'Emily Chen', initials: 'EC', color: '#6A1B9A', role: 'Assistant Teacher' },
-  { id: 'staff-6', name: 'David Kim', initials: 'DK', color: '#00838F', role: 'Kitchen Manager' },
-  { id: 'staff-7', name: 'Ashley Brown', initials: 'AB', color: '#4E342E', role: 'Floater' },
-  { id: 'staff-8', name: 'Michael Davis', initials: 'MD', color: '#37474F', role: 'Before/After School Lead' },
-];
+// Live staff roster, populated from the real employee store (getEmployees).
+// No fabricated people: starts empty and is filled at runtime by the component.
+// Module-level so the existing module-scoped helpers (getStaff, etc.) can read it.
+let STAFF: StaffMember[] = [];
 
-const CURRENT_USER_ID = 'staff-1'; // Christina Fraser
+// Deterministic avatar color from an id so each staff member is visually stable.
+const AVATAR_COLORS = ['#C62828', '#1565C0', '#2E7D32', '#E65100', '#6A1B9A', '#00838F', '#4E342E', '#37474F'];
+function colorForId(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+function initialsFor(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Current signed-in user; set when the real roster loads. Empty until then.
+let CURRENT_USER_ID = '';
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -116,8 +127,16 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
+const UNKNOWN_STAFF: StaffMember = {
+  id: 'unknown',
+  name: 'Unknown',
+  initials: '?',
+  color: '#9E9E9E',
+  role: '',
+};
+
 function getStaff(id: string): StaffMember {
-  return STAFF.find((s) => s.id === id) || STAFF[0];
+  return STAFF.find((s) => s.id === id) || UNKNOWN_STAFF;
 }
 
 function formatMessageTime(timestamp: string): string {
@@ -151,340 +170,30 @@ function getDMOtherParticipant(thread: DMThread): StaffMember {
   return getStaff(otherId);
 }
 
-// ─── Seed Data ──────────────────────────────────────────────────────
-
-function createSeedChannels(): Channel[] {
-  return [
-    {
-      id: 'ch-all-staff',
-      name: 'All Staff',
-      description: 'Announcements and updates for all employees across both locations.',
-      type: 'public',
-      memberIds: STAFF.map((s) => s.id),
-      createdAt: '2026-01-15T08:00:00Z',
-    },
-    {
-      id: 'ch-crystal',
-      name: 'Crystal Center',
-      description: 'Day-to-day communication for the Crystal location.',
-      type: 'public',
-      memberIds: ['staff-1', 'staff-2', 'staff-4', 'staff-5', 'staff-7'],
-      createdAt: '2026-01-15T08:00:00Z',
-    },
-    {
-      id: 'ch-brooklyn',
-      name: 'Brooklyn Park',
-      description: 'Day-to-day communication for the Brooklyn Park location.',
-      type: 'public',
-      memberIds: ['staff-1', 'staff-3', 'staff-6', 'staff-7', 'staff-8'],
-      createdAt: '2026-01-15T08:00:00Z',
-    },
-    {
-      id: 'ch-leads',
-      name: 'Lead Teachers',
-      description: 'Private channel for lead teachers and director. Curriculum planning, policy updates, and leadership discussion.',
-      type: 'private',
-      memberIds: ['staff-1', 'staff-2', 'staff-3'],
-      createdAt: '2026-01-15T08:00:00Z',
-    },
-    {
-      id: 'ch-kitchen',
-      name: 'Kitchen & CACFP',
-      description: 'Menu planning, food orders, CACFP documentation, and meal counts.',
-      type: 'public',
-      memberIds: ['staff-1', 'staff-2', 'staff-3', 'staff-6'],
-      createdAt: '2026-01-15T08:00:00Z',
-    },
-  ];
-}
-
-function createSeedMessages(): Message[] {
-  const baseDate = new Date();
-  const todayStr = (hoursAgo: number) => {
-    const d = new Date(baseDate.getTime() - hoursAgo * 3600000);
-    return d.toISOString();
-  };
-  const yesterdayStr = (hour: number) => {
-    const d = new Date(baseDate);
-    d.setDate(d.getDate() - 1);
-    d.setHours(hour, Math.floor(Math.random() * 60), 0, 0);
-    return d.toISOString();
-  };
-
-  return [
-    // All Staff channel
-    {
-      id: 'msg-1',
-      channelId: 'ch-all-staff',
-      dmThreadId: null,
-      senderId: 'staff-1',
-      content: 'Reminder: licensing visit is next Thursday. Please make sure all binders are updated and your classroom documentation is current.',
-      timestamp: yesterdayStr(9),
-      replyToId: null,
-      reactions: [
-        { emoji: '👍', users: ['staff-2', 'staff-3', 'staff-4'] },
-      ],
-      isPinned: true,
-      readReceipts: STAFF.map((s) => ({ userId: s.id, readAt: yesterdayStr(10) })),
-    },
-    {
-      id: 'msg-2',
-      channelId: 'ch-all-staff',
-      dmThreadId: null,
-      senderId: 'staff-3',
-      content: 'Great job today with the fire drill! Best time yet, 2 minutes 15 seconds.',
-      timestamp: yesterdayStr(14),
-      replyToId: null,
-      reactions: [
-        { emoji: '🔥', users: ['staff-1', 'staff-2', 'staff-5'] },
-        { emoji: '👏', users: ['staff-4', 'staff-7'] },
-      ],
-      isPinned: false,
-      readReceipts: STAFF.map((s) => ({ userId: s.id, readAt: yesterdayStr(15) })),
-    },
-    {
-      id: 'msg-3',
-      channelId: 'ch-all-staff',
-      dmThreadId: null,
-      senderId: 'staff-1',
-      content: 'Staff meeting this Friday at 4:30 PM. We will cover summer enrollment numbers and the new outdoor play area timeline.',
-      timestamp: todayStr(3),
-      replyToId: null,
-      reactions: [],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-1', readAt: todayStr(3) },
-        { userId: 'staff-2', readAt: todayStr(2.5) },
-        { userId: 'staff-3', readAt: todayStr(2) },
-        { userId: 'staff-5', readAt: todayStr(1.5) },
-        { userId: 'staff-6', readAt: todayStr(1) },
-      ],
-    },
-    // Crystal Center channel
-    {
-      id: 'msg-4',
-      channelId: 'ch-crystal',
-      dmThreadId: null,
-      senderId: 'staff-2',
-      content: "We're low on size 3 diapers at Crystal. Can someone add to the supply order?",
-      timestamp: yesterdayStr(11),
-      replyToId: null,
-      reactions: [],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-2', readAt: yesterdayStr(11) },
-        { userId: 'staff-1', readAt: yesterdayStr(11) },
-        { userId: 'staff-4', readAt: yesterdayStr(12) },
-      ],
-    },
-    {
-      id: 'msg-5',
-      channelId: 'ch-crystal',
-      dmThreadId: null,
-      senderId: 'staff-1',
-      content: 'Added to the order. Should arrive Wednesday.',
-      timestamp: yesterdayStr(12),
-      replyToId: 'msg-4',
-      reactions: [{ emoji: '👍', users: ['staff-2'] }],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-1', readAt: yesterdayStr(12) },
-        { userId: 'staff-2', readAt: yesterdayStr(12) },
-      ],
-    },
-    {
-      id: 'msg-6',
-      channelId: 'ch-crystal',
-      dmThreadId: null,
-      senderId: 'staff-4',
-      content: 'Parent pickup change for Aiden M: grandma (Patricia) picking up today, she is on the approved list.',
-      timestamp: todayStr(4),
-      replyToId: null,
-      reactions: [{ emoji: '👍', users: ['staff-2', 'staff-5'] }],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-4', readAt: todayStr(4) },
-        { userId: 'staff-2', readAt: todayStr(3.5) },
-        { userId: 'staff-1', readAt: todayStr(3) },
-      ],
-    },
-    // Brooklyn Park channel
-    {
-      id: 'msg-7',
-      channelId: 'ch-brooklyn',
-      dmThreadId: null,
-      senderId: 'staff-3',
-      content: 'Nap cots need new sheets, several have stains that will not come out. I counted 6 that need replacing.',
-      timestamp: todayStr(5),
-      replyToId: null,
-      reactions: [],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-3', readAt: todayStr(5) },
-        { userId: 'staff-1', readAt: todayStr(4) },
-      ],
-    },
-    {
-      id: 'msg-8',
-      channelId: 'ch-brooklyn',
-      dmThreadId: null,
-      senderId: 'staff-8',
-      content: 'After-school pickup was smooth today. All 12 kids accounted for and signed out by 5:45.',
-      timestamp: todayStr(1),
-      replyToId: null,
-      reactions: [{ emoji: '❤️', users: ['staff-1'] }],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-8', readAt: todayStr(1) },
-        { userId: 'staff-1', readAt: todayStr(0.5) },
-      ],
-    },
-    // Lead Teachers channel
-    {
-      id: 'msg-9',
-      channelId: 'ch-leads',
-      dmThreadId: null,
-      senderId: 'staff-1',
-      content: 'I want to discuss moving to a project-based curriculum for the 3-5 room. Let us talk at the Friday meeting.',
-      timestamp: todayStr(2),
-      replyToId: null,
-      reactions: [{ emoji: '👍', users: ['staff-2', 'staff-3'] }],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-1', readAt: todayStr(2) },
-        { userId: 'staff-2', readAt: todayStr(1.5) },
-        { userId: 'staff-3', readAt: todayStr(1) },
-      ],
-    },
-    // Kitchen channel
-    {
-      id: 'msg-10',
-      channelId: 'ch-kitchen',
-      dmThreadId: null,
-      senderId: 'staff-6',
-      content: 'Menu for next week is posted. We have two new allergen-free options for the toddler room. Please check the board.',
-      timestamp: todayStr(2.5),
-      replyToId: null,
-      reactions: [{ emoji: '👍', users: ['staff-1'] }],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-6', readAt: todayStr(2.5) },
-        { userId: 'staff-1', readAt: todayStr(2) },
-      ],
-    },
-    // DM messages
-    {
-      id: 'msg-dm-1',
-      channelId: null,
-      dmThreadId: 'dm-1',
-      senderId: 'staff-2',
-      content: 'Hey Christina, do you have a minute to talk about Emma R? Her parents asked about early kindergarten testing.',
-      timestamp: yesterdayStr(13),
-      replyToId: null,
-      reactions: [],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-2', readAt: yesterdayStr(13) },
-        { userId: 'staff-1', readAt: yesterdayStr(13) },
-      ],
-    },
-    {
-      id: 'msg-dm-2',
-      channelId: null,
-      dmThreadId: 'dm-1',
-      senderId: 'staff-1',
-      content: 'Yes, let us set up a parent conference. Can you pull her developmental checklist so we can review it together first?',
-      timestamp: yesterdayStr(14),
-      replyToId: null,
-      reactions: [],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-1', readAt: yesterdayStr(14) },
-        { userId: 'staff-2', readAt: yesterdayStr(14) },
-      ],
-    },
-    {
-      id: 'msg-dm-3',
-      channelId: null,
-      dmThreadId: 'dm-2',
-      senderId: 'staff-6',
-      content: 'Christina, we need to reorder milk. We are down to the last two gallons.',
-      timestamp: todayStr(3),
-      replyToId: null,
-      reactions: [],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-6', readAt: todayStr(3) },
-        { userId: 'staff-1', readAt: todayStr(2.5) },
-      ],
-    },
-    {
-      id: 'msg-dm-4',
-      channelId: null,
-      dmThreadId: 'dm-2',
-      senderId: 'staff-1',
-      content: 'Got it. I will place the order this afternoon.',
-      timestamp: todayStr(2.5),
-      replyToId: null,
-      reactions: [{ emoji: '👍', users: ['staff-6'] }],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-1', readAt: todayStr(2.5) },
-        { userId: 'staff-6', readAt: todayStr(2) },
-      ],
-    },
-    {
-      id: 'msg-dm-5',
-      channelId: null,
-      dmThreadId: 'dm-3',
-      senderId: 'staff-7',
-      content: 'Hi Christina, I wanted to ask about taking PTO next Friday. Is that okay with staffing?',
-      timestamp: todayStr(1.5),
-      replyToId: null,
-      reactions: [],
-      isPinned: false,
-      readReceipts: [
-        { userId: 'staff-7', readAt: todayStr(1.5) },
-      ],
-    },
-  ];
-}
-
-function createSeedDMs(): DMThread[] {
-  return [
-    { id: 'dm-1', participantIds: ['staff-1', 'staff-2'], lastMessageAt: '2026-03-06T14:00:00Z' },
-    { id: 'dm-2', participantIds: ['staff-1', 'staff-6'], lastMessageAt: '2026-03-07T10:00:00Z' },
-    { id: 'dm-3', participantIds: ['staff-1', 'staff-7'], lastMessageAt: '2026-03-07T11:00:00Z' },
-  ];
-}
-
 // ─── Storage ────────────────────────────────────────────────────────
 
 function loadChannels(): Channel[] {
   if (typeof window === 'undefined') return [];
   const stored = localStorage.getItem(STORAGE_KEYS.channels);
   if (stored) return JSON.parse(stored) as Channel[];
-  const seed = createSeedChannels();
-  localStorage.setItem(STORAGE_KEYS.channels, JSON.stringify(seed));
-  return seed;
+  // No seed-on-empty: a fresh inbox starts empty, never with fabricated channels.
+  return [];
 }
 
 function loadMessages(): Message[] {
   if (typeof window === 'undefined') return [];
   const stored = localStorage.getItem(STORAGE_KEYS.messages);
   if (stored) return JSON.parse(stored) as Message[];
-  const seed = createSeedMessages();
-  localStorage.setItem(STORAGE_KEYS.messages, JSON.stringify(seed));
-  return seed;
+  // No seed-on-empty: never inject fabricated messages.
+  return [];
 }
 
 function loadDMs(): DMThread[] {
   if (typeof window === 'undefined') return [];
   const stored = localStorage.getItem(STORAGE_KEYS.dms);
   if (stored) return JSON.parse(stored) as DMThread[];
-  const seed = createSeedDMs();
-  localStorage.setItem(STORAGE_KEYS.dms, JSON.stringify(seed));
-  return seed;
+  // No seed-on-empty: never inject fabricated DM threads.
+  return [];
 }
 
 function saveChannels(channels: Channel[]) {
@@ -507,6 +216,8 @@ export default function MessagingPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [dmThreads, setDmThreads] = useState<DMThread[]>([]);
   const [mounted, setMounted] = useState(false);
+  // Bumped after the real staff roster loads so render reflects it.
+  const [, setStaffVersion] = useState(0);
 
   // Navigation state
   const [activeView, setActiveView] = useState<ActiveView>({ kind: 'channel', channelId: 'ch-all-staff' });
@@ -545,6 +256,37 @@ export default function MessagingPage() {
     setMessages(loadMessages());
     setDmThreads(loadDMs());
     setMounted(true);
+
+    // Populate the staff roster from the real employee store. No fabricated
+    // people: if there are no employees, the roster stays empty and the page
+    // renders its empty states.
+    let cancelled = false;
+    (async () => {
+      try {
+        const employees = await getEmployees();
+        if (cancelled) return;
+        STAFF = employees.map((e) => {
+          const name = `${e.first_name} ${e.last_name}`.trim() || e.email;
+          return {
+            id: e.id,
+            name,
+            initials: initialsFor(name),
+            color: colorForId(e.id),
+            role: e.job_title || '',
+          };
+        });
+        // First staff member (or owner/director) acts as the signed-in user.
+        const self =
+          STAFF.find((s) => /owner|director/i.test(s.role)) || STAFF[0];
+        CURRENT_USER_ID = self ? self.id : '';
+        setStaffVersion((v) => v + 1);
+      } catch {
+        /* leave roster empty; the page renders its empty state */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ─── Persist ────────────────────────────────────────────────────
@@ -743,12 +485,16 @@ export default function MessagingPage() {
 
   const createChannel = () => {
     if (!newChannelName.trim()) return;
+    // Always include the live current user; drop any stale empty placeholder.
+    const memberIds = Array.from(
+      new Set([CURRENT_USER_ID, ...newChannelMembers].filter(Boolean))
+    );
     const newChannel: Channel = {
       id: generateId(),
       name: newChannelName.trim(),
       description: newChannelDesc.trim(),
       type: newChannelType,
-      memberIds: newChannelMembers,
+      memberIds,
       createdAt: new Date().toISOString(),
     };
     setChannels((prev) => [...prev, newChannel]);

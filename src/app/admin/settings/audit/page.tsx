@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/table';
 import { FileText, ArrowLeft, Search, RefreshCw, Download, Filter } from 'lucide-react';
 import { getAuditLog, AuditLogEntry, addAuditLog } from '@/lib/user-storage';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 function formatTimestamp(timestamp: string): string {
   try {
@@ -176,9 +177,9 @@ export default function AuditPage() {
 
   const loadLogs = () => {
     setIsLoading(true);
-    // Load from localStorage, or use sample data if empty
+    // Load from localStorage. Sample data only seeds in a demo environment.
     let storedLogs = getAuditLog();
-    if (storedLogs.length === 0) {
+    if (storedLogs.length === 0 && isDemoSeedEnabled()) {
       storedLogs = generateSampleAuditLogs();
     }
     setLogs(storedLogs);

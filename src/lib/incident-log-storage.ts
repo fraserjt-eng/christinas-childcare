@@ -6,6 +6,7 @@ import {
   supabaseInsert,
   supabaseUpdate,
 } from '@/lib/supabase/service';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 // ============================================================================
 // Types
@@ -118,7 +119,9 @@ export async function getIncidents(filters?: {
   const cloudData = await supabaseSelect<IncidentLog>('incident_reports');
   let incidents = cloudData !== null ? cloudData : getFromStorage();
 
-  if (incidents.length === 0) {
+  // Incident reports describe real children. Only seed fabricated reports in a
+  // throwaway demo environment; the live app returns the real (possibly empty) list.
+  if (incidents.length === 0 && isDemoSeedEnabled()) {
     await seedIncidentData();
     incidents = getFromStorage();
   }

@@ -31,32 +31,9 @@ interface CenterStatus {
   supplyRequests: number;
 }
 
-const SEED_CENTERS: CenterStatus[] = [
-  {
-    id: 'center_1',
-    name: 'Crystal Center',
-    address: '5510 W Broadway Ave, Crystal',
-    attendance: { present: 42, enrolled: 50 },
-    staff: { onDuty: 6, total: 7 },
-    ratio: 7,
-    maxRatio: 10,
-    openIncidents: 1,
-    pendingMessages: 4,
-    supplyRequests: 2,
-  },
-  {
-    id: 'center_2',
-    name: 'Brooklyn Park Center',
-    address: '7301 Brooklyn Blvd, Brooklyn Park',
-    attendance: { present: 35, enrolled: 40 },
-    staff: { onDuty: 5, total: 5 },
-    ratio: 7,
-    maxRatio: 10,
-    openIncidents: 0,
-    pendingMessages: 2,
-    supplyRequests: 3,
-  },
-];
+// Live center statuses. Empty by default so the dashboard shows a real
+// empty state instead of fabricated attendance/staff/incident numbers.
+const CENTERS: CenterStatus[] = [];
 
 // ─── Threshold helpers ────────────────────────────────────────────────────────
 
@@ -254,16 +231,24 @@ export function OperationsSplitView() {
       </div>
 
       {/* Side by side cards */}
-      <div className="flex flex-col md:flex-row gap-4">
-        {SEED_CENTERS.map((center) => (
-          <CenterCard key={center.id} center={center} />
-        ))}
-      </div>
-
-      {/* Demo notice */}
-      <p className="text-xs text-muted-foreground text-center">
-        Demo data — connect Supabase realtime for live center metrics.
-      </p>
+      {CENTERS.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 flex flex-col items-center justify-center text-center">
+            <Building2 className="h-10 w-10 text-muted-foreground/40 mb-3" />
+            <p className="text-sm font-medium text-gray-700">No center data yet</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+              Live attendance, staffing, and incident metrics will appear here once
+              centers start reporting.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="flex flex-col md:flex-row gap-4">
+          {CENTERS.map((center) => (
+            <CenterCard key={center.id} center={center} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

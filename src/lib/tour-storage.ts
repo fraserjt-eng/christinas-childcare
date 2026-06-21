@@ -6,6 +6,7 @@ import {
   supabaseInsert,
   supabaseUpdate,
 } from '@/lib/supabase/service';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 export interface TourChecklistItem {
   id: string;
@@ -282,9 +283,13 @@ function seedTours(): Tour[] {
 
 function ensureSeeded(): void {
   if (typeof window === 'undefined') return;
-  const existing = getFromStorage<Tour>(TOURS_KEY);
-  if (existing.length === 0) {
-    saveToStorage(TOURS_KEY, seedTours());
+  // Tour records are real people. Only seed fabricated tours in a throwaway
+  // demo environment; the live app shows the real (possibly empty) list.
+  if (isDemoSeedEnabled()) {
+    const existing = getFromStorage<Tour>(TOURS_KEY);
+    if (existing.length === 0) {
+      saveToStorage(TOURS_KEY, seedTours());
+    }
   }
   const existingSlots = getFromStorage<TourSlot>(SLOTS_KEY);
   if (existingSlots.length === 0) {

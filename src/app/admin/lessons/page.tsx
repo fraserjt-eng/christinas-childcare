@@ -71,6 +71,7 @@ import {
   seedSampleLessons,
 } from '@/lib/lesson-storage';
 
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 import { generateLessonPDF } from '@/lib/pdf/lesson-pdf';
 import { generateActivityCards } from '@/lib/pdf/activity-cards';
 import { generateParentLetter } from '@/lib/pdf/parent-letter';
@@ -148,8 +149,10 @@ export default function LessonBuilderPage() {
     loadLessons();
   }, [loadLessons]);
 
-  // Seed sample data on first load
+  // Seed sample data on first load (demo environment only). The live app shows
+  // real lessons only, or the existing empty state when there are none.
   useEffect(() => {
+    if (!isDemoSeedEnabled()) return;
     const initData = async () => {
       const seeded = await seedSampleLessons();
       if (seeded > 0) {

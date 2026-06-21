@@ -33,16 +33,9 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STAFF = [
-  { id: 'emp-oz', name: 'Ophelia Zeogar', center: 'crystal' },
-  { id: 'emp-cf', name: 'Christina Fraser', center: 'crystal' },
-  { id: 'emp-ms', name: 'Maria Santos', center: 'crystal' },
-  { id: 'emp-jr', name: 'James Robinson', center: 'crystal' },
-  { id: 'emp-sk', name: 'Sarah Kim', center: 'brooklyn_park' },
-  { id: 'emp-dc', name: 'David Chen', center: 'brooklyn_park' },
-  { id: 'emp-lj', name: 'Lisa Johnson', center: 'brooklyn_park' },
-  { id: 'emp-sz', name: 'Stephen Zeogar', center: 'crystal' },
-];
+// Staff roster for the schedule grid. Seeded with real staff at runtime;
+// empty by default so the live grid never shows fabricated people.
+const STAFF: { id: string; name: string; center: string }[] = [];
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -454,6 +447,13 @@ export function ScheduleOptimizer() {
               </tr>
             </thead>
             <tbody>
+              {filteredStaff.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-sm text-gray-500">
+                    No staff to schedule yet. Add staff to start building the weekly schedule.
+                  </td>
+                </tr>
+              )}
               {filteredStaff.map((staff) => (
                 <tr
                   key={staff.id}

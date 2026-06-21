@@ -12,6 +12,7 @@ import {
   supabaseUpsert,
   isSupabaseConfigured,
 } from '@/lib/supabase/service';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 export type CertType =
   | 'cpr_first_aid'
@@ -278,6 +279,13 @@ function buildSeedDevGoals(): DevGoal[] {
 function seedIfNeeded(): void {
   if (typeof window === 'undefined') return;
   if (localStorage.getItem(SEEDED_KEY)) return;
+
+  // Production default: do not fabricate staff certs/training/goals. Mark seeded
+  // so empty stays empty and the page renders its real (empty) state.
+  if (!isDemoSeedEnabled()) {
+    localStorage.setItem(SEEDED_KEY, 'true');
+    return;
+  }
 
   saveToStorage(CERTS_KEY, buildSeedCertifications());
   saveToStorage(TRAINING_KEY, buildSeedTrainingRecords());

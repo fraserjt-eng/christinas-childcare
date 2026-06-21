@@ -15,6 +15,7 @@ import {
   supabaseUpdate,
 } from '@/lib/supabase/service';
 import { currentCenterId } from '@/lib/current-center';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 const STORAGE_KEY = 'christinas_meetings_v2';
 
@@ -418,13 +419,17 @@ function load(): Meeting[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw) as Meeting[];
+    // Empty cache: only fabricate demo meetings in a demo environment. In
+    // production (NEXT_PUBLIC_SEED_DEMO_DATA unset) return empty so the UI shows
+    // its real empty state and real cloud rows hydrate in the background.
+    if (!isDemoSeedEnabled()) return [];
     const seed = buildSeedData();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
     // Mirror the freshly seeded meetings to the cloud in the background.
     for (const m of seed) cloudInsert(m);
     return seed;
   } catch {
-    return buildSeedData();
+    return isDemoSeedEnabled() ? buildSeedData() : [];
   }
 }
 
@@ -455,8 +460,9 @@ function hydrateFromCloud(): void {
       });
       if (rows === null) return; // Supabase not configured or errored: keep cache.
       if (rows.length === 0) {
-        // Cloud empty: seed it from whatever the cache holds (incl. seed data).
-        for (const m of load()) cloudInsert(m);
+        // Cloud empty: do not reseed it. Reflect the real (empty) cloud state so
+        // the cache and UI never show fabricated meetings.
+        save([]);
         return;
       }
       const meetings = rows.map((r) => fromRow(r));

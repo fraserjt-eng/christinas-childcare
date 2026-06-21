@@ -50,6 +50,8 @@ import {
   generateDisciplineId,
 } from '@/types/hr';
 import { useToast } from '@/hooks/use-toast';
+import { getEmployees } from '@/lib/employee-storage';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 // ─── Constants ──────────────────────────────────────────────────────
 
@@ -59,16 +61,9 @@ const STORAGE_KEYS = {
   discipline: 'christinas_discipline_records',
 };
 
-const EMPLOYEES = [
-  'Christina Fraser',
-  'Sarah Johnson',
-  'Maria Garcia',
-  'James Wilson',
-  'Emily Chen',
-  'David Kim',
-  'Ashley Brown',
-  'Michael Davis',
-];
+// Real staff names are loaded from getEmployees() at runtime into the
+// employeeNames state (see HROnboardingPage) and feed the employee dropdowns,
+// so the UI never lists fabricated people.
 
 type TabValue = 'templates' | 'documents' | 'discipline';
 
@@ -259,6 +254,7 @@ export default function HROnboardingPage() {
   const [documents, setDocuments] = useState<HRDocument[]>([]);
   const [disciplineRecords, setDisciplineRecords] = useState<DisciplineRecord[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [employeeNames, setEmployeeNames] = useState<string[]>([]);
 
   // Template state
   const [showTemplateForm, setShowTemplateForm] = useState(false);
@@ -301,22 +297,46 @@ export default function HROnboardingPage() {
 
     if (storedDocuments) {
       setDocuments(JSON.parse(storedDocuments));
-    } else {
+    } else if (isDemoSeedEnabled()) {
       const tpls = storedTemplates ? JSON.parse(storedTemplates) : buildSystemTemplates();
       const seed = buildSeedDocuments(tpls);
       setDocuments(seed);
       localStorage.setItem(STORAGE_KEYS.documents, JSON.stringify(seed));
+    } else {
+      setDocuments([]);
     }
 
     if (storedDiscipline) {
       setDisciplineRecords(JSON.parse(storedDiscipline));
-    } else {
+    } else if (isDemoSeedEnabled()) {
       const seed = buildSeedDiscipline();
       setDisciplineRecords(seed);
       localStorage.setItem(STORAGE_KEYS.discipline, JSON.stringify(seed));
+    } else {
+      setDisciplineRecords([]);
     }
 
     setIsLoaded(true);
+  }, []);
+
+  // Load real staff names for employee dropdowns
+  useEffect(() => {
+    let cancelled = false;
+    getEmployees()
+      .then((employees) => {
+        if (cancelled) return;
+        const names = employees
+          .filter((e) => e.employment_status === 'active')
+          .map((e) => `${e.first_name} ${e.last_name}`.trim())
+          .filter(Boolean);
+        setEmployeeNames(names);
+      })
+      .catch(() => {
+        if (!cancelled) setEmployeeNames([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ─── Persist helpers ────────────────────────────────────────────
@@ -1171,7 +1191,7 @@ export default function HROnboardingPage() {
                         <SelectValue placeholder="Select employee..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {EMPLOYEES.map((emp) => (
+                        {employeeNames.map((emp) => (
                           <SelectItem key={emp} value={emp}>
                             {emp}
                           </SelectItem>
@@ -1472,7 +1492,7 @@ export default function HROnboardingPage() {
                         <SelectValue placeholder="Select employee..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {EMPLOYEES.map((emp) => (
+                        {employeeNames.map((emp) => (
                           <SelectItem key={emp} value={emp}>
                             {emp}
                           </SelectItem>

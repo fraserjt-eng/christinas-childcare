@@ -18,6 +18,7 @@ import {
   generateLessonId,
 } from '@/types/curriculum';
 import { currentCenterId } from '@/lib/current-center';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 const STORAGE_KEY = 'christinas_lessons';
 
@@ -117,7 +118,9 @@ async function readAllLessonsRaw(): Promise<Lesson[]> {
 async function readAllLessons(): Promise<Lesson[]> {
   let lessons = await readAllLessonsRaw();
 
-  if (lessons.length === 0) {
+  // Only seed sample lessons in an explicit demo environment. The live app
+  // shows real lessons only (or the existing empty state when there are none).
+  if (lessons.length === 0 && isDemoSeedEnabled()) {
     await seedSampleLessons();
     lessons = await readAllLessonsRaw();
   }

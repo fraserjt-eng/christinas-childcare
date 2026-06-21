@@ -64,32 +64,10 @@ function saveDismissed(userKey: string, ids: string[]): void {
   }
 }
 
-const SEED: CenterAnnouncement[] = [
-  {
-    id: 'ann-spring-event',
-    title: 'Spring Family Event — March 21',
-    body: 'Join us for games, a potluck, and an art showcase from the children. Please RSVP by March 7th.',
-    audience: 'parents',
-    priority: 'important',
-    postedAt: new Date().toISOString(),
-    postedBy: 'Ophelia Zeogar',
-  },
-  {
-    id: 'ann-weather-reminder',
-    title: 'Dress for the Weather',
-    body: 'Please send children with weather-appropriate outerwear. We play outside daily when conditions allow.',
-    audience: 'parents',
-    priority: 'info',
-    postedAt: new Date().toISOString(),
-    postedBy: 'Ophelia Zeogar',
-  },
-];
-
 export function seedAnnouncements(): void {
+  // Hydrate from cloud only. Fabricated SEED announcements are never injected
+  // into the live app; real announcements come from createAnnouncement / cloud.
   hydrateOnce();
-  const existing = getAllLocal();
-  if (existing.length > 0) return;
-  void store.saveMany(SEED);
 }
 
 export function getAnnouncementsForAudience(

@@ -8,6 +8,7 @@ import {
   supabaseDelete,
 } from '@/lib/supabase/service';
 import { currentCenterId } from '@/lib/current-center';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 export type KnowledgeCategory =
   | 'strategic_foundation'
@@ -263,6 +264,8 @@ const SEED_ENTRIES: KnowledgeEntry[] = (() => {
 })();
 
 async function seedIfEmpty(): Promise<void> {
+  // No-op outside a demo environment so the live KB only shows real entries.
+  if (!isDemoSeedEnabled()) return;
   const existing = getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
   if (existing.length > 0) return;
 
@@ -284,7 +287,7 @@ export async function getEntries(filters?: {
   const cloudData = await cloudFetch<KnowledgeEntry>('entry');
   let entries = cloudData !== null ? cloudData : getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
 
-  if (entries.length === 0) {
+  if (entries.length === 0 && isDemoSeedEnabled()) {
     await seedIfEmpty();
     entries = getFromStorage<KnowledgeEntry>(ENTRIES_KEY);
   }

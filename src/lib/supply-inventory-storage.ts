@@ -7,6 +7,7 @@ import {
   supabaseUpdate,
   supabaseDelete,
 } from '@/lib/supabase/service';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 // ============================================================================
 // Types
@@ -168,7 +169,8 @@ export async function getItems(filters?: {
   const cloudData = await cloudFetch<SupplyItem>('item');
   let items = cloudData !== null ? cloudData : getFromStorage<SupplyItem>(KEYS.items);
 
-  if (items.length === 0) {
+  // Production default: start empty. Only seed sample supplies in a demo env.
+  if (items.length === 0 && isDemoSeedEnabled()) {
     await seedSupplyItems();
     items = getFromStorage<SupplyItem>(KEYS.items);
   }

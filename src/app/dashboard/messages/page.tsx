@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { MessageCircle, Send, ArrowLeft } from 'lucide-react';
 import { getCurrentFamily } from '@/lib/family-storage';
 import {
-  seedParentConversations,
   getConversationsForParent,
   sendMessageFromParent,
   markReadForParent,
@@ -43,7 +42,8 @@ export default function MessagesPage() {
     const name = family.parents[0]?.name || 'Parent';
     setParentEmail(email);
     setParentName(name);
-    seedParentConversations(email, name);
+    // No fabricated staff threads: only real cloud-backed conversations are
+    // loaded for this parent.
     refresh(email);
   }, [refresh]);
 

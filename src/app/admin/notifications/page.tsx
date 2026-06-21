@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { NotificationTierPrefs } from '@/components/admin/NotificationTierPrefs';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 import {
   Bell,
   BellOff,
@@ -346,10 +347,12 @@ export default function NotificationsPage() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       setNotifications(JSON.parse(stored) as Notification[]);
-    } else {
+    } else if (isDemoSeedEnabled()) {
       const seed = generateSeedNotifications();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
       setNotifications(seed);
+    } else {
+      setNotifications([]);
     }
 
     const storedPrefs = localStorage.getItem(PREFS_STORAGE_KEY);

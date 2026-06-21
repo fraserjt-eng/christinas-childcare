@@ -6,6 +6,7 @@ import {
   supabaseInsert,
   supabaseUpdate,
 } from '@/lib/supabase/service';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 export type PipelineStage =
   | 'inquiry'
@@ -416,7 +417,9 @@ export async function getLeads(filters?: {
     ? cloudData
     : getFromStorage<PipelineLead>(LEADS_KEY);
 
-  if (leads.length === 0) {
+  // Pipeline leads are real prospective families. Only seed fabricated leads in a
+  // throwaway demo environment; the live app returns the real (possibly empty) list.
+  if (leads.length === 0 && isDemoSeedEnabled()) {
     leads = buildSeedLeads();
     const activities = buildSeedActivities(leads);
     saveToStorage(LEADS_KEY, leads);

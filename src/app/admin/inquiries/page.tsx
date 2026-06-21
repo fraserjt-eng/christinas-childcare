@@ -3,11 +3,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Mail, Phone } from 'lucide-react';
 
-const inquiries = [
-  { name: 'Jennifer Lee', child: 'Ryan Lee', age: '18 months', program: 'Toddler', email: 'jennifer@example.com', phone: '(217) 555-0301', date: 'Jan 25, 2026', status: 'new', message: 'Looking for full-time care. We heard great things about your program!' },
-  { name: 'Carlos Rivera', child: 'Luna Rivera', age: '3 years', program: 'Preschool', email: 'carlos@example.com', phone: '(217) 555-0302', date: 'Jan 20, 2026', status: 'toured', message: '' },
-  { name: 'Aisha Johnson', child: 'Zara Johnson', age: '8 months', program: 'Infant', email: 'aisha@example.com', phone: '(217) 555-0303', date: 'Jan 22, 2026', status: 'contacted', message: 'First-time parent. Would love to schedule a tour.' },
-];
+interface Inquiry {
+  name: string;
+  child: string;
+  age: string;
+  program: string;
+  email: string;
+  phone: string;
+  date: string;
+  status: string;
+  message: string;
+}
+
+const inquiries: Inquiry[] = [];
 
 const statusColors: Record<string, string> = {
   new: 'bg-christina-coral text-white',
@@ -25,6 +33,13 @@ export default function InquiriesPage() {
         <p className="text-muted-foreground">{inquiries.length} inquiries</p>
       </div>
       <div className="space-y-4">
+        {inquiries.length === 0 && (
+          <Card>
+            <CardContent className="p-10 text-center text-muted-foreground">
+              No enrollment inquiries yet. New inquiries will appear here.
+            </CardContent>
+          </Card>
+        )}
         {inquiries.map((inq) => (
           <Card key={inq.email}>
             <CardContent className="p-6">

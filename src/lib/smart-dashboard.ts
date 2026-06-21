@@ -371,14 +371,15 @@ export function getDashboardAlerts(): DashboardAlert[] {
 // ─── getTodaySnapshot ───────────────────────────────────────────────
 
 export function getTodaySnapshot(): TodaySnapshot {
-  // Reasonable defaults for when localStorage is empty
+  // Zeroed defaults for when localStorage is empty, so no fabricated
+  // numbers flash before real data loads.
   const defaults: TodaySnapshot = {
-    childrenPresent: 52,
-    totalEnrolled: 65,
-    staffOnDuty: 7,
-    totalStaff: 8,
+    childrenPresent: 0,
+    totalEnrolled: 0,
+    staffOnDuty: 0,
+    totalStaff: 0,
     ratioCompliant: true,
-    mealsServed: 186,
+    mealsServed: 0,
     tasksComplete: 0,
     totalTasks: 0,
   };
