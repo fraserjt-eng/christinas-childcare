@@ -24,3 +24,16 @@ export function currentCenterId(): string {
   }
   return OPERATING_CENTER_ID;
 }
+
+// The admin "Combined" view (the cross-center comparison). The CenterSwitcher
+// sets a separate cc_view cookie so that pages which have NOT been taught to
+// aggregate still fall back to a real center via currentCenterId() above (they
+// show one center rather than breaking). Pages/routes that DO support combined
+// check this and aggregate across centers. The server reads the same signal
+// from the request cookies (cc_view) when a director has it on.
+export const COMBINED_VIEW = 'all';
+
+export function isCombinedView(): boolean {
+  if (typeof document === 'undefined') return false;
+  return /(?:^|;\s*)cc_view=combined(?:;|$)/.test(document.cookie);
+}

@@ -22,6 +22,7 @@ import { logoutFamily } from '@/lib/family-storage';
 import { useSessionUser, initialsFrom, roleLabel, type SessionUser } from '@/lib/use-session-user';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { PortalSwitcher } from '@/components/layout/PortalSwitcher';
+import { CenterSwitcher } from '@/components/layout/CenterSwitcher';
 import { ReportIssueButton } from '@/components/support/ReportIssueButton';
 import { HelpdeskNavBadge } from '@/components/support/HelpdeskNavBadge';
 import { useRole } from '@/hooks/useRole';
@@ -379,7 +380,10 @@ function SidebarContent({
         {isEmployee ? (
           <NavSection items={employeeNav} label="Employee Portal" />
         ) : isAdmin ? (
-          <RoleFilteredAdminNav />
+          <>
+            <CenterSwitcher />
+            <RoleFilteredAdminNav />
+          </>
         ) : (
           <NavSection items={parentNav} label="Parent Portal" labelKey="nav.parentPortal" />
         )}
