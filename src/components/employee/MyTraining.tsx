@@ -16,10 +16,7 @@ import {
   type TrainingRecord,
   type DevGoal,
 } from '@/lib/staff-development-storage';
-
-// Demo: show from Maria Santos&apos; perspective as an example employee view
-const DEMO_EMPLOYEE_ID = 'emp-ms';
-const DEMO_EMPLOYEE_NAME = 'Maria Santos';
+import { useSessionUser } from '@/lib/use-session-user';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -68,17 +65,23 @@ function goalStatusBadge(status: DevGoal['status']) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function MyTraining() {
+  // The signed-in employee's own development. session.user.id is the employee id
+  // (minted by staff-pin), so this shows real records, never a demo person.
+  const { user } = useSessionUser();
+  const empId = user?.id || '';
+  const empName = user?.full_name || '';
   const [certs, setCerts] = useState<Certification[]>([]);
   const [trainingRecords, setTrainingRecords] = useState<TrainingRecord[]>([]);
   const [goals, setGoals] = useState<DevGoal[]>([]);
   const [annualHours, setAnnualHours] = useState(0);
 
   useEffect(() => {
-    setCerts(getCertifications({ employee_id: DEMO_EMPLOYEE_ID }));
-    setTrainingRecords(getTrainingRecords(DEMO_EMPLOYEE_ID));
-    setGoals(getDevGoals(DEMO_EMPLOYEE_ID));
-    setAnnualHours(getAnnualTrainingHours(DEMO_EMPLOYEE_ID, CURRENT_YEAR));
-  }, []);
+    if (!empId) return;
+    setCerts(getCertifications({ employee_id: empId }));
+    setTrainingRecords(getTrainingRecords(empId));
+    setGoals(getDevGoals(empId));
+    setAnnualHours(getAnnualTrainingHours(empId, CURRENT_YEAR));
+  }, [empId]);
 
   const hoursPct = Math.min(100, (annualHours / ANNUAL_TRAINING_HOURS_REQUIRED) * 100);
   const hoursRemaining = Math.max(0, ANNUAL_TRAINING_HOURS_REQUIRED - annualHours);
@@ -92,7 +95,7 @@ export function MyTraining() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">My Development</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">{DEMO_EMPLOYEE_NAME}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">{empName}</p>
       </div>
 
       {/* Urgent alerts */}

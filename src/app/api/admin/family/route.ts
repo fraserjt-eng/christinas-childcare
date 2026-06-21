@@ -24,6 +24,14 @@ function deriveCenterId(
   return sessionCenter;
 }
 
+// "See/edit all centers" power belongs ONLY to a true owner/superadmin. A
+// center-bound admin -- or a misconfigured admin with no center -- is not this,
+// so when the derived center is null these handlers fail CLOSED for them.
+function isSuperRole(session: AuthedSession): boolean {
+  const role = (session.user.role || '').toLowerCase();
+  return role === 'owner' || role === 'superadmin';
+}
+
 // Admin-only: create a real family in the LIVE tables so it can clock in at the
 // kiosk by PIN. After migration 017 anon cannot write families, so this must
 // run server-side with the service role. The role of this account is always a
@@ -63,6 +71,11 @@ export async function GET(request: NextRequest) {
   }
 
   const centerId = deriveCenterId(request, session);
+  // Fail closed: a non-superadmin with no resolved center must never read all
+  // centers' families.
+  if (!centerId && !isSuperRole(session)) {
+    return NextResponse.json({ families: [] });
+  }
 
   // Fetch broad, join in JS (PostgREST .in() can silently drop rows).
   let famQuery = supabase
@@ -193,6 +206,9 @@ export async function POST(request: NextRequest) {
     .digest('hex');
 
   const centerId = deriveCenterId(request, session);
+  if (!centerId && !isSuperRole(session)) {
+    return NextResponse.json({ error: 'No center for this account' }, { status: 403 });
+  }
 
   const { data: family, error: famErr } = await supabase
     .from('families')
@@ -273,7 +289,9 @@ export async function DELETE(request: NextRequest) {
   }
 
   const centerId = deriveCenterId(request, session);
-  if (centerId && fam.center_id !== centerId) {
+  // Only an owner/superadmin may act outside a matched center; a center-bound
+  // (or null-center) admin must match the family's own center.
+  if (!isSuperRole(session) && (!centerId || fam.center_id !== centerId)) {
     return NextResponse.json({ error: 'Not your center' }, { status: 403 });
   }
 
@@ -367,7 +385,7 @@ export async function PUT(request: NextRequest) {
   }
 
   const centerId = deriveCenterId(request, session);
-  if (centerId && fam.center_id !== centerId) {
+  if (!isSuperRole(session) && (!centerId || fam.center_id !== centerId)) {
     return NextResponse.json({ error: 'Not your center' }, { status: 403 });
   }
 
