@@ -31,7 +31,7 @@ export function Header() {
           </div>
           <div className="flex items-center gap-4">
             <Link href="/start" className="hover:underline">{t('chrome.staffPortal')}</Link>
-            <Link href="/login" className="hover:underline">{t('chrome.parentPortal')}</Link>
+            <Link href="/parent-pin" className="hover:underline">{t('chrome.parentPortal')}</Link>
           </div>
         </div>
       </div>
