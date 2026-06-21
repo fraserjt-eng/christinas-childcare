@@ -176,7 +176,7 @@ export async function GET() {
 
   if (error) {
     return NextResponse.json(
-      { ok: false, error: `Failed to list snapshots: ${error.message}` },
+      { ok: false, error: 'Backup operation failed. Check logs.' },
       { status: 500 }
     );
   }

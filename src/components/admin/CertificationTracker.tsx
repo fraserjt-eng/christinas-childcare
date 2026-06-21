@@ -20,17 +20,20 @@ import {
   type CertType,
   type CertStatus,
 } from '@/lib/staff-development-storage';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STAFF_IDS = [
-  { id: 'emp-oz', name: 'Ophelia Zeogar' },
-  { id: 'emp-cf', name: 'Christina Fraser' },
-  { id: 'emp-ms', name: 'Maria Santos' },
-  { id: 'emp-jr', name: 'James Robinson' },
-  { id: 'emp-sk', name: 'Sarah Kim' },
-  { id: 'emp-dc', name: 'David Chen' },
-];
+const STAFF_IDS = isDemoSeedEnabled()
+  ? [
+      { id: 'emp-oz', name: 'Ophelia Zeogar' },
+      { id: 'emp-cf', name: 'Christina Fraser' },
+      { id: 'emp-ms', name: 'Maria Santos' },
+      { id: 'emp-jr', name: 'James Robinson' },
+      { id: 'emp-sk', name: 'Sarah Kim' },
+      { id: 'emp-dc', name: 'David Chen' },
+    ]
+  : [];
 
 const CERT_COLUMNS: CertType[] = ['cpr_first_aid', 'state_licensing', 'food_handler', 'mandatory_training'];
 
@@ -277,6 +280,13 @@ export function CertificationTracker() {
                 </tr>
               </thead>
               <tbody>
+                {STAFF_IDS.length === 0 && (
+                  <tr>
+                    <td colSpan={CERT_COLUMNS.length + 1} className="px-4 py-8 text-center text-sm text-gray-400">
+                      No certifications tracked yet.
+                    </td>
+                  </tr>
+                )}
                 {STAFF_IDS.map(staff => (
                   <tr key={staff.id} className="border-b last:border-b-0 hover:bg-gray-50/50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-800">{staff.name}</td>

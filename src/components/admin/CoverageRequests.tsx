@@ -24,18 +24,21 @@ import {
   denyCoverage,
   type CoverageRequest,
 } from '@/lib/schedule-optimizer-storage';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
 // Available staff who could cover
-const AVAILABLE_STAFF = [
-  { id: 'emp-oz', name: 'Ophelia Zeogar' },
-  { id: 'emp-cf', name: 'Christina Fraser' },
-  { id: 'emp-ms', name: 'Maria Santos' },
-  { id: 'emp-jr', name: 'James Robinson' },
-  { id: 'emp-sk', name: 'Sarah Kim' },
-  { id: 'emp-dc', name: 'David Chen' },
-  { id: 'emp-lj', name: 'Lisa Johnson' },
-  { id: 'emp-sz', name: 'Stephen Zeogar' },
-];
+const AVAILABLE_STAFF = isDemoSeedEnabled()
+  ? [
+      { id: 'emp-oz', name: 'Ophelia Zeogar' },
+      { id: 'emp-cf', name: 'Christina Fraser' },
+      { id: 'emp-ms', name: 'Maria Santos' },
+      { id: 'emp-jr', name: 'James Robinson' },
+      { id: 'emp-sk', name: 'Sarah Kim' },
+      { id: 'emp-dc', name: 'David Chen' },
+      { id: 'emp-lj', name: 'Lisa Johnson' },
+      { id: 'emp-sz', name: 'Stephen Zeogar' },
+    ]
+  : [];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -121,16 +124,20 @@ function ApproveDialog({ open, request, onApprove, onClose }: ApproveDialogProps
           </div>
           <div>
             <label className="text-xs font-medium text-gray-700 block mb-1.5">Assign Cover Employee</label>
-            <Select value={selectedCover} onValueChange={setSelectedCover}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select cover employee..." />
-              </SelectTrigger>
-              <SelectContent>
-                {eligibleCovers.map(s => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {eligibleCovers.length === 0 ? (
+              <p className="text-sm text-gray-400 py-2">No staff available to cover yet.</p>
+            ) : (
+              <Select value={selectedCover} onValueChange={setSelectedCover}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select cover employee..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {eligibleCovers.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="flex gap-2 pt-1">
             <Button variant="outline" size="sm" onClick={onClose} className="flex-1">Cancel</Button>

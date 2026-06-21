@@ -125,11 +125,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Lesson remix error:', error);
 
-    const message =
-      error instanceof Error ? error.message : 'Unknown error occurred';
-
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: 'AI generation failed. Please try again.' },
       { status: 500 }
     );
   }

@@ -2,8 +2,27 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes, createHash } from 'crypto';
-import { requireSession } from '@/lib/require-auth';
+import { requireSession, type AuthedSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+
+// Center scoping: a director who is owner/superadmin, OR has no session center,
+// may pick a center via the cc_center cookie or ?center; otherwise the caller is
+// locked to their own session center_id.
+function deriveCenterId(
+  request: NextRequest,
+  session: AuthedSession
+): string | null {
+  const role = (session.user.role || '').toLowerCase();
+  const sessionCenter = session.user.center_id ?? null;
+  const isCrossCenter =
+    role === 'owner' || role === 'superadmin' || !sessionCenter;
+  const picked =
+    request.cookies.get('cc_center')?.value ||
+    request.nextUrl.searchParams.get('center') ||
+    null;
+  if (isCrossCenter) return picked || sessionCenter;
+  return sessionCenter;
+}
 
 // Admin-only: create a real family in the LIVE tables so it can clock in at the
 // kiosk by PIN. After migration 017 anon cannot write families, so this must
@@ -33,7 +52,7 @@ async function uniquePin(
 // List live families for User Management (admin only). The list page reads
 // browser storage for staff; families live in Supabase, so without this they
 // never appear even though they work at the kiosk.
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await requireSession('admin');
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -43,11 +62,15 @@ export async function GET() {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
 
+  const centerId = deriveCenterId(request, session);
+
   // Fetch broad, join in JS (PostgREST .in() can silently drop rows).
-  const { data: fams } = await supabase
+  let famQuery = supabase
     .from('families')
     .select('id, email, status, pin, created_at')
     .limit(5000);
+  if (centerId) famQuery = famQuery.eq('center_id', centerId);
+  const { data: fams } = await famQuery;
   const { data: parents } = await supabase
     .from('family_parents')
     .select('family_id, name, phone, is_primary')
@@ -169,6 +192,8 @@ export async function POST(request: NextRequest) {
     .update('nologin:' + randomBytes(16).toString('hex'))
     .digest('hex');
 
+  const centerId = deriveCenterId(request, session);
+
   const { data: family, error: famErr } = await supabase
     .from('families')
     .insert({
@@ -176,6 +201,7 @@ export async function POST(request: NextRequest) {
       password_hash: placeholderHash,
       pin,
       status: 'active',
+      center_id: centerId || '3104ae69-4f26-4c1e-a767-3ff45b534860',
     })
     .select('id')
     .single();
@@ -239,11 +265,16 @@ export async function DELETE(request: NextRequest) {
 
   const { data: fam } = await supabase
     .from('families')
-    .select('id, email')
+    .select('id, email, center_id')
     .eq('id', id)
     .maybeSingle();
   if (!fam) {
     return NextResponse.json({ error: 'Family not found' }, { status: 404 });
+  }
+
+  const centerId = deriveCenterId(request, session);
+  if (centerId && fam.center_id !== centerId) {
+    return NextResponse.json({ error: 'Not your center' }, { status: 403 });
   }
 
   // Clear attendance for this family's children before the cascade removes
@@ -328,11 +359,16 @@ export async function PUT(request: NextRequest) {
 
   const { data: fam } = await supabase
     .from('families')
-    .select('id, pin')
+    .select('id, pin, center_id')
     .eq('id', id)
     .maybeSingle();
   if (!fam) {
     return NextResponse.json({ error: 'Family not found' }, { status: 404 });
+  }
+
+  const centerId = deriveCenterId(request, session);
+  if (centerId && fam.center_id !== centerId) {
+    return NextResponse.json({ error: 'Not your center' }, { status: 403 });
   }
 
   // Email must stay unique across other families.

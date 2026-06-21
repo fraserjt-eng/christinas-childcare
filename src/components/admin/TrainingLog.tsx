@@ -25,15 +25,18 @@ import {
   ANNUAL_TRAINING_HOURS_REQUIRED,
   type TrainingRecord,
 } from '@/lib/staff-development-storage';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
-const STAFF = [
-  { id: 'emp-oz', name: 'Ophelia Zeogar' },
-  { id: 'emp-cf', name: 'Christina Fraser' },
-  { id: 'emp-ms', name: 'Maria Santos' },
-  { id: 'emp-jr', name: 'James Robinson' },
-  { id: 'emp-sk', name: 'Sarah Kim' },
-  { id: 'emp-dc', name: 'David Chen' },
-];
+const STAFF = isDemoSeedEnabled()
+  ? [
+      { id: 'emp-oz', name: 'Ophelia Zeogar' },
+      { id: 'emp-cf', name: 'Christina Fraser' },
+      { id: 'emp-ms', name: 'Maria Santos' },
+      { id: 'emp-jr', name: 'James Robinson' },
+      { id: 'emp-sk', name: 'Sarah Kim' },
+      { id: 'emp-dc', name: 'David Chen' },
+    ]
+  : [];
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -228,9 +231,13 @@ export function TrainingLog() {
           <p className="text-xs text-muted-foreground">MN state requirement: {ANNUAL_TRAINING_HOURS_REQUIRED} hours/year</p>
         </CardHeader>
         <CardContent className="pt-0">
-          {STAFF.map(s => (
-            <HoursProgressBar key={s.id} employeeId={s.id} employeeName={s.name} />
-          ))}
+          {STAFF.length === 0 ? (
+            <p className="py-4 text-sm text-gray-400">No training records yet.</p>
+          ) : (
+            STAFF.map(s => (
+              <HoursProgressBar key={s.id} employeeId={s.id} employeeName={s.name} />
+            ))
+          )}
         </CardContent>
       </Card>
 

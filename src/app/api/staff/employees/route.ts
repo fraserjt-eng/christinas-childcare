@@ -16,18 +16,15 @@ function deriveCenterId(
   session: AuthedSession
 ): string | null {
   const role = (session.user.role || '').toLowerCase();
-  const isDirector =
-    role === 'admin' || role === 'owner' || role === 'superadmin';
   const sessionCenter = session.user.center_id ?? null;
+  const isCrossCenter =
+    role === 'owner' || role === 'superadmin' || !sessionCenter;
   const picked =
     request.cookies.get('cc_center')?.value ||
     request.nextUrl.searchParams.get('center') ||
     null;
-
-  if (isDirector && picked) return picked;
-  if (sessionCenter) return sessionCenter;
-  if (picked) return picked;
-  return null;
+  if (isCrossCenter) return picked || sessionCenter;
+  return sessionCenter;
 }
 
 export async function GET(request: NextRequest) {
@@ -43,9 +40,20 @@ export async function GET(request: NextRequest) {
 
   const centerId = deriveCenterId(request, session);
 
-  let query = supabase.from('employees').select('*').limit(5000);
-  if (centerId) query = query.eq('center_id', centerId);
-  const { data } = await query;
+  // Fail closed: a null center would expose every center's roster, so return
+  // nothing rather than querying all centers.
+  if (!centerId) {
+    return NextResponse.json(
+      { employees: [] },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
+
+  const { data } = await supabase
+    .from('employees')
+    .select('*')
+    .eq('center_id', centerId)
+    .limit(5000);
 
   // Strip the login pin and any password hash: this is a roster, not a
   // credential store, and it is readable by any signed-in staff member.

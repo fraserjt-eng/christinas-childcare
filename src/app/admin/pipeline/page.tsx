@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { UserPlus, Phone, Calendar, FileText, CheckCircle2, ArrowRight } from 'lucide-react'
+import { isDemoSeedEnabled } from '@/lib/demo-mode'
 
 interface PipelineItem {
   parentName: string
@@ -13,7 +14,7 @@ interface PipelineItem {
   dateAdded: string
 }
 
-const columns: { title: string; color: string; badgeClass: string; icon: React.ElementType; items: PipelineItem[] }[] = [
+const demoColumns: { title: string; color: string; badgeClass: string; icon: React.ElementType; items: PipelineItem[] }[] = [
   {
     title: 'Inquiry',
     color: 'border-t-christina-red',
@@ -57,6 +58,10 @@ const columns: { title: string; color: string; badgeClass: string; icon: React.E
   },
 ]
 
+const columns = isDemoSeedEnabled()
+  ? demoColumns
+  : demoColumns.map((col) => ({ ...col, items: [] as PipelineItem[] }))
+
 export default function EnrollmentPipelinePage() {
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6">
@@ -87,6 +92,9 @@ export default function EnrollmentPipelinePage() {
               </div>
 
               <div className="space-y-3">
+                {col.items.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No enrollment pipeline items yet.</p>
+                )}
                 {col.items.map((item) => (
                   <Card key={item.childName} className="hover:shadow-md transition-shadow cursor-pointer">
                     <CardContent className="p-4 space-y-2">

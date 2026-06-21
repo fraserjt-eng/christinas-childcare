@@ -24,15 +24,18 @@ import {
   updateDevGoal,
   type DevGoal,
 } from '@/lib/staff-development-storage';
+import { isDemoSeedEnabled } from '@/lib/demo-mode';
 
-const STAFF = [
-  { id: 'emp-oz', name: 'Ophelia Zeogar' },
-  { id: 'emp-cf', name: 'Christina Fraser' },
-  { id: 'emp-ms', name: 'Maria Santos' },
-  { id: 'emp-jr', name: 'James Robinson' },
-  { id: 'emp-sk', name: 'Sarah Kim' },
-  { id: 'emp-dc', name: 'David Chen' },
-];
+const STAFF = isDemoSeedEnabled()
+  ? [
+      { id: 'emp-oz', name: 'Ophelia Zeogar' },
+      { id: 'emp-cf', name: 'Christina Fraser' },
+      { id: 'emp-ms', name: 'Maria Santos' },
+      { id: 'emp-jr', name: 'James Robinson' },
+      { id: 'emp-sk', name: 'Sarah Kim' },
+      { id: 'emp-dc', name: 'David Chen' },
+    ]
+  : [];
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
@@ -383,7 +386,9 @@ export function DevPlanTracker() {
           {displayed.length === 0 && (
             <div className="text-center py-8">
               <Target className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No goals match your filters.</p>
+              <p className="text-sm text-gray-400">
+                {STAFF.length === 0 ? 'No development plans yet.' : 'No goals match your filters.'}
+              </p>
             </div>
           )}
         </div>

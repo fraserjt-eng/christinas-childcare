@@ -198,9 +198,11 @@ export async function POST(
           .from(tableName)
           .upsert(chunk, { onConflict: 'id' });
         if (error) {
-          warnings.push(
-            `${tableName}: upsert error on rows ${i}-${i + chunk.length}: ${error.message}`
+          console.error(
+            `${tableName}: upsert error on rows ${i}-${i + chunk.length}:`,
+            error.message
           );
+          warnings.push('Restore operation failed. Check logs.');
           break;
         }
         rowsRestored += chunk.length;

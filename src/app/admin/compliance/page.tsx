@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, Award, Users, AlertTriangle, Calendar, CheckCircle2, Clock } from 'lucide-react'
+import { isDemoSeedEnabled } from '@/lib/demo-mode'
 
 const ratioCards = [
   { room: 'Infant Room', current: '3 children : 1 staff', required: '4:1', ratio: 3/1, max: 4/1, status: 'Compliant' },
@@ -11,7 +12,7 @@ const ratioCards = [
   { room: 'School Age Room', current: '12 children : 1 staff', required: '15:1', ratio: 12/1, max: 15/1, status: 'Compliant' },
 ]
 
-const trainingTracker = [
+const demoTrainingTracker = [
   { name: 'Ophelia Zeogar', required: 16, completed: 16, status: 'Complete' },
   { name: 'Christina Fraser', required: 16, completed: 14, status: 'In Progress' },
   { name: 'Maria Santos', required: 16, completed: 16, status: 'Complete' },
@@ -20,6 +21,8 @@ const trainingTracker = [
   { name: 'David Chen', required: 16, completed: 8, status: 'Due Soon' },
   { name: 'Lisa Johnson', required: 16, completed: 12, status: 'In Progress' },
 ]
+
+const trainingTracker = isDemoSeedEnabled() ? demoTrainingTracker : []
 
 const deadlines = [
   { task: 'Monthly Fire Drill', due: 'Feb 1, 2026', status: 'Due Soon', icon: 'AlertTriangle' },
@@ -118,6 +121,9 @@ export default function ComplianceDashboardPage() {
           <CardDescription>MN requires 16 hours of annual training per staff member</CardDescription>
         </CardHeader>
         <CardContent>
+          {trainingTracker.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No staff training records yet.</p>
+          ) : (
           <div className="space-y-4">
             {trainingTracker.map((staff) => (
               <div key={staff.name} className="flex items-center gap-4">
@@ -137,6 +143,7 @@ export default function ComplianceDashboardPage() {
               </div>
             ))}
           </div>
+          )}
         </CardContent>
       </Card>
 

@@ -35,13 +35,15 @@ export async function GET(request: NextRequest) {
   }
 
   const centerId = deriveCenterId(request, session);
+  if (!centerId) {
+    return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+  }
 
-  let fq = supabase
+  const { data: families } = await supabase
     .from('families')
     .select('id, email, center_id, status')
+    .eq('center_id', centerId)
     .limit(5000);
-  if (centerId) fq = fq.eq('center_id', centerId);
-  const { data: families } = await fq;
   const fams = (families ?? []).filter((f) => f.status !== 'inactive');
   const famIds = fams.map((f) => f.id as string);
   const idFilter = famIds.length ? famIds : ['00000000-0000-0000-0000-000000000000'];

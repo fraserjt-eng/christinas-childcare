@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     return NextResponse.json(
-      { ok: false, error: `Could not subscribe: ${error.message}` },
+      { ok: false, error: 'Subscription failed. Please try again later.' },
       { status: 500 }
     );
   }
@@ -95,7 +95,7 @@ export async function GET() {
 
   if (error) {
     return NextResponse.json(
-      { ok: false, error: `Could not list subscribers: ${error.message}` },
+      { ok: false, error: 'Could not retrieve subscribers. Please try again.' },
       { status: 500 }
     );
   }
