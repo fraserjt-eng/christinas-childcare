@@ -5,6 +5,82 @@
 
 BEGIN;
 
+-- ============================================================================
+-- PROD CATCH-UP: tables from migrations 011/012/013 that prod never received.
+-- Without these the 042 lockdown below references missing relations and the
+-- whole bundle aborts. Idempotent (CREATE TABLE IF NOT EXISTS, DROP-guarded
+-- policies), schema only (NO seed data). newsletters already exists on prod, so
+-- its CREATE is a no-op.
+-- ============================================================================
+
+-- 011: research_findings (intelligence research inbox)
+CREATE TABLE IF NOT EXISTS public.research_findings (
+  id text PRIMARY KEY,
+  center_id uuid REFERENCES public.centers(id),
+  question_id text NOT NULL,
+  question_text text NOT NULL,
+  finding text NOT NULL,
+  evidence text,
+  framework_tag text NOT NULL,
+  severity text NOT NULL CHECK (severity IN ('info', 'opportunity', 'risk')),
+  source text NOT NULL DEFAULT 'internal' CHECK (source IN ('internal', 'external')),
+  status text NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'reviewed', 'acted', 'dismissed')),
+  action_plan_id text,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_research_findings_status ON public.research_findings(status);
+CREATE INDEX IF NOT EXISTS idx_research_findings_created ON public.research_findings(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_research_findings_framework ON public.research_findings(framework_tag);
+ALTER TABLE public.research_findings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.research_findings;
+CREATE POLICY "Allow all for authenticated" ON public.research_findings FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.research_findings;
+CREATE POLICY "Allow all for anon" ON public.research_findings FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- 012: news_updates, center_announcements, parent_conversations, newsletters
+CREATE TABLE IF NOT EXISTS public.news_updates (id text PRIMARY KEY, center_id uuid REFERENCES public.centers(id), data jsonb NOT NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS public.center_announcements (id text PRIMARY KEY, center_id uuid REFERENCES public.centers(id), data jsonb NOT NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS public.parent_conversations (id text PRIMARY KEY, center_id uuid REFERENCES public.centers(id), parent_email text NOT NULL, data jsonb NOT NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now());
+CREATE INDEX IF NOT EXISTS idx_parent_conversations_email ON public.parent_conversations(parent_email);
+CREATE TABLE IF NOT EXISTS public.newsletters (id text PRIMARY KEY, center_id uuid REFERENCES public.centers(id), data jsonb NOT NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now());
+ALTER TABLE public.news_updates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.center_announcements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.parent_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.newsletters ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.news_updates;
+CREATE POLICY "Allow all for authenticated" ON public.news_updates FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.news_updates;
+CREATE POLICY "Allow all for anon" ON public.news_updates FOR ALL TO anon USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.center_announcements;
+CREATE POLICY "Allow all for authenticated" ON public.center_announcements FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.center_announcements;
+CREATE POLICY "Allow all for anon" ON public.center_announcements FOR ALL TO anon USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.parent_conversations;
+CREATE POLICY "Allow all for authenticated" ON public.parent_conversations FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.parent_conversations;
+CREATE POLICY "Allow all for anon" ON public.parent_conversations FOR ALL TO anon USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.newsletters;
+CREATE POLICY "Allow all for authenticated" ON public.newsletters FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.newsletters;
+CREATE POLICY "Allow all for anon" ON public.newsletters FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- 013: substitutes, sub_assignments (Subs feature)
+CREATE TABLE IF NOT EXISTS public.substitutes (id text PRIMARY KEY, center_id uuid REFERENCES public.centers(id), data jsonb NOT NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now());
+CREATE TABLE IF NOT EXISTS public.sub_assignments (id text PRIMARY KEY, center_id uuid REFERENCES public.centers(id), data jsonb NOT NULL, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now());
+CREATE INDEX IF NOT EXISTS idx_sub_assignments_created ON public.sub_assignments(created_at DESC);
+ALTER TABLE public.substitutes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sub_assignments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.substitutes;
+CREATE POLICY "Allow all for authenticated" ON public.substitutes FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.substitutes;
+CREATE POLICY "Allow all for anon" ON public.substitutes FOR ALL TO anon USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.sub_assignments;
+CREATE POLICY "Allow all for authenticated" ON public.sub_assignments FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.sub_assignments;
+CREATE POLICY "Allow all for anon" ON public.sub_assignments FOR ALL TO anon USING (true) WITH CHECK (true);
+-- ===== END PROD CATCH-UP =====
+
 -- Monday cutover bundle: migrations 030-043. Apply to prod (dkzxcxwjhhxqfgksynjb)
 -- in order, ONLY at cutover, on J's go. All additive + idempotent.
 
