@@ -1,15 +1,13 @@
 'use client';
 
-// LIVE kiosk — the new front-facing (Tadpoles) design on REAL data.
+// LIVE kiosk — the SAME design as the /preview/kiosk we built, on REAL data.
 //
 // The kiosk runs OPEN on the lobby iPad (no session), so it cannot use the
-// preview store + LivePortalHydrator the signed-in /preview screens use. It
-// renders the SAME new design directly from the real, center-scoped /api/kiosk
-// client (lookup, attendance, check-in/out, privacy attestation). Photos are not
-// available open (no session), so avatars fall back to initials.
-//
-// Flow: PIN pad (with the center-name watermark) -> MN DCYF privacy gate -> the
-// family check-in grid. Auto-resets to the pad after inactivity.
+// preview store the signed-in /preview screens use. It renders the identical
+// look directly from the real, center-scoped /api/kiosk client. The whole tree
+// is wrapped in `.pv-root` so the portal (pv-*) design tokens resolve outside
+// the /preview layout. A faded, glowing center-name watermark sits behind the
+// keypad. Flow: PIN pad -> MN DCYF privacy gate -> family check-in grid.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -26,7 +24,6 @@ import {
 import type {
   KioskClient,
   KioskFamily,
-  FamilyParent,
   FamilyChildRow,
   AttendanceRow,
 } from '@/lib/kiosk-data';
@@ -34,38 +31,36 @@ import { PrivacyNotice, SeeStaffScreen } from './PrivacyNotice';
 import { BigButton, SuccessBanner, cx } from '@/components/preview/ui';
 import { PhotoAvatar } from '@/components/preview/PhotoAvatar';
 
-// ---- helpers ----
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  return isNaN(d.getTime())
-    ? ''
-    : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
-function primaryLastName(parents: FamilyParent[]): string {
-  const primary = parents.find((p) => p.is_primary) || parents[0];
-  if (!primary?.name) return '';
-  const parts = primary.name.trim().split(/\s+/);
-  return parts.length > 1 ? parts[parts.length - 1] : parts[0];
+function familyLabel(family: KioskFamily): string {
+  const primary = family.parents.find((p) => p.is_primary) || family.parents[0];
+  if (primary?.name) {
+    const parts = primary.name.trim().split(/\s+/);
+    const last = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+    return `${last} Family`;
+  }
+  // Kiosk-only roster stub (no guardian yet): label by the child's name.
+  return family.children[0]?.name || 'Welcome';
 }
 
-// A real child carries a free-text classroom, not a fixtures roomId. Map common
-// age-group words to the room look; default to the infant look. Keeps the new
-// design's color + icon language without depending on the demo fixtures.
+// A real child carries a free-text classroom (not a fixtures roomId). Map common
+// age-group words to the room look so the cards keep the design's color + icon.
 function roomLook(classroom: string | null): { icon: LucideIcon; color: string; label: string } {
   const c = (classroom || '').toLowerCase();
-  if (/infant|baby|nursery/.test(c)) return { icon: Baby, color: 'var(--pv-sky)', label: classroom || 'Infants' };
-  if (/toddler/.test(c)) return { icon: Blocks, color: 'var(--pv-teal)', label: classroom || 'Toddlers' };
-  if (/pre|pk|preschool/.test(c)) return { icon: Palette, color: 'var(--pv-plum)', label: classroom || 'Preschool' };
-  if (/school|kinder|age/.test(c)) return { icon: Backpack, color: 'var(--pv-gold)', label: classroom || 'School age' };
+  if (/infant|baby|nursery/.test(c)) return { icon: Baby, color: 'var(--pv-sky)', label: classroom || '' };
+  if (/toddler/.test(c)) return { icon: Blocks, color: 'var(--pv-teal)', label: classroom || '' };
+  if (/pre|pk/.test(c)) return { icon: Palette, color: 'var(--pv-plum)', label: classroom || '' };
+  if (/school|kinder|age/.test(c)) return { icon: Backpack, color: 'var(--pv-gold)', label: classroom || '' };
   return { icon: Baby, color: 'var(--pv-coral)', label: classroom || '' };
 }
 
-// ============================================================
-// PIN pad (with the center-name watermark behind the keypad)
-// ============================================================
-const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
-
+// ---- PIN pad (with the center-name watermark behind it) ----
 function PinScreen({
   client,
   centerName,
@@ -113,86 +108,85 @@ function PinScreen({
   }
 
   return (
-    <main className="pv-portal-bg relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 py-6">
-      {/* Center-name watermark: faded + glowing, behind the keypad, centered. */}
-      {centerName ? (
-        <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center select-none">
-          <span
-            className="pv-tad-title text-center"
-            style={{
-              fontSize: 'clamp(3.5rem, 17vw, 13rem)',
-              lineHeight: 1,
-              color: 'var(--pv-coral)',
-              opacity: 0.09,
-              textShadow: '0 0 70px var(--pv-coral)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {centerName}
-          </span>
-        </div>
-      ) : null}
-
-      <div className="relative z-10 mx-auto w-full max-w-md">
-        <div className="pv-rise mb-6 text-center" style={{ animationDelay: '30ms' }}>
+    <main className="pv-portal-bg relative min-h-[100dvh] overflow-hidden px-4 py-6">
+      <div className="relative z-10 mx-auto max-w-2xl">
+        <header className="pv-rise mb-8 text-center" style={{ animationDelay: '30ms' }}>
           <h1 className="pv-tad-title text-4xl sm:text-5xl">Christina&apos;s Child Care</h1>
-          {centerName ? (
-            <p className="mt-2 text-lg font-semibold" style={{ color: 'var(--pv-muted)' }}>
-              {centerName}
-            </p>
-          ) : null}
-        </div>
+          <p className="mt-3 text-lg font-semibold" style={{ color: 'var(--pv-muted)' }}>
+            {centerName ? centerName : 'Enter your family PIN to check in or out.'}
+          </p>
+        </header>
 
-        <div className={cx('pv-tile p-7 text-center sm:p-8', shake && 'pv-shake')}>
-          <span
-            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: 'color-mix(in srgb, var(--pv-coral) 12%, white)' }}
-            aria-hidden="true"
-          >
-            <KeyRound size={26} style={{ color: 'var(--pv-coral)' }} />
-          </span>
-          <h2 className="pv-tad-title mt-4 text-3xl">Enter your family PIN</h2>
-          <div className="mt-6 flex justify-center gap-4" aria-label={`${pin.length} of 4 digits`}>
-            {[0, 1, 2, 3].map((i) => (
+        <div className="pv-rise relative" style={{ animationDelay: '60ms' }}>
+          {/* Center-name watermark: faded + glowing, centered behind the keypad. */}
+          {centerName ? (
+            <div aria-hidden className="pointer-events-none absolute inset-0 z-0 flex select-none items-center justify-center">
               <span
-                key={i}
-                className="h-5 w-5 rounded-full border-2 transition-all"
+                className="pv-tad-title text-center"
                 style={{
-                  borderColor: 'var(--pv-coral)',
-                  backgroundColor: i < pin.length ? 'var(--pv-coral)' : 'transparent',
+                  fontSize: 'clamp(4.5rem, 22vw, 15rem)',
+                  lineHeight: 1,
+                  color: 'var(--pv-coral)',
+                  opacity: 0.22,
+                  textShadow: '0 0 60px var(--pv-coral), 0 0 120px var(--pv-coral)',
+                  whiteSpace: 'nowrap',
                 }}
-              />
-            ))}
-          </div>
-          {error ? (
-            <p className="mt-4 text-base font-bold" style={{ color: 'var(--pv-coral)' }}>
-              {error}
-            </p>
+              >
+                {centerName}
+              </span>
+            </div>
           ) : null}
-          <div className="mx-auto mt-7 grid w-fit grid-cols-3 gap-4">
-            {KEYS.map((key, i) =>
-              key ? (
-                <button
-                  key={`${key}-${i}`}
-                  type="button"
-                  onClick={() => press(key)}
-                  disabled={loading}
-                  className="pv-press flex h-[76px] w-[76px] items-center justify-center rounded-2xl border text-3xl font-semibold disabled:opacity-50"
-                  style={{ backgroundColor: '#fbfaf8', borderColor: 'var(--pv-line)', color: 'var(--pv-ink)' }}
-                  aria-label={key === '⌫' ? 'Delete a digit' : key}
-                >
-                  {key === '⌫' ? <Delete size={28} aria-hidden="true" /> : key}
-                </button>
-              ) : (
-                <span key={`blank-${i}`} className="h-[76px] w-[76px]" />
-              )
-            )}
+          <div
+            className={cx('pv-tile relative z-10 mx-auto max-w-md p-7 text-center sm:p-8', shake && 'pv-shake')}
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.42)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
+          >
+            <span
+              className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+              style={{ backgroundColor: 'color-mix(in srgb, var(--pv-coral) 12%, white)' }}
+              aria-hidden="true"
+            >
+              <KeyRound size={26} style={{ color: 'var(--pv-coral)' }} />
+            </span>
+            <h2 className="pv-tad-title mt-4 text-3xl">Enter your code</h2>
+            <div className="mt-6 flex justify-center gap-4" aria-label={`${pin.length} of 4 digits entered`}>
+              {[0, 1, 2, 3].map((i) => (
+                <span
+                  key={i}
+                  className="h-5 w-5 rounded-full border-2"
+                  style={{ borderColor: 'var(--pv-coral)', backgroundColor: i < pin.length ? 'var(--pv-coral)' : 'transparent' }}
+                />
+              ))}
+            </div>
+            {error ? (
+              <p className="mt-4 text-base font-bold" style={{ color: 'var(--pv-coral)' }}>
+                {error}
+              </p>
+            ) : null}
+            <div className="mx-auto mt-8 grid w-fit grid-cols-3 gap-4">
+              {KEYS.map((key, i) =>
+                key ? (
+                  <button
+                    key={`${key}-${i}`}
+                    type="button"
+                    onClick={() => press(key)}
+                    disabled={loading}
+                    className="pv-press flex h-[76px] w-[76px] items-center justify-center rounded-2xl border text-3xl font-semibold disabled:opacity-50"
+                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.55)', borderColor: 'var(--pv-line)', color: 'var(--pv-ink)' }}
+                    aria-label={key === '⌫' ? 'Delete a digit' : key}
+                  >
+                    {key === '⌫' ? <Delete size={28} aria-hidden="true" /> : key}
+                  </button>
+                ) : (
+                  <span key={`blank-${i}`} className="h-[76px] w-[76px]" />
+                )
+              )}
+            </div>
+            {loading ? (
+              <p className="mt-4 text-base" style={{ color: 'var(--pv-muted)' }}>
+                Checking...
+              </p>
+            ) : null}
           </div>
-          {loading ? (
-            <p className="mt-4 text-base" style={{ color: 'var(--pv-muted)' }}>
-              Checking...
-            </p>
-          ) : null}
         </div>
       </div>
 
@@ -205,9 +199,7 @@ function PinScreen({
   );
 }
 
-// ============================================================
-// Child tile (real check-in / out)
-// ============================================================
+// ---- child tile (mirrors the /preview/kiosk kid card; real check-in) ----
 function ChildTile({
   client,
   child,
@@ -223,39 +215,30 @@ function ChildTile({
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const refresh = useCallback(() => {
+  useEffect(() => {
     client.getTodayAttendance(child.id).then((r) => {
       setAtt(r);
       setLoaded(true);
     });
   }, [client, child.id]);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
   const inAt = att?.check_in && !att?.check_out ? att.check_in : null;
   const look = roomLook(child.classroom);
   const RoomIcon = look.icon;
+  const first = child.name.split(/\s+/)[0];
 
   async function toggle() {
     if (busy) return;
     setBusy(true);
-    if (inAt) {
-      await client.checkOut(child.id);
-    } else {
-      await client.checkIn(child, familyId);
-    }
-    const updated = await client.getTodayAttendance(child.id);
-    setAtt(updated);
+    if (inAt) await client.checkOut(child.id);
+    else await client.checkIn(child, familyId);
+    setAtt(await client.getTodayAttendance(child.id));
     setBusy(false);
-    const first = child.name.split(/\s+/)[0];
     onToggled(inAt ? `${first} is checked out. See you tomorrow!` : `${first} is checked in. Have a great day!`);
   }
 
   if (!loaded) return <div className="pv-tile h-44 animate-pulse" />;
 
-  const first = child.name.split(/\s+/)[0];
   return (
     <div
       className="pv-lift rounded-lg border p-4 text-center"
@@ -263,13 +246,7 @@ function ChildTile({
     >
       <button type="button" onClick={toggle} disabled={busy} className="pv-press pv-kiosk-target w-full disabled:opacity-60">
         <span className="block">
-          <PhotoAvatar
-            id={child.id}
-            name={child.name}
-            size={80}
-            rounded="rounded-lg"
-            className={cx('mx-auto', inAt ? '' : 'opacity-75 grayscale')}
-          />
+          <PhotoAvatar id={child.id} name={child.name} size={80} rounded="rounded-lg" className={cx('mx-auto', inAt ? '' : 'opacity-75 grayscale')} />
         </span>
         <span className="mt-2 block text-xl font-bold">{first}</span>
         {look.label ? (
@@ -288,82 +265,58 @@ function ChildTile({
   );
 }
 
-// ============================================================
-// Family check-in grid
-// ============================================================
-const AUTO_RESET_SECONDS = 20;
+// ---- family check-in grid (mirrors /preview/kiosk family screen) ----
+const AUTO_RESET_SECONDS = 25;
 
-function FamilyScreen({
-  client,
-  family,
-  onDone,
-}: {
-  client: KioskClient;
-  family: KioskFamily;
-  onDone: () => void;
-}) {
+function FamilyScreen({ client, family, onDone }: { client: KioskClient; family: KioskFamily; onDone: () => void }) {
   const [success, setSuccess] = useState<string | null>(null);
-  const [secondsLeft, setSecondsLeft] = useState(AUTO_RESET_SECONDS);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const start = useCallback(() => {
-    if (timer.current) clearInterval(timer.current);
-    setSecondsLeft(AUTO_RESET_SECONDS);
-    timer.current = setInterval(() => {
-      setSecondsLeft((p) => {
-        if (p <= 1) {
-          if (timer.current) clearInterval(timer.current);
-          onDone();
-          return 0;
-        }
-        return p - 1;
-      });
-    }, 1000);
+  // Silent privacy auto-reset: clear the family from the screen after inactivity.
+  const bump = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(onDone, AUTO_RESET_SECONDS * 1000);
   }, [onDone]);
 
   useEffect(() => {
-    start();
+    bump();
     return () => {
-      if (timer.current) clearInterval(timer.current);
+      if (timer.current) clearTimeout(timer.current);
     };
-  }, [start]);
-
-  const lastName = primaryLastName(family.parents);
+  }, [bump]);
 
   return (
-    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6" onPointerDown={start}>
-      <div className="mx-auto max-w-lg">
-        <header className="pv-rise mb-6 flex items-center justify-between" style={{ animationDelay: '30ms' }}>
-          <div>
-            <h1 className="pv-tad-title text-3xl sm:text-4xl">{lastName ? `Welcome, ${lastName} family` : 'Welcome'}</h1>
-            <p className="mt-1 text-base" style={{ color: 'var(--pv-muted)' }}>
-              Tap a child to check them in or out.
-            </p>
-          </div>
-          <span className="text-right text-sm" style={{ color: 'var(--pv-muted)' }}>
-            resets in
-            <span className="block text-2xl font-bold" style={{ color: 'var(--pv-ink)' }}>
-              {secondsLeft}s
-            </span>
-          </span>
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6" onPointerDown={bump}>
+      <div className="mx-auto max-w-2xl">
+        <header className="pv-rise mb-8 text-center" style={{ animationDelay: '30ms' }}>
+          <h1 className="pv-tad-title text-4xl sm:text-5xl">Christina&apos;s Child Care</h1>
         </header>
-
         <div className="pv-rise" style={{ animationDelay: '60ms' }}>
-          {family.children.length === 0 ? (
-            <div className="pv-tile p-8 text-center" style={{ color: 'var(--pv-muted)' }}>
-              No children on this account yet. Please see staff.
+          <div className="pv-tile mx-auto max-w-lg p-6 sm:p-7">
+            <div className="text-center">
+              <span className="inline-block">
+                <PhotoAvatar id={family.id} name={familyLabel(family)} size={80} rounded="rounded-2xl" />
+              </span>
+              <h2 className="pv-tad-title mt-2 text-3xl">{familyLabel(family)}</h2>
+              <p className="mt-1 text-lg" style={{ color: 'var(--pv-muted)' }}>
+                Tap a child to check them in or out.
+              </p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {family.children.map((child) => (
-                <ChildTile key={child.id} client={client} child={child} familyId={family.id} onToggled={(m) => { setSuccess(m); start(); }} />
-              ))}
+            {family.children.length === 0 ? (
+              <p className="mt-6 text-center text-lg" style={{ color: 'var(--pv-muted)' }}>
+                No children on this account yet. Please see staff.
+              </p>
+            ) : (
+              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {family.children.map((child) => (
+                  <ChildTile key={child.id} client={client} child={child} familyId={family.id} onToggled={(m) => { setSuccess(m); bump(); }} />
+                ))}
+              </div>
+            )}
+            <div className="mt-6">
+              <BigButton icon={Check} label="Done" color="var(--pv-plum)" onClick={onDone} className="w-full text-center" />
             </div>
-          )}
-        </div>
-
-        <div className="mt-6">
-          <BigButton icon={Check} label="Done" color="var(--pv-plum)" onClick={onDone} className="w-full text-center" />
+          </div>
         </div>
       </div>
       {success ? <SuccessBanner message={success} onDone={() => setSuccess(null)} /> : null}
@@ -371,34 +324,24 @@ function FamilyScreen({
   );
 }
 
-// ============================================================
-// Root — PIN -> privacy gate -> family grid
-// ============================================================
-export default function KioskScreen({
-  client,
-  centerName = '',
-}: {
-  client: KioskClient;
-  isDemo?: boolean;
-  centerName?: string;
-}) {
+// ---- root: PIN -> privacy gate -> family grid (wrapped in .pv-root) ----
+export default function KioskScreen({ client, centerName = '' }: { client: KioskClient; isDemo?: boolean; centerName?: string }) {
   const [activeFamily, setActiveFamily] = useState<KioskFamily | null>(null);
   const [pendingFamily, setPendingFamily] = useState<KioskFamily | null>(null);
   const [declined, setDeclined] = useState(false);
 
-  // MN DCYF gate: a family must have a CURRENT privacy-notice agreement before
-  // check-in. If not, show the notice; they cannot reach the grid until they agree.
   async function handlePinSuccess(family: KioskFamily) {
     const current = await client.getPrivacyAttestationStatus(family.id);
     if (current) setActiveFamily(family);
     else setPendingFamily(family);
   }
 
-  if (declined) return <SeeStaffScreen onDone={() => setDeclined(false)} />;
-
-  if (pendingFamily) {
-    const name = primaryLastName(pendingFamily.parents) || pendingFamily.children[0]?.name || 'Family';
-    return (
+  let body: React.ReactNode;
+  if (declined) {
+    body = <SeeStaffScreen onDone={() => setDeclined(false)} />;
+  } else if (pendingFamily) {
+    const name = familyLabel(pendingFamily);
+    body = (
       <PrivacyNotice
         familyName={name}
         onAgree={async () => {
@@ -413,11 +356,12 @@ export default function KioskScreen({
         }}
       />
     );
+  } else if (activeFamily) {
+    body = <FamilyScreen client={client} family={activeFamily} onDone={() => setActiveFamily(null)} />;
+  } else {
+    body = <PinScreen client={client} centerName={centerName} onSuccess={handlePinSuccess} />;
   }
 
-  return activeFamily ? (
-    <FamilyScreen client={client} family={activeFamily} onDone={() => setActiveFamily(null)} />
-  ) : (
-    <PinScreen client={client} centerName={centerName} onSuccess={handlePinSuccess} />
-  );
+  // .pv-root makes the portal design tokens (--pv-*) resolve outside /preview.
+  return <div className="pv-root">{body}</div>;
 }
