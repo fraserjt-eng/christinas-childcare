@@ -123,6 +123,18 @@ async function existingPins() {
   return new Set((data || []).map((r) => String(r.pin)));
 }
 
+// pin -> owning family id, for the hard collision guard below. There is NO DB
+// unique constraint on families.pin, so this is the only thing preventing two
+// families from sharing a login if a stale/pre-generated assignments file is
+// reused against a different database than it was generated for.
+async function existingPinOwners() {
+  const { data, error } = await supa.from('families').select('id, pin').not('pin', 'is', null).limit(10000);
+  if (error) throw new Error('reading existing pin owners: ' + error.message);
+  const m = new Map();
+  for (const r of data || []) if (r.pin != null && !m.has(String(r.pin))) m.set(String(r.pin), r.id);
+  return m;
+}
+
 async function resolveCenter() {
   const { data, error } = await supa.from('centers').select('id, name').ilike('name', `${CENTER_NAME}%`).limit(5);
   if (error) throw new Error('reading centers: ' + error.message);
@@ -255,6 +267,24 @@ ${tableRows}
 
   const { csvPath, htmlPath } = writeDeliverables(assign.rows, center.name);
   console.log(`PIN list written: ${htmlPath}\n               + ${csvPath}`);
+
+  // Hard PIN-collision guard — ALWAYS, against the LIVE target db, even when the
+  // assignments file is reused. A pin already owned by a DIFFERENT family (not one
+  // of ours) would let two families share a kiosk login. No DB unique constraint
+  // exists, so this guard is the enforcement. (gate Blocker C)
+  const ownerByPin = await existingPinOwners();
+  const ourIds = new Set(assign.rows.map((r) => r.family_id)); // upsert keys on family_id
+  const collisions = assign.rows.filter((r) => {
+    const owner = ownerByPin.get(String(r.pin));
+    return owner && !ourIds.has(owner);
+  });
+  if (collisions.length) {
+    console.error(`\nABORT: ${collisions.length} PIN(s) already used by OTHER families on ${dbRef}:`);
+    collisions.slice(0, 10).forEach((r) => console.error(`  ${r.name} pin ${r.pin} -> already owned by family ${ownerByPin.get(String(r.pin))}`));
+    console.error('Delete the stale assignments file (forces regeneration against this db) or resolve manually. NO writes were performed.');
+    process.exit(1);
+  }
+  console.log(`PIN collision check: clean — ${assign.rows.length} pins, none owned by another family on ${dbRef}.`);
 
   if (CHECK) {
     console.log('\nCHECK only — no database writes. Re-run with --apply to insert.\n');

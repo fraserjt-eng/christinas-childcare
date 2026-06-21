@@ -1,3 +1,10 @@
+-- TRANSACTIONAL + RE-RUNNABLE bundle (fixed per cutover gate, 2026-06-21).
+-- Wrapped in BEGIN/COMMIT: a partway failure rolls back clean. Every policy
+-- is DROP-guarded so a re-run cannot abort on 'policy already exists'. The BP
+-- backfill aborts safely if the canonical center id is missing on prod.
+
+BEGIN;
+
 -- Monday cutover bundle: migrations 030-043. Apply to prod (dkzxcxwjhhxqfgksynjb)
 -- in order, ONLY at cutover, on J's go. All additive + idempotent.
 
@@ -59,9 +66,19 @@ UPDATE public.child_daily_entries e
 -- a center-bound kiosk can never resolve a family or attendance row that has no
 -- center). No-op where the classroom backfill already covered everything (the
 -- seeded test DB). Brooklyn Park = 3104ae69-4f26-4c1e-a767-3ff45b534860.
-UPDATE public.family_children   SET center_id = '3104ae69-4f26-4c1e-a767-3ff45b534860' WHERE center_id IS NULL;
-UPDATE public.families          SET center_id = '3104ae69-4f26-4c1e-a767-3ff45b534860' WHERE center_id IS NULL;
-UPDATE public.child_daily_entries SET center_id = '3104ae69-4f26-4c1e-a767-3ff45b534860' WHERE center_id IS NULL;
+DO $$
+BEGIN
+  -- Fail SAFE: if prod's Brooklyn Park center is not this canonical id (the
+  -- app's OPERATING_CENTER_ID), abort the WHOLE bundle BEFORE backfilling so
+  -- no real Brooklyn Park row is stamped with a phantom center it cannot
+  -- resolve. The transaction wrapper rolls everything back on this abort.
+  IF NOT EXISTS (SELECT 1 FROM public.centers WHERE id = '3104ae69-4f26-4c1e-a767-3ff45b534860') THEN
+    RAISE EXCEPTION 'STOP: Brooklyn Park center 3104ae69-4f26-4c1e-a767-3ff45b534860 not found in public.centers. Run: SELECT id, name FROM public.centers; If prod BP has a different id, re-point this bundle AND src/lib/current-center.ts before applying. Nothing was changed.';
+  END IF;
+  UPDATE public.family_children     SET center_id = '3104ae69-4f26-4c1e-a767-3ff45b534860' WHERE center_id IS NULL;
+  UPDATE public.families            SET center_id = '3104ae69-4f26-4c1e-a767-3ff45b534860' WHERE center_id IS NULL;
+  UPDATE public.child_daily_entries SET center_id = '3104ae69-4f26-4c1e-a767-3ff45b534860' WHERE center_id IS NULL;
+END $$;
 
 -- ===== 20260619_031_supplies.sql =====
 -- Migration 031: supply & inventory module → Supabase table
@@ -93,8 +110,10 @@ ALTER TABLE public.supplies ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies consistent with the existing dual-write pattern
 -- (the dual-write uses the anon client)
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.supplies;
 CREATE POLICY "Allow all for authenticated" ON public.supplies
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.supplies;
 CREATE POLICY "Allow all for anon" ON public.supplies
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
@@ -127,8 +146,10 @@ ALTER TABLE public.authorizations ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies consistent with the existing dual-write pattern
 -- (the dual-write uses the anon client)
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.authorizations;
 CREATE POLICY "Allow all for authenticated" ON public.authorizations
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.authorizations;
 CREATE POLICY "Allow all for anon" ON public.authorizations
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
@@ -165,8 +186,10 @@ ALTER TABLE public.cacfp_records ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies consistent with the existing dual-write pattern
 -- (the dual-write uses the anon client)
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.cacfp_records;
 CREATE POLICY "Allow all for authenticated" ON public.cacfp_records
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.cacfp_records;
 CREATE POLICY "Allow all for anon" ON public.cacfp_records
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
@@ -203,8 +226,10 @@ ALTER TABLE public.comms ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies consistent with the existing dual-write pattern
 -- (the dual-write uses the anon client)
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.comms;
 CREATE POLICY "Allow all for authenticated" ON public.comms
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.comms;
 CREATE POLICY "Allow all for anon" ON public.comms
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
@@ -240,8 +265,10 @@ ALTER TABLE public.knowledge ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies consistent with the existing dual-write pattern
 -- (the dual-write uses the anon client)
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.knowledge;
 CREATE POLICY "Allow all for authenticated" ON public.knowledge
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.knowledge;
 CREATE POLICY "Allow all for anon" ON public.knowledge
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
@@ -274,8 +301,10 @@ ALTER TABLE public.lessons ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies consistent with the existing dual-write pattern
 -- (the dual-write uses the anon client)
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.lessons;
 CREATE POLICY "Allow all for authenticated" ON public.lessons
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.lessons;
 CREATE POLICY "Allow all for anon" ON public.lessons
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
@@ -312,8 +341,10 @@ ALTER TABLE public.meetings ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies consistent with the existing dual-write pattern
 -- (the dual-write uses the anon client)
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.meetings;
 CREATE POLICY "Allow all for authenticated" ON public.meetings
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.meetings;
 CREATE POLICY "Allow all for anon" ON public.meetings
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
@@ -348,8 +379,10 @@ ALTER TABLE public.notification_prefs ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies consistent with the existing dual-write pattern
 -- (the dual-write uses the anon client)
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.notification_prefs;
 CREATE POLICY "Allow all for authenticated" ON public.notification_prefs
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.notification_prefs;
 CREATE POLICY "Allow all for anon" ON public.notification_prefs
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
@@ -385,8 +418,10 @@ ALTER TABLE public.onboarding ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies consistent with the existing dual-write pattern
 -- (the dual-write uses the anon client)
+DROP POLICY IF EXISTS "Allow all for authenticated" ON public.onboarding;
 CREATE POLICY "Allow all for authenticated" ON public.onboarding
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow all for anon" ON public.onboarding;
 CREATE POLICY "Allow all for anon" ON public.onboarding
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
@@ -455,6 +490,7 @@ ALTER TABLE public.dashboard_layout ENABLE ROW LEVEL SECURITY;
 -- Permissive anon policy only. The browser dual-write runs as the `anon`
 -- publishable key (src/lib/supabase/service.ts). The `authenticated` role is
 -- never used in this app, so it gets no policy (see migration 040).
+DROP POLICY IF EXISTS "Allow all for anon" ON public.dashboard_layout;
 CREATE POLICY "Allow all for anon" ON public.dashboard_layout
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
@@ -493,6 +529,7 @@ DROP POLICY IF EXISTS "Allow all for authenticated" ON public.sub_assignments;
 -- user-storage) still reaches them.
 DROP POLICY IF EXISTS "Allow all for anon" ON public.app_settings;
 DROP POLICY IF EXISTS "Allow all for authenticated" ON public.app_settings;
+DROP POLICY IF EXISTS "anon non-sensitive settings" ON public.app_settings;
 CREATE POLICY "anon non-sensitive settings" ON public.app_settings
   FOR ALL TO anon
   USING (key NOT IN ('app_users', 'security_settings'))
@@ -534,3 +571,4 @@ ALTER TABLE public.kiosk_attestations ENABLE ROW LEVEL SECURITY;
 COMMENT ON TABLE public.kiosk_attestations IS
 'MN DCYF attestations: family privacy-notice agreements (kiosk gate) and provider import-attendance accuracy attestations. Service-role only.';
 
+COMMIT;
