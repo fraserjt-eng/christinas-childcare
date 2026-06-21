@@ -49,7 +49,7 @@ export function HeaderCenterSwitcher() {
   if (!user) return null;
 
   const role = (user.role || '').toLowerCase();
-  const isCrossCenter = role === 'owner' || role === 'superadmin' || !user.center_id;
+  const isCrossCenter = role === 'owner' || role === 'superadmin';
 
   // A center-bound admin: name the center, no switching.
   if (!isCrossCenter) {

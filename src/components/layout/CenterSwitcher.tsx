@@ -37,7 +37,7 @@ export function CenterSwitcher() {
   if (!user) return null;
 
   const role = (user.role || '').toLowerCase();
-  const isCrossCenter = role === 'owner' || role === 'superadmin' || !user.center_id;
+  const isCrossCenter = role === 'owner' || role === 'superadmin';
 
   // A center-bound admin only ever sees their own center: show it, no switcher.
   if (!isCrossCenter) {

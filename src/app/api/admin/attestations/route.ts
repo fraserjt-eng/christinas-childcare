@@ -15,7 +15,7 @@ function deriveCenterId(
 ): string | null {
   const role = (session.user.role || '').toLowerCase();
   const sessionCenter = session.user.center_id ?? null;
-  const isCrossCenter = role === 'owner' || role === 'superadmin' || !sessionCenter;
+  const isCrossCenter = role === 'owner' || role === 'superadmin';
   const picked =
     request.cookies.get('cc_center')?.value ||
     request.nextUrl.searchParams.get('center') ||

@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   // trusted from a center-bound caller, so PINs cannot leak across centers.
   const role = (session.user.role || '').toLowerCase();
   const isCrossCenter =
-    role === 'owner' || role === 'superadmin' || !session.user.center_id;
+    role === 'owner' || role === 'superadmin';
   const sessionCenter = session.user.center_id ?? null;
   const picked =
     request.cookies.get('cc_center')?.value ||

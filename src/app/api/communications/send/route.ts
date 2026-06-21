@@ -33,7 +33,7 @@ function deriveCenterId(request: NextRequest, session: AuthedSession): string | 
   const sessionCenter = session.user.center_id ?? null;
   // Only a cross-center director (owner/superadmin, or no home center) may pick a
   // center; a center-bound admin/teacher is locked to their own center.
-  const isCrossCenter = role === 'owner' || role === 'superadmin' || !sessionCenter;
+  const isCrossCenter = role === 'owner' || role === 'superadmin';
   const picked =
     request.cookies.get('cc_center')?.value ||
     request.nextUrl.searchParams.get('center') ||

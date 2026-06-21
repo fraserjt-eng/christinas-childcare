@@ -17,7 +17,7 @@ const RED = 'FFC62828', YELLOW = 'FFFFD54F', CREAM = 'FFFAF6F0', GREY = 'FF6B728
 
 function scopeCenters(request: NextRequest, session: AuthedSession): string[] | null {
   const role = (session.user.role || '').toLowerCase();
-  const isCrossCenter = role === 'owner' || role === 'superadmin' || !session.user.center_id;
+  const isCrossCenter = role === 'owner' || role === 'superadmin';
   if (!isCrossCenter) return [session.user.center_id as string];
   const combined = request.cookies.get('cc_view')?.value === 'combined';
   if (combined) return null; // all centers
