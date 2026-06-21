@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       supabase.from('employees').select('id, first_name, last_name, role, classroom_id, employment_status').eq('center_id', centerId).limit(5000),
       supabase.from('families').select('id, email, copay_default_amount').eq('center_id', centerId).limit(5000),
       supabase.from('family_parents').select('family_id, name, phone, relationship, is_primary').limit(5000),
-      supabase.from('attendance').select('child_id, check_in, check_out').eq('center_id', centerId).eq('date', today).limit(5000),
+      supabase.from('attendance').select('id, child_id, child_name, check_in, check_out').eq('center_id', centerId).eq('date', today).limit(5000),
       supabase.from('time_entries').select('employee_id, clock_in, clock_out').eq('center_id', centerId).eq('date', today).limit(5000),
       supabase.from('child_daily_entries').select('id, child_id, classroom_id, type, detail, occurred_at').eq('center_id', centerId).order('occurred_at', { ascending: false }).limit(200),
       supabase.from('staff_schedules').select('id, employee_id, date, start_time, end_time, classroom_id').eq('center_id', centerId).gte('date', weekStart).lte('date', weekEnd).limit(5000),
@@ -118,6 +118,10 @@ export async function GET(request: NextRequest) {
     return {
       id: r.id as string,
       name: r.name as string,
+      // The licensing age-group slug (infant/toddler/preschool/school_age).
+      // The admin ratio monitor buckets children by this; it is additive and
+      // ignored by the preview hydrator, which reads only id/name/emoji/etc.
+      ageGroup: (r.age_group as string) ?? '',
       emoji: style.emoji,
       color: style.color,
       capacity: (r.capacity as number) ?? 10,
@@ -209,6 +213,16 @@ export async function GET(request: NextRequest) {
     if (!cid) continue;
     checkedIn[cid] = a.check_out ? null : displayTime(a.check_in as string | null);
   }
+  // Raw today-attendance rows (with their db ids + ISO times) so the admin
+  // attendance page can drive check-out / edit / delete actions by id. The
+  // preview hydrator ignores this key.
+  const todayAttendance = (attRes.data ?? []).map((a) => ({
+    id: a.id as string,
+    child_id: (a.child_id as string | null) ?? null,
+    child_name: (a.child_name as string | null) ?? null,
+    check_in: (a.check_in as string | null) ?? null,
+    check_out: (a.check_out as string | null) ?? null,
+  }));
   const clockedIn: Record<string, string | null> = {};
   for (const t of teRes.data ?? []) {
     const eid = t.employee_id as string;
@@ -257,7 +271,7 @@ export async function GET(request: NextRequest) {
   const centerName = centers.find((c) => c.id === centerId)?.name ?? null;
 
   return NextResponse.json(
-    { centerId, centerName, centers, rooms, kids, staff, families, checkedIn, clockedIn, feed, shifts },
+    { centerId, centerName, centers, rooms, kids, staff, families, checkedIn, clockedIn, todayAttendance, feed, shifts },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }

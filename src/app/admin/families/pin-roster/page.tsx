@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Printer, RefreshCw, LayoutList, IdCard } from 'lucide-react';
+import { Printer, RefreshCw, LayoutList, IdCard, Download } from 'lucide-react';
 
 interface PinRosterRow {
   center: string;
@@ -188,6 +188,13 @@ export default function PinRosterPage() {
           </div>
           <Button variant="outline" onClick={load} disabled={loading}>
             <RefreshCw className="mr-1.5 h-4 w-4" /> Refresh
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => window.open('/api/admin/family-directory/export', '_blank')}
+            title="Download a branded spreadsheet (current center, or all centers in Combined view)"
+          >
+            <Download className="mr-1.5 h-4 w-4" /> Spreadsheet
           </Button>
           <Button
             onClick={() => window.print()}

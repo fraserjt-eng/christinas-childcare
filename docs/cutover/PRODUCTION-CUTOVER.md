@@ -66,16 +66,26 @@ SELECT count(*) FROM public.families WHERE center_id IS NULL;   -- expect 0
 Run the Supabase security advisor on prod — expect zero errors (matches test).
 
 ## STEP 4 — Import the Crystal roster (J, with prod creds)
-```bash
-SUPA_URL=https://dkzxcxwjhhxqfgksynjb.supabase.co \
-SUPA_SERVICE_ROLE=<prod service_role key> \
-node scripts/import-crystal-roster.mjs --check     # confirms 0 PIN collisions
-# then, only if --check is clean:
-SUPA_URL=… SUPA_SERVICE_ROLE=… node scripts/import-crystal-roster.mjs --apply
+Use **`scripts/import-crystal-families.mjs`** — it upserts Crystal under the
+app's canonical center id `b2000000-0000-0000-0000-000000000002`. Do NOT use
+`import-crystal-roster.mjs`; it creates Crystal with a random UUID that will not
+match the app's expected center id.
+
+Put the prod creds in `.env.prod.local` (the `--prod` flag reads that file):
 ```
-The importer aborts if any of the 66 PINs is already used by a live BP family.
-It regenerates the printable PIN list (`~/Desktop/crystal-kiosk-pins.html`) —
-print THAT (the prod copy), not an earlier one.
+SUPA_URL=https://dkzxcxwjhhxqfgksynjb.supabase.co
+SUPA_SERVICE_ROLE=<prod service_role key>
+```
+Then:
+```bash
+node scripts/import-crystal-families.mjs --prod            # --check is the default: read-only, prints the plan + 0 PIN collisions
+# then, only if the check is clean:
+node scripts/import-crystal-families.mjs --prod --apply
+```
+The importer aborts if any family PIN is already used by another family on the
+target DB. It regenerates the printable PIN list
+(`~/Desktop/crystal-family-pins.html`) — print THAT (the prod copy), not an
+earlier one.
 
 ## STEP 5 — Confirm prod env on Vercel (J, dashboard) — BEFORE the merge
 On the `christinas-childcare` Vercel project, paste-compare exactly:

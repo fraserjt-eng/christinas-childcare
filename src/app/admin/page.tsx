@@ -385,29 +385,27 @@ export default function AdminDashboard() {
     const ratioOk = (children: number, staff: number) =>
       children === 0 ? true : staff >= Math.ceil(children / 4);
 
-    // Children present right now: real, not-checked-out attendance, scoped to
-    // this admin's center (cross-center owner/superadmin: all centers).
+    // Children present right now: real, not-checked-out attendance. Read through
+    // the session-gated service-role route (the anon client cannot read the
+    // PII-locked attendance table). The route center-scopes server-side from the
+    // session, so a center-bound admin only ever sees their own center.
     async function fetchAttendance() {
       try {
-        const { supabase } = await import('@/lib/supabase');
-        const today = new Date().toISOString().split('T')[0];
-        let attQuery = supabase
-          .from('attendance')
-          .select('id, child_name, check_in, check_out')
-          .eq('date', today);
-        if (centerId) attQuery = attQuery.eq('center_id', centerId);
-        const { data } = await attQuery;
-        if (data) {
-          const checkedIn = data.filter((r: { check_out: string | null }) => !r.check_out).length;
-          setSnapshot((prev) => ({
-            ...prev,
-            childrenPresent: checkedIn,
-            totalEnrolled: Math.max(prev.totalEnrolled, checkedIn),
-            ratioCompliant: ratioOk(checkedIn, prev.staffOnDuty),
-          }));
-        }
+        const r = await fetch('/api/portal/center-data', { cache: 'no-store' });
+        if (!r.ok) return; // 401/403 (no session) or unavailable: keep last known
+        const d = await r.json();
+        // checkedIn maps child_id -> time string when present, null when checked
+        // out. Not-checked-out count = number of non-null values.
+        const checkedInMap = (d.checkedIn ?? {}) as Record<string, string | null>;
+        const checkedIn = Object.values(checkedInMap).filter((v) => v !== null).length;
+        setSnapshot((prev) => ({
+          ...prev,
+          childrenPresent: checkedIn,
+          totalEnrolled: Math.max(prev.totalEnrolled, checkedIn),
+          ratioCompliant: ratioOk(checkedIn, prev.staffOnDuty),
+        }));
       } catch {
-        // Supabase not available, keep last known values
+        // Route not available, keep last known values
       }
     }
 
@@ -510,8 +508,9 @@ export default function AdminDashboard() {
         // localStorage read failure must not crash the dashboard
       }
     });
-    // Re-run once the session resolves so the center-scoped attendance read
-    // uses the right center (null -> center, or stays null for superadmin).
+    // Re-run once the session resolves (and if the session's center changes) so
+    // the attendance read reflects the right center. Center scoping itself is
+    // enforced server-side by /api/portal/center-data from the session.
   }, [centerId, sessionLoading]);
 
   // Filter alerts by current zone

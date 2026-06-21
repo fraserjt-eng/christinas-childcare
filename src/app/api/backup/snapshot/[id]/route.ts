@@ -16,7 +16,7 @@ function unauthorized() {
 
 async function loadSnapshotByIdOrPath(id: string) {
   const supabase = getServerSupabase();
-  if (!supabase) return { error: 'Supabase service role not configured.' as const };
+  if (!supabase) return { error: 'Backup is not available.' as const };
 
   // Look up metadata first; the id might be a uuid OR a legacy filename.
   let storagePath = id;
@@ -28,7 +28,9 @@ async function loadSnapshotByIdOrPath(id: string) {
       .eq('id', id)
       .single();
     if (error || !data) {
-      return { error: `Snapshot not found: ${error?.message ?? 'no row'}` };
+      // Log internals server-side; return a generic message only.
+      if (error) console.error('snapshot metadata lookup failed:', error.message);
+      return { error: 'Snapshot not found.' };
     }
     storagePath = data.storage_path;
   }
@@ -38,7 +40,8 @@ async function loadSnapshotByIdOrPath(id: string) {
     .download(storagePath);
 
   if (dlError || !blob) {
-    return { error: `Download failed: ${dlError?.message ?? 'no data'}` };
+    if (dlError) console.error('snapshot download failed:', dlError.message);
+    return { error: 'Backup operation failed. Check logs.' };
   }
 
   const text = await blob.text();
@@ -46,7 +49,8 @@ async function loadSnapshotByIdOrPath(id: string) {
   try {
     envelope = JSON.parse(text) as SnapshotEnvelope;
   } catch (e) {
-    return { error: `Snapshot JSON is malformed: ${(e as Error).message}` };
+    console.error('snapshot JSON parse failed:', (e as Error).message);
+    return { error: 'Backup operation failed. Check logs.' };
   }
 
   return { envelope, storagePath, supabase };
@@ -85,7 +89,7 @@ export async function DELETE(
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json(
-      { ok: false, error: 'Supabase service role not configured.' },
+      { ok: false, error: 'Backup is not available.' },
       { status: 503 }
     );
   }
@@ -104,8 +108,9 @@ export async function DELETE(
       .eq('id', decodedId)
       .single();
     if (error || !data) {
+      if (error) console.error('snapshot delete lookup failed:', error.message);
       return NextResponse.json(
-        { ok: false, error: `Snapshot not found: ${error?.message ?? 'no row'}` },
+        { ok: false, error: 'Snapshot not found.' },
         { status: 404 }
       );
     }
@@ -118,8 +123,9 @@ export async function DELETE(
     .remove([storagePath]);
 
   if (rmError) {
+    console.error('snapshot storage delete failed:', rmError.message);
     return NextResponse.json(
-      { ok: false, error: `Storage delete failed: ${rmError.message}` },
+      { ok: false, error: 'Backup operation failed. Check logs.' },
       { status: 500 }
     );
   }

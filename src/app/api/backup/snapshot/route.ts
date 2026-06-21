@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
         .select('*')
         .limit(10000);
       if (error) {
+        // Collect internals for the server log only; never return them.
         tableErrors.push({ table: spec.name, error: error.message });
         return;
       }
@@ -108,12 +109,13 @@ export async function POST(req: NextRequest) {
     });
 
   if (uploadError) {
+    // Log internals server-side; the client gets a generic message only.
+    console.error('backup snapshot upload failed:', uploadError.message);
+    if (tableErrors.length > 0) {
+      console.error('backup snapshot partial dump errors:', tableErrors);
+    }
     return NextResponse.json(
-      {
-        ok: false,
-        error: `Storage upload failed: ${uploadError.message}`,
-        partialDumpErrors: tableErrors,
-      },
+      { ok: false, error: 'Backup operation failed. Check logs.' },
       { status: 500 }
     );
   }
@@ -140,6 +142,12 @@ export async function POST(req: NextRequest) {
     console.error('backup_snapshots metadata write failed:', metaError.message);
   }
 
+  // The snapshot succeeded even if some tables errored; log any partial-dump
+  // internals server-side rather than returning them to the client.
+  if (tableErrors.length > 0) {
+    console.error('backup snapshot partial dump errors:', tableErrors);
+  }
+
   return NextResponse.json({
     ok: true,
     snapshot: {
@@ -152,7 +160,6 @@ export async function POST(req: NextRequest) {
       table_row_count: envelope.meta.table_row_count,
       tables_included: envelope.meta.tables_included,
     },
-    partialDumpErrors: tableErrors.length > 0 ? tableErrors : undefined,
   });
 }
 

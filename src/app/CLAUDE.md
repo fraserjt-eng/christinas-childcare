@@ -151,7 +151,7 @@ christina-coral: #FF7043 (alerts, destructive)
 4. **`authenticateFamily` returns `{ family, pending }`** not `FamilyAccount | null`. Destructure the result.
 5. **ENFILE during local builds:** Too many parallel processes. Just deploy with `vercel --prod` instead.
 6. **Kiosk uses Supabase directly.** No localStorage. Any kiosk feature must query/write Supabase, not storage modules.
-7. **Anon key works for kiosk queries.** RLS policies allow anon SELECT on families and INSERT/UPDATE on attendance.
+7. **PII tables are service-role-only.** `families`, `family_children`, `attendance`, `employees` and the other PII tables deny the anon key (RLS). Read them only through the session-gated service-role routes (`/api/store` or `/api/portal/center-data`); never re-open anon SELECT on them.
 
 ## Video Pipeline (March 29, 2026)
 

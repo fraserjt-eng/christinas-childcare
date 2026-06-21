@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useSessionUser } from '@/lib/use-session-user';
 
 // Minnesota licensing ratios
@@ -27,53 +26,56 @@ interface ClassroomData {
 }
 
 export default function RatiosPage() {
-  // The center to scope to. A center-bound admin sees only their center; the
-  // cross-center owner/superadmin (no employee center) sees all centers.
-  const { user, loading: sessionLoading } = useSessionUser();
-  const centerId = user?.center_id ?? null;
+  // Center scoping is enforced server-side by /api/portal/center-data from the
+  // session, so this page no longer needs the center id client-side. We still
+  // wait for the session to load before calling the route.
+  const { loading: sessionLoading } = useSessionUser();
   const [classrooms, setClassrooms] = useState<ClassroomData[]>([]);
   const [staffOnDuty, setStaffOnDuty] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
-    // Wait for the session so we know which center to scope to. A center-bound
-    // admin must never even briefly count another center's children.
+    // Wait for the session so we know we have one before calling the route.
     if (sessionLoading) return;
-    const today = new Date().toISOString().split('T')[0];
 
-    // Get today's checked-in children (not checked out), scoped to this
-    // admin's center (cross-center owner/superadmin: all centers).
-    let attQuery = supabase
-      .from('attendance')
-      .select('child_id, child_name')
-      .eq('date', today)
-      .is('check_out', null);
-    if (centerId) attQuery = attQuery.eq('center_id', centerId);
-    const { data: attendance } = await attQuery;
-
-    // Get children with their classrooms, scoped to the same center.
-    let childQuery = supabase
-      .from('family_children')
-      .select('id, classroom');
-    if (centerId) childQuery = childQuery.eq('center_id', centerId);
-    const { data: children } = await childQuery;
-
-    // Build classroom lookup
-    const childClassroom = new Map<string, string>();
-    if (children) {
-      for (const c of children) {
-        childClassroom.set(c.id, c.classroom || 'unassigned');
+    // Read the PII-locked attendance + family_children through the session-gated
+    // service-role route (the anon client cannot read them). The route
+    // center-scopes server-side from the session, so a center-bound admin only
+    // ever counts their own center's children.
+    let kids: Array<{ id: string; roomId: string }> = [];
+    let rooms: Array<{ id: string; ageGroup: string }> = [];
+    let checkedInMap: Record<string, string | null> = {};
+    try {
+      const r = await fetch('/api/portal/center-data', { cache: 'no-store' });
+      if (r.ok) {
+        const d = await r.json();
+        kids = (d.kids ?? []) as Array<{ id: string; roomId: string }>;
+        rooms = (d.rooms ?? []) as Array<{ id: string; ageGroup: string }>;
+        checkedInMap = (d.checkedIn ?? {}) as Record<string, string | null>;
       }
+    } catch {
+      // Route unavailable: fall through with empty data (no anon fallback).
     }
 
-    // Count present children per classroom
+    // roomId (classroom_id) -> licensing age-group slug used by CLASSROOM_CONFIG.
+    const roomAgeGroup = new Map<string, string>();
+    for (const room of rooms) {
+      roomAgeGroup.set(room.id, room.ageGroup || 'unassigned');
+    }
+    // childId -> its classroom age-group slug.
+    const childClassroom = new Map<string, string>();
+    for (const k of kids) {
+      childClassroom.set(k.id, roomAgeGroup.get(k.roomId) || 'unassigned');
+    }
+
+    // Count present children per classroom. Present = checked in, not checked
+    // out (checkedIn maps child_id -> time string when present, null when out).
     const presentByClassroom = new Map<string, number>();
-    if (attendance) {
-      for (const a of attendance) {
-        const cls = childClassroom.get(a.child_id) || 'unassigned';
-        presentByClassroom.set(cls, (presentByClassroom.get(cls) || 0) + 1);
-      }
+    for (const [childId, time] of Object.entries(checkedInMap)) {
+      if (time === null) continue; // checked out
+      const cls = childClassroom.get(childId) || 'unassigned';
+      presentByClassroom.set(cls, (presentByClassroom.get(cls) || 0) + 1);
     }
 
     // Build classroom data. requiredStaff is the licensing minimum for the
@@ -106,7 +108,7 @@ export default function RatiosPage() {
 
     setClassrooms(data);
     setLoading(false);
-  }, [centerId, sessionLoading]);
+  }, [sessionLoading]);
 
   useEffect(() => {
     loadData();

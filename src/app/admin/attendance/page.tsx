@@ -18,6 +18,10 @@ import { LogIn, LogOut, RefreshCw, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase';
 import { useSessionUser } from '@/lib/use-session-user';
 
+// The check-in / check-out writes below still use the anon `supabase` client
+// (those paths are allowed). The PII-locked READS (family_children + attendance)
+// are read through the session-gated service-role route /api/portal/center-data.
+
 // ISO <-> <input type="datetime-local"> (browser local time).
 function isoToLocal(iso: string | null): string {
   if (!iso) return '';
@@ -32,17 +36,6 @@ function localToIso(local: string): string | null {
   if (!local) return null;
   const d = new Date(local);
   return isNaN(d.getTime()) ? null : d.toISOString();
-}
-
-interface AttendanceRecord {
-  id: string;
-  child_name: string;
-  child_id: string;
-  date: string;
-  check_in: string | null;
-  check_out: string | null;
-  center_id: string;
-  notes: string | null;
 }
 
 interface ChildWithAttendance {
@@ -78,41 +71,56 @@ export default function AttendancePage() {
   const [editError, setEditError] = useState('');
 
   const loadData = useCallback(async () => {
-    // Wait for the session so we know which center to scope to. A center-bound
-    // admin must never even briefly see another center's children.
+    // Wait for the session so we have one before calling the route.
     if (sessionLoading) return;
-    const today = new Date().toISOString().split('T')[0];
 
-    // Children for this admin's center (cross-center owner/superadmin: all).
-    let childQuery = supabase
-      .from('family_children')
-      .select('id, name, classroom, family_id');
-    if (centerId) childQuery = childQuery.eq('center_id', centerId);
-    const { data: children, error: childErr } = await childQuery;
-    if (childErr) console.error('Children fetch error:', childErr.message);
-
-    // Today's attendance, scoped to the same center.
-    let attQuery = supabase
-      .from('attendance')
-      .select('id, child_id, child_name, check_in, check_out, notes')
-      .eq('date', today);
-    if (centerId) attQuery = attQuery.eq('center_id', centerId);
-    const { data: attendance } = await attQuery;
-
-    const attendanceMap = new Map<string, AttendanceRecord>();
-    if (attendance) {
-      for (const a of attendance) {
-        attendanceMap.set(a.child_id, a as AttendanceRecord);
+    // Read the PII-locked family_children + today's attendance through the
+    // session-gated service-role route (the anon client cannot read them). The
+    // route center-scopes server-side from the session, so a center-bound admin
+    // only ever sees their own center; never fall back to the anon client here.
+    type RouteKid = { id: string; firstName: string; lastName: string; roomId: string };
+    type RouteRoom = { id: string; name: string };
+    type RouteAtt = {
+      id: string;
+      child_id: string | null;
+      child_name: string | null;
+      check_in: string | null;
+      check_out: string | null;
+    };
+    let kids: RouteKid[] = [];
+    let rooms: RouteRoom[] = [];
+    let attendance: RouteAtt[] = [];
+    try {
+      const r = await fetch('/api/portal/center-data', { cache: 'no-store' });
+      if (r.ok) {
+        const d = await r.json();
+        kids = (d.kids ?? []) as RouteKid[];
+        rooms = (d.rooms ?? []) as RouteRoom[];
+        attendance = (d.todayAttendance ?? []) as RouteAtt[];
+      } else {
+        console.error('center-data read failed:', r.status);
       }
+    } catch {
+      // Route unavailable: fall through with empty data (no anon fallback).
     }
 
-    // Merge children with attendance
-    const merged: ChildWithAttendance[] = (children || []).map((c: { id: string; name: string; classroom: string | null }) => {
-      const att = attendanceMap.get(c.id);
+    // roomId (classroom_id) -> display name for the classroom column.
+    const roomName = new Map<string, string>();
+    for (const room of rooms) roomName.set(room.id, room.name);
+
+    const attendanceMap = new Map<string, RouteAtt>();
+    for (const a of attendance) {
+      if (a.child_id) attendanceMap.set(a.child_id, a);
+    }
+
+    // Merge children with attendance.
+    const merged: ChildWithAttendance[] = kids.map((c) => {
+      const att = c.id ? attendanceMap.get(c.id) : undefined;
+      const fullName = `${c.firstName} ${c.lastName}`.trim();
       return {
         child_id: c.id,
-        child_name: c.name,
-        classroom: c.classroom || 'Unassigned',
+        child_name: fullName,
+        classroom: (c.roomId && roomName.get(c.roomId)) || 'Unassigned',
         check_in: att?.check_in || null,
         check_out: att?.check_out || null,
         attendance_id: att?.id || null,
@@ -120,18 +128,17 @@ export default function AttendancePage() {
     });
 
     // Also include any attendance records for children not in family_children (legacy data)
-    if (attendance) {
-      for (const a of attendance) {
-        if (!merged.find((m) => m.child_id === a.child_id)) {
-          merged.push({
-            child_id: a.child_id,
-            child_name: a.child_name || 'Unknown',
-            classroom: '',
-            check_in: a.check_in,
-            check_out: a.check_out,
-            attendance_id: a.id,
-          });
-        }
+    for (const a of attendance) {
+      if (!a.child_id) continue;
+      if (!merged.find((m) => m.child_id === a.child_id)) {
+        merged.push({
+          child_id: a.child_id,
+          child_name: a.child_name || 'Unknown',
+          classroom: '',
+          check_in: a.check_in,
+          check_out: a.check_out,
+          attendance_id: a.id,
+        });
       }
     }
 
@@ -144,7 +151,7 @@ export default function AttendancePage() {
 
     setRecords(merged);
     setLoading(false);
-  }, [centerId, sessionLoading]);
+  }, [sessionLoading]);
 
   useEffect(() => {
     loadData();
