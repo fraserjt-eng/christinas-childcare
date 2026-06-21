@@ -47,8 +47,18 @@ export default function AdminLoginPage() {
         }
         const data = await res.json();
         const role = (data.user?.role || '').toLowerCase();
-        if (ADMIN_ROLES.includes(role)) {
+        const centerId = data.user?.center_id as string | undefined;
+        if (role === 'superadmin') {
+          // Cross-center owner: straight to the back office.
           router.push('/admin');
+        } else if (role === 'admin' || role === 'owner') {
+          // A site owner/admin: open THEIR office, scoped to their own center
+          // (not the cross-center admin view). The office has an Admin link.
+          if (centerId) {
+            document.cookie = `cc_center=${centerId}; path=/; max-age=86400; samesite=lax`;
+            document.cookie = 'cc_view=single; path=/; max-age=86400; samesite=lax';
+          }
+          router.push('/preview/office');
         } else {
           setPinError('That PIN is a staff PIN, not an admin PIN. Use the Staff portal.');
           setLoading(false);

@@ -42,9 +42,15 @@ export default function EmployeeLoginPage() {
       }
 
       const data = await res.json();
-      const role = data.user?.role;
-      // Into the new front-facing portal. /admin stays the deep backend.
-      router.push(role === 'admin' || role === 'superadmin' ? '/preview/office' : '/preview/room');
+      const role = (data.user?.role || '').toLowerCase();
+      const centerId = data.user?.center_id as string | undefined;
+      // Scope the session to the signer's OWN center so they see their site.
+      if (centerId) {
+        document.cookie = `cc_center=${centerId}; path=/; max-age=86400; samesite=lax`;
+        document.cookie = 'cc_view=single; path=/; max-age=86400; samesite=lax';
+      }
+      // Teachers to the room; owners/admins to their own office.
+      router.push(role === 'teacher' ? '/preview/room' : '/preview/office');
     } catch {
       setPinError('Connection error. Please try again.');
       setLoading(false);

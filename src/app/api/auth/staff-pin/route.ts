@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { mintSessionResponse } from '@/lib/mint-session';
+import { SUPERADMIN_EMAILS } from '@/lib/auth-allowlist';
 
 /**
  * Staff PIN sign-in, rebuilt securely.
@@ -64,11 +65,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid PIN' }, { status: 401 });
   }
 
+  // Effective role: the configured owner email is the cross-center superadmin;
+  // a site owner/admin/director is a center 'admin'; everyone else is staff.
+  // Returning the TRUE role (not collapsing owner -> admin for everyone) lets
+  // the login route open the right door: the superadmin's back office vs a site
+  // owner's own office.
+  const email = (employee.email || '').toLowerCase().trim();
   const empRole = (employee.role as string)?.toLowerCase() || 'teacher';
   const role =
-    empRole === 'admin' || empRole === 'owner' || empRole === 'director'
-      ? 'admin'
-      : 'teacher';
+    email && SUPERADMIN_EMAILS.includes(email)
+      ? 'superadmin'
+      : empRole === 'admin' || empRole === 'owner' || empRole === 'director'
+        ? 'admin'
+        : 'teacher';
 
   return mintSessionResponse({
     id: employee.id,
