@@ -15,7 +15,7 @@
 import ExcelJS from 'exceljs';
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { createHash, randomInt } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -90,10 +90,13 @@ for (const f of famRows ?? []) {
   existingPinById.set(f.id, f.pin ? String(f.pin) : null);
 }
 
+const _ASC = '0123456789', _DESC = '9876543210';
+const _WEAK = new Set(['1234', '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999', '1212', '2121', '1010', '0101', '2020', '4321', '2580', '6969', '1004', '2000']);
+const isWeakPin = (p) => !/^\d{4}$/.test(p) || /^(\d)\1{3}$/.test(p) || _ASC.includes(p) || _DESC.includes(p) || _WEAK.has(p);
 function freshPin(used) {
-  for (let i = 0; i < 20000; i++) {
-    const p = String(Math.floor(1000 + (Math.abs(Math.sin(i + used.size * 7.13)) * 9000))).slice(0, 4);
-    if (p.length === 4 && !used.has(p)) { used.add(p); return p; }
+  for (let i = 0; i < 100000; i++) {
+    const p = String(randomInt(1000, 10000));
+    if (!isWeakPin(p) && !used.has(p)) { used.add(p); return p; }
   }
   throw new Error('could not allocate a unique PIN');
 }

@@ -38,7 +38,9 @@ export async function GET(request: NextRequest) {
   // a non-admin can only ever see their own records
   const ownUser = (requested: string | null) => (admin && requested ? requested : session.user.id);
 
-  const adminOps = new Set(['allProgress', 'allKnowledgeChecks', 'allGateAssessments']);
+  // gateOverrides carries free-text HR/competency reasons per staff member -> admin-only.
+  // (unitUnlocks is non-PII global unlock state the staff training pages need, so it stays teacher-readable.)
+  const adminOps = new Set(['allProgress', 'allKnowledgeChecks', 'allGateAssessments', 'gateOverrides']);
   if (adminOps.has(op) && !admin) return fail('Forbidden', 403);
 
   try {
