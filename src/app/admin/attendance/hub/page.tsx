@@ -23,6 +23,10 @@ import {
   Send,
   ShieldCheck,
   AlertTriangle,
+  Baby,
+  Clock,
+  ClipboardCheck,
+  Sun,
 } from 'lucide-react';
 import { centerDate, shiftCenterDate } from '@/lib/center-time';
 import { recentCycles } from '@/lib/attendance-cycles';
@@ -342,20 +346,21 @@ export default function AttendanceHubPage() {
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : summary ? (
             <>
-              {/* totals */}
+              {/* totals — colored stat hubs (matches the back-office dashboard) */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  ['Children', summary.totals.uniqueChildren],
-                  ['Child-days', summary.totals.childDays],
-                  ['Hours', summary.totals.hours],
-                  ['Days open', summary.totals.daysOpen],
-                ].map(([label, val]) => (
-                  <Card key={label as string}>
-                    <CardContent className="p-4">
-                      <p className="text-2xl font-bold text-christina-red">{val as number}</p>
-                      <p className="text-xs text-muted-foreground">{label as string}</p>
-                    </CardContent>
-                  </Card>
+                  { label: 'Children', value: summary.totals.uniqueChildren, Icon: Baby, badge: 'bg-blue-100 text-blue-600', num: 'text-blue-600' },
+                  { label: 'Child-days', value: summary.totals.childDays, Icon: ClipboardCheck, badge: 'bg-emerald-100 text-emerald-600', num: 'text-emerald-600' },
+                  { label: 'Hours', value: summary.totals.hours, Icon: Clock, badge: 'bg-amber-100 text-amber-600', num: 'text-amber-600' },
+                  { label: 'Days open', value: summary.totals.daysOpen, Icon: Sun, badge: 'bg-purple-100 text-purple-600', num: 'text-purple-600' },
+                ].map(({ label, value, Icon, badge, num }) => (
+                  <div key={label} className="flex flex-col items-center gap-1.5 rounded-2xl border bg-white p-4 text-center">
+                    <span className={`flex h-11 w-11 items-center justify-center rounded-full ${badge}`}>
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <p className={`text-2xl font-bold ${num}`}>{value}</p>
+                    <p className="text-xs font-medium text-gray-600">{label}</p>
+                  </div>
                 ))}
               </div>
 
