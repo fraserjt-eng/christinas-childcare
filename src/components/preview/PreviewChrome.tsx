@@ -1,18 +1,22 @@
 "use client";
 
-// Persistent chrome for every signed-in portal screen: the brand bar, the
+// Persistent chrome for every signed-in portal screen: the brand bar, an Admin
+// link for owner/admin sessions (the escape hatch into the back office), the
 // sound toggle, and sign-out. Also rehydrates the persisted store exactly once
 // after mount so the server render and the first client paint always match.
 
 import { usePathname } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick, setSoundEnabled } from "@/lib/preview/sound";
+
+const ADMIN_ROLES = ["admin", "owner", "superadmin"];
 
 export function PreviewChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const soundOn = usePreviewStore((s) => s.soundOn);
   const toggleSound = usePreviewStore((s) => s.toggleSound);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const result = usePreviewStore.persist.rehydrate();
@@ -24,16 +28,31 @@ export function PreviewChrome({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Read the session role so owners/admins get a link into /admin from the
+  // front-facing portal (so the admin back office is always one tap away).
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/auth/session", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && d?.user?.role) setIsAdmin(ADMIN_ROLES.includes(String(d.user.role).toLowerCase()));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   async function handleSignOut() {
     playClick();
-    // Clear the real server session cookie, not just client state, so Sign Out
-    // actually signs out. Hard-navigate to the login (matches DashboardLayout).
+    // Clear the real server session cookie, not just client state. Send everyone
+    // to the access page (the four-door home), not the parent login.
     try {
       await fetch("/api/auth/session", { method: "DELETE" });
     } catch {
       /* best effort; redirect regardless */
     }
-    window.location.href = "/login";
+    window.location.href = "/start";
   }
 
   return (
@@ -44,6 +63,15 @@ export function PreviewChrome({ children }: { children: ReactNode }) {
             Christina&apos;s Child Care Center
           </span>
           <span className="ml-auto flex items-center gap-2">
+            {isAdmin && (
+              <a
+                href="/admin"
+                className="pv-target rounded-lg px-3 py-1.5 text-sm font-bold"
+                style={{ backgroundColor: "rgba(0,0,0,0.28)" }}
+              >
+                🗂️ Admin
+              </a>
+            )}
             <button
               type="button"
               onClick={() => {

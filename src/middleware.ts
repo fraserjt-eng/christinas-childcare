@@ -136,6 +136,7 @@ export async function middleware(request: NextRequest) {
     if (
       pathname.startsWith('/api/kiosk') ||
       pathname.startsWith('/api/auth/staff-pin') ||
+      pathname.startsWith('/api/auth/parent-pin') ||
       pathname.startsWith('/api/employee/') ||
       pathname.startsWith('/api/parent/') ||
       pathname.startsWith('/api/staff/') ||
