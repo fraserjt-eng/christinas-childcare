@@ -41,3 +41,6 @@ next-env.d.ts
 *kiosk-pins*
 Attendance2026*
 *.roster.json
+
+# prod cutover creds (one-time, never commit)
+.env.prod.local
