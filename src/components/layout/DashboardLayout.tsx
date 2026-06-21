@@ -23,6 +23,7 @@ import { useSessionUser, initialsFrom, roleLabel, type SessionUser } from '@/lib
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { PortalSwitcher } from '@/components/layout/PortalSwitcher';
 import { CenterSwitcher } from '@/components/layout/CenterSwitcher';
+import { HeaderCenterSwitcher } from '@/components/layout/HeaderCenterSwitcher';
 import { ReportIssueButton } from '@/components/support/ReportIssueButton';
 import { HelpdeskNavBadge } from '@/components/support/HelpdeskNavBadge';
 import { useRole } from '@/hooks/useRole';
@@ -459,20 +460,23 @@ export function DashboardLayout({ children, isAdmin = false, isEmployee = false 
         />
       </aside>
       <div className="flex-1 flex flex-col min-h-0">
-        <header className="bg-white border-b px-4 py-3 flex items-center justify-between lg:justify-end">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild className="lg:hidden">
-              <Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
-              <SidebarContent
-                isAdmin={isAdmin}
-                isEmployee={isEmployee}
-                sessionUser={sessionUser}
-                onLogout={(isEmployee || !isAdmin) ? handleLogout : undefined}
-              />
-            </SheetContent>
-          </Sheet>
+        <header className="bg-white border-b px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild className="lg:hidden">
+                <Button variant="ghost" size="icon"><Menu className="h-5 w-5" /></Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <SidebarContent
+                  isAdmin={isAdmin}
+                  isEmployee={isEmployee}
+                  sessionUser={sessionUser}
+                  onLogout={(isEmployee || !isAdmin) ? handleLogout : undefined}
+                />
+              </SheetContent>
+            </Sheet>
+            {isAdmin && <HeaderCenterSwitcher />}
+          </div>
           <div className="flex items-center gap-2">
             <PortalSwitcher isAdmin={isAdmin} isEmployee={isEmployee} />
             <ReportIssueButton />
