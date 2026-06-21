@@ -173,8 +173,8 @@ async function pullData(
         case 'staff_schedules': {
           const { data } = await supabase
             .from('staff_schedules')
-            .select('employee_id,shift_date,shift_start,shift_end')
-            .gte('shift_date', cutoffIso.split('T')[0])
+            .select('employee_id,date,start_time,end_time')
+            .gte('date', cutoffIso.split('T')[0])
             .limit(2000);
           raw.staff_schedules = data || [];
           summaryParts.push(`${lookbackDays}d schedules: ${data?.length || 0} shifts`);

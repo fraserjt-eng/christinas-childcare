@@ -13,9 +13,9 @@ interface StaffScheduleRow {
   id: string;
   employee_id: string;
   employee_name?: string;
-  shift_date: string;
-  shift_start: string;
-  shift_end: string;
+  date: string;
+  start_time: string;
+  end_time: string;
   role?: string;
 }
 
@@ -55,7 +55,7 @@ export function NextDayPrep() {
       try {
         if (isSupabaseConfigured) {
           const staffData = await supabaseSelect<StaffScheduleRow>('staff_schedules', {
-            filters: { shift_date: tomorrow },
+            filters: { date: tomorrow },
           });
           if (staffData) setStaff(staffData);
 
