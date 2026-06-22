@@ -34,6 +34,7 @@ export async function GET() {
     .from('daily_photos')
     .select('id, photo_url, caption, created_at, classroom_name, activity_type, child_ids')
     .overlaps('child_ids', childIds)
+    .eq('status', 'approved') // families see a photo only AFTER Christina approves it
     .order('created_at', { ascending: false })
     .limit(5000);
 
