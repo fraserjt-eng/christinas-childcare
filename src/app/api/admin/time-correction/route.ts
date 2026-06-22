@@ -28,7 +28,13 @@ export async function POST(request: NextRequest) {
   }
   // A center-bound admin may only correct rows in their own center. The
   // cross-center owner/superadmin (null center) may correct any row.
-  const centerId = session.user.center_id ?? null;
+  const role = (session.user.role || '').toLowerCase();
+  const myCenter = session.user.center_id ?? null;
+  // Owner/superadmin (or a no-home-center session) may correct/delete any
+  // center's row, matching the read + check-in routes; a center-bound admin
+  // stays scoped. Setting centerId=null for cross-center skips the filter below.
+  const crossCenter = !myCenter || role === 'owner' || role === 'superadmin';
+  const centerId = crossCenter ? null : myCenter;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
@@ -183,7 +189,13 @@ export async function DELETE(request: NextRequest) {
   }
   // A center-bound admin may only delete rows in their own center. The
   // cross-center owner/superadmin (null center) may delete any row.
-  const centerId = session.user.center_id ?? null;
+  const role = (session.user.role || '').toLowerCase();
+  const myCenter = session.user.center_id ?? null;
+  // Owner/superadmin (or a no-home-center session) may correct/delete any
+  // center's row, matching the read + check-in routes; a center-bound admin
+  // stays scoped. Setting centerId=null for cross-center skips the filter below.
+  const crossCenter = !myCenter || role === 'owner' || role === 'superadmin';
+  const centerId = crossCenter ? null : myCenter;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
