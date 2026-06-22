@@ -455,10 +455,13 @@ export default function OfficePage() {
                   <p className="mt-3 text-base font-semibold" style={{ color: "var(--pv-muted)" }}>Every button is already on your screen.</p>
                 )}
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <div
+                className="sticky bottom-3 z-20 flex flex-col gap-3 rounded-2xl border p-3 shadow-lg sm:flex-row"
+                style={{ borderColor: "var(--pv-line)", backgroundColor: "rgba(255,255,255,0.96)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }}
+              >
                 <BigButton
                   icon={Check}
-                  label={saving ? "Saving..." : "Save my screen"}
+                  label={saving ? "Saving..." : "Save my screen & go back"}
                   color="var(--pv-teal)"
                   disabled={saving}
                   onClick={saveAndExit}
