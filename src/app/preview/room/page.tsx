@@ -74,6 +74,41 @@ const MEAL_CHIPS = ["Ate all", "Ate some", "Just a little"];
 const BOTTLE_CHIPS = ["2 oz", "4 oz", "6 oz", "8 oz, finished it"];
 const DIAPER_CHIPS = ["Wet", "BM", "Dry, checked"];
 const NAP_CHIPS = ["Just fell asleep", "Woke up happy", "Short rest"];
+const ACTIVITY_CHIPS = [
+  "Circle time",
+  "Outdoor play",
+  "Art & craft",
+  "Music & movement",
+  "Story time",
+  "Sensory play",
+  "Free play",
+  "Blocks",
+];
+const BOTTLE_TYPES = ["Breast milk", "Formula", "Water"];
+
+// Format a 24h time value ("13:05") as a friendly clock time ("1:05 PM").
+function fmtTime(t: string): string {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (!m) return t;
+  const h = Number(m[1]);
+  const ap = h >= 12 ? "PM" : "AM";
+  const h12 = ((h + 11) % 12) + 1;
+  return `${h12}:${m[2]} ${ap}`;
+}
+// The structured nap / bottle controls just build the human-readable note
+// string; storage stays {note: string} so the family feed renders it unchanged.
+function buildNap(start: string, end: string): string {
+  if (start && end) return `Slept ${fmtTime(start)} to ${fmtTime(end)}`;
+  if (start) return `Fell asleep ${fmtTime(start)}`;
+  if (end) return `Woke up ${fmtTime(end)}`;
+  return "";
+}
+function buildBottle(oz: string, type: string): string {
+  const parts: string[] = [];
+  if (oz) parts.push(`${oz} oz`);
+  if (type) parts.push(type.toLowerCase());
+  return parts.join(" ");
+}
 
 const STANDARD_ACTIONS: RoomAction[] = [
   {
@@ -101,7 +136,7 @@ const STANDARD_ACTIONS: RoomAction[] = [
     color: "var(--pv-gold)",
     panelTitle: "Log an activity",
     defaultDetail: "Outdoor play and big blocks",
-    quickChips: [],
+    quickChips: ACTIVITY_CHIPS,
   },
   {
     kind: "photo",
@@ -169,7 +204,7 @@ const INFANT_ACTIONS: RoomAction[] = [
     color: "var(--pv-coral)",
     panelTitle: "Log an activity",
     defaultDetail: "Tummy time and rattles",
-    quickChips: [],
+    quickChips: ACTIVITY_CHIPS,
   },
   {
     kind: "photo",
@@ -206,6 +241,12 @@ export default function RoomPage() {
   const [roomId, setRoomId] = useState("toddlers");
   const [activeKind, setActiveKind] = useState<ActionKind | null>(null);
   const [detail, setDetail] = useState("");
+  // Structured helpers for nap (start/end time) and bottle (oz + type). They
+  // only build the detail string above; nothing new is stored.
+  const [napStart, setNapStart] = useState("");
+  const [napEnd, setNapEnd] = useState("");
+  const [bottleOz, setBottleOz] = useState("");
+  const [bottleType, setBottleType] = useState("");
   const [selectedKidIds, setSelectedKidIds] = useState<string[]>([]);
   const [photoId, setPhotoId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -265,7 +306,13 @@ export default function RoomPage() {
 
   function openAction(action: RoomAction) {
     setActiveKind(action.kind);
-    setDetail(action.defaultDetail);
+    // Nap and bottle start blank so the structured pickers drive the note;
+    // everything else keeps its friendly default.
+    setDetail(action.kind === "nap" || action.kind === "bottle" ? "" : action.defaultDetail);
+    setNapStart("");
+    setNapEnd("");
+    setBottleOz("");
+    setBottleType("");
     setSelectedKidIds(presentKids.map((k) => k.id));
     setPhotoId(null);
     setUploadedUrl(null);
@@ -434,6 +481,76 @@ export default function RoomPage() {
                   ))}
                 </div>
               </>
+            ) : null}
+
+            {activeAction.kind === "nap" ? (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <label className="block text-sm font-bold" style={{ color: "var(--pv-ink)" }}>
+                  Fell asleep
+                  <input
+                    type="time"
+                    value={napStart}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNapStart(v);
+                      setDetail(buildNap(v, napEnd));
+                    }}
+                    className="mt-1 w-full rounded-lg border px-3 py-3 text-lg"
+                    style={{ borderColor: "var(--pv-line)", color: "var(--pv-ink)", backgroundColor: "var(--pv-card)" }}
+                  />
+                </label>
+                <label className="block text-sm font-bold" style={{ color: "var(--pv-ink)" }}>
+                  Woke up
+                  <input
+                    type="time"
+                    value={napEnd}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNapEnd(v);
+                      setDetail(buildNap(napStart, v));
+                    }}
+                    className="mt-1 w-full rounded-lg border px-3 py-3 text-lg"
+                    style={{ borderColor: "var(--pv-line)", color: "var(--pv-ink)", backgroundColor: "var(--pv-card)" }}
+                  />
+                </label>
+              </div>
+            ) : null}
+
+            {activeAction.kind === "bottle" ? (
+              <div className="mt-4">
+                <label className="block text-sm font-bold" style={{ color: "var(--pv-ink)" }}>
+                  How many ounces
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    inputMode="decimal"
+                    value={bottleOz}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setBottleOz(v);
+                      setDetail(buildBottle(v, bottleType));
+                    }}
+                    className="mt-1 block w-28 rounded-lg border px-3 py-3 text-lg"
+                    style={{ borderColor: "var(--pv-line)", color: "var(--pv-ink)", backgroundColor: "var(--pv-card)" }}
+                  />
+                </label>
+                <p className="mt-3 text-sm font-bold" style={{ color: "var(--pv-ink)" }}>What was in it</p>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {BOTTLE_TYPES.map((t) => (
+                    <Chip
+                      key={t}
+                      label={t}
+                      on={bottleType === t}
+                      onColor={activeAction.color}
+                      onClick={() => {
+                        setBottleType(t);
+                        setDetail(buildBottle(bottleOz, t));
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
             ) : null}
 
             <label htmlFor="room-log-detail" className="mt-4 block text-base font-bold">
