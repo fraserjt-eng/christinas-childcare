@@ -15,12 +15,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LogIn, LogOut, RefreshCw, Pencil, Trash2, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useSessionUser } from '@/lib/use-session-user';
 
-// The check-in / check-out writes below still use the anon `supabase` client
-// (those paths are allowed). The PII-locked READS (family_children + attendance)
-// are read through the session-gated service-role route /api/portal/center-data.
+// All reads + writes go through session-gated service-role routes: reads via
+// /api/portal/center-data, writes via /api/admin/attendance/checkin and
+// /api/admin/time-correction. The anon client can't reach the RLS-locked
+// attendance table, so nothing here touches it directly.
 
 // ISO <-> <input type="datetime-local"> (browser local time).
 function isoToLocal(iso: string | null): string {
@@ -47,19 +47,14 @@ interface ChildWithAttendance {
   attendance_id: string | null;
 }
 
-// The single operating center (Brooklyn Park). Id retained from the original
-// seed record, renamed from "Crystal Center" once the business consolidated.
-const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
-
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 export default function AttendancePage() {
-  // The center to scope to. A center-bound admin sees only their center; the
-  // cross-center owner/superadmin (no employee center) sees all centers.
-  const { user, loading: sessionLoading } = useSessionUser();
-  const centerId = user?.center_id ?? null;
+  // Center scoping is enforced server-side by /api/portal/center-data + the
+  // check-in route, based on the session.
+  const { loading: sessionLoading } = useSessionUser();
   const [records, setRecords] = useState<ChildWithAttendance[]>([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -156,24 +151,10 @@ export default function AttendancePage() {
   useEffect(() => {
     loadData();
 
-    // Keep the page live so a kiosk check-in shows up without a manual reload.
-    // Three layers, because a phone left open is the real-world case:
-    //  1. realtime — instant update when the attendance table changes
-    //  2. refetch on focus/visibility — phones drop the socket when the screen
-    //     sleeps, so re-pull the moment the tab comes back to the foreground
-    //  3. slow interval poll — backstop if realtime never connects on mobile
-    let unsubscribe: (() => void) | undefined;
-    (async () => {
-      try {
-        const { subscribeToTable } = await import('@/lib/supabase/realtime');
-        unsubscribe = subscribeToTable('attendance', () => {
-          loadData();
-        });
-      } catch {
-        /* realtime optional; focus + poll still keep it fresh */
-      }
-    })();
-
+    // Keep the page live without a manual reload. The anon client can't subscribe
+    // to the RLS-locked attendance table, so we refetch on focus/visibility (phones
+    // drop the socket when the screen sleeps) plus a slow interval poll — both pull
+    // through the service-role route.
     const onVisible = () => {
       if (document.visibilityState === 'visible') loadData();
     };
@@ -183,7 +164,6 @@ export default function AttendancePage() {
     const poll = setInterval(loadData, 60000);
 
     return () => {
-      if (unsubscribe) unsubscribe();
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onVisible);
       clearInterval(poll);
@@ -197,23 +177,22 @@ export default function AttendancePage() {
   }
 
   async function handleCheckIn(child: ChildWithAttendance) {
-    const today = new Date().toISOString().split('T')[0];
-    await supabase.from('attendance').insert({
-      child_id: child.child_id,
-      child_name: child.child_name,
-      date: today,
-      check_in: new Date().toISOString(),
-      center_id: centerId ?? OPERATING_CENTER_ID,
+    // attendance is RLS-locked to anon; write through the service-role route
+    await fetch('/api/admin/attendance/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'checkin', childId: child.child_id }),
     });
     await loadData();
   }
 
   async function handleCheckOut(child: ChildWithAttendance) {
     if (!child.attendance_id) return;
-    await supabase
-      .from('attendance')
-      .update({ check_out: new Date().toISOString() })
-      .eq('id', child.attendance_id);
+    await fetch('/api/admin/attendance/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'checkout', attendanceId: child.attendance_id }),
+    });
     await loadData();
   }
 
