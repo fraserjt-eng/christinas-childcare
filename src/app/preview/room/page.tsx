@@ -7,6 +7,7 @@
 // actions carry quick-detail chips that fill the detail box in one tap.
 
 import { useState } from "react";
+import { BackHome } from "@/components/preview/BackHome";
 import {
   Apple,
   Baby,
@@ -318,6 +319,7 @@ export default function RoomPage() {
   return (
     <main className="pv-tad pv-portal-bg min-h-[100dvh] px-4 py-6">
       <div className="mx-auto max-w-3xl">
+        <BackHome />
         <header className="mb-6">
           <h1 className="pv-tad-title text-3xl sm:text-4xl">Room log</h1>
           <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>

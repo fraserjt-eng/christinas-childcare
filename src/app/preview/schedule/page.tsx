@@ -7,6 +7,7 @@
 // out by accident.
 
 import { useState } from "react";
+import { BackHome } from "@/components/preview/BackHome";
 import {
   Backpack,
   Baby,
@@ -174,6 +175,7 @@ export default function SchedulePage() {
   return (
     <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
       <div className="mx-auto max-w-4xl">
+        <BackHome />
         <header className="mb-6">
           <h1 className="pv-tad-title text-3xl sm:text-4xl">The week</h1>
           <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>

@@ -9,6 +9,7 @@ import { Armchair, Check, ShieldAlert } from "lucide-react";
 import { Chip, EmptyState, useMounted } from "@/components/preview/ui";
 import { PhotoAvatar } from "@/components/preview/PhotoAvatar";
 import { AvatarUpload } from "@/components/preview/AvatarUpload";
+import { BackHome } from "@/components/preview/BackHome";
 import { type MealMark } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 
@@ -58,6 +59,7 @@ export default function MealsPage() {
   return (
     <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
       <div className="mx-auto max-w-2xl">
+        <BackHome />
         {/* Branded header: the real screen title (center identity now lives in
             the global watermark behind the content). */}
         <header className="pv-rise mb-6">

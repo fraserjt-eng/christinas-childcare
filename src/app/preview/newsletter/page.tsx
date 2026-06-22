@@ -6,7 +6,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Camera, Check, type LucideIcon, Pin, Plus, Send, Sun } from "lucide-react";
-import { Card, Chip, ScreenHeader, StepNote, SuccessBanner, useMounted } from "@/components/preview/ui";
+import { Card, Chip, StepNote, SuccessBanner, useMounted } from "@/components/preview/ui";
+import { BackHome } from "@/components/preview/BackHome";
 import { DEMO_PHOTOS } from "@/lib/preview/fixtures";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
@@ -24,10 +25,13 @@ export default function NewsletterPage() {
   return (
     <main className="px-4 py-6">
       <div className="mx-auto max-w-2xl">
-        <ScreenHeader
-          title="Newsletter Monday"
-          note="Three blocks to fill. The design is never your job."
-        />
+        <BackHome />
+        <header className="mb-6">
+          <h1 className="pv-tad-title text-3xl sm:text-4xl">Newsletter Monday</h1>
+          <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
+            Three blocks to fill. The design is never your job.
+          </p>
+        </header>
         <StepNote step={8} text="Type in any block, then flip to see what families get." />
 
         <div className="pv-rise mb-6 flex flex-wrap gap-3" style={{ animationDelay: "60ms" }}>
