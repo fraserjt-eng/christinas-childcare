@@ -258,9 +258,14 @@ export default function RoomPage() {
   const roomKids = kids.filter((k) => k.roomId === roomId);
   const presentKids = mounted ? roomKids.filter((k) => checkedIn[k.id]) : [];
   const awayKids = mounted ? roomKids.filter((k) => !checkedIn[k.id]) : roomKids;
-  const actions = roomId === "infants" ? INFANT_ACTIONS : STANDARD_ACTIONS;
-  const activeAction = actions.find((a) => a.kind === activeKind) ?? null;
   const activeRoom = rooms.find((r) => r.id === roomId) ?? null;
+  // Infant rooms get Bottle + Diaper. Match by the room name so the real
+  // "Infant Room (Sunshine)" works, not just the fixture id "infants".
+  const isInfantRoom = activeRoom
+    ? /infant|baby|nursery/i.test(activeRoom.name)
+    : roomId === "infants";
+  const actions = isInfantRoom ? INFANT_ACTIONS : STANDARD_ACTIONS;
+  const activeAction = actions.find((a) => a.kind === activeKind) ?? null;
   const todaysLog = mounted
     ? feed.filter(
         (e) =>

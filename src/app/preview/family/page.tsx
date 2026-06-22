@@ -488,8 +488,11 @@ function KidCard({
         />
       </div>
 
+      <p className="mt-4 text-sm font-bold uppercase tracking-wide" style={{ color: "var(--pv-muted)" }}>
+        Today&apos;s report
+      </p>
       {today.length > 0 ? (
-        <div className="mt-4 flex flex-col gap-2">
+        <div className="mt-2 flex flex-col gap-2">
           {today.map((e) => {
             const look = KIND_LOOK[e.kind];
             const demo = photoById(e.photoId);
@@ -1165,8 +1168,11 @@ function RealKidCard({
         </span>
       </div>
 
+      <p className="mt-4 text-sm font-bold uppercase tracking-wide" style={{ color: "var(--pv-muted)" }}>
+        Today&apos;s report
+      </p>
       {today.length > 0 ? (
-        <div className="mt-4 flex flex-col gap-2">
+        <div className="mt-2 flex flex-col gap-2">
           {today.map((e) => {
             const look = KIND_LOOK[e.kind];
             return (
@@ -1196,9 +1202,13 @@ function RealKidCard({
           })}
         </div>
       ) : (
-        <p className="mt-4 text-base" style={{ color: "var(--pv-muted)" }}>
-          {here ? "Nothing logged yet today. Check back soon." : "Their day starts once they are dropped off."}
-        </p>
+        <div className="mt-2 rounded-lg border border-dashed p-4" style={{ borderColor: "var(--pv-line)" }}>
+          <p className="text-sm" style={{ color: "var(--pv-muted)" }}>
+            {here
+              ? `Naps, meals, bottles, activities, and photos will show here as the teachers log ${firstName}'s day.`
+              : `Once ${firstName} is dropped off, naps, meals, bottles, activities, and photos will show here.`}
+          </p>
+        </div>
       )}
     </div>
   );

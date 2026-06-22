@@ -178,21 +178,32 @@ export default function AttendancePage() {
 
   async function handleCheckIn(child: ChildWithAttendance) {
     // attendance is RLS-locked to anon; write through the service-role route
+    let data: { id?: string } = {};
     try {
       const r = await fetch('/api/admin/attendance/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'checkin', childId: child.child_id }),
       });
+      data = await r.json().catch(() => ({}));
       if (!r.ok) {
-        const d = await r.json().catch(() => ({}));
-        window.alert(d.error || 'Could not check this child in. Please try again.');
+        window.alert((data as { error?: string }).error || 'Could not check this child in. Please try again.');
         return;
       }
     } catch {
       window.alert('Could not check this child in. Please try again.');
       return;
     }
+    // Reflect the check-in immediately (the re-read below confirms it), so the
+    // row never looks like "nothing happened" even if the refresh is slow.
+    const now = new Date().toISOString();
+    setRecords((prev) =>
+      prev.map((rec) =>
+        rec.child_id === child.child_id
+          ? { ...rec, check_in: now, check_out: null, attendance_id: data.id ?? rec.attendance_id }
+          : rec
+      )
+    );
     await loadData();
   }
 
@@ -213,6 +224,12 @@ export default function AttendancePage() {
       window.alert('Could not check this child out. Please try again.');
       return;
     }
+    const now = new Date().toISOString();
+    setRecords((prev) =>
+      prev.map((rec) =>
+        rec.attendance_id === child.attendance_id ? { ...rec, check_out: now } : rec
+      )
+    );
     await loadData();
   }
 

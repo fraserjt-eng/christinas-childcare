@@ -24,12 +24,14 @@ export async function POST(request: NextRequest) {
   let body: { action?: string; childId?: string; attendanceId?: string };
   try { body = await request.json(); } catch { return fail('Invalid body', 400); }
 
-  // Center scope: mirror the attendance/time-correction route exactly so this
-  // route works for the SAME sessions that can already edit/delete attendance.
-  // A null-center session (owner/superadmin, and the cross-center admin) may
-  // touch any center; a center-bound staffer is limited to their own center.
+  // Center scope: an owner/superadmin (or a session with no home center) is
+  // cross-center and may check a child in/out at ANY center — this matches the
+  // read side (/api/portal/center-data), so an owner who can SEE Crystal can
+  // also act there. A center-bound teacher/admin is limited to their own center.
+  const role = (session.user.role || '').toLowerCase();
   const myCenter = session.user.center_id ?? null;
-  const canTouch = (centerId: string | null) => !myCenter || centerId === myCenter;
+  const crossCenter = !myCenter || role === 'owner' || role === 'superadmin';
+  const canTouch = (centerId: string | null) => crossCenter || centerId === myCenter;
 
   const now = new Date().toISOString();
   const today = now.slice(0, 10);
