@@ -54,10 +54,14 @@ function CenterPicker() {
 function KioskInner() {
   const params = useSearchParams();
   const center = params.get('center') || undefined;
+  // When a signed-in parent reaches the kiosk from their family page, the link
+  // carries ?from=portal so we skip the lobby framing and send them back to
+  // their portal after they finish (instead of resetting to a blank pad).
+  const fromPortal = params.get('from') === 'portal';
   const client = useMemo(() => (center ? makeLiveKioskClient(center) : null), [center]);
   const centerName = CENTERS.find((c) => c.id === center)?.name || '';
   if (!center || !client) return <CenterPicker />;
-  return <KioskScreen client={client} centerName={centerName} />;
+  return <KioskScreen client={client} centerName={centerName} fromPortal={fromPortal} />;
 }
 
 export default function KioskPage() {

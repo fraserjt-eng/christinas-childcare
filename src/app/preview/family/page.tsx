@@ -1022,7 +1022,7 @@ function RealParentHome({ user }: { user: SessionUser }) {
             ) : null}
           </div>
           <Link
-            href="/kiosk"
+            href={user.center_id ? `/kiosk?center=${user.center_id}&from=portal` : "/kiosk"}
             onClick={() => playClick()}
             className="pv-tile pv-target mt-3 flex items-center gap-2 p-3 text-base font-bold"
             style={{ color: "var(--pv-teal)" }}

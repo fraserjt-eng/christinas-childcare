@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Backpack,
   Baby,
@@ -325,10 +326,14 @@ function FamilyScreen({ client, family, onDone }: { client: KioskClient; family:
 }
 
 // ---- root: PIN -> privacy gate -> family grid (wrapped in .pv-root) ----
-export default function KioskScreen({ client, centerName = '' }: { client: KioskClient; isDemo?: boolean; centerName?: string }) {
+export default function KioskScreen({ client, centerName = '', fromPortal = false }: { client: KioskClient; isDemo?: boolean; centerName?: string; fromPortal?: boolean }) {
+  const router = useRouter();
   const [activeFamily, setActiveFamily] = useState<KioskFamily | null>(null);
   const [pendingFamily, setPendingFamily] = useState<KioskFamily | null>(null);
   const [declined, setDeclined] = useState(false);
+  // A parent who came from their own family page goes back there when finished;
+  // the shared lobby iPad instead resets to a blank pad for the next family.
+  const closeFamily = fromPortal ? () => router.push('/preview/family') : () => setActiveFamily(null);
 
   async function handlePinSuccess(family: KioskFamily) {
     const current = await client.getPrivacyAttestationStatus(family.id);
@@ -357,11 +362,26 @@ export default function KioskScreen({ client, centerName = '' }: { client: Kiosk
       />
     );
   } else if (activeFamily) {
-    body = <FamilyScreen client={client} family={activeFamily} onDone={() => setActiveFamily(null)} />;
+    body = <FamilyScreen client={client} family={activeFamily} onDone={closeFamily} />;
   } else {
     body = <PinScreen client={client} centerName={centerName} onSuccess={handlePinSuccess} />;
   }
 
   // .pv-root makes the portal design tokens (--pv-*) resolve outside /preview.
-  return <div className="pv-root">{body}</div>;
+  return (
+    <div className="pv-root">
+      {fromPortal ? (
+        <div className="pv-portal-bg px-4 pt-4">
+          <Link
+            href="/preview/family"
+            className="pv-press inline-flex items-center gap-1 text-sm font-bold"
+            style={{ color: 'var(--pv-muted)' }}
+          >
+            ← Back to my family page
+          </Link>
+        </div>
+      ) : null}
+      {body}
+    </div>
+  );
 }
