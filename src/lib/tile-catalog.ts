@@ -73,6 +73,36 @@ export const TILE_CATALOG: TileCatalogEntry[] = [
     icon: "ClipboardCheck",
     kind: "admin",
   },
+  // Staff/classroom tools, so an owner can step into a room and do exactly what
+  // the teachers do (sub coverage). Owners already pass the teacher-level auth
+  // gates; these tiles just surface the tools on the owner's office screen.
+  {
+    id: "room-log",
+    label: "Room log",
+    description: "Log naps, meals, and activities",
+    href: "/preview/room",
+    group: "Daily",
+    icon: "ClipboardList",
+    kind: "portal",
+  },
+  {
+    id: "clock",
+    label: "Clock in / out",
+    description: "Start or end a shift on the floor",
+    href: "/employee",
+    group: "Daily",
+    icon: "Clock",
+    kind: "portal",
+  },
+  {
+    id: "meal-count",
+    label: "Meal count",
+    description: "Tap who ate at the table",
+    href: "/employee/meal-count",
+    group: "Daily",
+    icon: "UtensilsCrossed",
+    kind: "portal",
+  },
   {
     id: "tasks",
     label: "Tasks",
