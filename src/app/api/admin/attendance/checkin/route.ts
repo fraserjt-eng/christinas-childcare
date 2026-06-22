@@ -10,6 +10,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { centerDate } from '@/lib/center-time';
 
 function fail(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -34,7 +35,11 @@ export async function POST(request: NextRequest) {
   const canTouch = (centerId: string | null) => crossCenter || centerId === myCenter;
 
   const now = new Date().toISOString();
-  const today = now.slice(0, 10);
+  // The attendance DATE must be the center's business day (America/Chicago), not
+  // UTC — the kiosk, the dashboard, and the parent feed all read by centerDate().
+  // Stamping UTC here wrote evening check-ins under tomorrow's date, so they
+  // "flashed then vanished" (saved, but invisible to the center-local read).
+  const today = centerDate();
 
   try {
     if (body.action === 'checkin') {
