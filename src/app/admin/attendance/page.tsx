@@ -178,21 +178,41 @@ export default function AttendancePage() {
 
   async function handleCheckIn(child: ChildWithAttendance) {
     // attendance is RLS-locked to anon; write through the service-role route
-    await fetch('/api/admin/attendance/checkin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'checkin', childId: child.child_id }),
-    });
+    try {
+      const r = await fetch('/api/admin/attendance/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'checkin', childId: child.child_id }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        window.alert(d.error || 'Could not check this child in. Please try again.');
+        return;
+      }
+    } catch {
+      window.alert('Could not check this child in. Please try again.');
+      return;
+    }
     await loadData();
   }
 
   async function handleCheckOut(child: ChildWithAttendance) {
     if (!child.attendance_id) return;
-    await fetch('/api/admin/attendance/checkin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'checkout', attendanceId: child.attendance_id }),
-    });
+    try {
+      const r = await fetch('/api/admin/attendance/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'checkout', attendanceId: child.attendance_id }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        window.alert(d.error || 'Could not check this child out. Please try again.');
+        return;
+      }
+    } catch {
+      window.alert('Could not check this child out. Please try again.');
+      return;
+    }
     await loadData();
   }
 

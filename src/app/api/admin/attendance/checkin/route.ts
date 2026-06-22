@@ -24,10 +24,12 @@ export async function POST(request: NextRequest) {
   let body: { action?: string; childId?: string; attendanceId?: string };
   try { body = await request.json(); } catch { return fail('Invalid body', 400); }
 
-  const role = (session.user.role || '').toLowerCase();
-  const isCrossCenter = role === 'owner' || role === 'superadmin';
+  // Center scope: mirror the attendance/time-correction route exactly so this
+  // route works for the SAME sessions that can already edit/delete attendance.
+  // A null-center session (owner/superadmin, and the cross-center admin) may
+  // touch any center; a center-bound staffer is limited to their own center.
   const myCenter = session.user.center_id ?? null;
-  const canTouch = (centerId: string | null) => isCrossCenter || (!!myCenter && centerId === myCenter) || (!myCenter && false);
+  const canTouch = (centerId: string | null) => !myCenter || centerId === myCenter;
 
   const now = new Date().toISOString();
   const today = now.slice(0, 10);
