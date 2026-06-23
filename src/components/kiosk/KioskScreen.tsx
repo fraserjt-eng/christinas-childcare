@@ -206,11 +206,13 @@ function ChildTile({
   client,
   child,
   familyId,
+  signerName,
   onToggled,
 }: {
   client: KioskClient;
   child: FamilyChildRow;
   familyId: string;
+  signerName: string;
   onToggled: (msg: string) => void;
 }) {
   const [att, setAtt] = useState<AttendanceRow | null>(null);
@@ -232,8 +234,8 @@ function ChildTile({
   async function toggle() {
     if (busy) return;
     setBusy(true);
-    if (inAt) await client.checkOut(child.id);
-    else await client.checkIn(child, familyId);
+    if (inAt) await client.checkOut(child.id, signerName.trim() || undefined);
+    else await client.checkIn(child, familyId, signerName.trim() || undefined);
     setAtt(await client.getTodayAttendance(child.id));
     setBusy(false);
     onToggled(inAt ? `${first} is checked out. See you tomorrow!` : `${first} is checked in. Have a great day!`);
@@ -272,7 +274,11 @@ const AUTO_RESET_SECONDS = 25;
 
 function FamilyScreen({ client, family, onDone }: { client: KioskClient; family: KioskFamily; onDone: () => void }) {
   const [success, setSuccess] = useState<string | null>(null);
+  // Who is dropping off / picking up — fills the DCYF Sign In/Out Person column.
+  const [signer, setSigner] = useState('');
+  const [other, setOther] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const adultNames = Array.from(new Set((family.parents || []).map((p) => (p.name || '').trim()).filter(Boolean)));
 
   // Silent privacy auto-reset: clear the family from the screen after inactivity.
   const bump = useCallback(() => {
@@ -304,6 +310,51 @@ function FamilyScreen({ client, family, onDone }: { client: KioskClient; family:
                 Tap a child to check them in or out.
               </p>
             </div>
+            {family.children.length > 0 ? (
+              <div className="mt-5 rounded-xl border p-3" style={{ borderColor: 'var(--pv-line)' }}>
+                <p className="text-center text-base font-bold" style={{ color: 'var(--pv-ink)' }}>
+                  Who&apos;s here? Tap your name.
+                </p>
+                <div className="mt-2 flex flex-wrap justify-center gap-2">
+                  {adultNames.map((name) => {
+                    const on = !other && signer === name;
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => { setOther(false); setSigner(name); }}
+                        className="pv-press rounded-full border px-4 py-2 text-base font-semibold"
+                        style={on
+                          ? { backgroundColor: 'var(--pv-teal)', color: '#fff', borderColor: 'var(--pv-teal)' }
+                          : { borderColor: 'var(--pv-line)', color: 'var(--pv-ink)' }}
+                      >
+                        {name}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => { setOther(true); setSigner(''); }}
+                    className="pv-press rounded-full border px-4 py-2 text-base font-semibold"
+                    style={other
+                      ? { backgroundColor: 'var(--pv-teal)', color: '#fff', borderColor: 'var(--pv-teal)' }
+                      : { borderColor: 'var(--pv-line)', color: 'var(--pv-ink)' }}
+                  >
+                    Other
+                  </button>
+                </div>
+                {other ? (
+                  <input
+                    type="text"
+                    value={signer}
+                    onChange={(e) => setSigner(e.target.value)}
+                    placeholder="Type the full name"
+                    className="mx-auto mt-2 block w-full max-w-xs rounded-lg border px-4 py-2 text-lg"
+                    style={{ borderColor: 'var(--pv-line)', color: 'var(--pv-ink)', backgroundColor: 'var(--pv-card)' }}
+                  />
+                ) : null}
+              </div>
+            ) : null}
             {family.children.length === 0 ? (
               <p className="mt-6 text-center text-lg" style={{ color: 'var(--pv-muted)' }}>
                 No children on this account yet. Please see staff.
@@ -311,7 +362,7 @@ function FamilyScreen({ client, family, onDone }: { client: KioskClient; family:
             ) : (
               <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {family.children.map((child) => (
-                  <ChildTile key={child.id} client={client} child={child} familyId={family.id} onToggled={(m) => { setSuccess(m); bump(); }} />
+                  <ChildTile key={child.id} client={client} child={child} familyId={family.id} signerName={signer} onToggled={(m) => { setSuccess(m); bump(); }} />
                 ))}
               </div>
             )}

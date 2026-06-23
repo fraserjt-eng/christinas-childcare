@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     employeeId?: string;
     centerId?: string;
     agreedName?: string;
+    signedByName?: string | null;
   };
   try {
     body = await request.json();
@@ -190,10 +191,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ data: { ok: true } });
     }
 
+    const signedInBy = (body.signedByName || '').toString().trim() || null;
+
     if (existing && existing.check_out) {
       await supabase
         .from('attendance')
-        .update({ check_out: null, check_in: new Date().toISOString() })
+        .update({ check_out: null, check_in: new Date().toISOString(), signed_in_by_name: signedInBy })
         .eq('id', existing.id);
       return NextResponse.json({ data: { ok: true } });
     }
@@ -205,6 +208,7 @@ export async function POST(request: NextRequest) {
       check_in: new Date().toISOString(),
       center_id: centerId,
       notes: body.familyId ? `family:${body.familyId}` : null,
+      signed_in_by_name: signedInBy,
     });
     return NextResponse.json({ data: { ok: true } });
   }
@@ -216,7 +220,7 @@ export async function POST(request: NextRequest) {
     }
     await supabase
       .from('attendance')
-      .update({ check_out: new Date().toISOString() })
+      .update({ check_out: new Date().toISOString(), signed_out_by_name: (body.signedByName || '').toString().trim() || null })
       .eq('child_id', body.childId)
       .eq('date', todayDate())
       .eq('center_id', centerId);
