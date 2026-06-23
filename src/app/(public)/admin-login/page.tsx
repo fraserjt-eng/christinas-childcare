@@ -49,14 +49,20 @@ export default function AdminLoginPage() {
         const role = (data.user?.role || '').toLowerCase();
         const centerId = data.user?.center_id as string | undefined;
         if (role === 'superadmin' || role === 'admin' || role === 'owner') {
-          // Land in the owner's office (the simplified center hub with the Admin
-          // link), the same page Christina sees. The Admin button there opens the
-          // deep back office. Scope to the staffer's own center; a cross-center
-          // superadmin (no home center) defaults to Brooklyn Park and can switch
-          // centers from the office header.
-          const target = centerId || '3104ae69-4f26-4c1e-a767-3ff45b534860';
-          document.cookie = `cc_center=${target}; path=/; max-age=86400; samesite=lax`;
-          document.cookie = 'cc_view=single; path=/; max-age=86400; samesite=lax';
+          // Land in the owner's office (the same page Christina sees); the Admin
+          // button there opens the deep back office.
+          if (centerId) {
+            // A site owner/admin: scope every center-aware page to their center.
+            document.cookie = `cc_center=${centerId}; path=/; max-age=86400; samesite=lax`;
+            document.cookie = 'cc_view=single; path=/; max-age=86400; samesite=lax';
+          } else {
+            // A cross-center director (superadmin, or an owner with no home
+            // center): default a center so the office renders, but DON'T force
+            // single-center view — leave cc_view as-is so the admin hub's
+            // Combined (all-centers) view keeps working. Forcing single here was
+            // resetting Combined to one center on every login.
+            document.cookie = `cc_center=3104ae69-4f26-4c1e-a767-3ff45b534860; path=/; max-age=86400; samesite=lax`;
+          }
           router.push('/preview/office');
         } else {
           setPinError('That PIN is a staff PIN, not an admin PIN. Use the Staff portal.');
