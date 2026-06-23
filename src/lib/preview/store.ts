@@ -89,6 +89,8 @@ export interface LivePayload {
   clockedIn: Record<string, string | null>;
   feed: FeedEvent[];
   shifts: PreviewShift[];
+  /** kidId -> signed avatar URL, from family_children.photo_url (cloud). */
+  kidPhotos?: Record<string, string>;
 }
 
 export interface PreviewState {
@@ -289,9 +291,19 @@ export const usePreviewStore = create<PreviewState>()(
       },
 
       setKidPhoto: (kidId, dataUrl) => {
+        // Optimistic: show it immediately on this device.
         set((state) => ({
           kidPhotos: { ...state.kidPhotos, [kidId]: dataUrl },
         }));
+        // Persist to the cloud so it syncs to every device (best-effort; in the
+        // sealed fixtures demo there is no session and this 401s harmlessly).
+        if (typeof fetch !== 'undefined') {
+          fetch('/api/child-photo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ child_id: kidId, image_data: dataUrl }),
+          }).catch(() => {});
+        }
       },
 
       setStaffPhoto: (staffId, dataUrl) => {
@@ -478,6 +490,10 @@ export const usePreviewStore = create<PreviewState>()(
           threads: Object.fromEntries(payload.families.map((f) => [f.id, state.threads[f.id] ?? []])),
           meals: {},
           shifts: payload.shifts,
+          // Cloud avatars win where present; a just-uploaded local photo not yet
+          // reflected in the cloud is preserved so it never flickers to the
+          // placeholder between upload and the next hydrate.
+          kidPhotos: { ...state.kidPhotos, ...(payload.kidPhotos ?? {}) },
         }));
       },
 

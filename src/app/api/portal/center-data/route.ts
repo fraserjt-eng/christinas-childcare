@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { centerDate, centerTime } from '@/lib/center-time';
+import { signPhotoList } from '@/lib/photo-url';
 
 // age_group -> the new design's room styling + licensing ratio limit.
 const ROOM_STYLE: Record<string, { emoji: string; color: string; ratioLimit: number }> = {
@@ -270,8 +271,32 @@ export async function GET(request: NextRequest) {
 
   const centerName = centers.find((c) => c.id === centerId)?.name ?? null;
 
+  // Child profile photos (avatars), signed for display. Separate + best-effort:
+  // if family_children.photo_url does not exist yet (migration not applied), the
+  // query errors quietly and we return no avatars rather than breaking the whole
+  // portal. kidId -> signed URL; the store hydrates these into kidPhotos so a
+  // photo taken on one device shows on every device.
+  const kidPhotos: Record<string, string> = {};
+  try {
+    const { data: photoRows } = await supabase
+      .from('family_children')
+      .select('id, photo_url')
+      .eq('center_id', centerId)
+      .not('photo_url', 'is', null)
+      .limit(5000);
+    const rows = photoRows ?? [];
+    if (rows.length > 0) {
+      const signed = await signPhotoList(supabase, rows.map((r) => r.photo_url as string));
+      rows.forEach((r, i) => {
+        if (signed[i]) kidPhotos[r.id as string] = signed[i];
+      });
+    }
+  } catch {
+    /* column may not exist yet; no avatars this load */
+  }
+
   return NextResponse.json(
-    { centerId, centerName, centers, rooms, kids, staff, families, checkedIn, clockedIn, todayAttendance, feed, shifts },
+    { centerId, centerName, centers, rooms, kids, staff, families, checkedIn, clockedIn, todayAttendance, feed, shifts, kidPhotos },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }
