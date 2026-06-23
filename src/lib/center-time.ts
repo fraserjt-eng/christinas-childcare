@@ -21,6 +21,26 @@ export function centerDateOf(iso: string | number | Date): string {
   return centerDate(new Date(iso));
 }
 
+// Clock time in the center's timezone, e.g. "1:05 PM". Display times (check-in,
+// "here since", feed entries) MUST use this, not toLocaleTimeString() with no
+// timeZone — that formats in the browser's zone, or UTC on the server, so a
+// parent on a non-Central device (or any server-rendered time) shows the wrong
+// hour. The stored timestamps stay UTC; only the display is pinned to the center.
+const timeFmt = new Intl.DateTimeFormat('en-US', {
+  timeZone: CENTER_TZ,
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
+export function centerTime(d: Date = new Date()): string {
+  return timeFmt.format(d);
+}
+
+export function centerTimeOf(iso: string | number | Date): string {
+  return centerTime(new Date(iso));
+}
+
 // Shift a YYYY-MM-DD business date by whole days, staying in center time.
 // Noon anchor avoids any DST/offset edge flipping the day.
 export function shiftCenterDate(dateStr: string, deltaDays: number): string {

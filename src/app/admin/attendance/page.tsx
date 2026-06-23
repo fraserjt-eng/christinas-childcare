@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LogIn, LogOut, RefreshCw, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { useSessionUser } from '@/lib/use-session-user';
+import { centerTime } from '@/lib/center-time';
 
 // All reads + writes go through session-gated service-role routes: reads via
 // /api/portal/center-data, writes via /api/admin/attendance/checkin and
@@ -48,7 +49,7 @@ interface ChildWithAttendance {
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return centerTime(new Date(iso));
 }
 
 export default function AttendancePage() {

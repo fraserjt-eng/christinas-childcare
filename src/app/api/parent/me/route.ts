@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionFamily } from '@/lib/parent-server';
-import { centerDate } from '@/lib/center-time';
+import { centerDate, centerTime } from '@/lib/center-time';
 
 // The signed-in parent's REAL family record (profile + parents + children),
 // from the verified session email. Replaces the home page's stale
@@ -67,7 +67,7 @@ export async function GET() {
       const t = a.check_in ? new Date(a.check_in as string) : null;
       presence[cid] =
         t && !isNaN(t.getTime())
-          ? t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          ? centerTime(t)
           : null;
     }
   }

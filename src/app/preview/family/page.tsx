@@ -55,6 +55,7 @@ import {
 } from "@/lib/preview/fixtures";
 import { usePreviewStore, type PreviewMessage } from "@/lib/preview/store";
 import { playClick } from "@/lib/preview/sound";
+import { centerTime } from "@/lib/center-time";
 
 const KIND_LOOK: Record<FeedEvent["kind"], { Icon: LucideIcon; color: string; bg: string }> = {
   meal: { Icon: Apple, color: "var(--pv-gold)", bg: "#fdebd2" },
@@ -877,7 +878,7 @@ function entryToFeed(e: ApiEntry, kidId: string): FeedEvent {
   const when = e.occurred_at ? new Date(e.occurred_at) : null;
   const time =
     when && !isNaN(when.getTime())
-      ? when.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+      ? centerTime(when)
       : "";
   return {
     id: e.id,

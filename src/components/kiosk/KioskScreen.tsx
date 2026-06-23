@@ -31,12 +31,13 @@ import type {
 import { PrivacyNotice, SeeStaffScreen } from './PrivacyNotice';
 import { BigButton, SuccessBanner, cx } from '@/components/preview/ui';
 import { PhotoAvatar } from '@/components/preview/PhotoAvatar';
+import { centerTime } from '@/lib/center-time';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return isNaN(d.getTime()) ? '' : centerTime(d);
 }
 
 function familyLabel(family: KioskFamily): string {

@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
-import { centerDate } from '@/lib/center-time';
+import { centerDate, centerTime } from '@/lib/center-time';
 
 // age_group -> the new design's room styling + licensing ratio limit.
 const ROOM_STYLE: Record<string, { emoji: string; color: string; ratioLimit: number }> = {
@@ -28,7 +28,7 @@ function displayTime(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);
   if (isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return centerTime(d);
 }
 
 function splitName(full: string): { first: string; last: string } {
