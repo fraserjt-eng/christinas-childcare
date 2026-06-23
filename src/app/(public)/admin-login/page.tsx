@@ -48,16 +48,15 @@ export default function AdminLoginPage() {
         const data = await res.json();
         const role = (data.user?.role || '').toLowerCase();
         const centerId = data.user?.center_id as string | undefined;
-        if (role === 'superadmin') {
-          // Cross-center owner: straight to the back office.
-          router.push('/admin');
-        } else if (role === 'admin' || role === 'owner') {
-          // A site owner/admin: open THEIR office, scoped to their own center
-          // (not the cross-center admin view). The office has an Admin link.
-          if (centerId) {
-            document.cookie = `cc_center=${centerId}; path=/; max-age=86400; samesite=lax`;
-            document.cookie = 'cc_view=single; path=/; max-age=86400; samesite=lax';
-          }
+        if (role === 'superadmin' || role === 'admin' || role === 'owner') {
+          // Land in the owner's office (the simplified center hub with the Admin
+          // link), the same page Christina sees. The Admin button there opens the
+          // deep back office. Scope to the staffer's own center; a cross-center
+          // superadmin (no home center) defaults to Brooklyn Park and can switch
+          // centers from the office header.
+          const target = centerId || '3104ae69-4f26-4c1e-a767-3ff45b534860';
+          document.cookie = `cc_center=${target}; path=/; max-age=86400; samesite=lax`;
+          document.cookie = 'cc_view=single; path=/; max-age=86400; samesite=lax';
           router.push('/preview/office');
         } else {
           setPinError('That PIN is a staff PIN, not an admin PIN. Use the Staff portal.');

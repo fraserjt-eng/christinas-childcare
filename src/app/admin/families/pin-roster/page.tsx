@@ -27,7 +27,16 @@ interface PinRosterRow {
   email: string;
 }
 
+interface PinRosterStaff {
+  center: string;
+  name: string;
+  role: string;
+  jobTitle: string;
+  pin: string;
+}
+
 type PrintMode = 'roster' | 'slips';
+type Dataset = 'families' | 'staff';
 
 // Static print stylesheet. Hides the DashboardLayout chrome + on-page controls
 // so only the branded sheet prints, and controls page breaks between centers.
@@ -95,6 +104,8 @@ function todayLabel(): string {
 
 export default function PinRosterPage() {
   const [rows, setRows] = useState<PinRosterRow[]>([]);
+  const [staff, setStaff] = useState<PinRosterStaff[]>([]);
+  const [dataset, setDataset] = useState<Dataset>('families');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<PrintMode>('roster');
@@ -113,11 +124,13 @@ export default function PinRosterPage() {
         setRows([]);
         return;
       }
-      const data = (await res.json()) as { rows?: PinRosterRow[] };
+      const data = (await res.json()) as { rows?: PinRosterRow[]; staff?: PinRosterStaff[] };
       setRows(Array.isArray(data.rows) ? data.rows : []);
+      setStaff(Array.isArray(data.staff) ? data.staff : []);
     } catch {
       setError('Could not load the roster. Try again.');
       setRows([]);
+      setStaff([]);
     } finally {
       setLoading(false);
     }
@@ -127,8 +140,8 @@ export default function PinRosterPage() {
     load();
   }, [load]);
 
-  // Group rows by center, preserving the route's alphabetical sort.
-  const byCenter = useMemo(() => {
+  // Group each dataset by center, preserving the route's alphabetical sort.
+  const familiesByCenter = useMemo(() => {
     const map = new Map<string, PinRosterRow[]>();
     for (const r of rows) {
       if (!map.has(r.center)) map.set(r.center, []);
@@ -136,6 +149,15 @@ export default function PinRosterPage() {
     }
     return Array.from(map.entries());
   }, [rows]);
+  const staffByCenter = useMemo(() => {
+    const map = new Map<string, PinRosterStaff[]>();
+    for (const s of staff) {
+      if (!map.has(s.center)) map.set(s.center, []);
+      map.get(s.center)!.push(s);
+    }
+    return Array.from(map.entries());
+  }, [staff]);
+  const activeCount = dataset === 'families' ? rows.length : staff.length;
 
   const dateStr = todayLabel();
 
@@ -152,14 +174,38 @@ export default function PinRosterPage() {
       <div className="pin-roster-noprint mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-heading text-2xl font-bold text-christina-red">
-            Family PIN Roster
+            PIN Roster
           </h1>
           <p className="text-sm text-muted-foreground">
-            Kiosk PINs for staff use. Keep this sheet secure: a PIN signs a
-            family in at the kiosk.
+            {dataset === 'families'
+              ? 'Kiosk PINs for staff use. Keep this sheet secure: a PIN signs a family in at the kiosk.'
+              : 'Staff sign-in PINs (clock-in and admin login). Keep this sheet secure.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* Families vs Staff */}
+          <div className="inline-flex overflow-hidden rounded-lg border border-christina-red/30">
+            <button
+              type="button"
+              onClick={() => setDataset('families')}
+              className={
+                'px-3 py-2 text-sm font-medium transition-colors ' +
+                (dataset === 'families' ? 'bg-christina-red text-white' : 'bg-white text-christina-red hover:bg-christina-red/10')
+              }
+            >
+              Families
+            </button>
+            <button
+              type="button"
+              onClick={() => setDataset('staff')}
+              className={
+                'px-3 py-2 text-sm font-medium transition-colors ' +
+                (dataset === 'staff' ? 'bg-christina-red text-white' : 'bg-white text-christina-red hover:bg-christina-red/10')
+              }
+            >
+              Staff
+            </button>
+          </div>
           <div className="inline-flex overflow-hidden rounded-lg border border-christina-red/30">
             <button
               type="button"
@@ -189,16 +235,18 @@ export default function PinRosterPage() {
           <Button variant="outline" onClick={load} disabled={loading}>
             <RefreshCw className="mr-1.5 h-4 w-4" /> Refresh
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => window.open('/api/admin/family-directory/export', '_blank')}
-            title="Download a branded spreadsheet (current center, or all centers in Combined view)"
-          >
-            <Download className="mr-1.5 h-4 w-4" /> Spreadsheet
-          </Button>
+          {dataset === 'families' && (
+            <Button
+              variant="outline"
+              onClick={() => window.open('/api/admin/family-directory/export', '_blank')}
+              title="Download a branded spreadsheet (current center, or all centers in Combined view)"
+            >
+              <Download className="mr-1.5 h-4 w-4" /> Spreadsheet
+            </Button>
+          )}
           <Button
             onClick={() => window.print()}
-            disabled={loading || rows.length === 0}
+            disabled={loading || activeCount === 0}
             className="bg-christina-red text-white hover:bg-christina-red/90"
           >
             <Printer className="mr-1.5 h-4 w-4" /> Print
@@ -216,9 +264,9 @@ export default function PinRosterPage() {
         <p className="pin-roster-noprint text-sm text-muted-foreground">
           Loading roster...
         </p>
-      ) : rows.length === 0 && !error ? (
+      ) : activeCount === 0 && !error ? (
         <p className="pin-roster-noprint text-sm text-muted-foreground">
-          No families with a kiosk PIN yet.
+          {dataset === 'families' ? 'No families with a kiosk PIN yet.' : 'No staff with a PIN yet.'}
         </p>
       ) : (
         // The printable sheet: cream body, christina-red header per center.
@@ -226,7 +274,7 @@ export default function PinRosterPage() {
           className="pin-roster-sheet rounded-xl"
           style={{ backgroundColor: '#faf6f0', padding: '1.5rem' }}
         >
-          {byCenter.map(([center, centerRows]) => (
+          {(dataset === 'families' ? familiesByCenter : staffByCenter).map(([center, centerRows]) => (
             <section
               key={center}
               className="pin-roster-group mb-8 last:mb-0"
@@ -245,7 +293,7 @@ export default function PinRosterPage() {
                     className="text-xs leading-tight"
                     style={{ color: '#FFD54F' }}
                   >
-                    Where Learning and Growth Become One
+                    {dataset === 'families' ? 'Where Learning and Growth Become One' : 'Staff PINs'}
                   </p>
                 </div>
                 <div className="text-right">
@@ -258,10 +306,16 @@ export default function PinRosterPage() {
                 </div>
               </header>
 
-              {mode === 'roster' ? (
-                <RosterTable rows={centerRows} />
+              {dataset === 'families' ? (
+                mode === 'roster' ? (
+                  <RosterTable rows={centerRows as PinRosterRow[]} />
+                ) : (
+                  <SlipGrid rows={centerRows as PinRosterRow[]} />
+                )
+              ) : mode === 'roster' ? (
+                <StaffTable rows={centerRows as PinRosterStaff[]} />
               ) : (
-                <SlipGrid rows={centerRows} />
+                <StaffSlipGrid rows={centerRows as PinRosterStaff[]} />
               )}
             </section>
           ))}
@@ -376,6 +430,57 @@ function SlipGrid({ rows }: { rows: PinRosterRow[] }) {
             className="mt-1 h-1 w-10 rounded-full"
             style={{ backgroundColor: '#FFD54F' }}
           />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function roleLabel(s: PinRosterStaff): string {
+  const r = s.role ? s.role.charAt(0).toUpperCase() + s.role.slice(1) : '';
+  return [s.jobTitle, r].filter(Boolean).join(' · ') || '—';
+}
+
+function StaffTable({ rows }: { rows: PinRosterStaff[] }) {
+  return (
+    <table className="w-full border-collapse text-left text-sm" style={{ backgroundColor: '#ffffff' }}>
+      <thead>
+        <tr style={{ backgroundColor: '#FFD54F', color: '#1f2937' }}>
+          <th className="border-b-2 px-3 py-2 font-heading font-bold" style={{ borderColor: '#C62828' }}>Staff</th>
+          <th className="border-b-2 px-3 py-2 font-heading font-bold" style={{ borderColor: '#C62828' }}>Role</th>
+          <th className="border-b-2 px-3 py-2 font-heading font-bold" style={{ borderColor: '#C62828' }}>PIN</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={`${r.name}-${r.pin}-${i}`} style={{ backgroundColor: i % 2 === 0 ? '#ffffff' : '#faf6f0' }}>
+            <td className="px-3 py-2 font-medium" style={{ borderBottom: '1px solid #e5e7eb' }}>{r.name}</td>
+            <td className="px-3 py-2" style={{ borderBottom: '1px solid #e5e7eb', color: '#374151' }}>{roleLabel(r)}</td>
+            <td className="px-3 py-2 font-mono text-base font-bold" style={{ borderBottom: '1px solid #e5e7eb', color: '#C62828', letterSpacing: '0.15em' }}>{r.pin}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function StaffSlipGrid({ rows }: { rows: PinRosterStaff[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {rows.map((r, i) => (
+        <div
+          key={`${r.name}-${r.pin}-${i}`}
+          className="pin-slip flex flex-col items-center rounded-lg px-3 py-4 text-center"
+          style={{ backgroundColor: '#ffffff', border: '2px solid #C62828' }}
+        >
+          <div className="mb-1 flex items-center gap-1.5">
+            <CLogo size={22} />
+            <span className="font-heading text-sm font-bold" style={{ color: '#C62828' }}>{r.name}</span>
+          </div>
+          <p className="mb-0.5 text-[11px]" style={{ color: '#6b7280' }}>{roleLabel(r)}</p>
+          <p className="text-[11px] uppercase tracking-wide" style={{ color: '#6b7280' }}>Sign-in PIN</p>
+          <p className="font-mono text-3xl font-bold" style={{ color: '#C62828', letterSpacing: '0.2em' }}>{r.pin}</p>
+          <div className="mt-1 h-1 w-10 rounded-full" style={{ backgroundColor: '#FFD54F' }} />
         </div>
       ))}
     </div>

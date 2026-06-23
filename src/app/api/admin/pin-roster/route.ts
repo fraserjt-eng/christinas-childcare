@@ -33,6 +33,14 @@ export interface PinRosterRow {
   email: string;
 }
 
+export interface PinRosterStaff {
+  center: string;
+  name: string;
+  role: string;
+  jobTitle: string;
+  pin: string;
+}
+
 export async function GET(request: NextRequest) {
   const session = await requireSession('admin');
   if (!session) return fail('Unauthorized', 401);
@@ -64,7 +72,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Fetch broad + filter in JS (PostgREST silently drops rows on .in()/filters).
-  const [centersRes, famRes, parentsRes, childrenRes] = await Promise.all([
+  const [centersRes, famRes, parentsRes, childrenRes, empRes] = await Promise.all([
     supabase.from('centers').select('id, name').limit(5000),
     supabase
       .from('families')
@@ -75,6 +83,10 @@ export async function GET(request: NextRequest) {
       .select('family_id, name, is_primary')
       .limit(5000),
     supabase.from('family_children').select('family_id, name').limit(10000),
+    supabase
+      .from('employees')
+      .select('first_name, last_name, email, role, job_title, pin, employment_status, center_id')
+      .limit(5000),
   ]);
 
   const centerNameById = new Map<string, string>();
@@ -157,8 +169,38 @@ export async function GET(request: NextRequest) {
       a.familyName.localeCompare(b.familyName)
   );
 
+  // Staff PINs (clock-in / admin sign-in). Same credential class as a family
+  // PIN, so same guarded door. Center-scoped like the families above; staff with
+  // no home center (owners/superadmin) are grouped under "Leadership" and shown
+  // only to a full cross-center view, never to a center-bound admin or a picked
+  // single center.
+  const staff: PinRosterStaff[] = [];
+  for (const e of empRes.data ?? []) {
+    const pin = (e.pin as string | null) ?? '';
+    if (!pin) continue;
+    const status = (e.employment_status as string | null) ?? 'active';
+    if (status !== 'active') continue;
+    const centerId = (e.center_id as string | null) ?? '';
+    if (!centerId) {
+      if (allowedCenterIds) continue; // leadership only on the full org view
+    } else if (allowedCenterIds && !allowedCenterIds.has(centerId)) {
+      continue;
+    }
+    const name = `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim() || (e.email as string) || 'Staff';
+    staff.push({
+      center: centerId ? centerNameById.get(centerId) || 'Center' : 'Leadership',
+      name,
+      role: (e.role as string) || '',
+      jobTitle: (e.job_title as string) || '',
+      pin,
+    });
+  }
+  staff.sort(
+    (a, b) => a.center.localeCompare(b.center) || a.name.localeCompare(b.name)
+  );
+
   return NextResponse.json(
-    { rows },
+    { rows, staff },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }
