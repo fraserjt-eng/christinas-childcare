@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { LogIn, LogOut, RefreshCw, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { useSessionUser } from '@/lib/use-session-user';
 import { centerTime } from '@/lib/center-time';
+import DayEntryGrid from '@/components/admin/DayEntryGrid';
 
 // All reads + writes go through session-gated service-role routes: reads via
 // /api/portal/center-data, writes via /api/admin/attendance/checkin and
@@ -57,6 +58,7 @@ export default function AttendancePage() {
   // check-in route, based on the session.
   const { loading: sessionLoading } = useSessionUser();
   const [records, setRecords] = useState<ChildWithAttendance[]>([]);
+  const [mode, setMode] = useState<'today' | 'enter'>('today');
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -315,27 +317,49 @@ export default function AttendancePage() {
           return r.classroom === filter;
         });
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <p className="text-muted-foreground animate-pulse">Loading attendance...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Attendance</h1>
-          <p className="text-muted-foreground">{todayFormatted}</p>
+          <p className="text-muted-foreground">
+            {mode === 'today' ? todayFormatted : 'Enter or edit any day from a paper sheet'}
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-md border bg-muted/40 p-0.5 text-sm">
+            <button
+              type="button"
+              onClick={() => setMode('today')}
+              className={'rounded px-3 py-1.5 font-medium ' + (mode === 'today' ? 'bg-white text-christina-red shadow-sm' : 'text-muted-foreground')}
+            >
+              Today (live)
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('enter')}
+              className={'rounded px-3 py-1.5 font-medium ' + (mode === 'enter' ? 'bg-white text-christina-red shadow-sm' : 'text-muted-foreground')}
+            >
+              Enter a day
+            </button>
+          </div>
+          {mode === 'today' && (
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          )}
+        </div>
       </div>
 
+      {mode === 'enter' ? (
+        <DayEntryGrid />
+      ) : loading ? (
+        <div className="flex min-h-[200px] items-center justify-center">
+          <p className="animate-pulse text-muted-foreground">Loading attendance...</p>
+        </div>
+      ) : (
+        <>
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
@@ -456,6 +480,8 @@ export default function AttendancePage() {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
 
       <Dialog
         open={!!editing}

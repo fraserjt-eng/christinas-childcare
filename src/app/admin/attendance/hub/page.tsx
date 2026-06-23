@@ -11,7 +11,6 @@
 // DashboardLayout.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { buildDcyfCsv } from '@/lib/dcyf-export';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -316,22 +315,14 @@ export default function AttendanceHubPage() {
 
   return (
     <div className="container mx-auto space-y-6 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="h-8 w-8 text-christina-red" />
-          <div>
-            <h1 className="text-2xl font-bold md:text-3xl">Attendance Hub</h1>
-            <p className="text-muted-foreground">
-              Daily, weekly, monthly, and yearly attendance{summary ? ` for ${summary.centerName}` : ''}, and submitting to the state.
-            </p>
-          </div>
+      <div className="flex items-center gap-3">
+        <CalendarDays className="h-8 w-8 text-christina-red" />
+        <div>
+          <h1 className="text-2xl font-bold md:text-3xl">Attendance Hub</h1>
+          <p className="text-muted-foreground">
+            Daily, weekly, monthly, and yearly attendance{summary ? ` for ${summary.centerName}` : ''}, and submitting to the state.
+          </p>
         </div>
-        <Link
-          href="/admin/attendance/entry"
-          className="inline-flex items-center gap-1.5 rounded-md border border-christina-red/40 px-3 py-2 text-sm font-medium text-christina-red hover:bg-christina-red/5"
-        >
-          <CalendarDays className="h-4 w-4" /> Enter a day
-        </Link>
       </div>
 
       {/* Deadline reminder (computed; no email needed) */}
