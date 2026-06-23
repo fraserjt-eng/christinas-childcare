@@ -71,11 +71,14 @@ function splitName(name: string): { first: string; last: string } {
 }
 
 interface ExportRow {
-  date: string;
-  childFirstName: string;
-  childLastName: string;
-  dropOff: string | null; // ISO check_in
-  pickUp: string | null; // ISO check_out
+  date: string; // YYYY-MM-DD, for stable sorting only (DCYF embeds the date in the times)
+  firstName: string;
+  lastName: string;
+  dob: string | null; // YYYY-MM-DD from the roster
+  checkIn: string | null; // ISO check_in
+  checkOut: string | null; // ISO check_out
+  signInPerson: string;
+  signOutPerson: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -116,7 +119,7 @@ export async function POST(request: NextRequest) {
   // ---- read the period's attendance, center-scoped (service role) ----
   const { data: attendance, error: attErr } = await supabase
     .from('attendance')
-    .select('child_id, child_name, date, check_in, check_out')
+    .select('child_id, child_name, date, check_in, check_out, signed_in_by_name, signed_out_by_name')
     .eq('center_id', centerId)
     .gte('date', periodStart)
     .lte('date', periodEnd)
@@ -133,15 +136,18 @@ export async function POST(request: NextRequest) {
     new Set(rawRows.map((r) => r.child_id as string).filter(Boolean))
   );
   const nameById = new Map<string, string>();
+  const dobById = new Map<string, string>();
   if (childIds.length > 0) {
     // Fetch the roster broad, then map in JS. PostgREST .in() with many UUIDs
-    // can silently drop rows, so we filter client-side instead.
+    // can silently drop rows, so we filter client-side instead. DOB is required
+    // by the DCYF import and comes from the roster (source of truth).
     const { data: kids } = await supabase
       .from('family_children')
-      .select('id, name')
+      .select('id, name, date_of_birth')
       .limit(5000);
     for (const k of kids ?? []) {
       nameById.set(k.id as string, (k.name as string) || '');
+      if (k.date_of_birth) dobById.set(k.id as string, k.date_of_birth as string);
     }
   }
 
@@ -152,17 +158,20 @@ export async function POST(request: NextRequest) {
       const { first, last } = splitName(name);
       return {
         date: (r.date as string) || '',
-        childFirstName: first,
-        childLastName: last,
-        dropOff: (r.check_in as string) || null,
-        pickUp: (r.check_out as string) || null,
+        firstName: first,
+        lastName: last,
+        dob: dobById.get(r.child_id as string) || null,
+        checkIn: (r.check_in as string) || null,
+        checkOut: (r.check_out as string) || null,
+        signInPerson: (r.signed_in_by_name as string) || '',
+        signOutPerson: (r.signed_out_by_name as string) || '',
       };
     })
     // Stable order: by date, then child last/first name, sorted in JS.
     .sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
-      const an = `${a.childLastName} ${a.childFirstName}`.trim();
-      const bn = `${b.childLastName} ${b.childFirstName}`.trim();
+      const an = `${a.lastName} ${a.firstName}`.trim();
+      const bn = `${b.lastName} ${b.firstName}`.trim();
       return an.localeCompare(bn);
     });
 

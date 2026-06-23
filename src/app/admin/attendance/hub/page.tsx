@@ -11,6 +11,7 @@
 // DashboardLayout.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { buildDcyfCsv } from '@/lib/dcyf-export';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -93,11 +94,6 @@ const ATTESTATION_TEXT = `I acknowledge, agree, and attest to the following:
 
 function csvCell(v: string): string {
   return /[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
-}
-function timeOf(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 function download(filename: string, csv: string) {
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -265,15 +261,21 @@ export default function AttendanceHubPage() {
         return;
       }
       const rows = Array.isArray(data.rows) ? data.rows : [];
-      const header = ['Date', 'Child First Name', 'Child Last Name', 'Drop-off time', 'Pick-up time'];
-      const lines = [header.map(csvCell).join(',')];
-      for (const r of rows) {
-        lines.push(
-          [csvCell(r.date || ''), csvCell(r.childFirstName || ''), csvCell(r.childLastName || ''), csvCell(timeOf(r.dropOff)), csvCell(timeOf(r.pickUp))].join(',')
-        );
-      }
-      download(`CCAP-attendance-${exFrom}-to-${exTo}.csv`, lines.join('\r\n'));
-      setExMsg(`Exported ${rows.length} record${rows.length === 1 ? '' : 's'} for ${exFrom} to ${exTo}. Upload this file in the state Provider Hub. Your attestation was recorded.`);
+      // The DCYF Import Attendance CSV (exact template, chunked at 250 rows). The
+      // helper already prepends the BOM, so download the blob directly rather than
+      // via download() (which would add a second BOM).
+      const files = buildDcyfCsv(rows);
+      files.forEach((f, i) => {
+        const part = files.length > 1 ? `-part-${i + 1}-of-${files.length}` : '';
+        const blob = new Blob([f.csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `DCYF-attendance-${exFrom}-to-${exTo}${part}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+      setExMsg(`Exported ${rows.length} record${rows.length === 1 ? '' : 's'} for ${exFrom} to ${exTo}${files.length > 1 ? ` in ${files.length} files (250 rows each)` : ''}. Upload to the state Provider Hub. Your attestation was recorded.`);
       setAttested(false);
       loadSubmissions();
     } catch {

@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { FileSpreadsheet, Download, Loader2, ShieldCheck } from 'lucide-react';
 import { currentCenterId } from '@/lib/current-center';
+import { buildDcyfCsv } from '@/lib/dcyf-export';
 
 interface Center {
   id: string;
@@ -33,10 +34,13 @@ interface Center {
 
 interface ExportRow {
   date: string;
-  childFirstName: string;
-  childLastName: string;
-  dropOff: string | null;
-  pickUp: string | null;
+  firstName: string;
+  lastName: string;
+  dob: string | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  signInPerson: string;
+  signOutPerson: string;
 }
 
 // The exact DCYF text the provider must read and attest to. Kept verbatim,
@@ -47,23 +51,6 @@ const ATTESTATION_TEXT = `I acknowledge, agree, and attest to the following:
 - The attendance records must: be accurate, legible, and completed daily; be kept at the site where services are delivered for six years after the date of service; be immediately available upon request to the county, Tribe and/or staff of the Department of Children, Youth, and Families (DCYF); include the date, each child's first and last name, and each child's drop-off and pick-up times.
 - To the extent possible, drop-off and pick-up times must be entered by the person dropping off or picking up the child.
 - The attendance records as submitted are true and accurate.`;
-
-// A CSV cell: quote and escape anything with a comma, quote, or newline.
-function csvCell(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
-
-// An ISO timestamp shown as a local clock time for the CCAP drop-off / pick-up
-// columns. Empty when there is no time recorded.
-function timeOf(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 // Today and 14 days ago as YYYY-MM-DD, for sensible default range bounds.
 function todayLocal(): string {
@@ -140,41 +127,29 @@ export default function CcapExportPage() {
 
       const rows: ExportRow[] = Array.isArray(data.rows) ? data.rows : [];
 
-      // Build the CSV with the CCAP-required header and fields.
-      const header = [
-        'Date',
-        'Child First Name',
-        'Child Last Name',
-        'Drop-off time',
-        'Pick-up time',
-      ];
-      const lines = [header.map(csvCell).join(',')];
-      for (const r of rows) {
-        lines.push(
-          [
-            csvCell(r.date || ''),
-            csvCell(r.childFirstName || ''),
-            csvCell(r.childLastName || ''),
-            csvCell(timeOf(r.dropOff)),
-            csvCell(timeOf(r.pickUp)),
-          ].join(',')
-        );
-      }
-      // Prepend a UTF-8 BOM so Excel reads accented names correctly.
-      const csv = '﻿' + lines.join('\r\n');
-      const centerName =
-        centers.find((c) => c.id === centerId)?.name || 'center';
-      const fileName = `CCAP-attendance-${centerName.replace(/[^a-z0-9]+/gi, '-')}-${periodStart}-to-${periodEnd}.csv`;
+      // Build the DCYF Import Attendance CSV (exact template, chunked at 250 rows).
+      const centerName = centers.find((c) => c.id === centerId)?.name || 'center';
+      const slug = centerName.replace(/[^a-z0-9]+/gi, '-');
+      const files = buildDcyfCsv(rows);
+      files.forEach((f, i) => {
+        const part = files.length > 1 ? `-part-${i + 1}-of-${files.length}` : '';
+        const fileName = `DCYF-attendance-${slug}-${periodStart}-to-${periodEnd}${part}.csv`;
+        const blob = new Blob([f.csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
 
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      setLastResult({ count: rows.length, name: fileName });
+      setLastResult({
+        count: rows.length,
+        name:
+          files.length > 1
+            ? `${files.length} files (DCYF format, 250 rows each)`
+            : `DCYF-attendance-${slug}-${periodStart}-to-${periodEnd}.csv`,
+      });
     } catch {
       setError('The export could not be completed.');
     } finally {
