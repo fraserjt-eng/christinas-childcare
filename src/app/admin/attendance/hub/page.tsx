@@ -54,6 +54,13 @@ interface CenterRow {
   childDays: number;
   hours: number;
 }
+interface RoomRow {
+  center: string;
+  room: string;
+  childrenPresent: number;
+  childDays: number;
+  hours: number;
+}
 interface Summary {
   centerName: string;
   combined?: boolean;
@@ -63,6 +70,7 @@ interface Summary {
   buckets: Bucket[];
   children: ChildSummary[];
   byCenter?: CenterRow[];
+  byRoom?: RoomRow[];
   totals: { uniqueChildren: number; childDays: number; hours: number; daysOpen: number };
 }
 interface CycleStatus {
@@ -237,6 +245,15 @@ export default function AttendanceHubPage() {
       lines.push([csvCell(c.name), String(c.daysPresent), String(c.hours), csvCell(c.lastDate)].join(','));
     }
     download(`attendance-by-child-${view}-${summary.from}-to-${summary.to}.csv`, lines.join('\r\n'));
+  }
+  function downloadRooms() {
+    if (!summary?.byRoom) return;
+    const header = ['Center', 'Room', 'Children present', 'Child-days', 'Hours'];
+    const lines = [header.map(csvCell).join(',')];
+    for (const r of summary.byRoom) {
+      lines.push([csvCell(r.center), csvCell(r.room), String(r.childrenPresent), String(r.childDays), String(r.hours)].join(','));
+    }
+    download(`attendance-by-room-${view}-${summary.from}-to-${summary.to}.csv`, lines.join('\r\n'));
   }
 
   function pickPeriod(from: string, to: string) {
@@ -424,6 +441,45 @@ export default function AttendanceHubPage() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* per-room (every view; how the day/period split across rooms) */}
+              {summary.byRoom && summary.byRoom.length > 0 && (() => {
+                const rooms = summary.byRoom!;
+                const maxRoom = Math.max(1, ...rooms.map((r) => r.childrenPresent));
+                const groups = summary.combined ? Array.from(new Set(rooms.map((r) => r.center))) : [null as string | null];
+                return (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <CardTitle className="text-lg">By room</CardTitle>
+                      <Button variant="outline" size="sm" onClick={downloadRooms} disabled={rooms.length === 0}>
+                        <Download className="mr-1.5 h-4 w-4" /> Dataset
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {groups.map((g) => (
+                          <div key={g ?? 'one'} className="space-y-1.5">
+                            {g && <p className="text-sm font-semibold text-gray-700">{g}</p>}
+                            {rooms
+                              .filter((r) => g === null || r.center === g)
+                              .map((r) => (
+                                <div key={`${r.center}-${r.room}`} className="flex items-center gap-3 text-sm">
+                                  <span className="w-36 shrink-0 text-muted-foreground">{r.room}</span>
+                                  <div className="h-4 flex-1 overflow-hidden rounded bg-muted">
+                                    <div className="h-full bg-christina-blue/70" style={{ width: `${(r.childrenPresent / maxRoom) * 100}%` }} />
+                                  </div>
+                                  <span className="w-8 shrink-0 text-right font-medium">{r.childrenPresent}</span>
+                                  <span className="hidden w-24 shrink-0 text-right text-xs text-muted-foreground sm:inline">{r.childDays} child-days</span>
+                                  <span className="hidden w-14 shrink-0 text-right text-xs text-muted-foreground sm:inline">{r.hours}h</span>
+                                </div>
+                              ))}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
               {/* buckets */}
               <Card>

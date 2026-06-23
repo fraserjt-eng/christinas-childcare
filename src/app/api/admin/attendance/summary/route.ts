@@ -63,6 +63,28 @@ function monthLabel(ym: string): string {
   return `${MONTHS[Number(m) - 1]} ${y}`;
 }
 
+// Normalize the free-text room label (family_children.classroom) into a canonical
+// age-group bucket. The centers record rooms inconsistently ("School Aged" vs
+// "School Age (Trailblazers)", "toddler" vs "Toddler", "Preschool Program (Green
+// Room)", "Kindergarten Preparatory"); collapse them so the by-room view groups
+// cleanly instead of scattering across near-duplicate labels.
+const ROOM_ORDER = ['Infant', 'Toddler', 'Preschool', 'Kindergarten Prep', 'School Age'];
+function canonicalRoom(raw: string | null | undefined): string {
+  const s = (raw || '').toLowerCase().trim();
+  if (!s) return 'Unassigned';
+  if (s.includes('infant')) return 'Infant';
+  if (s.includes('toddler')) return 'Toddler';
+  if (s.includes('school age') || s.includes('school aged') || s.includes('trailblazer') || s.includes('summer')) return 'School Age';
+  if (s.includes('kinder')) return 'Kindergarten Prep'; // before the 'pre' rule ("preparatory" contains "pre")
+  if (s.includes('pre')) return 'Preschool'; // preschool, pre-k, prek, pre-school
+  return (raw || '').trim();
+}
+function roomRank(name: string): number {
+  const i = ROOM_ORDER.indexOf(name);
+  if (i >= 0) return i;
+  return name === 'Unassigned' ? 999 : 500;
+}
+
 interface AttRow {
   child_id: string | null;
   child_name: string | null;
@@ -125,13 +147,17 @@ export async function GET(request: NextRequest) {
     if (offset > 200000) break; // hard backstop
   }
 
-  // roster names (source of truth; fall back to denormalized child_name)
+  // roster names + rooms (source of truth; fall back to denormalized child_name)
   const nameById = new Map<string, string>();
+  const roomById = new Map<string, string>();
   {
-    let kq = supabase.from('family_children').select('id, name').limit(10000);
+    let kq = supabase.from('family_children').select('id, name, classroom').limit(10000);
     if (!combined && centerId) kq = kq.eq('center_id', centerId);
     const { data: kids } = await kq;
-    for (const k of kids ?? []) nameById.set(k.id as string, (k.name as string) || '');
+    for (const k of kids ?? []) {
+      nameById.set(k.id as string, (k.name as string) || '');
+      roomById.set(k.id as string, (k.classroom as string) || '');
+    }
   }
 
   const hoursOf = (r: AttRow): number => {
@@ -144,6 +170,7 @@ export async function GET(request: NextRequest) {
   const bucketMap = new Map<string, { label: string; start: string; end: string; present: Set<string>; childDays: number; hours: number; checkins: number }>();
   const childMap = new Map<string, { name: string; days: Set<string>; hours: number; lastDate: string }>();
   const centerAgg = new Map<string, { present: Set<string>; childDays: number; hours: number }>();
+  const roomAgg = new Map<string, { centerId: string; room: string; present: Set<string>; childDays: number; hours: number }>();
   let totalHours = 0;
   const daysOpen = new Set<string>();
 
@@ -184,6 +211,15 @@ export async function GET(request: NextRequest) {
       ca.childDays += 1;
       ca.hours += h;
     }
+
+    // by-room (always; lets a single-center director see their rooms too)
+    const room = canonicalRoom(roomById.get(r.child_id as string));
+    const rk = `${(r.center_id as string) || 'unknown'}|${room}`;
+    if (!roomAgg.has(rk)) roomAgg.set(rk, { centerId: (r.center_id as string) || 'unknown', room, present: new Set(), childDays: 0, hours: 0 });
+    const ra = roomAgg.get(rk)!;
+    ra.present.add(cid);
+    ra.childDays += 1;
+    ra.hours += h;
   }
 
   const buckets = Array.from(bucketMap.entries())
@@ -207,6 +243,19 @@ export async function GET(request: NextRequest) {
         .sort((a, b) => a.center.localeCompare(b.center))
     : [];
 
+  const byRoom = Array.from(roomAgg.values())
+    .map((a) => ({
+      center: centerNames.get(a.centerId) || (combined ? 'Center' : centerName),
+      room: a.room,
+      childrenPresent: a.present.size,
+      childDays: a.childDays,
+      hours: Math.round(a.hours * 10) / 10,
+    }))
+    .sort(
+      (a, b) =>
+        a.center.localeCompare(b.center) || roomRank(a.room) - roomRank(b.room) || a.room.localeCompare(b.room)
+    );
+
   return NextResponse.json(
     {
       centerId: combined ? 'all' : centerId,
@@ -218,6 +267,7 @@ export async function GET(request: NextRequest) {
       buckets,
       children,
       byCenter,
+      byRoom,
       totals: {
         uniqueChildren: childMap.size,
         childDays: rows.length,
