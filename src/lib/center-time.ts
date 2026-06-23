@@ -48,3 +48,58 @@ export function shiftCenterDate(dateStr: string, deltaDays: number): string {
   d.setDate(d.getDate() + deltaDays);
   return centerDate(d);
 }
+
+// 24-hour clock ("HH:MM") in center time, for prefilling <input type="time">.
+const clock24Fmt = new Intl.DateTimeFormat('en-GB', {
+  timeZone: CENTER_TZ,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+export function centerClock24(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? '' : clock24Fmt.format(d); // "09:11"
+}
+
+// The TZ offset (local - UTC, in ms) for a given instant.
+function tzOffsetMs(utcMs: number): number {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: CENTER_TZ,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  const map: Record<string, string> = {};
+  for (const p of dtf.formatToParts(new Date(utcMs))) map[p.type] = p.value;
+  // 'en-US' can render midnight as hour 24; normalize so Date.UTC stays in range.
+  const hour = map.hour === '24' ? '00' : map.hour;
+  const asUTC = Date.UTC(+map.year, +map.month - 1, +map.day, +hour, +map.minute, +map.second);
+  return asUTC - utcMs;
+}
+
+// Convert a wall-clock time entered at the center (a YYYY-MM-DD business day plus
+// a clock like "09:11", "9:11 AM", or "5:30pm") into a UTC ISO string. Used when
+// staff key a paper day into the app: the time they write is center-local, and
+// the attendance row stores UTC, the same as a kiosk tap. Returns null if the
+// clock can't be parsed. Two-pass offset so a DST boundary can't shift the hour.
+export function centerWallTimeToUtc(ymd: string, clock: string): string | null {
+  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec((ymd || '').trim());
+  const cm = /^(\d{1,2}):(\d{2})\s*([ap]m)?$/i.exec((clock || '').trim());
+  if (!dm || !cm) return null;
+  let h = parseInt(cm[1], 10);
+  const min = parseInt(cm[2], 10);
+  const ap = cm[3]?.toLowerCase();
+  if (ap === 'pm' && h < 12) h += 12;
+  if (ap === 'am' && h === 12) h = 0;
+  if (h > 23 || min > 59) return null;
+  const wallMs = Date.UTC(+dm[1], +dm[2] - 1, +dm[3], h, min, 0);
+  // First guess using the offset at the wall instant, then refine once.
+  let utcMs = wallMs - tzOffsetMs(wallMs);
+  utcMs = wallMs - tzOffsetMs(utcMs);
+  return new Date(utcMs).toISOString();
+}
