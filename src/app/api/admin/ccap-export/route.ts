@@ -27,6 +27,7 @@ import { requireSession, type AuthedSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionEmployee } from '@/lib/employee-server';
 import { IMPORT_ATTENDANCE_VERSION } from '@/lib/attestation';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 // A staff subject with no resolvable employee id still needs a non-null uuid
 // for the attestation row's subject_id (the column is uuid). The all-zero uuid
@@ -199,6 +200,20 @@ export async function POST(request: NextRequest) {
       period_end: periodEnd,
       row_count: rows.length,
     },
+  });
+
+  await logAudit({
+    actor: session.user,
+    action: 'ccap.export',
+    targetType: 'cacfp',
+    targetId: centerId,
+    centerId: session.user.center_id ?? centerId,
+    detail: {
+      period_start: periodStart,
+      period_end: periodEnd,
+      row_count: rows.length,
+    },
+    ip: auditIp(request),
   });
 
   return NextResponse.json(

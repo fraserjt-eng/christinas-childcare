@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 // Admin (or owner/superadmin) sends a direct message to a registered parent.
 // It is saved server-side (shows in the parent's portal) and emailed.
@@ -106,6 +107,16 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+
+  await logAudit({
+    actor: session.user,
+    action: 'parent_message.send',
+    targetType: 'family',
+    targetId: family.id,
+    centerId: session.user.center_id ?? null,
+    detail: { subject, emailed },
+    ip: auditIp(request),
+  });
 
   return NextResponse.json({ ok: true, emailed });
 }

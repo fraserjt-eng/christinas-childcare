@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { signPayload } from '@/lib/session';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 /**
  * Multi-admin management (Phase 6). The owner adds and manages other backend
@@ -171,6 +172,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  await logAudit({
+    actor: session.user,
+    action: 'team.create',
+    targetType: 'employee',
+    targetId: created.id,
+    centerId: created.center_id ?? session.user.center_id ?? null,
+    detail: { email, role, center_id: created.center_id },
+    ip: auditIp(request),
+  });
+
   // Mint a "set your password" link with the SAME logic as /api/admin/invite:
   // a short-lived signed token pointing at our own /set-password page.
   let token: string;
@@ -293,6 +304,19 @@ export async function PATCH(request: NextRequest) {
   if (updErr) {
     return NextResponse.json({ error: 'Could not update the role' }, { status: 500 });
   }
+
+  await logAudit({
+    actor: session.user,
+    action: 'team.update',
+    targetType: 'employee',
+    targetId: id,
+    centerId:
+      (target as { center_id?: string | null }).center_id ??
+      session.user.center_id ??
+      null,
+    detail: { from_role: currentRole, to_role: role },
+    ip: auditIp(request),
+  });
 
   return NextResponse.json({ ok: true });
 }

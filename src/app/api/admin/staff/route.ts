@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 // Create a staff member in the LIVE employees table so their PIN works at
 // login/kiosk. The old "Add User" path wrote employees only to the admin's
@@ -155,6 +156,16 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+
+  await logAudit({
+    actor: session.user,
+    action: 'employee.create',
+    targetType: 'employee',
+    targetId: created.id,
+    centerId: resolvedCenterId ?? session.user.center_id ?? null,
+    detail: { email, role },
+    ip: auditIp(request),
+  });
 
   return NextResponse.json({ ok: true, id: created.id, role });
 }
@@ -361,6 +372,16 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
+  await logAudit({
+    actor: session.user,
+    action: 'employee.update',
+    targetType: 'employee',
+    targetId: resolvedId,
+    centerId: targetCenterId ?? session.user.center_id ?? null,
+    detail: { fields: Object.keys(updates) },
+    ip: auditIp(request),
+  });
+
   return NextResponse.json({ ok: true, employee: updated });
 }
 
@@ -447,6 +468,16 @@ export async function DELETE(request: NextRequest) {
       { status: error ? 500 : 404 }
     );
   }
+
+  await logAudit({
+    actor: session.user,
+    action: 'employee.delete',
+    targetType: 'employee',
+    targetId: ids[0],
+    centerId: inScope[0]?.center_id ?? session.user.center_id ?? null,
+    detail: { email, deactivated_ids: ids },
+    ip: auditIp(request),
+  });
 
   return NextResponse.json({ ok: true, deactivated: data });
 }

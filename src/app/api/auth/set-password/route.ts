@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { signPayload } from '@/lib/session';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 // Completes the admin-issued setup link. Verifies our own signed token (no
 // Supabase hosted flow) and sets the password where it is actually checked:
@@ -100,6 +101,14 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    await logAudit({
+      actor: { email },
+      action: 'credential.set_password',
+      targetType: 'family',
+      targetId: familyId,
+      detail: { subject: 'family' },
+      ip: auditIp(request),
+    });
     return NextResponse.json({
       ok: true,
       kind: 'parent',
@@ -132,6 +141,14 @@ export async function POST(request: NextRequest) {
     } catch {
       // Staff can still sign in with their PIN; surface success regardless.
     }
+    await logAudit({
+      actor: { email },
+      action: 'credential.set_password',
+      targetType: 'employee',
+      targetId: emp.id as string,
+      detail: { subject: 'employee' },
+      ip: auditIp(request),
+    });
     return NextResponse.json({
       ok: true,
       kind: 'staff',

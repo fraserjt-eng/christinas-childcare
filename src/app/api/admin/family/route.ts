@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes, createHash } from 'crypto';
 import { requireSession, type AuthedSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 // Center scoping: a director who is owner/superadmin, OR has no session center,
 // may pick a center via the cc_center cookie or ?center; otherwise the caller is
@@ -252,6 +253,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not add the children' }, { status: 500 });
   }
 
+  await logAudit({
+    actor: session.user,
+    action: 'family.create',
+    targetType: 'family',
+    targetId: family.id,
+    centerId: centerId ?? session.user.center_id ?? null,
+    detail: { children: childRows.length, parents: 1 },
+    ip: auditIp(request),
+  });
+
   return NextResponse.json({
     ok: true,
     familyId: family.id,
@@ -321,6 +332,16 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
+
+  await logAudit({
+    actor: session.user,
+    action: 'family.delete',
+    targetType: 'family',
+    targetId: id,
+    centerId: fam.center_id ?? session.user.center_id ?? null,
+    detail: { children: childIds.length },
+    ip: auditIp(request),
+  });
 
   return NextResponse.json({ ok: true });
 }
@@ -452,6 +473,16 @@ export async function PUT(request: NextRequest) {
   if (kidErr) {
     return NextResponse.json({ error: 'Could not update the children' }, { status: 500 });
   }
+
+  await logAudit({
+    actor: session.user,
+    action: 'family.update',
+    targetType: 'family',
+    targetId: id,
+    centerId: fam.center_id ?? session.user.center_id ?? null,
+    detail: { children: children.length, parents: 1 },
+    ip: auditIp(request),
+  });
 
   return NextResponse.json({ ok: true, pin: newPin, childCount: children.length });
 }

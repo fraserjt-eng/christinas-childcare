@@ -1,8 +1,9 @@
 export const runtime = 'nodejs';
 
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 const STATUSES = ['new', 'in_review', 'completed', 'denied'] as const;
 
@@ -33,7 +34,7 @@ export async function GET(): Promise<NextResponse> {
 }
 
 // PATCH { id, status?, admin_notes? }: record progress on a request. Admin only.
-export async function PATCH(request: Request): Promise<NextResponse> {
+export async function PATCH(request: NextRequest): Promise<NextResponse> {
   const session = await requireSession('admin');
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -73,6 +74,17 @@ export async function PATCH(request: Request): Promise<NextResponse> {
   if (error) {
     return NextResponse.json({ error: 'Could not update the request' }, { status: 500 });
   }
+
+  await logAudit({
+    actor: session.user,
+    action: 'data_request.update',
+    targetType: 'data_request',
+    targetId: id,
+    centerId: session.user.center_id ?? null,
+    detail: typeof body.status === 'string' ? { status: body.status } : undefined,
+    ip: auditIp(request),
+  });
+
   return NextResponse.json(
     { ok: true },
     { headers: { 'Cache-Control': 'no-store' } }

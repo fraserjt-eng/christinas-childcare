@@ -1,9 +1,11 @@
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { signPhotoList } from '@/lib/photo-url';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function uuidOrNull(v: unknown): string | null {
@@ -114,6 +116,18 @@ export async function PATCH(request: Request): Promise<NextResponse> {
 
   if (error) {
     return NextResponse.json({ error: 'Could not update photos' }, { status: 500 });
+  }
+
+  for (const id of ids) {
+    await logAudit({
+      actor: session.user,
+      action: 'photo.moderate',
+      targetType: 'daily_photo',
+      targetId: id,
+      centerId: session.user.center_id ?? null,
+      detail: { status },
+      ip: auditIp(request as NextRequest),
+    });
   }
 
   return NextResponse.json(
