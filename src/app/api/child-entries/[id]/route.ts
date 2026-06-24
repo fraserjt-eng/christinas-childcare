@@ -72,6 +72,30 @@ async function loadContext(id: string) {
   const isAdmin = ADMIN_ROLES.includes(session.user.role);
   const employee = await resolveSessionEmployee(session);
 
+  // Center scope (ALWAYS enforced, independent of the classroom flag): a teacher
+  // or center-bound admin may only touch entries for children at THEIR center.
+  // Room-floating within a center stays allowed; cross-center is blocked. Only a
+  // cross-center director (owner/superadmin, or a session with no home center) is
+  // exempt. 404 (not 403) so entry ids can't be probed across centers.
+  const role = (session.user.role || '').toLowerCase();
+  const myCenter = session.user.center_id ?? null;
+  const crossCenter = !myCenter || role === 'owner' || role === 'superadmin';
+  if (!crossCenter) {
+    const childId = (entry as { child_id?: string | null }).child_id ?? null;
+    let entryCenter: string | null = null;
+    if (childId) {
+      const { data: child } = await supabase
+        .from('family_children')
+        .select('center_id')
+        .eq('id', childId)
+        .maybeSingle();
+      entryCenter = (child?.center_id as string | null) ?? null;
+    }
+    if (entryCenter && entryCenter !== myCenter) {
+      return { error: NextResponse.json({ error: 'Entry not found' }, { status: 404 }) } as const;
+    }
+  }
+
   // Classroom scope (when enabled): a teacher may only edit/delete entries for
   // children in their assigned room. Admin/owner/superadmin bypass. The entry
   // carries the room it was logged under; fall back to the child's current

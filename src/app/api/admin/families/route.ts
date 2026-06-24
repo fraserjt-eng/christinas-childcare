@@ -25,7 +25,7 @@ interface ChildIn {
   medical_notes?: string;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await requireSession('admin');
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -35,12 +35,25 @@ export async function GET() {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
 
+  // Center scope: a center-bound admin only sees their own center's families. A
+  // cross-center director (owner/superadmin, or no home center) sees all, or one
+  // center if they narrowed via the cc_center cookie. Without this, any admin saw
+  // every center's families, children's DOB/allergies/medical notes, and PINs.
+  const role = (session.user.role || '').toLowerCase();
+  const sessionCenter = session.user.center_id ?? null;
+  const crossCenter = role === 'owner' || role === 'superadmin' || !sessionCenter;
+  const picked = request.cookies.get('cc_center')?.value || null;
+  const centerId = crossCenter ? picked : sessionCenter;
+
+  let famQ = supabase
+    .from('families')
+    .select('id, email, status, pin, address, family_bio, created_at, updated_at')
+    .limit(5000);
+  if (centerId) famQ = famQ.eq('center_id', centerId);
+
   // Fetch broad, join in JS (PostgREST .in() can silently drop rows).
   const [{ data: fams }, { data: parents }, { data: kids }] = await Promise.all([
-    supabase
-      .from('families')
-      .select('id, email, status, pin, address, family_bio, created_at, updated_at')
-      .limit(5000),
+    famQ,
     supabase
       .from('family_parents')
       .select('id, family_id, name, phone, email, relationship, is_primary')
@@ -122,6 +135,20 @@ export async function PATCH(request: NextRequest) {
   const id = (body.id || '').trim();
   if (!id) {
     return NextResponse.json({ error: 'id is required' }, { status: 400 });
+  }
+
+  // Center scope: a center-bound admin may only edit a family at their own center
+  // (this PATCH can delete+rewrite children + rotate the kiosk PIN). Cross-center
+  // directors (owner/superadmin, or no home center) are exempt.
+  const role = (session.user.role || '').toLowerCase();
+  const myCenter = session.user.center_id ?? null;
+  const crossCenter = role === 'owner' || role === 'superadmin' || !myCenter;
+  if (!crossCenter) {
+    const { data: fam } = await supabase.from('families').select('center_id').eq('id', id).maybeSingle();
+    if (!fam) return NextResponse.json({ error: 'Family not found' }, { status: 404 });
+    if ((fam.center_id as string | null) !== myCenter) {
+      return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+    }
   }
 
   const famUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() };
