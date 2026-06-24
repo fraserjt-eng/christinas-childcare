@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "remotion:studio": "remotion studio remotion/index.tsx",
     "remotion:render": "remotion render remotion/index.tsx",
     "remotion:render:all": "npm run remotion:render LessonBuilder public/videos/lesson-builder.mp4 && npm run remotion:render CurriculumLibrary public/videos/curriculum.mp4 && npm run remotion:render StaffManagement public/videos/staff.mp4 && npm run remotion:render Attendance public/videos/attendance.mp4 && npm run remotion:render Reports public/videos/reports.mp4"

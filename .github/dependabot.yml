@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # Weekly npm security + version updates, grouped so a quiet week is one PR, not
+  # twenty. Closes the "CVEs accumulate undetected" gap from the audit.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      production-dependencies:
+        dependency-type: production
+      development-dependencies:
+        dependency-type: development
+  # Keep the CI/Fortress workflow actions current too.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

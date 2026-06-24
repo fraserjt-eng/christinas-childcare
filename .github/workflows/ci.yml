@@ -1,0 +1,29 @@
+name: CI
+on: [push, pull_request]
+
+# Build + typecheck + lint gate. This app auto-deploys main to production, so a
+# broken build or a type error must be caught here BEFORE it can merge — the
+# missing piece the June 2026 audit flagged (the Fortress secret scan already
+# runs separately in fortress-secret-scan.yml).
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+        env:
+          # Build-time placeholders only. Real values live in Vercel; the client
+          # reads them at runtime, so these just let `next build` complete in CI.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
