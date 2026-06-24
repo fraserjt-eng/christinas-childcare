@@ -21,6 +21,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession, type AuthedSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionFamily } from '@/lib/parent-server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 type MinRole = 'parent' | 'teacher' | 'admin';
 
@@ -135,6 +136,10 @@ export async function POST(request: NextRequest) {
       const rec = { ...(body.record ?? {}) };
       if (scope !== 'global') Object.assign(rec, scope.stamp);
       const { data } = await supabase.from(table).insert(rec).select().single();
+      await logAudit({
+        actor: session.user, action: `store.insert`, targetType: table,
+        targetId: (data as { id?: string } | null)?.id ?? null, centerId: ctx.center, ip: auditIp(request),
+      });
       return NextResponse.json({ data: data ?? null });
     }
 
@@ -144,6 +149,10 @@ export async function POST(request: NextRequest) {
       const rid = (rec.id as string) || body.id;
       if (rid && !(await ownsRow(rid))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       const { data } = await supabase.from(table).upsert(rec, { onConflict: body.onConflict || 'id' }).select().single();
+      await logAudit({
+        actor: session.user, action: `store.upsert`, targetType: table,
+        targetId: (data as { id?: string } | null)?.id ?? rid ?? null, centerId: ctx.center, ip: auditIp(request),
+      });
       return NextResponse.json({ data: data ?? null });
     }
 
@@ -153,6 +162,10 @@ export async function POST(request: NextRequest) {
       const updates: Record<string, unknown> = { ...(body.updates ?? {}), updated_at: new Date().toISOString() };
       if (scope !== 'global') for (const [k, v] of Object.entries(scope.stamp)) if (k !== 'id') updates[k] = v; // can't reassign owner
       const { data } = await supabase.from(table).update(updates).eq('id', body.id).select().single();
+      await logAudit({
+        actor: session.user, action: `store.update`, targetType: table,
+        targetId: body.id, centerId: ctx.center, ip: auditIp(request),
+      });
       return NextResponse.json({ data: data ?? null });
     }
 
@@ -160,6 +173,10 @@ export async function POST(request: NextRequest) {
       if (!body.id) return NextResponse.json({ error: 'id required' }, { status: 400 });
       if (!(await ownsRow(body.id))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       await supabase.from(table).delete().eq('id', body.id);
+      await logAudit({
+        actor: session.user, action: `store.delete`, targetType: table,
+        targetId: body.id, centerId: ctx.center, ip: auditIp(request),
+      });
       return NextResponse.json({ data: true });
     }
 

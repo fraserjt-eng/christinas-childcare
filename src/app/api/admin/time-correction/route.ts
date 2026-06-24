@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 // Admin time corrections, authoritative on the real tables so the fix
 // pulses everywhere (payroll, ratios, labor, dashboard, reports):
@@ -121,6 +122,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    await logAudit({
+      actor: session.user, action: 'timecorrection.clock', targetType: 'time_entry',
+      targetId: id, centerId: (existing.center_id as string | null) ?? null, ip: auditIp(request),
+    });
     return NextResponse.json({ ok: true, entry: saved });
   }
 
@@ -168,6 +173,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    await logAudit({
+      actor: session.user, action: 'timecorrection.attendance', targetType: 'attendance',
+      targetId: id, centerId: (existing.center_id as string | null) ?? null, ip: auditIp(request),
+    });
     return NextResponse.json({ ok: true, attendance: saved });
   }
 
@@ -249,5 +258,9 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
+  await logAudit({
+    actor: session.user, action: 'record.delete', targetType: table,
+    targetId: id, centerId: myCenter, detail: { kind }, ip: auditIp(request),
+  });
   return NextResponse.json({ ok: true, deleted: { kind, id } });
 }

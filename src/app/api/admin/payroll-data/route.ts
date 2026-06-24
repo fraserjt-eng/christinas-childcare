@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 // Payroll read + writes via the service role. The page used client
 // employee-storage which reads time_entries/employees/pay_stubs with the
@@ -133,6 +134,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    await logAudit({
+      actor: session.user, action: 'payroll.rate_change', targetType: 'employee',
+      targetId: body.employeeId, centerId, detail: { hourly_rate: rate }, ip: auditIp(request),
+    });
     return NextResponse.json({ ok: true });
   }
 
@@ -182,6 +187,11 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    await logAudit({
+      actor: session.user, action: 'payroll.stub_create', targetType: 'employee',
+      targetId: s.employee_id as string, centerId,
+      detail: { period_start: s.period_start, period_end: s.period_end }, ip: auditIp(request),
+    });
     return NextResponse.json({ ok: true });
   }
 
@@ -220,6 +230,10 @@ export async function POST(request: NextRequest) {
     } catch {
       /* status flag is non-critical */
     }
+    await logAudit({
+      actor: session.user, action: `payroll.${body.action}`, targetType: 'pay_stub',
+      targetId: body.stubId, centerId, ip: auditIp(request),
+    });
     return NextResponse.json({ ok: true });
   }
 

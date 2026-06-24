@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 // Full family records for the admin Families tab (People > Families).
 // The page used the client family-storage which reads Supabase with the
@@ -205,6 +206,20 @@ export async function PATCH(request: NextRequest) {
       );
     }
   }
+
+  await logAudit({
+    actor: session.user,
+    action: 'family.update',
+    targetType: 'family',
+    targetId: id,
+    centerId: myCenter,
+    detail: {
+      status: typeof body.status === 'string' ? body.status : undefined,
+      email_changed: typeof body.email === 'string',
+      children_replaced: Array.isArray(body.children),
+    },
+    ip: auditIp(request),
+  });
 
   return NextResponse.json({ ok: true });
 }

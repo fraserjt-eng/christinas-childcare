@@ -13,6 +13,7 @@ import {
   CLASSROOM_SCOPING_ENABLED,
 } from '@/lib/child-entries-policy';
 import { signEntryPhoto } from '@/lib/photo-url';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 // Edit (PATCH) and soft-delete (DELETE) a single child_daily_entries row.
 // Staff (teacher rank) may change everyday entries from the last 48 hours;
@@ -126,7 +127,7 @@ async function loadContext(id: string) {
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   const ctx = await loadContext(params.id);
   if ('error' in ctx) return ctx.error;
-  const { supabase, entry, isAdmin, employee } = ctx;
+  const { session, supabase, entry, isAdmin, employee } = ctx;
 
   const denied = gate(entry, isAdmin);
   if (denied) return denied;
@@ -161,13 +162,18 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (error || !updated) {
     return NextResponse.json({ error: 'Could not update the entry' }, { status: 500 });
   }
+  await logAudit({
+    actor: session.user, action: 'child_entry.update', targetType: 'child_daily_entry',
+    targetId: entry.id, centerId: session.user.center_id ?? null,
+    detail: { type: entry.type }, ip: auditIp(request),
+  });
   return NextResponse.json({ ok: true, entry: await signEntryPhoto(supabase, updated) });
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   const ctx = await loadContext(params.id);
   if ('error' in ctx) return ctx.error;
-  const { supabase, entry, isAdmin, employee } = ctx;
+  const { session, supabase, entry, isAdmin, employee } = ctx;
 
   const denied = gate(entry, isAdmin);
   if (denied) return denied;
@@ -182,5 +188,10 @@ export async function DELETE(_request: NextRequest, { params }: { params: { id: 
   if (error) {
     return NextResponse.json({ error: 'Could not delete the entry' }, { status: 500 });
   }
+  await logAudit({
+    actor: session.user, action: 'child_entry.delete', targetType: 'child_daily_entry',
+    targetId: entry.id, centerId: session.user.center_id ?? null,
+    detail: { type: entry.type }, ip: auditIp(request),
+  });
   return NextResponse.json({ ok: true, deleted: true });
 }

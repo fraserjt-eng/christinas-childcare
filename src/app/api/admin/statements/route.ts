@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionEmployee } from '@/lib/employee-server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 // Co-payment statements (send-only, no payment processing). Admin enters the
 // amount per period; the client renders a PDF for download. Emailing is wired
@@ -147,6 +148,16 @@ export async function POST(request: NextRequest) {
   if (error || !created) {
     return NextResponse.json({ error: 'Could not save the statement' }, { status: 500 });
   }
+
+  await logAudit({
+    actor: session.user,
+    action: 'statement.create',
+    targetType: 'family_statement',
+    targetId: created.id as string,
+    centerId: familyCenter,
+    detail: { family_id: familyId, amount, period_label: periodLabel },
+    ip: auditIp(request),
+  });
 
   return NextResponse.json({ ok: true, statement: created });
 }
