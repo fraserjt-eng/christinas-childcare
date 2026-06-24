@@ -116,9 +116,19 @@ export const RATE_LIMITS = {
  * Uses IP address or forwarded header
  */
 export function getClientIdentifier(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
-  return ip;
+  // SECURITY: never key on x-forwarded-for[0] — a client can PREPEND a fake IP
+  // to that header to mint a fresh rate-limit bucket every request and defeat
+  // the PIN/login throttles. Prefer x-real-ip (set by the Vercel edge to the
+  // observed client IP, not client-spoofable). Fall back to the LAST x-forwarded
+  // -for entry (closest to the trusted edge), then a constant.
+  const realIp = request.headers.get('x-real-ip');
+  if (realIp && realIp.trim()) return realIp.trim();
+  const fwd = request.headers.get('x-forwarded-for');
+  if (fwd) {
+    const parts = fwd.split(',').map((p) => p.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
+  return 'unknown';
 }
 
 /**
