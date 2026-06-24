@@ -50,3 +50,4 @@ Attendance2026*
 
 # prod cutover creds (one-time, never commit)
 .env.prod.local
+soc2-evidence/
