@@ -14,26 +14,39 @@ function unauthorized() {
   return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 }
 
+// Backups are whole-organization dumps (every center's children, staff, and
+// financial rows). Only a cross-center director (owner/superadmin, or a session
+// with no home center) may create, read, restore, or delete them; a center-bound
+// admin must not reach another center's data through a backup. (OWASP: broken
+// access control / IDOR — center-scope bypass.)
+function isCrossCenter(session: { user: { role?: string; center_id?: string | null } }): boolean {
+  const role = (session.user.role || '').toLowerCase();
+  return role === 'owner' || role === 'superadmin' || !session.user.center_id;
+}
+function forbidden() {
+  return NextResponse.json(
+    { ok: false, error: 'Backups are restricted to the owner.' },
+    { status: 403 }
+  );
+}
+
 async function loadSnapshotByIdOrPath(id: string) {
   const supabase = getServerSupabase();
   if (!supabase) return { error: 'Backup is not available.' as const };
 
-  // Look up metadata first; the id might be a uuid OR a legacy filename.
-  let storagePath = id;
-  const isUuidish = /^[0-9a-f]{8}-/.test(id);
-  if (isUuidish) {
-    const { data, error } = await supabase
-      .from('backup_snapshots')
-      .select('storage_path')
-      .eq('id', id)
-      .single();
-    if (error || !data) {
-      // Log internals server-side; return a generic message only.
-      if (error) console.error('snapshot metadata lookup failed:', error.message);
-      return { error: 'Snapshot not found.' };
-    }
-    storagePath = data.storage_path;
+  // ALWAYS resolve through the metadata row by id; never accept a raw object
+  // path (which would let an attacker download arbitrary objects in the
+  // data-snapshots bucket by guessing filenames).
+  const { data, error } = await supabase
+    .from('backup_snapshots')
+    .select('storage_path')
+    .eq('id', id)
+    .single();
+  if (error || !data) {
+    if (error) console.error('snapshot metadata lookup failed:', error.message);
+    return { error: 'Snapshot not found.' };
   }
+  const storagePath = data.storage_path;
 
   const { data: blob, error: dlError } = await supabase.storage
     .from('data-snapshots')
@@ -65,6 +78,7 @@ export async function GET(
 ) {
   const session = await requireSession('admin');
   if (!session) return unauthorized();
+  if (!isCrossCenter(session)) return forbidden();
 
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
@@ -85,6 +99,7 @@ export async function DELETE(
 ) {
   const session = await requireSession('admin');
   if (!session) return unauthorized();
+  if (!isCrossCenter(session)) return forbidden();
 
   const supabase = getServerSupabase();
   if (!supabase) {
@@ -97,26 +112,21 @@ export async function DELETE(
   const { id } = await params;
   const decodedId = decodeURIComponent(id);
 
-  // Resolve the storage path so we can remove both the file and the metadata row.
-  const isUuidish = /^[0-9a-f]{8}-/.test(decodedId);
-  let storagePath = decodedId;
-  let metaId: string | null = null;
-  if (isUuidish) {
-    const { data, error } = await supabase
-      .from('backup_snapshots')
-      .select('id, storage_path')
-      .eq('id', decodedId)
-      .single();
-    if (error || !data) {
-      if (error) console.error('snapshot delete lookup failed:', error.message);
-      return NextResponse.json(
-        { ok: false, error: 'Snapshot not found.' },
-        { status: 404 }
-      );
-    }
-    storagePath = data.storage_path;
-    metaId = data.id;
+  // Resolve through the metadata row by id (never accept a raw object path).
+  const { data: meta, error: metaErr } = await supabase
+    .from('backup_snapshots')
+    .select('id, storage_path')
+    .eq('id', decodedId)
+    .single();
+  if (metaErr || !meta) {
+    if (metaErr) console.error('snapshot delete lookup failed:', metaErr.message);
+    return NextResponse.json(
+      { ok: false, error: 'Snapshot not found.' },
+      { status: 404 }
+    );
   }
+  const storagePath = meta.storage_path as string;
+  const metaId: string | null = meta.id as string;
 
   const { error: rmError } = await supabase.storage
     .from('data-snapshots')
@@ -151,6 +161,7 @@ export async function POST(
 ) {
   const session = await requireSession('admin');
   if (!session) return unauthorized();
+  if (!isCrossCenter(session)) return forbidden();
 
   const { id } = await params;
   const decodedId = decodeURIComponent(id);

@@ -21,6 +21,20 @@ function unauthorized() {
   return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
 }
 
+// Backups dump every center's data, so only a cross-center director (owner/
+// superadmin, or no home center) may list or create them — not a center-bound
+// admin. (OWASP: broken access control.)
+function isCrossCenter(session: { user: { role?: string; center_id?: string | null } }): boolean {
+  const role = (session.user.role || '').toLowerCase();
+  return role === 'owner' || role === 'superadmin' || !session.user.center_id;
+}
+function forbidden() {
+  return NextResponse.json(
+    { ok: false, error: 'Backups are restricted to the owner.' },
+    { status: 403 }
+  );
+}
+
 function badConfig(reason: string) {
   return NextResponse.json(
     { ok: false, error: `Backup is not available: ${reason}` },
@@ -35,6 +49,7 @@ function badConfig(reason: string) {
 export async function POST(req: NextRequest) {
   const session = await requireSession('admin');
   if (!session) return unauthorized();
+  if (!isCrossCenter(session)) return forbidden();
 
   const supabase = getServerSupabase();
   if (!supabase) {
@@ -169,6 +184,7 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const session = await requireSession('admin');
   if (!session) return unauthorized();
+  if (!isCrossCenter(session)) return forbidden();
 
   const supabase = getServerSupabase();
   if (!supabase) {
