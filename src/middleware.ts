@@ -80,13 +80,25 @@ const API_RATE_LIMIT = {
  * carries is derived server-side from the database. So verifying this signed
  * cookie here is sufficient and the role inside it is trustworthy.
  */
+// Edge-safe constant-time string comparison (no Node crypto in middleware).
+function constantTimeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 async function verifySignedCookieEdge(cookieValue: string): Promise<Record<string, unknown> | null> {
-  // Fail closed in production: no SESSION_SECRET means deny, not sign with a
-  // publicly known key. Returning null makes the caller treat the request as
-  // unauthenticated and redirect to login.
+  // Fail closed in production: no SESSION_SECRET (or a known-weak/short one)
+  // means deny, not sign with a guessable key. Returning null makes the caller
+  // treat the request as unauthenticated and redirect to login.
+  const raw = process.env.SESSION_SECRET || '';
   const secret =
-    process.env.SESSION_SECRET ||
-    (process.env.NODE_ENV === 'production' ? '' : 'dev-secret-change-in-production');
+    process.env.NODE_ENV === 'production'
+      ? raw && raw !== 'dev-secret-change-in-production' && raw.length >= 32
+        ? raw
+        : ''
+      : raw || 'dev-secret-change-in-production';
   if (!secret) return null;
   const lastDot = cookieValue.lastIndexOf('.');
   if (lastDot === -1) return null;
@@ -106,7 +118,7 @@ async function verifySignedCookieEdge(cookieValue: string): Promise<Record<strin
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
 
-  if (signature !== expected) return null;
+  if (!constantTimeEqualHex(signature, expected)) return null;
 
   try {
     const data = JSON.parse(payload);

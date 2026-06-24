@@ -141,6 +141,19 @@ export async function POST(request: NextRequest) {
     if (!s.employee_id || !s.period_start || !s.period_end) {
       return NextResponse.json({ error: 'Invalid pay stub' }, { status: 400 });
     }
+    // Center-membership authz (same rule as the 'rate' action): a center-bound
+    // admin may only create a pay stub for an employee in their own center.
+    if (centerId) {
+      const { data: emp } = await supabase
+        .from('employees')
+        .select('center_id')
+        .eq('id', s.employee_id as string)
+        .maybeSingle();
+      if (!emp) return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+      if (emp.center_id !== centerId) {
+        return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+      }
+    }
     // Core columns + the full computed stub in breakdown (jsonb) so nothing
     // computed is lost even if a column is absent.
     const { error } = await supabase.from('pay_stubs').insert({
@@ -175,6 +188,26 @@ export async function POST(request: NextRequest) {
   if (body.action === 'markPaid' || body.action === 'finalize') {
     if (!body.stubId) {
       return NextResponse.json({ error: 'stubId required' }, { status: 400 });
+    }
+    // Center-membership authz: resolve the stub's employee and reject if the
+    // employee belongs to another center.
+    if (centerId) {
+      const { data: stubRow } = await supabase
+        .from('pay_stubs')
+        .select('employee_id')
+        .eq('id', body.stubId)
+        .maybeSingle();
+      const empId = (stubRow?.employee_id as string | undefined) ?? undefined;
+      if (empId) {
+        const { data: emp } = await supabase
+          .from('employees')
+          .select('center_id')
+          .eq('id', empId)
+          .maybeSingle();
+        if (emp && emp.center_id !== centerId) {
+          return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+        }
+      }
     }
     const patch =
       body.action === 'markPaid'

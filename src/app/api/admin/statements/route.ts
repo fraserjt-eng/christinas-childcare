@@ -106,21 +106,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Enter a valid amount' }, { status: 400 });
   }
 
-  // Confirm the family exists + grab its center for the record.
+  // Confirm the family exists + read its center.
   const { data: family } = await supabase
     .from('families')
-    .select('id')
+    .select('id, center_id')
     .eq('id', familyId)
     .maybeSingle();
   if (!family) {
     return NextResponse.json({ error: 'Unknown family' }, { status: 404 });
   }
-  // The center for the record: any center (single-center business today).
-  const { data: anyCenter } = await supabase
-    .from('centers')
-    .select('id')
-    .limit(1)
-    .maybeSingle();
+  // Center scope: a center-bound admin may only issue a statement for a family at
+  // their own center, and the statement is recorded under the FAMILY's center
+  // (not an arbitrary "any center", which mislabeled records in multi-center).
+  const role = (session.user.role || '').toLowerCase();
+  const myCenter = session.user.center_id ?? null;
+  const crossCenter = role === 'owner' || role === 'superadmin' || !myCenter;
+  const familyCenter = (family.center_id as string | null) ?? null;
+  if (!crossCenter && familyCenter !== myCenter) {
+    return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+  }
 
   const employee = await resolveSessionEmployee(session);
 
@@ -128,7 +132,7 @@ export async function POST(request: NextRequest) {
     .from('family_statements')
     .insert({
       family_id: familyId,
-      center_id: anyCenter?.id ?? null,
+      center_id: familyCenter,
       period_label: periodLabel,
       period_start: body.period_start || null,
       period_end: body.period_end || null,
