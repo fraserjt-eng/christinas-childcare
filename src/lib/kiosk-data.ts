@@ -52,7 +52,7 @@ export interface KioskClient {
   getTodayAttendance(childId: string): Promise<AttendanceRow | null>;
   // signedByName: the adult who dropped off / picked up (DCYF Sign In/Out Person).
   checkIn(child: FamilyChildRow, familyId: string, signedByName?: string): Promise<void>;
-  checkOut(childId: string, signedByName?: string): Promise<void>;
+  checkOut(childId: string, familyId?: string, signedByName?: string): Promise<void>;
   // MN DCYF privacy-notice gate: is the family's agreement current (right
   // version, within the year)? And record an agreement.
   getPrivacyAttestationStatus(familyId: string): Promise<boolean>;
@@ -105,8 +105,8 @@ export function makeLiveKioskClient(centerId?: string): KioskClient {
         centerId,
       });
     },
-    checkOut: async (childId, signedByName) => {
-      await callKiosk({ action: 'checkout', childId, signedByName: signedByName || null, centerId });
+    checkOut: async (childId, familyId, signedByName) => {
+      await callKiosk({ action: 'checkout', childId, familyId, signedByName: signedByName || null, centerId });
     },
     getPrivacyAttestationStatus: async (familyId) => {
       const res = await callKiosk<{ current: boolean }>({

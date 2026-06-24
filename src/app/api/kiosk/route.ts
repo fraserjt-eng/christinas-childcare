@@ -24,6 +24,32 @@ function todayDate(): string {
   return centerDate();
 }
 
+// Verify a child belongs to the family that signed in at this kiosk, scoped to
+// the kiosk's center. The kiosk only ever hands out a PIN'd family's own
+// children, so an attendance write for any other childId is rejected here. This
+// closes the cross-family / cross-center write: familyId is required on check-in
+// (the client always sends it) and verified on check-out when present; the
+// child's center is always enforced. center_id was backfilled on every
+// family_children row (migration 030), so the null branch is only defensive.
+async function verifyKioskChild(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  childId: string,
+  centerId: string,
+  familyId?: string
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  let query = supabase
+    .from('family_children')
+    .select('id, family_id, center_id')
+    .eq('id', childId);
+  if (familyId) query = query.eq('family_id', familyId);
+  const { data: child } = await query.maybeSingle();
+  if (!child) return { ok: false, status: 403, error: 'Child not found for this family' };
+  if (child.center_id && child.center_id !== centerId) {
+    return { ok: false, status: 403, error: 'Child not at this center' };
+  }
+  return { ok: true };
+}
+
 export async function POST(request: NextRequest) {
   const clientId = getClientIdentifier(request);
 
@@ -176,6 +202,14 @@ export async function POST(request: NextRequest) {
     if (!body.childId || !body.childName) {
       return NextResponse.json({ error: 'childId and childName required' }, { status: 400 });
     }
+    const familyId = (body.familyId || '').trim();
+    if (!familyId) {
+      return NextResponse.json({ error: 'familyId required' }, { status: 400 });
+    }
+    const guard = await verifyKioskChild(supabase, body.childId, centerId, familyId);
+    if (!guard.ok) {
+      return NextResponse.json({ error: guard.error }, { status: guard.status });
+    }
     const today = todayDate();
 
     const { data: existingRows } = await supabase
@@ -207,7 +241,7 @@ export async function POST(request: NextRequest) {
       date: today,
       check_in: new Date().toISOString(),
       center_id: centerId,
-      notes: body.familyId ? `family:${body.familyId}` : null,
+      notes: `family:${familyId}`,
       signed_in_by_name: signedInBy,
     });
     return NextResponse.json({ data: { ok: true } });
@@ -217,6 +251,15 @@ export async function POST(request: NextRequest) {
   if (body.action === 'checkout') {
     if (!body.childId) {
       return NextResponse.json({ error: 'childId required' }, { status: 400 });
+    }
+    const guard = await verifyKioskChild(
+      supabase,
+      body.childId,
+      centerId,
+      (body.familyId || '').trim() || undefined
+    );
+    if (!guard.ok) {
+      return NextResponse.json({ error: guard.error }, { status: guard.status });
     }
     await supabase
       .from('attendance')

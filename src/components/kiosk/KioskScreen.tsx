@@ -234,7 +234,7 @@ function ChildTile({
   async function toggle() {
     if (busy) return;
     setBusy(true);
-    if (inAt) await client.checkOut(child.id, signerName.trim() || undefined);
+    if (inAt) await client.checkOut(child.id, familyId, signerName.trim() || undefined);
     else await client.checkIn(child, familyId, signerName.trim() || undefined);
     setAtt(await client.getTodayAttendance(child.id));
     setBusy(false);
