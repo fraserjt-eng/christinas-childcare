@@ -315,7 +315,8 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
 };
 
 // Superadmin emails: hardcoded for security. These users get superadmin role on Google OAuth login.
-export const SUPERADMIN_EMAILS = ['fraserjt@gmail.com'];
+// J (builder) + Christina Fraser (owner).
+export const SUPERADMIN_EMAILS = ['fraserjt@gmail.com', 'c.fraser@chriskids2.org'];
 
 /**
  * Sign in with Google OAuth via Supabase

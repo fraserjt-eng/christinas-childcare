@@ -19,7 +19,8 @@ export interface AllowlistResult {
 
 // Bootstrap superadmin list — always allowed even if not in any table.
 // Exported so the server-side resolver shares one source of truth.
-export const SUPERADMIN_EMAILS = ['fraserjt@gmail.com'];
+// J (builder) + Christina Fraser (owner) have cross-center superadmin access.
+export const SUPERADMIN_EMAILS = ['fraserjt@gmail.com', 'c.fraser@chriskids2.org'];
 
 /**
  * Look up a signing-in email against all role tables.
