@@ -268,8 +268,8 @@ export const TILE_CATALOG: TileCatalogEntry[] = [
   // ---------------------------------------------------------------- Admin
   {
     id: "reports",
-    label: "Reports",
-    description: "Sent to you weekly",
+    label: "Daily Reports",
+    description: "Any past day, by child",
     href: "/admin/reports",
     group: "Admin",
     icon: "ClipboardList",
