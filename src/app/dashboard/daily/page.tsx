@@ -17,6 +17,7 @@ import {
   Sparkles,
   Camera,
   AlertTriangle,
+  CheckCircle2,
   StickyNote,
   Loader2,
 } from 'lucide-react';
@@ -47,6 +48,8 @@ const TYPE_META: Record<
   bottle: { label: 'Bottle', icon: Milk, color: 'text-sky-600' },
   bathroom: { label: 'Bathroom', icon: Baby, color: 'text-cyan-600' },
   diaper: { label: 'Diaper', icon: Baby, color: 'text-cyan-600' },
+  toileting: { label: 'Potty', icon: CheckCircle2, color: 'text-teal-600' },
+  accident: { label: 'Accident', icon: AlertTriangle, color: 'text-orange-600' },
   medication: { label: 'Medication', icon: Pill, color: 'text-red-600' },
   activity: { label: 'Activity', icon: Sparkles, color: 'text-emerald-600' },
   photo: { label: 'Photo', icon: Camera, color: 'text-purple-600' },
@@ -254,47 +257,53 @@ export default function ParentDailyReportPage() {
               soon.
             </p>
           ) : (
-            <div className="space-y-1">
-              {entries.map((e) => {
-                const meta = TYPE_META[e.type] || TYPE_META.note;
-                const Icon = meta.icon;
-                const text = detailText(e.detail);
-                return (
-                  <div
-                    key={e.id}
-                    className="flex items-start gap-3 py-2.5 border-b last:border-b-0"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                      <Icon className={`h-4 w-4 ${meta.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+            // Chronological timeline: earliest at the top, each entry on a rail
+            // with its clock time, so the day reads top-to-bottom instead of as
+            // one undifferentiated list.
+            <ol className="space-y-0">
+              {[...entries]
+                .sort((a, b) =>
+                  (a.occurred_at || '').localeCompare(b.occurred_at || '')
+                )
+                .map((e, i, arr) => {
+                  const meta = TYPE_META[e.type] || TYPE_META.note;
+                  const Icon = meta.icon;
+                  const text = detailText(e.detail);
+                  const isLast = i === arr.length - 1;
+                  return (
+                    <li key={e.id} className="flex gap-3">
+                      <div className="w-14 flex-shrink-0 pt-2.5 text-right text-xs font-semibold text-gray-600">
+                        {timeOf(e.occurred_at)}
+                      </div>
+                      <div className="flex flex-shrink-0 flex-col items-center">
+                        <span className="mt-2 flex h-8 w-8 items-center justify-center rounded-full border-2 border-muted bg-white">
+                          <Icon className={`h-4 w-4 ${meta.color}`} />
+                        </span>
+                        {!isLast && <span className="my-1 w-px flex-1 bg-border" />}
+                      </div>
+                      <div className="min-w-0 flex-1 py-2.5">
                         <Badge variant="outline" className="text-xs">
                           {meta.label}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {timeOf(e.occurred_at)}
-                        </span>
-                      </div>
-                      {text && (
-                        <p className="text-sm text-gray-800 mt-1 break-words">
-                          {text}
-                        </p>
-                      )}
-                      {e.type === 'photo' &&
-                        typeof e.detail?.photo_url === 'string' && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={e.detail.photo_url as string}
-                            alt="From your child's day"
-                            className="mt-2 rounded-lg max-h-64 w-auto border"
-                          />
+                        {text && (
+                          <p className="mt-1 break-words text-sm text-gray-800">
+                            {text}
+                          </p>
                         )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        {e.type === 'photo' &&
+                          typeof e.detail?.photo_url === 'string' && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={e.detail.photo_url as string}
+                              alt="From your child's day"
+                              className="mt-2 max-h-64 w-auto rounded-lg border"
+                            />
+                          )}
+                      </div>
+                    </li>
+                  );
+                })}
+            </ol>
           )}
         </CardContent>
       </Card>
