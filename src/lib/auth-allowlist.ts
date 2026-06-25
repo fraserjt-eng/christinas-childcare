@@ -19,8 +19,15 @@ export interface AllowlistResult {
 
 // Bootstrap superadmin list — always allowed even if not in any table.
 // Exported so the server-side resolver shares one source of truth.
-// J (builder) + Christina Fraser (owner) have cross-center superadmin access.
-export const SUPERADMIN_EMAILS = ['fraserjt@gmail.com', 'c.fraser@chriskids2.org'];
+// The leadership team (J + the owners) get cross-center superadmin access; this
+// list is also applied at mint time (mint-session.ts) so every login path — Google
+// OR staff PIN — yields a superadmin cookie, not an 'admin' one. Lowercase only.
+export const SUPERADMIN_EMAILS = [
+  'fraserjt@gmail.com',
+  'c.fraser@chriskids2.org',
+  'ophelia@chriskidstoo.org',
+  'sbzeogar@chriskids2.org',
+];
 
 /**
  * Look up a signing-in email against all role tables.

@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { signPayload, SESSION_MAX_AGE } from '@/lib/session';
+import { SUPERADMIN_EMAILS } from '@/lib/auth-allowlist';
 
 export interface SessionUser {
   id: string;
@@ -20,14 +21,25 @@ export interface SessionUser {
 }
 
 export function mintSessionResponse(user: SessionUser): NextResponse {
+  // The leadership emails ALWAYS mint as cross-center superadmin, no matter how
+  // they signed in. Without this, a staff-PIN login resolves an owner to role
+  // 'admin', which hides the center switcher and owner-only features — even
+  // though requireSession would treat them as superadmin server-side. Forcing it
+  // here makes the COOKIE itself say superadmin, so the client UI matches. (Each
+  // owner must sign out + back in once for their new cookie to take effect.)
+  const email = (user.email || '').toLowerCase().trim();
+  const effectiveUser: SessionUser = SUPERADMIN_EMAILS.includes(email)
+    ? { ...user, role: 'superadmin', center_id: null }
+    : user;
+
   const sessionData = {
-    user,
+    user: effectiveUser,
     expires_at: Date.now() + SESSION_MAX_AGE * 1000,
   };
   const payload = JSON.stringify(sessionData);
   const cookieValue = `${payload}.${signPayload(payload)}`;
 
-  const response = NextResponse.json({ success: true, user });
+  const response = NextResponse.json({ success: true, user: effectiveUser });
   response.cookies.set('auth_session', cookieValue, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
