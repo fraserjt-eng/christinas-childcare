@@ -12,7 +12,7 @@ import { centerDateOf } from '@/lib/center-time';
 // service-role-only). Mirrors the single POST /api/child-entries contract.
 // Sensitive types (photo, incident, medication) are intentionally excluded from
 // batch entry: those must be logged per child, deliberately.
-const BATCH_TYPES = ['note', 'activity', 'nap', 'meal', 'bathroom', 'diaper'] as const;
+const BATCH_TYPES = ['note', 'activity', 'nap', 'meal', 'bathroom', 'diaper', 'toileting', 'accident'] as const;
 type BatchType = (typeof BATCH_TYPES)[number];
 
 interface EntryInput {

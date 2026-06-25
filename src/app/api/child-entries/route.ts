@@ -21,6 +21,8 @@ const ENTRY_TYPES = [
   'bottle',
   'bathroom',
   'diaper',
+  'toileting',
+  'accident',
   'medication',
   'activity',
   'photo',

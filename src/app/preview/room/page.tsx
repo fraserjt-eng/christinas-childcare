@@ -15,6 +15,8 @@ import {
   Blocks,
   Camera,
   Check,
+  CheckCircle2,
+  CircleSlash,
   ClipboardList,
   type LucideIcon,
   Milk,
@@ -51,13 +53,15 @@ const KIND_ICON: Record<string, LucideIcon> = {
   meal: Apple,
   bottle: Milk,
   diaper: StickyNote,
+  toileting: CheckCircle2,
+  accident: CircleSlash,
   nap: Moon,
   activity: Palette,
   photo: Camera,
   note: StickyNote,
 };
 
-type ActionKind = "meal" | "bottle" | "diaper" | "nap" | "activity" | "photo" | "note";
+type ActionKind = "meal" | "bottle" | "diaper" | "toileting" | "accident" | "nap" | "activity" | "photo" | "note";
 
 interface RoomAction {
   kind: ActionKind;
@@ -73,6 +77,8 @@ interface RoomAction {
 const MEAL_CHIPS = ["Ate all", "Ate some", "Just a little"];
 const BOTTLE_CHIPS = ["2 oz", "4 oz", "6 oz", "8 oz, finished it"];
 const DIAPER_CHIPS = ["Wet", "BM", "Dry, checked"];
+const TOILETING_CHIPS = ["Used the potty", "Pee", "BM", "Tried, no luck"];
+const ACCIDENT_CHIPS = ["Wet clothes", "BM accident", "Changed clothes"];
 const NAP_CHIPS = ["Just fell asleep", "Woke up happy", "Short rest"];
 const ACTIVITY_CHIPS = [
   "Circle time",
@@ -226,6 +232,82 @@ const INFANT_ACTIONS: RoomAction[] = [
   },
 ];
 
+/** Toddler rooms are potty-training, so Diaper, Potty, and Accident lead. */
+const TODDLER_ACTIONS: RoomAction[] = [
+  {
+    kind: "diaper",
+    label: "Diaper",
+    icon: StickyNote,
+    color: "var(--pv-plum)",
+    panelTitle: "Log a diaper change",
+    defaultDetail: "Wet, changed",
+    quickChips: DIAPER_CHIPS,
+  },
+  {
+    kind: "toileting",
+    label: "Potty",
+    icon: CheckCircle2,
+    color: "var(--pv-teal)",
+    panelTitle: "Log potty / toileting",
+    defaultDetail: "Used the potty",
+    quickChips: TOILETING_CHIPS,
+  },
+  {
+    kind: "accident",
+    label: "Accident",
+    icon: CircleSlash,
+    color: "var(--pv-coral)",
+    panelTitle: "Log an accident",
+    defaultDetail: "Wet clothes, changed",
+    quickChips: ACCIDENT_CHIPS,
+  },
+  {
+    kind: "meal",
+    label: "Meal",
+    icon: Apple,
+    color: "var(--pv-gold)",
+    panelTitle: "Log a meal",
+    defaultDetail: "Lunch, ate most",
+    quickChips: MEAL_CHIPS,
+  },
+  {
+    kind: "nap",
+    label: "Nap",
+    icon: Moon,
+    color: "var(--pv-plum)",
+    panelTitle: "Log a nap",
+    defaultDetail: "Slept 12:30 to 2:05",
+    quickChips: NAP_CHIPS,
+  },
+  {
+    kind: "activity",
+    label: "Activity",
+    icon: Palette,
+    color: "var(--pv-sky)",
+    panelTitle: "Log an activity",
+    defaultDetail: "Outdoor play and big blocks",
+    quickChips: ACTIVITY_CHIPS,
+  },
+  {
+    kind: "photo",
+    label: "Photo",
+    icon: Camera,
+    color: "var(--pv-gold)",
+    panelTitle: "Log a photo",
+    defaultDetail: "A moment from today",
+    quickChips: [],
+  },
+  {
+    kind: "note",
+    label: "Note",
+    icon: StickyNote,
+    color: "var(--pv-coral)",
+    panelTitle: "Log a note",
+    defaultDetail: "A quick note from the room",
+    quickChips: [],
+  },
+];
+
 export default function RoomPage() {
   const mounted = useMounted();
   const rooms = usePreviewStore((s) => s.rooms);
@@ -264,7 +346,14 @@ export default function RoomPage() {
   const isInfantRoom = activeRoom
     ? /infant|baby|nursery/i.test(activeRoom.name)
     : roomId === "infants";
-  const actions = isInfantRoom ? INFANT_ACTIONS : STANDARD_ACTIONS;
+  const isToddlerRoom = activeRoom
+    ? /toddler|2.?yr|two.?year/i.test(activeRoom.name)
+    : roomId === "toddlers";
+  const actions = isInfantRoom
+    ? INFANT_ACTIONS
+    : isToddlerRoom
+      ? TODDLER_ACTIONS
+      : STANDARD_ACTIONS;
   const activeAction = actions.find((a) => a.kind === activeKind) ?? null;
   const todaysLog = mounted
     ? feed.filter(

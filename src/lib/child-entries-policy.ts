@@ -9,6 +9,8 @@ export const STAFF_EDITABLE_TYPES = [
   'bottle',
   'bathroom',
   'diaper',
+  'toileting',
+  'accident',
   'activity',
   'photo',
 ] as const;

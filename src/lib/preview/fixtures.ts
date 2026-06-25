@@ -75,6 +75,8 @@ export type FeedKind =
   | "meal"
   | "bottle"
   | "diaper"
+  | "toileting"
+  | "accident"
   | "nap"
   | "activity"
   | "photo"
