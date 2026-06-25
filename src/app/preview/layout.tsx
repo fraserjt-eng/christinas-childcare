@@ -4,6 +4,7 @@ import "./preview.css";
 import { PreviewChrome } from "@/components/preview/PreviewChrome";
 import LivePortalHydrator from "@/components/preview/LivePortalHydrator";
 import CenterWatermark from "@/components/preview/CenterWatermark";
+import { CoachWidget } from "@/components/coach/CoachWidget";
 
 // The production portal. Logged-in surfaces require a real auth_session; the
 // route protection in src/middleware.ts redirects an unauthenticated visitor to
@@ -31,6 +32,7 @@ export default function PreviewLayout({
           <LivePortalHydrator />
           <CenterWatermark />
           <PreviewChrome>{children}</PreviewChrome>
+          <CoachWidget />
         </>
       ) : (
         children
