@@ -12,9 +12,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const BUCKET = 'child_photos';
-// One hour: long enough to view a full daily report or scroll a gallery, short
-// enough that a leaked link stops working quickly.
-const TTL_SECONDS = 60 * 60;
+// Eight hours: a full working day, so a photo opened in the morning still loads
+// in the afternoon without a hard refresh. Still expires the same day, so a
+// leaked link does not live forever.
+const TTL_SECONDS = 60 * 60 * 8;
 
 /**
  * Reduce any stored photo value to the bucket object path.

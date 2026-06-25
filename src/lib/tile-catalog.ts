@@ -117,11 +117,11 @@ export const TILE_CATALOG: TileCatalogEntry[] = [
   {
     id: "newsletter",
     label: "Newsletter",
-    description: "Three blocks, then send",
-    href: "/preview/newsletter",
+    description: "AI draft + auto-fill, then send",
+    href: "/admin/communications",
     group: "Family",
     icon: "Newspaper",
-    kind: "portal",
+    kind: "admin",
   },
   {
     id: "messages",

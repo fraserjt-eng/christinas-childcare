@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
       supabase.from('family_parents').select('family_id, name, phone, relationship, is_primary').limit(5000),
       supabase.from('attendance').select('id, child_id, child_name, check_in, check_out').eq('center_id', centerId).eq('date', today).limit(5000),
       supabase.from('time_entries').select('employee_id, clock_in, clock_out').eq('center_id', centerId).eq('date', today).limit(5000),
-      supabase.from('child_daily_entries').select('id, child_id, classroom_id, type, detail, occurred_at').eq('center_id', centerId).order('occurred_at', { ascending: false }).limit(200),
+      supabase.from('child_daily_entries').select('id, child_id, classroom_id, type, detail, occurred_at').eq('center_id', centerId).eq('date', today).order('occurred_at', { ascending: false }).limit(200),
       supabase.from('staff_schedules').select('id, employee_id, date, start_time, end_time, classroom_id').eq('center_id', centerId).gte('date', weekStart).lte('date', weekEnd).limit(5000),
     ]);
 

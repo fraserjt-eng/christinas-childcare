@@ -506,6 +506,15 @@ export const usePreviewStore = create<PreviewState>()(
       name: "cc-preview-demo-v1",
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
+      // Never persist kidPhotos. They hold short-lived SIGNED photo URLs; a
+      // persisted link expires within hours and then shows a broken image until
+      // a hard refresh. Always rehydrate them fresh from the server via
+      // hydrateFromLive, so a photo saved on one device shows on every device.
+      partialize: (state) => {
+        const persisted = { ...state } as Record<string, unknown>;
+        delete persisted.kidPhotos;
+        return persisted as Partial<PreviewState>;
+      },
       // Bump when the fixture world changes shape so devices that walked an
       // older demo reseed instead of carrying a stale world (v2: four rooms,
       // bottles and diapers, infant and school-age kids. v3: uploaded photos.
