@@ -101,6 +101,15 @@ function fmtTime(t: string): string {
   const h12 = ((h + 11) % 12) + 1;
   return `${h12}:${m[2]} ${ap}`;
 }
+// Parse a friendly clock time ("9:15 AM") to minutes-since-midnight, so today's
+// log can read in chronological (timeline) order.
+function clockMins(t: string): number {
+  const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)?/i.exec(t || "");
+  if (!m) return 0;
+  let h = Number(m[1]) % 12;
+  if (/pm/i.test(m[3] ?? "")) h += 12;
+  return h * 60 + Number(m[2]);
+}
 // The structured nap / bottle controls just build the human-readable note
 // string; storage stays {note: string} so the family feed renders it unchanged.
 function buildNap(start: string, end: string): string {
@@ -759,7 +768,9 @@ export default function RoomPage() {
           {todaysLog.length === 0 ? (
             <EmptyState icon={ClipboardList} title="Nothing logged here yet" detail="What you log shows up in this list to fix later." />
           ) : (
-            todaysLog.map((e) => {
+            [...todaysLog]
+              .sort((a, b) => clockMins(a.time) - clockMins(b.time))
+              .map((e) => {
               const KindIcon = KIND_ICON[e.kind] ?? StickyNote;
               return (
               <div key={e.id} className="pv-tile p-5">

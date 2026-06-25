@@ -14,7 +14,8 @@ export function isEmailConfigured(): boolean {
 
 export async function sendNotificationEmail(
   subject: string,
-  htmlBody: string
+  htmlBody: string,
+  to: string = NOTIFICATION_EMAIL
 ): Promise<Record<string, unknown> | null> {
   if (!RESEND_API_KEY) {
     console.log('[email] RESEND_API_KEY not set, skipping email notification');
@@ -30,7 +31,7 @@ export async function sendNotificationEmail(
       },
       body: JSON.stringify({
         from: "Christina's Childcare <notifications@christinaschildcare.com>",
-        to: [NOTIFICATION_EMAIL],
+        to: [to],
         subject,
         html: htmlBody,
       }),

@@ -8,6 +8,7 @@ import { applyRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 import { reportError } from '@/lib/error-reporter';
 import { audioObjectPath, imageObjectPath } from '@/lib/support/paths';
 import { normalizeRole } from '@/lib/support/types';
+import { sendNotificationEmail } from '@/lib/email';
 
 const SUBMIT_RATE_LIMIT = { maxRequests: 10, windowMs: RATE_LIMITS.login.windowMs };
 const MAX_AUDIO_BYTES = 15 * 1024 * 1024; // 15 MB
@@ -105,6 +106,24 @@ export async function POST(req: NextRequest) {
       status: 'new',
     });
     if (insErr) throw insErr;
+
+    // Alert J by email so a new ticket reaches him without watching the queue.
+    // Best-effort: sendNotificationEmail no-ops when RESEND_API_KEY is unset and
+    // never throws, so it can't fail the ticket. Destination is overridable via
+    // TICKET_ALERT_EMAIL.
+    const alertTo = process.env.TICKET_ALERT_EMAIL || 'fraserjt@gmail.com';
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    await sendNotificationEmail(
+      `New support ticket: ${subject.slice(0, 120)}`,
+      `<div style="font-family:system-ui,Arial,sans-serif;font-size:15px;line-height:1.5;color:#222">
+        <p><strong>${esc(subject)}</strong></p>
+        ${description ? `<p>${esc(description).replace(/\n/g, '<br/>')}</p>` : ''}
+        <hr style="border:none;border-top:1px solid #eee;margin:16px 0"/>
+        <p style="font-size:13px;color:#666">From ${esc(session.user.full_name || 'a user')} (${esc(session.user.email || 'no email')}, ${esc(normalizeRole(session.user.role))})${pageUrl ? ` &middot; on ${esc(pageUrl)}` : ''}</p>
+      </div>`,
+      alertTo
+    );
 
     return NextResponse.json({ id }, { status: 201 });
   } catch (err) {

@@ -217,7 +217,11 @@ export default function DailyReportsPage() {
                         ))}
                       </div>
                       <div className="space-y-1">
-                        {child.entries.slice(0, 5).map((e) => (
+                        {[...child.entries]
+                          .sort((a, b) =>
+                            (a.occurred_at || '').localeCompare(b.occurred_at || '')
+                          )
+                          .map((e) => (
                           <div
                             key={e.id}
                             className="flex items-center gap-2 text-sm border-b last:border-b-0 py-1.5"
@@ -247,11 +251,6 @@ export default function DailyReportsPage() {
                               )}
                           </div>
                         ))}
-                        {child.entries.length > 5 && (
-                          <p className="text-xs text-muted-foreground pt-1">
-                            + {child.entries.length - 5} more
-                          </p>
-                        )}
                       </div>
                     </div>
                   )}
