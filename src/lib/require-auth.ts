@@ -47,7 +47,7 @@ const ROLE_RANK: Record<string, number> = {
  * @param minRole minimum role required. Omit to require only a valid session.
  */
 export async function requireSession(
-  minRole?: 'teacher' | 'admin'
+  minRole?: 'teacher' | 'admin' | 'owner' | 'superadmin'
 ): Promise<AuthedSession | null> {
   const raw = (await cookies()).get('auth_session')?.value;
   if (!raw) return null;

@@ -5,17 +5,10 @@ import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { logAudit, auditIp } from '@/lib/audit-log';
 
-// Admin (or owner/superadmin) sends a direct message to a registered parent.
-// It is saved server-side (shows in the parent's portal) and emailed.
-// requireSession('admin') already allows owner + superadmin (higher rank).
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+// Admin (or owner/superadmin) composes a direct message to a registered parent.
+// Composing now saves a DRAFT (status='pending_review'); the actual send + email
+// happen when an owner approves it from the review queue (see
+// /api/admin/comms-review). requireSession('admin') allows owner + superadmin.
 
 export async function POST(request: NextRequest) {
   const session = await requireSession('admin');
@@ -62,46 +55,27 @@ export async function POST(request: NextRequest) {
 
   const fromName = `${session.user.full_name || 'Christina’s Child Care Center'}`;
 
-  // Try to send the email first so we can record whether it went out.
-  let emailed = false;
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  if (RESEND_API_KEY) {
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: "Christina's Child Care Center <notifications@christinaschildcare.com>",
-          to: [family.email],
-          reply_to: 'info@christinaschildcare.com',
-          subject,
-          html: `<div style="font-family:system-ui,Arial,sans-serif;font-size:15px;line-height:1.5;color:#222">
-            <p>${escapeHtml(message).replace(/\n/g, '<br/>')}</p>
-            <hr style="border:none;border-top:1px solid #eee;margin:20px 0"/>
-            <p style="font-size:13px;color:#666">From ${escapeHtml(fromName)} at Christina&rsquo;s Child Care Center.
-            You can also see this in your parent portal.</p>
-          </div>`,
-        }),
-      });
-      emailed = res.ok;
-    } catch {
-      emailed = false;
-    }
-  }
+  // Composing saves a DRAFT for owner review — it does NOT send or email yet.
+  // An owner approves it from the review queue, which is where the email + the
+  // parent-portal post actually happen. So every outbound family message is
+  // signed off before it reaches a parent (the "everything reviewed" rule).
+  const { data: created, error: insErr } = await supabase
+    .from('parent_messages')
+    .insert({
+      family_id: family.id,
+      parent_email: family.email.toLowerCase(),
+      subject,
+      body: message,
+      from_name: fromName,
+      emailed: false,
+      status: 'pending_review',
+      created_by: session.user.id,
+      created_by_name: fromName,
+    })
+    .select('id')
+    .single();
 
-  const { error: insErr } = await supabase.from('parent_messages').insert({
-    family_id: family.id,
-    parent_email: family.email.toLowerCase(),
-    subject,
-    body: message,
-    from_name: fromName,
-    emailed,
-  });
-
-  if (insErr) {
+  if (insErr || !created) {
     return NextResponse.json(
       { error: 'Could not save the message' },
       { status: 500 }
@@ -110,13 +84,13 @@ export async function POST(request: NextRequest) {
 
   await logAudit({
     actor: session.user,
-    action: 'parent_message.send',
+    action: 'parent_message.draft_create',
     targetType: 'family',
     targetId: family.id,
     centerId: session.user.center_id ?? null,
-    detail: { subject, emailed },
+    detail: { subject, message_id: created.id },
     ip: auditIp(request),
   });
 
-  return NextResponse.json({ ok: true, emailed });
+  return NextResponse.json({ ok: true, status: 'pending_review', id: created.id });
 }

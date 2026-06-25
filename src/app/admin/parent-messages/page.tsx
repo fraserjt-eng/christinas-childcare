@@ -82,9 +82,7 @@ export default function AdminParentMessagesPage() {
       }
       setDmOpen(false);
       setDmResult(
-        data.emailed
-          ? `Message sent to ${dmEmail} by email and in their portal.`
-          : `Message saved to ${dmEmail}'s portal. Email was not sent (email service not configured).`
+        `Draft submitted for owner review. It will be sent to ${dmEmail} once an owner approves it.`
       );
       setDmEmail('');
       setDmSubject('');
@@ -145,7 +143,8 @@ export default function AdminParentMessagesPage() {
             <DialogHeader>
               <DialogTitle>Message a registered parent</DialogTitle>
               <DialogDescription>
-                Goes to their email and their parent portal.
+                Saved as a draft. An owner reviews and approves it before it
+                reaches the parent.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
@@ -206,7 +205,7 @@ export default function AdminParentMessagesPage() {
                 disabled={dmBusy}
                 className="bg-christina-red hover:bg-christina-red/90"
               >
-                {dmBusy ? 'Sending…' : 'Send message'}
+                {dmBusy ? 'Submitting…' : 'Submit for review'}
               </Button>
             </DialogFooter>
           </DialogContent>
