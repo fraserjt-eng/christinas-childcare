@@ -191,6 +191,18 @@ export async function PATCH(request: NextRequest) {
   // Replace the children list, if provided.
   if (Array.isArray(body.children)) {
     const clean = body.children.filter((c) => (c.name || '').trim());
+    // Preserve each child's existing PHOTO across this delete+reinsert. The
+    // payload carries no id or photo_url, so map the saved photo by name —
+    // without this, every admin family edit WIPED the kids' photos.
+    const { data: existingKids } = await supabase
+      .from('family_children')
+      .select('name, photo_url')
+      .eq('family_id', id);
+    const photoByName = new Map<string, string>();
+    for (const k of existingKids ?? []) {
+      const n = ((k.name as string) || '').trim().toLowerCase();
+      if (n && k.photo_url) photoByName.set(n, k.photo_url as string);
+    }
     await supabase.from('family_children').delete().eq('family_id', id);
     if (clean.length > 0) {
       await supabase.from('family_children').insert(
@@ -202,6 +214,7 @@ export async function PATCH(request: NextRequest) {
           classroom_id: c.classroom_id || null,
           allergies: c.allergies || [],
           medical_notes: c.medical_notes || null,
+          photo_url: photoByName.get((c.name || '').trim().toLowerCase()) ?? null,
         }))
       );
     }
