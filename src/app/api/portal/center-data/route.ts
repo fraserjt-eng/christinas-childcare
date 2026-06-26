@@ -295,8 +295,30 @@ export async function GET(request: NextRequest) {
     /* column may not exist yet; no avatars this load */
   }
 
+  // Staff profile photos (avatars), signed for display. Same private bucket as
+  // the kids (staff/ prefix), same best-effort guard: if employees.photo_url
+  // does not exist yet the query errors quietly and we return no staff avatars.
+  const staffPhotos: Record<string, string> = {};
+  try {
+    const { data: staffPhotoRows } = await supabase
+      .from('employees')
+      .select('id, photo_url')
+      .eq('center_id', centerId)
+      .not('photo_url', 'is', null)
+      .limit(5000);
+    const rows = staffPhotoRows ?? [];
+    if (rows.length > 0) {
+      const signed = await signPhotoList(supabase, rows.map((r) => r.photo_url as string));
+      rows.forEach((r, i) => {
+        if (signed[i]) staffPhotos[r.id as string] = signed[i];
+      });
+    }
+  } catch {
+    /* column may not exist yet; no staff avatars this load */
+  }
+
   return NextResponse.json(
-    { centerId, centerName, centers, rooms, kids, staff, families, checkedIn, clockedIn, todayAttendance, feed, shifts, kidPhotos },
+    { centerId, centerName, centers, rooms, kids, staff, families, checkedIn, clockedIn, todayAttendance, feed, shifts, kidPhotos, staffPhotos },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }

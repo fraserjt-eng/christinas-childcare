@@ -91,6 +91,8 @@ export interface LivePayload {
   shifts: PreviewShift[];
   /** kidId -> signed avatar URL, from family_children.photo_url (cloud). */
   kidPhotos?: Record<string, string>;
+  /** staffId -> signed avatar URL, from employees.photo_url (cloud). */
+  staffPhotos?: Record<string, string>;
 }
 
 export interface PreviewState {
@@ -307,9 +309,19 @@ export const usePreviewStore = create<PreviewState>()(
       },
 
       setStaffPhoto: (staffId, dataUrl) => {
+        // Optimistic: show it immediately on this device.
         set((state) => ({
           staffPhotos: { ...state.staffPhotos, [staffId]: dataUrl },
         }));
+        // Persist to the cloud so it syncs to every device (best-effort; in the
+        // sealed fixtures demo there is no session and this 401s harmlessly).
+        if (typeof fetch !== 'undefined') {
+          fetch('/api/staff-photo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employee_id: staffId, image_data: dataUrl }),
+          }).catch(() => {});
+        }
       },
 
       markFamilyPaid: (familyId) => {
@@ -494,6 +506,7 @@ export const usePreviewStore = create<PreviewState>()(
           // reflected in the cloud is preserved so it never flickers to the
           // placeholder between upload and the next hydrate.
           kidPhotos: { ...state.kidPhotos, ...(payload.kidPhotos ?? {}) },
+          staffPhotos: { ...state.staffPhotos, ...(payload.staffPhotos ?? {}) },
         }));
       },
 
@@ -506,13 +519,14 @@ export const usePreviewStore = create<PreviewState>()(
       name: "cc-preview-demo-v1",
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
-      // Never persist kidPhotos. They hold short-lived SIGNED photo URLs; a
-      // persisted link expires within hours and then shows a broken image until
-      // a hard refresh. Always rehydrate them fresh from the server via
-      // hydrateFromLive, so a photo saved on one device shows on every device.
+      // Never persist kidPhotos/staffPhotos. They hold short-lived SIGNED photo
+      // URLs; a persisted link expires within hours and then shows a broken
+      // image until a hard refresh. Always rehydrate them fresh from the server
+      // via hydrateFromLive, so a photo saved on one device shows on every device.
       partialize: (state) => {
         const persisted = { ...state } as Record<string, unknown>;
         delete persisted.kidPhotos;
+        delete persisted.staffPhotos;
         return persisted as Partial<PreviewState>;
       },
       // Bump when the fixture world changes shape so devices that walked an
