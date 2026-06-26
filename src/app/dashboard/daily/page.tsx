@@ -27,6 +27,7 @@ interface Child {
   name: string;
   classroom: string | null;
   date_of_birth: string | null;
+  photo_url?: string | null;
 }
 
 interface Entry {
@@ -197,8 +198,18 @@ export default function ParentDailyReportPage() {
               variant={activeChild === c.id ? 'default' : 'outline'}
               size="sm"
               onClick={() => setActiveChild(c.id)}
-              className={activeChild === c.id ? 'bg-christina-red' : ''}
+              className={
+                activeChild === c.id ? 'bg-christina-red gap-2' : 'gap-2'
+              }
             >
+              {c.photo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={c.photo_url}
+                  alt={c.name}
+                  className="h-5 w-5 rounded-full object-cover"
+                />
+              ) : null}
               {c.name}
             </Button>
           ))}

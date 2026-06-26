@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { logAudit, auditIp } from '@/lib/audit-log';
+import { signPhotoList } from '@/lib/photo-url';
 
 // Full family records for the admin Families tab (People > Families).
 // The page used the client family-storage which reads Supabase with the
@@ -61,9 +62,21 @@ export async function GET(request: NextRequest) {
       .limit(5000),
     supabase
       .from('family_children')
-      .select('id, family_id, name, date_of_birth, classroom, classroom_id, allergies, medical_notes')
+      .select('id, family_id, name, date_of_birth, classroom, classroom_id, allergies, medical_notes, photo_url')
       .limit(5000),
   ]);
+
+  // Sign each child's avatar so the admin Families tab shows their face (and so
+  // the edit form can preview the current photo). Bare paths -> 8h signed URLs.
+  const kidList = kids || [];
+  const signedKidPhotos = await signPhotoList(
+    supabase,
+    kidList.map((k) => (k.photo_url as string | null) ?? null)
+  );
+  const photoByKidId = new Map<string, string>();
+  kidList.forEach((k, i) => {
+    if (signedKidPhotos[i]) photoByKidId.set(k.id as string, signedKidPhotos[i]);
+  });
 
   const families = (fams || [])
     .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
@@ -98,6 +111,7 @@ export async function GET(request: NextRequest) {
           allergies: (k.allergies as string[] | null) || [],
           medical_notes: (k.medical_notes as string | null) || undefined,
           emergency_contacts: [],
+          photo_url: photoByKidId.get(k.id as string) || undefined,
         })),
     }));
 

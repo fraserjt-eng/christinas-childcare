@@ -5,7 +5,7 @@
 // Also rehydrates the persisted store exactly once after mount so the server
 // render and the first client paint always match.
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { usePreviewStore } from "@/lib/preview/store";
 import { playClick, setSoundEnabled } from "@/lib/preview/sound";
@@ -22,8 +22,14 @@ function readCookie(name: string): string {
   return m ? decodeURIComponent(m[1]) : "";
 }
 
+// Office/portal "home" surfaces where a back button would land on an unrelated
+// screen; everywhere else the back button shows.
+const HOME_ROUTES = new Set(["/preview/office", "/preview/family", "/preview/room"]);
+
 export function PreviewChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const showBack = !!pathname && !HOME_ROUTES.has(pathname);
   const soundOn = usePreviewStore((s) => s.soundOn);
   const toggleSound = usePreviewStore((s) => s.toggleSound);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -81,6 +87,20 @@ export function PreviewChrome({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col">
       <div className="px-4 py-3 text-white sm:px-8" style={{ backgroundColor: "var(--pv-coral)" }}>
         <div className="mx-auto flex max-w-[1800px] flex-wrap items-center gap-2 sm:gap-3">
+          {showBack && (
+            <button
+              type="button"
+              onClick={() => {
+                playClick();
+                router.back();
+              }}
+              className="pv-target rounded-lg px-2.5 py-1.5 text-sm font-bold"
+              style={{ backgroundColor: "rgba(0,0,0,0.18)" }}
+              aria-label="Go back"
+            >
+              ← Back
+            </button>
+          )}
           <span className="pv-serif text-lg font-semibold leading-none sm:text-xl">
             Christina&apos;s Child Care Center
           </span>

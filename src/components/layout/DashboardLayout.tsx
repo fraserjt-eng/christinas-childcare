@@ -24,6 +24,7 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { PortalSwitcher } from '@/components/layout/PortalSwitcher';
 import { CenterSwitcher } from '@/components/layout/CenterSwitcher';
 import { HeaderCenterSwitcher } from '@/components/layout/HeaderCenterSwitcher';
+import { BackButton } from '@/components/layout/BackButton';
 import { ReportIssueButton } from '@/components/support/ReportIssueButton';
 import { HelpdeskNavBadge } from '@/components/support/HelpdeskNavBadge';
 import { useRole } from '@/hooks/useRole';
@@ -475,6 +476,7 @@ export function DashboardLayout({ children, isAdmin = false, isEmployee = false 
                 />
               </SheetContent>
             </Sheet>
+            <BackButton />
             {isAdmin && <HeaderCenterSwitcher />}
           </div>
           <div className="flex items-center gap-2">
