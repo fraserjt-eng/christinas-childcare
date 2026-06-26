@@ -28,11 +28,18 @@ export async function GET(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  // Center scoping: a center-bound admin/teacher sees only their center's
-  // entries. centerId === null means a cross-center owner/superadmin, who
-  // sees every center (query stays unscoped). child_daily_entries carries
-  // center_id directly (migration 030).
-  const centerId = session.user.center_id ?? null;
+  // Center scoping. A center-bound admin/teacher is locked to their own center.
+  // A cross-center owner/superadmin follows the center they picked in the
+  // switcher (the cc_center cookie) so the report matches the site they are
+  // looking at; only with NO center picked (the Combined view) does it span
+  // every center. Without this, an owner's null session center left the query
+  // unscoped and the BP report listed every site's children. child_daily_entries
+  // and family_children both carry center_id (migration 030).
+  const role = (session.user.role || '').toLowerCase();
+  const sessionCenter = session.user.center_id ?? null;
+  const crossCenter = role === 'owner' || role === 'superadmin' || !sessionCenter;
+  const picked = request.cookies.get('cc_center')?.value || null;
+  const centerId = crossCenter ? picked : sessionCenter;
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });

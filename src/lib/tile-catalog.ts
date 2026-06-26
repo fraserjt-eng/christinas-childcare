@@ -270,10 +270,10 @@ export const TILE_CATALOG: TileCatalogEntry[] = [
     id: "reports",
     label: "Daily Reports",
     description: "Any past day, by child",
-    href: "/admin/reports",
+    href: "/preview/office/reports",
     group: "Admin",
     icon: "ClipboardList",
-    kind: "admin",
+    kind: "portal",
   },
   {
     id: "inventory",
