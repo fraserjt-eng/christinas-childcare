@@ -462,7 +462,8 @@ export async function PUT(request: NextRequest) {
 
   // Preserve each child's PHOTO across this delete+reinsert (map by name; the
   // payload carries no id/photo_url). Without this, editing a family WIPES the
-  // kids' photos.
+  // kids' photos. Names that appear more than once in the submitted set are
+  // ambiguous, so we skip preservation for those to avoid mis-assigning a face.
   const { data: existingKids } = await supabase
     .from('family_children')
     .select('name, photo_url')
@@ -472,6 +473,16 @@ export async function PUT(request: NextRequest) {
     const n = ((k.name as string) || '').trim().toLowerCase();
     if (n && k.photo_url) photoByName.set(n, k.photo_url as string);
   }
+  const nameCounts = new Map<string, number>();
+  for (const c of children) {
+    const n = (c.name as string).trim().toLowerCase();
+    nameCounts.set(n, (nameCounts.get(n) || 0) + 1);
+  }
+  const preservedPhoto = (name: string): string | null => {
+    const n = name.trim().toLowerCase();
+    if ((nameCounts.get(n) || 0) > 1) return null;
+    return photoByName.get(n) ?? null;
+  };
   await supabase.from('family_children').delete().eq('family_id', id);
   const { error: kidErr } = await supabase.from('family_children').insert(
     children.map((c) => ({
@@ -480,7 +491,10 @@ export async function PUT(request: NextRequest) {
       date_of_birth: c.date_of_birth?.trim() || null,
       classroom: c.classroom?.trim() || null,
       classroom_id: c.classroom_id?.trim() || null,
-      photo_url: photoByName.get((c.name as string).trim().toLowerCase()) ?? null,
+      // Keep each child bound to the family's center so the kiosk cross-center
+      // guard (which fails open on a NULL center) cannot be widened by an edit.
+      center_id: (fam.center_id as string | null) || '3104ae69-4f26-4c1e-a767-3ff45b534860',
+      photo_url: preservedPhoto(c.name as string),
     }))
   );
   if (kidErr) {

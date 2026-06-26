@@ -15,10 +15,22 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { logAudit, auditIp } from '@/lib/audit-log';
 
 function fail(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
 }
+
+// Only real raster image types are accepted, mapped to a fixed extension. This
+// keeps the storage path off client-controlled input and blocks an SVG (an
+// active-content vector) or any non-image from being written to the bucket.
+const ALLOWED_IMAGE_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
 
 export async function POST(request: NextRequest) {
   const session = await requireSession('teacher');
@@ -50,11 +62,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const commaIdx = imageData.indexOf(',');
+    if (commaIdx === -1) return fail('image_data must be a data URL', 400);
     const meta = imageData.slice(5, commaIdx); // after "data:"
-    const contentType = (meta.split(';')[0] || 'image/jpeg').trim();
-    const ext = contentType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
+    const contentType = (meta.split(';')[0] || '').trim().toLowerCase();
+    const ext = ALLOWED_IMAGE_TYPES[contentType];
+    if (!ext) {
+      return fail('Photo must be a JPEG, PNG, WebP, or GIF image.', 400);
+    }
     const base64 = imageData.slice(commaIdx + 1);
     const buffer = Buffer.from(base64, 'base64');
+    if (buffer.length === 0) return fail('The photo was empty. Try again.', 400);
     // One stable object per child; switching the photo overwrites it (upsert).
     const path = `avatars/${childId}.${ext}`;
     const { error: upErr } = await supabase.storage
@@ -67,6 +84,16 @@ export async function POST(request: NextRequest) {
       .update({ photo_url: path })
       .eq('id', childId);
     if (dbErr) return fail('The photo was uploaded but could not be saved.', 500);
+
+    await logAudit({
+      actor: session.user,
+      action: 'child.photo.update',
+      targetType: 'family_children',
+      targetId: childId,
+      centerId: (child.center_id as string | null) ?? session.user.center_id ?? null,
+      detail: { content_type: contentType },
+      ip: auditIp(request),
+    });
 
     return NextResponse.json({ ok: true });
   } catch {

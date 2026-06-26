@@ -207,7 +207,8 @@ export async function PATCH(request: NextRequest) {
     const clean = body.children.filter((c) => (c.name || '').trim());
     // Preserve each child's existing PHOTO across this delete+reinsert. The
     // payload carries no id or photo_url, so map the saved photo by name —
-    // without this, every admin family edit WIPED the kids' photos.
+    // without this, every admin family edit WIPED the kids' photos. Names that
+    // repeat in the submitted set are ambiguous, so skip preservation for those.
     const { data: existingKids } = await supabase
       .from('family_children')
       .select('name, photo_url')
@@ -217,6 +218,27 @@ export async function PATCH(request: NextRequest) {
       const n = ((k.name as string) || '').trim().toLowerCase();
       if (n && k.photo_url) photoByName.set(n, k.photo_url as string);
     }
+    const nameCounts = new Map<string, number>();
+    for (const c of clean) {
+      const n = (c.name || '').trim().toLowerCase();
+      nameCounts.set(n, (nameCounts.get(n) || 0) + 1);
+    }
+    const preservedPhoto = (name: string): string | null => {
+      const n = (name || '').trim().toLowerCase();
+      if ((nameCounts.get(n) || 0) > 1) return null;
+      return photoByName.get(n) ?? null;
+    };
+    // Keep each child bound to the family's center so the kiosk cross-center
+    // guard (which fails open on a NULL center) cannot be widened by an edit.
+    const { data: famRow } = await supabase
+      .from('families')
+      .select('center_id')
+      .eq('id', id)
+      .maybeSingle();
+    const childCenterId =
+      (famRow?.center_id as string | null) ||
+      myCenter ||
+      '3104ae69-4f26-4c1e-a767-3ff45b534860';
     await supabase.from('family_children').delete().eq('family_id', id);
     if (clean.length > 0) {
       await supabase.from('family_children').insert(
@@ -228,7 +250,8 @@ export async function PATCH(request: NextRequest) {
           classroom_id: c.classroom_id || null,
           allergies: c.allergies || [],
           medical_notes: c.medical_notes || null,
-          photo_url: photoByName.get((c.name || '').trim().toLowerCase()) ?? null,
+          center_id: childCenterId,
+          photo_url: preservedPhoto(c.name || ''),
         }))
       );
     }

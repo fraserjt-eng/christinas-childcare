@@ -174,10 +174,14 @@ export async function POST(request: NextRequest) {
       .eq('family_id', family.id);
 
     // Sign each child's avatar so the kiosk check-in tiles show their face.
+    // Short TTL (5 min): the kiosk lookup is PIN-gated but unauthenticated and
+    // rate-limited, so a guessed PIN must not yield a long-lived face-photo link.
+    // A re-lookup on the next PIN entry mints a fresh URL, so check-in is unaffected.
     const kids = children || [];
     const signedKidPhotos = await signPhotoList(
       supabase,
-      kids.map((c) => (c.photo_url as string | null) ?? null)
+      kids.map((c) => (c.photo_url as string | null) ?? null),
+      5 * 60
     );
     const childrenOut = kids.map((c, i) => ({
       ...c,
