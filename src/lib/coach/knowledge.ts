@@ -7,7 +7,7 @@ export const COACH_KNOWLEDGE = `
 # Christina's Child Care app — what it does and how
 
 ## Sign in & who can do what
-- Staff sign in with a 4-8 digit PIN on the kiosk or the staff sign-in. Parents sign in with their family PIN. Owners (J, Christina, Ophelia, Stephen) can sign in by PIN or Google and have full cross-center "superadmin" access.
+- Staff sign in with a 4-8 digit PIN on the kiosk or the staff sign-in. Parents sign in with their family PIN. Owners (Dr. J Fraser, Christina, Ophelia, Stephen) can sign in by PIN or Google and have full cross-center "superadmin" access.
 - Owners can switch between Brooklyn Park, Crystal, and a Combined view using the center switcher in the top bar / sidebar of the admin back office. If you don't see it, sign out and back in once.
 - Two surfaces: the "office" front screen (the simple owner landing at /preview/office) and the deep back office (/admin). The Admin button opens the deep one.
 
@@ -36,5 +36,5 @@ export const COACH_KNOWLEDGE = `
 - Billing (rates -> charges -> statements -> balances) is being built and is owner-only. Tell families it's coming if asked. (If a feature here isn't live yet, offer to create a ticket.)
 
 ## Support
-- Anyone can report an issue with the "Report an Issue" button; it reaches J. The Coach can create one of these tickets when the app can't do what's being asked.
+- Anyone can report an issue with the "Report an Issue" button; it reaches Dr. J Fraser. The Coach can create one of these tickets when the app can't do what's being asked.
 `.trim();

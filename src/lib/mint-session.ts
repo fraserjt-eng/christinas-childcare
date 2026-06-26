@@ -21,16 +21,22 @@ export interface SessionUser {
 }
 
 export function mintSessionResponse(user: SessionUser): NextResponse {
-  // The leadership emails ALWAYS mint as cross-center superadmin, no matter how
-  // they signed in. Without this, a staff-PIN login resolves an owner to role
-  // 'admin', which hides the center switcher and owner-only features — even
-  // though requireSession would treat them as superadmin server-side. Forcing it
-  // here makes the COOKIE itself say superadmin, so the client UI matches. (Each
-  // owner must sign out + back in once for their new cookie to take effect.)
+  // The leadership emails mint as cross-center superadmin on a staff/admin/Google
+  // login, no matter which role the credential resolved to. Without this, a
+  // staff-PIN login resolves an owner to role 'admin', which hides the center
+  // switcher and owner-only features. Forcing it here makes the COOKIE say
+  // superadmin so the client UI matches.
+  //
+  // EXCEPTION: a deliberate PARENT login (parent-pin route mints role 'parent')
+  // is NEVER overridden — otherwise an owner whose email is also a family email
+  // (e.g. J's test family) could never sign in as a parent to test the family
+  // experience. So an owner can be a parent via the family PIN AND a superadmin
+  // via the admin/staff login.
   const email = (user.email || '').toLowerCase().trim();
-  const effectiveUser: SessionUser = SUPERADMIN_EMAILS.includes(email)
-    ? { ...user, role: 'superadmin', center_id: null }
-    : user;
+  const effectiveUser: SessionUser =
+    user.role !== 'parent' && SUPERADMIN_EMAILS.includes(email)
+      ? { ...user, role: 'superadmin', center_id: null }
+      : user;
 
   const sessionData = {
     user: effectiveUser,
