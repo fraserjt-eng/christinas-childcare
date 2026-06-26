@@ -840,6 +840,7 @@ interface ApiChild {
   allergies: string[];
   medical_notes?: string;
   checked_in_at: string | null;
+  photo_url?: string;
 }
 interface ApiFamily {
   id: string;
@@ -1143,7 +1144,7 @@ function RealKidCard({
   return (
     <div className="pv-tile p-5">
       <div className="flex items-center gap-3">
-        <PhotoAvatar id={kid.id} name={kid.name} size={56} rounded="rounded-md" />
+        <PhotoAvatar id={kid.id} name={kid.name} src={kid.photo_url} size={56} rounded="rounded-md" />
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xl font-bold" style={{ color: "var(--pv-ink)" }}>{firstName}</span>

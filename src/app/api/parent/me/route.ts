@@ -5,6 +5,7 @@ import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { resolveSessionFamily } from '@/lib/parent-server';
 import { centerDate, centerTime } from '@/lib/center-time';
+import { signPhotoList } from '@/lib/photo-url';
 
 // The signed-in parent's REAL family record (profile + parents + children),
 // from the verified session email. Replaces the home page's stale
@@ -40,11 +41,23 @@ export async function GET() {
       supabase
         .from('family_children')
         .select(
-          'id, name, date_of_birth, classroom, allergies, medical_notes, family_id'
+          'id, name, date_of_birth, classroom, allergies, medical_notes, family_id, photo_url'
         )
         .eq('family_id', fam.family_id)
         .limit(200),
     ]);
+
+  // Sign each child's avatar (private bucket -> short-lived signed URL) so the
+  // photo follows the child onto the parent's home + family view.
+  const kidRows = kids ?? [];
+  const signedPhotos = await signPhotoList(
+    supabase,
+    kidRows.map((c) => (c.photo_url as string | null) ?? null)
+  );
+  const photoByChild: Record<string, string> = {};
+  kidRows.forEach((c, i) => {
+    if (signedPhotos[i]) photoByChild[c.id as string] = signedPhotos[i];
+  });
 
   // Today's presence for this family's own children (parent-scoped: we only
   // ever query the kids resolved from the verified session, never a client id).
@@ -99,6 +112,7 @@ export async function GET() {
         medical_notes: (c.medical_notes as string | null) || undefined,
         emergency_contacts: [],
         checked_in_at: presence[c.id as string] ?? null,
+        photo_url: photoByChild[c.id as string] || undefined,
       })),
   };
 
