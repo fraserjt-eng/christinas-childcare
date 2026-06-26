@@ -5,6 +5,7 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { centerDate } from '@/lib/center-time';
 import { PRIVACY_NOTICE_VERSION, ATTESTATION_VALID_DAYS } from '@/lib/attestation';
+import { signPhotoList } from '@/lib/photo-url';
 
 // The live kiosk's only data path. The browser never touches the family or
 // attendance tables directly (anon is denied on them by migration 017). This
@@ -169,15 +170,26 @@ export async function POST(request: NextRequest) {
 
     const { data: children } = await supabase
       .from('family_children')
-      .select('id, family_id, name, date_of_birth, classroom')
+      .select('id, family_id, name, date_of_birth, classroom, photo_url')
       .eq('family_id', family.id);
+
+    // Sign each child's avatar so the kiosk check-in tiles show their face.
+    const kids = children || [];
+    const signedKidPhotos = await signPhotoList(
+      supabase,
+      kids.map((c) => (c.photo_url as string | null) ?? null)
+    );
+    const childrenOut = kids.map((c, i) => ({
+      ...c,
+      photo_url: signedKidPhotos[i] || null,
+    }));
 
     return NextResponse.json({
       data: {
         id: family.id,
         email: family.email,
         parents: parents || [],
-        children: children || [],
+        children: childrenOut,
       },
     });
   }

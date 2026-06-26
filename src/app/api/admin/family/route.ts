@@ -460,6 +460,18 @@ export async function PUT(request: NextRequest) {
     is_primary: true,
   });
 
+  // Preserve each child's PHOTO across this delete+reinsert (map by name; the
+  // payload carries no id/photo_url). Without this, editing a family WIPES the
+  // kids' photos.
+  const { data: existingKids } = await supabase
+    .from('family_children')
+    .select('name, photo_url')
+    .eq('family_id', id);
+  const photoByName = new Map<string, string>();
+  for (const k of existingKids ?? []) {
+    const n = ((k.name as string) || '').trim().toLowerCase();
+    if (n && k.photo_url) photoByName.set(n, k.photo_url as string);
+  }
   await supabase.from('family_children').delete().eq('family_id', id);
   const { error: kidErr } = await supabase.from('family_children').insert(
     children.map((c) => ({
@@ -468,6 +480,7 @@ export async function PUT(request: NextRequest) {
       date_of_birth: c.date_of_birth?.trim() || null,
       classroom: c.classroom?.trim() || null,
       classroom_id: c.classroom_id?.trim() || null,
+      photo_url: photoByName.get((c.name as string).trim().toLowerCase()) ?? null,
     }))
   );
   if (kidErr) {
