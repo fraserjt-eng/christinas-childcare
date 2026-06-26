@@ -38,6 +38,35 @@ export default function OfficeMessagesPage() {
     setSuccess(`Sent to the ${family.name}. It is on their phone now.`);
   }
 
+  // Live site: this is a design preview built on sample families. The real way
+  // to message a family is Parent Messages in the back office. Never show fake
+  // families on production.
+  if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") {
+    return (
+      <main className="px-4 py-6">
+        <div className="mx-auto max-w-2xl">
+          <ScreenHeader
+            title="messages"
+            backHref="/preview/office"
+            backLabel="The office"
+            note="Message families from the back office."
+          />
+          <p className="pv-rise mt-4 text-base" style={{ color: "var(--pv-muted)" }}>
+            This preview uses sample families. To message a real family, use Parent
+            Messages in the back office.
+          </p>
+          <a
+            href="/admin/parent-messages"
+            className="pv-press mt-3 inline-block rounded-lg px-5 py-2 text-base font-bold text-white"
+            style={{ backgroundColor: "var(--pv-coral)" }}
+          >
+            Open Parent Messages
+          </a>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="px-4 py-6">
       <div className="mx-auto max-w-2xl">
