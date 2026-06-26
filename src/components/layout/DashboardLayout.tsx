@@ -141,6 +141,7 @@ const adminNavGroups: NavGroup[] = [
     label: 'Business',
     icon: DollarSign,
     items: [
+      { href: '/admin/billing', label: 'Billing', icon: Wallet },
       { href: '/admin/financial', label: 'Financial Planning', icon: DollarSign },
       { href: '/admin/statements', label: 'Parent Statements', icon: FileText },
       { href: '/admin/financial/forecasting', label: 'Revenue Forecast', icon: Target },
