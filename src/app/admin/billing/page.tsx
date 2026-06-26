@@ -36,7 +36,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Wallet, Search, Loader2, Pencil } from 'lucide-react';
+import Link from 'next/link';
+import { Wallet, Search, Loader2, Pencil, ScrollText } from 'lucide-react';
 
 interface Contract {
   rate_amount: number | null;
@@ -276,15 +277,30 @@ export default function BillingPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => openEdit(fam)}
-                              title="Edit contract"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-1">
+                              {c?.is_pilot ? (
+                                <Button
+                                  asChild
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  title="Open ledger"
+                                >
+                                  <Link href={`/admin/billing/${fam.id}`}>
+                                    <ScrollText className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              ) : null}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => openEdit(fam)}
+                                title="Edit contract"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
