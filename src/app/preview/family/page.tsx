@@ -98,7 +98,35 @@ export default function ParentPhonePage() {
   if (user && user.role === "parent") {
     return <RealParentHome user={user} />;
   }
-  return <PreviewParentPhone />;
+  // NEVER show the demo fixture families on the live site. The design demo only
+  // renders when NEXT_PUBLIC_DEMO_MODE is on; a real non-parent (a staff/owner
+  // who landed here) is pointed at the family sign-in instead of fake students.
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === "true") {
+    return <PreviewParentPhone />;
+  }
+  return <NonParentFamilyNotice />;
+}
+
+function NonParentFamilyNotice() {
+  return (
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6">
+      <div className="mx-auto max-w-md pv-rise">
+        <h1 className="pv-tad-title text-3xl sm:text-4xl">Family view</h1>
+        <p className="mt-2 text-base" style={{ color: "var(--pv-muted)" }}>
+          This is the page a parent sees. Parents sign in with their family PIN to
+          see their own children. To preview a family, use that family&rsquo;s PIN
+          at the family sign-in.
+        </p>
+        <a
+          href="/parent-pin"
+          className="pv-press mt-4 inline-block rounded-lg px-5 py-2 text-base font-bold text-white"
+          style={{ backgroundColor: "var(--pv-coral)" }}
+        >
+          Family sign in
+        </a>
+      </div>
+    </main>
+  );
 }
 
 function PreviewParentPhone() {
@@ -840,6 +868,7 @@ interface ApiChild {
   allergies: string[];
   medical_notes?: string;
   checked_in_at: string | null;
+  photo_url?: string;
 }
 interface ApiFamily {
   id: string;
@@ -1143,7 +1172,7 @@ function RealKidCard({
   return (
     <div className="pv-tile p-5">
       <div className="flex items-center gap-3">
-        <PhotoAvatar id={kid.id} name={kid.name} size={56} rounded="rounded-md" />
+        <PhotoAvatar id={kid.id} name={kid.name} src={kid.photo_url} size={56} rounded="rounded-md" />
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xl font-bold" style={{ color: "var(--pv-ink)" }}>{firstName}</span>

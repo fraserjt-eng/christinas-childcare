@@ -11,6 +11,15 @@ import { Loader2, BarChart3, ClipboardList } from 'lucide-react';
 interface Child {
   id: string;
   name: string;
+  photo_url?: string | null;
+}
+
+function initialsOf(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2);
 }
 
 interface Entry {
@@ -112,7 +121,21 @@ export default function ProgressPage() {
             <Card key={c.id}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center justify-between">
-                  <span>{c.name}</span>
+                  <span className="flex items-center gap-2">
+                    {c.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={c.photo_url}
+                        alt={c.name}
+                        className="h-7 w-7 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="h-7 w-7 rounded-full bg-christina-blue/10 flex items-center justify-center text-xs font-bold text-christina-blue">
+                        {initialsOf(c.name)}
+                      </span>
+                    )}
+                    {c.name}
+                  </span>
                   <Button asChild size="sm" variant="outline" className="gap-2">
                     <Link href="/dashboard/daily">
                       <ClipboardList className="h-4 w-4" />

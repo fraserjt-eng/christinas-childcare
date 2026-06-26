@@ -46,32 +46,37 @@ export function toStoragePath(stored: string | null | undefined): string | null 
 /**
  * One stored value -> a signed URL. Inline data: images pass through unchanged;
  * an unresolvable value returns '' (no broken bucket link is ever emitted).
+ * `ttlSeconds` overrides the default working-day TTL (e.g. the kiosk passes a
+ * short window so a brute-forced PIN can't yield a long-lived face-photo link).
  */
 export async function signPhoto(
   supabase: SupabaseClient,
-  stored: string | null | undefined
+  stored: string | null | undefined,
+  ttlSeconds: number = TTL_SECONDS
 ): Promise<string> {
   if (!stored || typeof stored !== 'string') return '';
   if (stored.startsWith('data:')) return stored;
   const path = toStoragePath(stored);
   if (!path) return /^https?:\/\//i.test(stored) ? stored : '';
-  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, TTL_SECONDS);
+  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, ttlSeconds);
   return data?.signedUrl ?? '';
 }
 
 /**
  * Sign a list of stored values in a single round trip where possible. Preserves
  * order and length, so callers can map the result back onto their rows.
+ * `ttlSeconds` overrides the default TTL (see signPhoto).
  */
 export async function signPhotoList(
   supabase: SupabaseClient,
-  stored: (string | null | undefined)[]
+  stored: (string | null | undefined)[],
+  ttlSeconds: number = TTL_SECONDS
 ): Promise<string[]> {
   const paths = stored.map(toStoragePath);
   const real = Array.from(new Set(paths.filter((p): p is string => !!p)));
   const byPath = new Map<string, string>();
   if (real.length > 0) {
-    const { data } = await supabase.storage.from(BUCKET).createSignedUrls(real, TTL_SECONDS);
+    const { data } = await supabase.storage.from(BUCKET).createSignedUrls(real, ttlSeconds);
     for (const item of data ?? []) {
       if (item.path && item.signedUrl) byPath.set(item.path, item.signedUrl);
     }

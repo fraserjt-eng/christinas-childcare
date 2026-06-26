@@ -250,7 +250,7 @@ function ChildTile({
     >
       <button type="button" onClick={toggle} disabled={busy} className="pv-press pv-kiosk-target w-full disabled:opacity-60">
         <span className="block">
-          <PhotoAvatar id={child.id} name={child.name} size={80} rounded="rounded-lg" className={cx('mx-auto', inAt ? '' : 'opacity-75 grayscale')} />
+          <PhotoAvatar id={child.id} name={child.name} src={child.photo_url ?? undefined} size={80} rounded="rounded-lg" className={cx('mx-auto', inAt ? '' : 'opacity-75 grayscale')} />
         </span>
         <span className="mt-2 block text-xl font-bold">{first}</span>
         {look.label ? (

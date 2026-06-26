@@ -28,6 +28,7 @@ export interface FamilyChildRow {
   name: string;
   date_of_birth: string | null;
   classroom: string | null;
+  photo_url?: string | null;
 }
 
 export interface KioskFamily {

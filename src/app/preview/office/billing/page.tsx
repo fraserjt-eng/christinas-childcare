@@ -28,6 +28,27 @@ export default function OfficeBillingPage() {
   const totalOwed = mounted ? rows.reduce((sum, r) => sum + r.owed, 0) : 0;
   const pastDueCount = mounted ? rows.filter((r) => r.owed > 0).length : 0;
 
+  // Live site: this screen is a design preview built on sample families, and
+  // real billing is not built yet. Never show fake families on production.
+  if (process.env.NEXT_PUBLIC_DEMO_MODE !== "true") {
+    return (
+      <main className="px-4 py-6">
+        <div className="mx-auto max-w-2xl">
+          <ScreenHeader
+            title="billing"
+            backHref="/preview/office"
+            backLabel="The office"
+            note="Family billing is being built."
+          />
+          <p className="pv-rise mt-4 text-base" style={{ color: "var(--pv-muted)" }}>
+            Real billing isn&rsquo;t live yet. When it is, every family&rsquo;s
+            balance will show here. For now, statements live in the back office.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="px-4 py-6">
       <div className="mx-auto max-w-2xl">

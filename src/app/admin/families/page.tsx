@@ -78,10 +78,61 @@ function childrenPayload(f: Pick<FamilyAccount, 'children'>): ChildPayload[] {
     }));
 }
 import { FamilyBulkUpload } from '@/components/admin/FamilyBulkUpload';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Helpers
 // ============================================================================
+
+// A persisted child has a real database UUID; an unsaved child carries a
+// generated `child_...` id. Only persisted children can receive a photo (the
+// upload endpoint keys off the real row), so the upload control gates on this.
+function isPersistedChildId(id: string): boolean {
+  return !!id && !id.startsWith('child_');
+}
+
+function childInitials(name: string): string {
+  return (
+    (name || '?')
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .slice(0, 2) || '?'
+  );
+}
+
+// A child's avatar (signed photo) with an initials fallback. Shared by the
+// family list, the details dialog, and the edit form.
+function KidAvatar({
+  name,
+  photo,
+  className,
+}: {
+  name: string;
+  photo?: string | null;
+  className?: string;
+}) {
+  if (photo) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src={photo}
+        alt={name || 'Child'}
+        className={cn('rounded-full object-cover', className)}
+      />
+    );
+  }
+  return (
+    <span
+      className={cn(
+        'rounded-full bg-christina-blue/10 flex items-center justify-center font-bold text-christina-blue',
+        className
+      )}
+    >
+      {childInitials(name)}
+    </span>
+  );
+}
 
 function generatePin(): string {
   return String(Math.floor(1000 + Math.random() * 9000));
@@ -165,6 +216,7 @@ function emptyChild(): ChildFormData {
     emergency_contact_name: '',
     emergency_contact_phone: '',
     emergency_contact_relationship: '',
+    photo_url: '',
   };
 }
 
@@ -203,6 +255,7 @@ interface ChildFormData {
   emergency_contact_name: string;
   emergency_contact_phone: string;
   emergency_contact_relationship: string;
+  photo_url: string;
 }
 
 interface FamilyFormState {
@@ -253,6 +306,7 @@ function buildFormFromFamily(family: FamilyAccount): FamilyFormState {
       emergency_contact_name: ec?.name ?? '',
       emergency_contact_phone: ec?.phone ?? '',
       emergency_contact_relationship: ec?.relationship ?? '',
+      photo_url: c.photo_url ?? '',
     };
   };
 
@@ -353,6 +407,43 @@ function FamilyFormContent({
   const updateChild = (index: number, field: keyof ChildFormData, value: string) => {
     const updated = form.children.map((c, i) => (i === index ? { ...c, [field]: value } : c));
     onChange({ ...form, children: updated });
+  };
+
+  // Per-child profile photo. Reads the file as a data URL and posts it to the
+  // service-role /api/child-photo (uploads to the private bucket, stores the
+  // path on family_children.photo_url). We optimistically show the local data
+  // URL so the avatar updates immediately; the next load serves a signed URL.
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+
+  const uploadChildPhoto = (index: number, file: File) => {
+    const child = form.children[index];
+    if (!child || !isPersistedChildId(child.id)) return;
+    setUploadingIdx(index);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const dataUrl = reader.result as string;
+        const res = await fetch('/api/child-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ child_id: child.id, image_data: dataUrl }),
+        });
+        if (res.ok) {
+          onChange({
+            ...form,
+            children: form.children.map((c, i) =>
+              i === index ? { ...c, photo_url: dataUrl } : c
+            ),
+          });
+        }
+      } catch {
+        /* leave the existing photo in place on failure */
+      } finally {
+        setUploadingIdx(null);
+      }
+    };
+    reader.onerror = () => setUploadingIdx(null);
+    reader.readAsDataURL(file);
   };
 
   // Real classroom list for the per-child room assignment dropdown.
@@ -606,6 +697,38 @@ function FamilyFormContent({
               )}
             </div>
 
+            {/* Profile photo */}
+            <div className="flex items-center gap-3">
+              <KidAvatar
+                name={child.name}
+                photo={child.photo_url || undefined}
+                className="h-12 w-12 text-sm"
+              />
+              {isPersistedChildId(child.id) ? (
+                <label className="text-xs font-medium text-christina-red cursor-pointer hover:underline">
+                  {uploadingIdx === idx
+                    ? 'Uploading…'
+                    : child.photo_url
+                      ? 'Change photo'
+                      : 'Add photo'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadChildPhoto(idx, f);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              ) : (
+                <span className="text-xs text-muted-foreground">
+                  Save the family first, then add a photo.
+                </span>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2 space-y-1">
                 <Label htmlFor={`child-${idx}-name`}>Name *</Label>
@@ -759,7 +882,8 @@ function FamilyDetailsDialog({
             <p className="text-sm font-semibold">Children ({family.children.length})</p>
             {family.children.map((c) => (
               <div key={c.id} className="rounded-lg bg-muted/40 p-3 space-y-1 text-sm">
-                <p className="font-medium">
+                <p className="font-medium flex items-center gap-2">
+                  <KidAvatar name={c.name} photo={c.photo_url} className="h-8 w-8 text-xs" />
                   {c.name}
                   {c.date_of_birth && (
                     <span className="text-muted-foreground font-normal ml-2">
@@ -1170,7 +1294,12 @@ export default function FamiliesPage() {
                                 <span className="text-muted-foreground text-sm">None</span>
                               ) : (
                                 family.children.map((c) => (
-                                  <p key={c.id} className="text-sm">
+                                  <p key={c.id} className="text-sm flex items-center gap-1.5">
+                                    <KidAvatar
+                                      name={c.name}
+                                      photo={c.photo_url}
+                                      className="h-6 w-6 text-[10px]"
+                                    />
                                     {c.name}
                                     {c.date_of_birth && (
                                       <span className="text-muted-foreground ml-1 text-xs">

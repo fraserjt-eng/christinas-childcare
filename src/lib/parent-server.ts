@@ -6,12 +6,14 @@
 
 import { getServerSupabase } from '@/lib/supabase/server';
 import type { AuthedSession } from '@/lib/require-auth';
+import { signPhotoList } from '@/lib/photo-url';
 
 export interface ResolvedChild {
   id: string;
   name: string;
   classroom: string | null;
   date_of_birth: string | null;
+  photo_url: string | null;
 }
 
 export interface ResolvedFamily {
@@ -60,18 +62,22 @@ export async function resolveSessionFamily(
 
   const { data: kids } = await supabase
     .from('family_children')
-    .select('id, name, classroom, date_of_birth, family_id')
+    .select('id, name, classroom, date_of_birth, family_id, photo_url')
     .eq('family_id', familyId)
     .limit(5000);
 
-  const children: ResolvedChild[] = (kids ?? [])
-    .filter((c) => c.family_id === familyId)
-    .map((c) => ({
-      id: c.id as string,
-      name: (c.name as string) || 'Child',
-      classroom: (c.classroom as string | null) ?? null,
-      date_of_birth: (c.date_of_birth as string | null) ?? null,
-    }));
+  const kidRows = (kids ?? []).filter((c) => c.family_id === familyId);
+  const signed = await signPhotoList(
+    supabase,
+    kidRows.map((c) => (c.photo_url as string | null) ?? null)
+  );
+  const children: ResolvedChild[] = kidRows.map((c, i) => ({
+    id: c.id as string,
+    name: (c.name as string) || 'Child',
+    classroom: (c.classroom as string | null) ?? null,
+    date_of_birth: (c.date_of_birth as string | null) ?? null,
+    photo_url: signed[i] || null,
+  }));
 
   return { family_id: familyId, email: familyEmail, children };
 }

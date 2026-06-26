@@ -11,6 +11,7 @@ interface Child {
   name: string;
   classroom: string | null;
   date_of_birth: string | null;
+  photo_url?: string | null;
 }
 
 function ageFrom(dob: string | null): string {
@@ -85,15 +86,24 @@ export default function ChildrenPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-christina-blue/10 flex items-center justify-center">
-                    <span className="font-heading font-bold text-christina-blue text-xl">
-                      {child.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')
-                        .slice(0, 2)}
-                    </span>
-                  </div>
+                  {child.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={child.photo_url}
+                      alt={child.name}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-christina-blue/10 flex items-center justify-center">
+                      <span className="font-heading font-bold text-christina-blue text-xl">
+                        {child.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2)}
+                      </span>
+                    </div>
+                  )}
                   <div>
                     <h2 className="text-xl font-bold">{child.name}</h2>
                     {ageFrom(child.date_of_birth) && (
