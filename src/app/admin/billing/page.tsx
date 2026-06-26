@@ -246,7 +246,14 @@ export default function BillingPage() {
                       const c = fam.contract;
                       return (
                         <TableRow key={fam.id}>
-                          <TableCell className="font-medium">{fam.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {fam.name}
+                            {c?.notes ? (
+                              <span className="block text-xs font-normal text-muted-foreground mt-0.5 line-clamp-2 max-w-xs">
+                                {c.notes}
+                              </span>
+                            ) : null}
+                          </TableCell>
                           <TableCell className="text-sm">
                             {c && c.rate_amount ? (
                               <>
