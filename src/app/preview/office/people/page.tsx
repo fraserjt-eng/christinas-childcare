@@ -36,6 +36,9 @@ export default function PeoplePage() {
   const addPerson = usePreviewStore((s) => s.addPerson);
   const staffPhotos = usePreviewStore((s) => s.staffPhotos);
   const setStaffPhoto = usePreviewStore((s) => s.setStaffPhoto);
+  // A family's avatar = its first child's real photo (signed). Without this the
+  // family rows fell back to the shared stock portrait for everyone.
+  const kidPhotos = usePreviewStore((s) => s.kidPhotos);
 
   const [openStaffId, setOpenStaffId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -157,6 +160,7 @@ export default function PeoplePage() {
                   <PhotoAvatar
                     id={family.id}
                     name={family.name}
+                    src={kidPhotos[family.kidIds[0]]}
                     size={44}
                     rounded="rounded-md"
                     className="shrink-0"

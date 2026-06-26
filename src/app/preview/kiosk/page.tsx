@@ -389,7 +389,7 @@ export default function KioskPage() {
           <div className="pv-tile mx-auto max-w-lg p-6 sm:p-7">
             <div className="text-center">
               <span className="inline-block">
-                <PhotoAvatar id={activeFamily.id} name={activeFamily.name} size={80} rounded="rounded-2xl" />
+                <PhotoAvatar id={activeFamily.id} name={activeFamily.name} src={kidPhotos[activeFamily.kidIds[0]]} size={80} rounded="rounded-2xl" />
               </span>
               <h2 className="pv-tad-title mt-2 text-3xl">{activeFamily.name}</h2>
               <p className="mt-1 text-lg" style={{ color: "var(--pv-muted)" }}>

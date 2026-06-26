@@ -1,10 +1,14 @@
 "use client";
 
-// Photographic avatar for the preview layer. Prefers a real photo (an
-// uploaded data URL from the store, or a generated portrait at
-// /preview/people/<id>.jpg); on a missing file it falls back to clean
-// initials on a soft brand-tinted ground. No emoji, no cartoon. This is the
-// piece that makes the whole preview read as contemporary and photographic.
+// Photographic avatar for the preview layer. Prefers a real photo (a child's
+// signed photo_url passed as src, or an uploaded data URL from the store).
+//
+// Fallback when there is no real photo:
+//   - DEMO sandbox (NEXT_PUBLIC_DEMO_MODE): a shared stock portrait, so the
+//     marketing demo still reads as photographic.
+//   - LIVE: clean initials on a soft brand-tinted ground. We never show the
+//     stock face to real families — one identical stock child across every
+//     family is exactly what reads as "fake" on a production roster.
 
 import { useState } from "react";
 import { cx } from "@/components/preview/ui";
@@ -32,9 +36,11 @@ export function PhotoAvatar({
   className?: string;
 }) {
   const [errored, setErrored] = useState(false);
-  // One shared placeholder (a fully-dressed child) stands in for every photo
-  // until a real one is uploaded. An uploaded data URL (src) always wins.
-  const path = src || "/preview/people/placeholder.jpg";
+  // A real photo (src) always wins. With no real photo, the demo sandbox shows
+  // a shared stock portrait so it stays photographic; LIVE shows initials so a
+  // real, un-photographed family is never given the same stock child's face.
+  const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  const path = src || (isDemo ? "/preview/people/placeholder.jpg" : null);
   const showImg = Boolean(path) && !errored;
   const initials = name
     .split(/\s+/)
@@ -65,7 +71,7 @@ export function PhotoAvatar({
       {showImg ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={path}
+          src={path ?? undefined}
           alt={name}
           loading="lazy"
           onError={() => setErrored(true)}
