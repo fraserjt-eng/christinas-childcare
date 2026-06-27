@@ -22,27 +22,60 @@ export async function GET() {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
 
-  // Fetch broad, join in JS (PostgREST .in() can silently drop rows).
-  const [{ data: fams }, { data: parents }, { data: stmts }] = await Promise.all([
+  // Fetch broad, join in JS (PostgREST .in() can silently drop rows). The
+  // contracts + charges + payments let us compute each PILOT family's live
+  // ledger balance, so a statement amount comes from the running tab instead of
+  // being hand-keyed (Phase 4). Non-pilot families have no ledger -> null.
+  const [
+    { data: fams },
+    { data: parents },
+    { data: stmts },
+    { data: contracts },
+    { data: charges },
+    { data: payments },
+  ] = await Promise.all([
     supabase.from('families').select('id, email, status, copay_default_amount').limit(5000),
     supabase.from('family_parents').select('family_id, name, email, is_primary').limit(5000),
     supabase
       .from('family_statements')
       .select('id, family_id, period_label, period_start, period_end, amount, note, status, created_at, sent_at')
       .limit(5000),
+    supabase.from('family_billing_contracts').select('family_id, is_pilot').limit(5000),
+    supabase.from('billing_charges').select('family_id, amount').limit(5000),
+    supabase.from('billing_payments').select('family_id, amount').limit(5000),
   ]);
+
+  // Per-pilot-family ledger balance (charges - payments), rounded to cents.
+  const pilotFamilies = new Set(
+    (contracts ?? []).filter((c) => c.is_pilot === true).map((c) => c.family_id as string)
+  );
+  const chargeByFamily = new Map<string, number>();
+  for (const c of charges ?? []) {
+    const k = c.family_id as string;
+    chargeByFamily.set(k, (chargeByFamily.get(k) || 0) + Number(c.amount || 0));
+  }
+  const payByFamily = new Map<string, number>();
+  for (const p of payments ?? []) {
+    const k = p.family_id as string;
+    payByFamily.set(k, (payByFamily.get(k) || 0) + Number(p.amount || 0));
+  }
 
   const families = (fams ?? [])
     .filter((f) => (f.status as string) !== 'inactive')
     .map((f) => {
-      const ps = (parents ?? []).filter((p) => p.family_id === f.id);
+      const id = f.id as string;
+      const ps = (parents ?? []).filter((p) => p.family_id === id);
       const primary = ps.find((p) => p.is_primary) || ps[0];
+      const ledgerBalance = pilotFamilies.has(id)
+        ? Math.round(((chargeByFamily.get(id) || 0) - (payByFamily.get(id) || 0)) * 100) / 100
+        : null;
       return {
-        id: f.id as string,
+        id,
         email: (f.email as string) || '',
         parentName: (primary?.name as string) || '',
         copay_default_amount:
           f.copay_default_amount != null ? Number(f.copay_default_amount) : null,
+        ledger_balance: ledgerBalance,
       };
     })
     .sort((a, b) => a.parentName.localeCompare(b.parentName));

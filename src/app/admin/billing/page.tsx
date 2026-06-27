@@ -37,7 +37,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import Link from 'next/link';
-import { Wallet, Search, Loader2, Pencil, ScrollText } from 'lucide-react';
+import { Wallet, Search, Loader2, Pencil, ScrollText, Download } from 'lucide-react';
+import { buildCcapBillingCsv, buildBillingSummaryCsv } from '@/lib/billing-export';
 
 interface Contract {
   rate_amount: number | null;
@@ -132,6 +133,14 @@ export default function BillingPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
 
+  // Exports (Phases 3+5): a period + download buttons for the CCAP draft and the
+  // billing summary. Default the period to the current month.
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  const [periodStart, setPeriodStart] = useState(monthStart.toISOString().slice(0, 10));
+  const [periodEnd, setPeriodEnd] = useState(new Date().toISOString().slice(0, 10));
+  const [exporting, setExporting] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -181,6 +190,33 @@ export default function BillingPage() {
   );
   const pilotCount = families.filter((f) => f.contract?.is_pilot).length;
 
+  const runExport = async (kind: 'ccap' | 'summary') => {
+    setExporting(true);
+    try {
+      const r = await fetch(
+        `/api/admin/billing-export?period_start=${periodStart}&period_end=${periodEnd}`,
+        { cache: 'no-store' }
+      );
+      if (!r.ok) return;
+      const d = await r.json();
+      const rows = d.rows || [];
+      const csv = kind === 'ccap' ? buildCcapBillingCsv(rows) : buildBillingSummaryCsv(rows);
+      const name =
+        kind === 'ccap'
+          ? `ccap-billing-DRAFT_${periodStart}_to_${periodEnd}.csv`
+          : `billing-summary_${periodStart}_to_${periodEnd}.csv`;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -204,6 +240,38 @@ export default function BillingPage() {
           Setting a contract here records the agreement; it does not send a bill or move money.
         </p>
       </div>
+
+      {/* Exports (pilot families only) */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <p className="text-sm font-semibold">Export billing (pilot families)</p>
+              <p className="text-xs text-muted-foreground">
+                Pick a period, then download. The CCAP file is a draft format until the owner walkthrough confirms the state-hub fields.
+              </p>
+            </div>
+            <div className="flex items-end gap-2 ml-auto">
+              <div className="space-y-1">
+                <Label className="text-xs">From</Label>
+                <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} className="h-9 w-36" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">To</Label>
+                <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} className="h-9 w-36" />
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5" disabled={exporting} onClick={() => runExport('ccap')}>
+              <Download className="h-4 w-4" /> CCAP billing (draft)
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" disabled={exporting} onClick={() => runExport('summary')}>
+              <Download className="h-4 w-4" /> Billing summary (QuickBooks / Brightwheel)
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

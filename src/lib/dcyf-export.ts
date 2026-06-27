@@ -44,8 +44,12 @@ const dcyfTimeFmt = new Intl.DateTimeFormat('en-US', {
 }); // HH:MM AM/PM
 
 function csvCell(value: string): string {
-  const s = (value ?? '').toString();
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  let s = (value ?? '').toString();
+  // Block spreadsheet formula injection (CWE-1236): a cell starting with
+  // = + - @ (or a tab/CR) executes as a formula in Excel/Sheets. Child names
+  // are user-entered, so prefix a tab to force the cell to text.
+  if (/^[=+\-@\t\r]/.test(s)) s = '\t' + s;
+  return /[",\n\r\t]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 // "MM/DD/YYYY HH:MM AM/PM" in center time, or '' when there is no instant.
