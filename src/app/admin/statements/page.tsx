@@ -12,6 +12,9 @@ interface FamilyRow {
   email: string;
   parentName: string;
   copay_default_amount: number | null;
+  // For pilot families: the live ledger balance (charges - payments). null = not
+  // in the billing pilot, so the amount is still entered by hand.
+  ledger_balance: number | null;
 }
 interface StatementRow {
   id: string;
@@ -54,6 +57,7 @@ export default function StatementsPage() {
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
   const [amount, setAmount] = useState('');
+  const [amountSource, setAmountSource] = useState<'ledger' | 'copay' | null>(null);
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -82,12 +86,21 @@ export default function StatementsPage() {
     return m;
   }, [families]);
 
-  // Prefill amount from the family's co-pay default when one is selected.
+  // Prefill the amount when a family is selected. A PILOT family's live ledger
+  // balance (charges - payments) wins — that is the real co-pay due, computed,
+  // not hand-keyed. Otherwise fall back to the saved co-pay default.
   function onSelectFamily(id: string) {
     setFamilyId(id);
     const f = familyById[id];
-    if (f && f.copay_default_amount != null && !amount) {
+    if (!f) return;
+    if (f.ledger_balance != null) {
+      setAmount(f.ledger_balance.toFixed(2));
+      setAmountSource('ledger');
+    } else if (f.copay_default_amount != null && !amount) {
       setAmount(String(f.copay_default_amount));
+      setAmountSource('copay');
+    } else {
+      setAmountSource(null);
     }
   }
 
@@ -139,6 +152,7 @@ export default function StatementsPage() {
       setPeriodStart('');
       setPeriodEnd('');
       setAmount('');
+      setAmountSource(null);
       setNote('');
       await load();
     } finally {
@@ -224,9 +238,19 @@ export default function StatementsPage() {
               step="0.01"
               min="0"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => { setAmount(e.target.value); setAmountSource(null); }}
               placeholder="0.00"
             />
+            {amountSource === 'ledger' && (
+              <p className="mt-1 text-xs text-christina-green">
+                Balance due from the billing ledger. Edit if needed.
+              </p>
+            )}
+            {amountSource === 'copay' && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Prefilled from the saved co-pay default.
+              </p>
+            )}
           </div>
 
           <div className="sm:col-span-2">
