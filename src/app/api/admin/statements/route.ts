@@ -34,7 +34,7 @@ export async function GET() {
     { data: charges },
     { data: payments },
   ] = await Promise.all([
-    supabase.from('families').select('id, email, status, copay_default_amount').limit(5000),
+    supabase.from('families').select('id, email, status, copay_default_amount, center_id').limit(5000),
     supabase.from('family_parents').select('family_id, name, email, is_primary').limit(5000),
     supabase
       .from('family_statements')
@@ -60,8 +60,23 @@ export async function GET() {
     payByFamily.set(k, (payByFamily.get(k) || 0) + Number(p.amount || 0));
   }
 
+  // Center scope (mirror the POST handler): a center-bound admin sees only
+  // their own center's families and statements. An owner/superadmin, or a
+  // director with no center binding, sees all (cross-center). Defense-in-depth
+  // for multi-center; with a single center today this is a no-op for everyone.
+  const role = (session.user.role || '').toLowerCase();
+  const myCenter = session.user.center_id ?? null;
+  const crossCenter = role === 'owner' || role === 'superadmin' || !myCenter;
+  const centerByFamily = new Map<string, string | null>();
+  for (const f of fams ?? []) {
+    centerByFamily.set(f.id as string, (f.center_id as string | null) ?? null);
+  }
+  const inScope = (familyId: string) =>
+    crossCenter || centerByFamily.get(familyId) === myCenter;
+
   const families = (fams ?? [])
     .filter((f) => (f.status as string) !== 'inactive')
+    .filter((f) => inScope(f.id as string))
     .map((f) => {
       const id = f.id as string;
       const ps = (parents ?? []).filter((p) => p.family_id === id);
@@ -81,6 +96,7 @@ export async function GET() {
     .sort((a, b) => a.parentName.localeCompare(b.parentName));
 
   const statements = (stmts ?? [])
+    .filter((s) => inScope(s.family_id as string))
     .map((s) => ({
       id: s.id as string,
       family_id: s.family_id as string,
