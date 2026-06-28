@@ -12,7 +12,7 @@ import { logAudit, auditIp } from '@/lib/audit-log';
 
 // GET: the families (with a primary parent + co-pay default) plus the
 // statements already issued, so the admin page can list and create.
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await requireSession('admin');
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -60,19 +60,22 @@ export async function GET() {
     payByFamily.set(k, (payByFamily.get(k) || 0) + Number(p.amount || 0));
   }
 
-  // Center scope (mirror the POST handler): a center-bound admin sees only
-  // their own center's families and statements. An owner/superadmin, or a
-  // director with no center binding, sees all (cross-center). Defense-in-depth
-  // for multi-center; with a single center today this is a no-op for everyone.
+  // Active center (mirror /api/admin/families GET): a center-bound admin is
+  // locked to their own center; a cross-center director (owner/superadmin, or no
+  // home center) sees all, or one center when they narrowed via the cc_center
+  // site picker. Without this the list returned every center's families and
+  // statements. With a single center today this is a no-op for everyone.
   const role = (session.user.role || '').toLowerCase();
-  const myCenter = session.user.center_id ?? null;
-  const crossCenter = role === 'owner' || role === 'superadmin' || !myCenter;
+  const sessionCenter = session.user.center_id ?? null;
+  const crossCenter = role === 'owner' || role === 'superadmin' || !sessionCenter;
+  const picked = request.cookies.get('cc_center')?.value || null;
+  const centerId = crossCenter ? picked : sessionCenter;
   const centerByFamily = new Map<string, string | null>();
   for (const f of fams ?? []) {
     centerByFamily.set(f.id as string, (f.center_id as string | null) ?? null);
   }
   const inScope = (familyId: string) =>
-    crossCenter || centerByFamily.get(familyId) === myCenter;
+    !centerId || centerByFamily.get(familyId) === centerId;
 
   const families = (fams ?? [])
     .filter((f) => (f.status as string) !== 'inactive')
