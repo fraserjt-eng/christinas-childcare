@@ -60,11 +60,31 @@ export function dcyfDateTime(iso: string | null | undefined): string {
   return `${dcyfDateFmt.format(d)} ${dcyfTimeFmt.format(d)}`.trim();
 }
 
-// DOB is stored as a bare date (YYYY-MM-DD) with no time; reformat to MM/DD/YYYY
-// directly from the parts so no timezone math can shift it a day.
-export function dcyfDob(ymd: string | null | undefined): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec((ymd || '').toString());
-  return m ? `${m[2]}/${m[3]}/${m[1]}` : '';
+// The DCYF Provider Hub rejects any DOB that is not EXACTLY MM/DD/YYYY (it
+// rejected "6/28/21"). The roster stores a bare date (YYYY-MM-DD), but a bulk
+// import or hand edit can leave a loose value, so accept the common shapes
+// (ISO, M/D/YY, M/D/YYYY) and always emit zero-padded MM/DD/YYYY with a 4-digit
+// year. No timezone math (reformat the parts) so the day can never shift. Returns
+// '' on an empty/unparseable value (better an empty REQUIRED field the importer
+// flags than an invalid date that fails the whole upload).
+const DOB_YEAR_PIVOT = 26; // 2-digit year <= 26 -> 20xx, else 19xx (kids are 2000s)
+export function dcyfDob(value: string | null | undefined): string {
+  const s = (value || '').toString().trim();
+  if (!s) return '';
+  let mo: string, da: string, yr: string;
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s); // ISO YYYY-MM-DD
+  if (m) {
+    yr = m[1]; mo = m[2]; da = m[3];
+  } else {
+    m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(s); // US M/D/YY or M/D/YYYY
+    if (!m) return '';
+    mo = m[1]; da = m[2];
+    yr = m[3].length === 4 ? m[3] : String(Number(m[3]) <= DOB_YEAR_PIVOT ? 2000 + Number(m[3]) : 1900 + Number(m[3]));
+  }
+  const MM = mo.padStart(2, '0');
+  const DD = da.padStart(2, '0');
+  if (+MM < 1 || +MM > 12 || +DD < 1 || +DD > 31) return '';
+  return `${MM}/${DD}/${yr}`;
 }
 
 // Build one or more DCYF CSV files (chunked at DCYF_MAX_ROWS data rows). Each
