@@ -11,6 +11,7 @@ interface Photo {
   caption: string;
   created_at: string;
   classroom_name: string;
+  media_type?: string;
 }
 
 function formatRelativeTime(iso: string): string {
@@ -95,12 +96,21 @@ export function PhotoFeed() {
           {photos.map((photo) => (
             <Card key={photo.id} className="overflow-hidden">
               <div className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={photo.photo_url}
-                  alt={photo.caption || 'Photo from your child’s day'}
-                  className="w-full object-cover max-h-80"
-                />
+                {photo.media_type === 'video' ? (
+                  <video
+                    src={photo.photo_url}
+                    controls
+                    preload="metadata"
+                    className="w-full object-cover max-h-80 bg-black"
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photo.photo_url}
+                    alt={photo.caption || 'Photo from your child’s day'}
+                    className="w-full object-cover max-h-80"
+                  />
+                )}
               </div>
               <CardContent className="p-4 space-y-2">
                 {photo.caption && (

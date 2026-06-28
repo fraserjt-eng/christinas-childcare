@@ -85,11 +85,42 @@ export async function POST(request: Request): Promise<NextResponse> {
   const employeeId = uuidOrNull(session.user.id);
   const employeeName = session.user.full_name || session.user.email || 'Staff';
 
+  const videoPrefix = `gallery/${classroomId ?? 'room'}/`;
   const saved: string[] = [];
   for (const p of photos) {
-    const dataUrl = typeof p.photo_data === 'string' ? p.photo_data : '';
-    if (!dataUrl.startsWith('data:')) continue;
     try {
+      // VIDEO: already uploaded straight to storage via a server-minted signed
+      // URL (/api/employee/media-upload-url). We only record the row here. The
+      // path must sit under THIS classroom's gallery prefix and end in a video
+      // extension, so a teacher cannot record an arbitrary object.
+      if (p.media_type === 'video' && typeof p.storage_path === 'string') {
+        const sp = p.storage_path;
+        if (!sp.startsWith(videoPrefix) || sp.includes('..') || !/\.(mp4|webm|mov)$/i.test(sp)) {
+          continue;
+        }
+        const { data: row, error: insErr } = await supabase
+          .from('daily_photos')
+          .insert({
+            classroom_id: classroomId,
+            classroom_name: classroomName,
+            employee_id: employeeId,
+            employee_name: employeeName,
+            photo_url: sp,
+            caption: typeof p.caption === 'string' ? p.caption.slice(0, 200) : null,
+            activity_type: typeof p.activity_type === 'string' ? p.activity_type : 'other',
+            status: 'pending',
+            child_ids: childIds,
+            media_type: 'video',
+          })
+          .select('id')
+          .single();
+        if (!insErr && row) saved.push(row.id as string);
+        continue;
+      }
+
+      // PHOTO: small data URL uploaded here (downscaled client-side).
+      const dataUrl = typeof p.photo_data === 'string' ? p.photo_data : '';
+      if (!dataUrl.startsWith('data:')) continue;
       const commaIdx = dataUrl.indexOf(',');
       const meta = dataUrl.slice(5, commaIdx); // after "data:"
       const contentType = (meta.split(';')[0] || 'image/jpeg').trim();
@@ -118,6 +149,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           activity_type: typeof p.activity_type === 'string' ? p.activity_type : 'other',
           status: 'pending',
           child_ids: childIds,
+          media_type: 'photo',
         })
         .select('id')
         .single();
@@ -154,7 +186,7 @@ export async function GET(): Promise<NextResponse> {
 
   const { data } = await supabase
     .from('daily_photos')
-    .select('id, photo_url, caption, activity_type, status, classroom_name, created_at')
+    .select('id, photo_url, caption, activity_type, status, classroom_name, created_at, media_type')
     .order('created_at', { ascending: false })
     .limit(30);
 

@@ -343,13 +343,23 @@ export function PhotoReviewGrid() {
                   isSelected ? 'ring-2 ring-christina-red' : ''
                 }`}
               >
-                {/* Photo thumbnail */}
+                {/* Photo / video thumbnail */}
                 <div className="relative">
-                  <img
-                    src={photo.photo_url}
-                    alt={photo.caption || ACTIVITY_LABELS[photo.activity_type]}
-                    className="w-full h-44 object-cover"
-                  />
+                  {photo.media_type === 'video' ? (
+                    <video
+                      src={photo.photo_url}
+                      controls
+                      preload="metadata"
+                      className="w-full h-44 object-cover bg-black"
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photo.photo_url}
+                      alt={photo.caption || ACTIVITY_LABELS[photo.activity_type]}
+                      className="w-full h-44 object-cover"
+                    />
+                  )}
                   {/* Selection checkbox overlay */}
                   <div className="absolute top-2 left-2">
                     <Checkbox
