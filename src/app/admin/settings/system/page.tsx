@@ -75,6 +75,26 @@ export default function SystemSettingsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadKioskKit = async () => {
+    try {
+      const res = await fetch('/api/admin/kiosk-rollout-kit');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        window.alert(body.error || 'The kiosk rollout kit could not be downloaded.');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Crystal-Kiosk-Rollout-Kit.zip';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.alert('The kiosk rollout kit could not be downloaded.');
+    }
+  };
+
   const handleClearTrainingProgress = () => {
     if (window.confirm('Clear ALL training progress for ALL users? This cannot be undone.')) {
       localStorage.removeItem('training-progress');
@@ -175,6 +195,32 @@ export default function SystemSettingsPage() {
           >
             <Download className="h-4 w-4 mr-2" />
             Export Knowledge Check Answers (CSV)
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Kiosk Rollout Kit */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-heading flex items-center gap-2">
+            <Download className="h-5 w-5 text-christina-red" />
+            Kiosk Rollout Kit
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            One ZIP to print for the new Crystal front-desk kiosk: a personalized
+            flyer for every family with their PIN, plus a staff master PIN list.
+            Hand the flyers out and keep the master list at the desk. The kit holds
+            family PINs, so keep it private.
+          </p>
+          <Button
+            variant="outline"
+            className="w-full justify-start text-sm"
+            onClick={handleDownloadKioskKit}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download Kiosk Rollout Kit (ZIP)
           </Button>
         </CardContent>
       </Card>
