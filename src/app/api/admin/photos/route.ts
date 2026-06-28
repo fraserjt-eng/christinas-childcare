@@ -35,7 +35,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   let q = supabase
     .from('daily_photos')
     .select(
-      'id, photo_url, caption, activity_type, status, classroom_name, employee_name, created_at, child_ids'
+      'id, photo_url, caption, activity_type, status, classroom_name, employee_name, created_at, child_ids, media_type'
     )
     .order('created_at', { ascending: false })
     .limit(5000);

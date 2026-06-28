@@ -17,6 +17,11 @@ import {
 import { ACTIVITY_LABELS, ActivityType } from '@/lib/photo-storage';
 import { getClassrooms } from '@/lib/food-storage';
 import { Classroom } from '@/types/food';
+import { supabase } from '@/lib/supabase';
+
+// Short clips only, to keep Supabase storage + egress cost bounded.
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB
+const MAX_VIDEO_SECONDS = 60;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +30,7 @@ interface PhotoDraft {
   previewUrl: string;
   activityType: ActivityType;
   caption: string;
+  isVideo: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -37,6 +43,44 @@ function readFileAsDataUrl(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
+
+// Read a video's duration from a temporary object URL, so we can reject clips
+// over the cap before any upload starts. Resolves null if the browser can't read it.
+function getVideoDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(Number.isFinite(v.duration) ? v.duration : null);
+    };
+    v.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    v.src = url;
+  });
+}
+
+// Returns an error message if the video is too big or too long, else null.
+async function validateVideo(file: File): Promise<string | null> {
+  if (file.size > MAX_VIDEO_BYTES) {
+    return `That video is too large. Keep it under ${Math.round(MAX_VIDEO_BYTES / 1024 / 1024)}MB.`;
+  }
+  const dur = await getVideoDuration(file);
+  if (dur != null && dur > MAX_VIDEO_SECONDS + 1) {
+    return `That video is too long. Keep it under ${MAX_VIDEO_SECONDS} seconds.`;
+  }
+  return null;
+}
+
+const VIDEO_CONTENT_TYPES: Record<string, string> = {
+  'video/mp4': 'video/mp4',
+  'video/webm': 'video/webm',
+  'video/quicktime': 'video/quicktime',
+  'video/mov': 'video/quicktime',
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -68,18 +112,39 @@ export default function EmployeePhotosPage() {
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
+    setErrorMsg('');
 
     const remaining = 5 - drafts.length;
     const toAdd = files.slice(0, remaining);
 
-    const newDrafts: PhotoDraft[] = await Promise.all(
-      toAdd.map(async (file) => ({
-        file,
-        previewUrl: await readFileAsDataUrl(file),
-        activityType: 'free_play' as ActivityType,
-        caption: '',
-      }))
-    );
+    const newDrafts: PhotoDraft[] = [];
+    for (const file of toAdd) {
+      const isVideo = file.type.startsWith('video/');
+      if (isVideo) {
+        const err = await validateVideo(file);
+        if (err) {
+          setErrorMsg(err);
+          continue;
+        }
+        // Object URL for the preview; the File itself is uploaded straight to
+        // storage on submit (never read into a data URL — too large for that).
+        newDrafts.push({
+          file,
+          previewUrl: URL.createObjectURL(file),
+          activityType: 'free_play',
+          caption: '',
+          isVideo: true,
+        });
+      } else {
+        newDrafts.push({
+          file,
+          previewUrl: await readFileAsDataUrl(file),
+          activityType: 'free_play',
+          caption: '',
+          isVideo: false,
+        });
+      }
+    }
 
     setDrafts((prev) => [...prev, ...newDrafts]);
 
@@ -119,20 +184,51 @@ export default function EmployeePhotosPage() {
     const classroomName = classroom?.name || '';
 
     try {
-      // Service-role API: uploads to storage and tags the classroom's children
-      // so the owner can approve and parents can then see the photos. The signed-in
-      // staff member is taken from the session server-side.
+      // Photos ride in the JSON body as small data URLs. Videos are too large
+      // for that, so each uploads straight to storage via a server-minted signed
+      // URL, and we record only its path. Both then post to /api/employee/photos,
+      // which tags the classroom's children for owner approval.
+      const items: Array<Record<string, unknown>> = [];
+      for (const draft of drafts) {
+        if (draft.isVideo) {
+          const contentType = VIDEO_CONTENT_TYPES[draft.file.type] || 'video/mp4';
+          const urlRes = await fetch('/api/employee/media-upload-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ classroom_id: selectedClassroomId, content_type: contentType }),
+          });
+          const urlJson = await urlRes.json().catch(() => ({}));
+          if (!urlRes.ok || !urlJson.path || !urlJson.token) {
+            throw new Error(urlJson.error || 'Could not start the video upload.');
+          }
+          const up = await supabase.storage
+            .from('child_photos')
+            .uploadToSignedUrl(urlJson.path, urlJson.token, draft.file, { contentType });
+          if (up.error) {
+            throw new Error('The video upload failed. Please try again.');
+          }
+          items.push({
+            storage_path: urlJson.path,
+            media_type: 'video',
+            activity_type: draft.activityType,
+            caption: draft.caption || undefined,
+          });
+        } else {
+          items.push({
+            photo_data: draft.previewUrl,
+            activity_type: draft.activityType,
+            caption: draft.caption || undefined,
+          });
+        }
+      }
+
       const res = await fetch('/api/employee/photos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           classroom_id: selectedClassroomId,
           classroom_name: classroomName,
-          photos: drafts.map((draft) => ({
-            photo_data: draft.previewUrl,
-            activity_type: draft.activityType,
-            caption: draft.caption || undefined,
-          })),
+          photos: items,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -188,9 +284,10 @@ export default function EmployeePhotosPage() {
     <div className="space-y-6 pb-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Upload Photos</h1>
+        <h1 className="text-2xl font-bold">Upload Photos &amp; Video</h1>
         <p className="text-muted-foreground mt-1">
-          Share moments from the day. Photos are reviewed before parents see them.
+          Share moments from the day: photos or a short video (up to 60 seconds). Everything is
+          reviewed before parents see it.
         </p>
       </div>
 
@@ -234,8 +331,7 @@ export default function EmployeePhotosPage() {
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
-            capture="environment"
+            accept="image/*,video/*"
             multiple
             className="hidden"
             onChange={handleFileChange}
@@ -269,12 +365,22 @@ export default function EmployeePhotosPage() {
                   <div className="flex gap-3 p-3">
                     {/* Thumbnail */}
                     <div className="relative shrink-0">
-                      <img
-                        src={draft.previewUrl}
-                        alt={`Photo ${index + 1}`}
-                        className="h-20 w-20 rounded-lg object-cover"
-                        loading="lazy"
-                      />
+                      {draft.isVideo ? (
+                        <video
+                          src={draft.previewUrl}
+                          className="h-20 w-20 rounded-lg object-cover bg-black"
+                          muted
+                          playsInline
+                        />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={draft.previewUrl}
+                          alt={`Photo ${index + 1}`}
+                          className="h-20 w-20 rounded-lg object-cover"
+                          loading="lazy"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => removeDraft(index)}
@@ -308,13 +414,13 @@ export default function EmployeePhotosPage() {
                       {/* Caption */}
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">
-                          Caption{' '}
-                          <span className="text-muted-foreground/60">(optional)</span>
+                          Description{' '}
+                          <span className="text-muted-foreground/60">(what are they doing?)</span>
                         </Label>
                         <Input
                           value={draft.caption}
                           onChange={(e) => updateDraftCaption(index, e.target.value)}
-                          placeholder="What were the kids doing?"
+                          placeholder="e.g. Building block towers at free play"
                           className="h-8 text-sm"
                           maxLength={200}
                         />

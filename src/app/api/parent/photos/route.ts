@@ -32,7 +32,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('daily_photos')
-    .select('id, photo_url, caption, created_at, classroom_name, activity_type, child_ids')
+    .select('id, photo_url, caption, created_at, classroom_name, activity_type, child_ids, media_type')
     .overlaps('child_ids', childIds)
     .eq('status', 'approved') // families see a photo only AFTER Christina approves it
     .order('created_at', { ascending: false })
@@ -62,6 +62,7 @@ export async function GET() {
     created_at: (p.created_at as string) || new Date().toISOString(),
     classroom_name: (p.classroom_name as string | null) || '',
     activity_type: (p.activity_type as string | null) || 'other',
+    media_type: (p.media_type as string | null) || 'photo',
   }));
 
   return NextResponse.json(

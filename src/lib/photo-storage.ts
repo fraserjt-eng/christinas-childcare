@@ -22,6 +22,7 @@ export interface DailyPhoto {
   employee_id?: string;
   employee_name?: string;
   photo_url: string; // base64 data URL in demo mode, Supabase Storage URL in production
+  media_type?: 'photo' | 'video'; // video uploads render with <video> instead of <img>
   caption?: string;
   activity_type: ActivityType;
   status: PhotoStatus;
