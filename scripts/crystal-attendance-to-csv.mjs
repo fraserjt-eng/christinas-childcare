@@ -110,12 +110,19 @@ function loadRoster(csvPath) {
 
 function matchRoster(roster, sheetName) {
   const { first, last } = splitSheetName(sheetName);
-  // Try first|last, then last|first (sheets vary), then last-name-only unique.
-  return (
-    roster.get(norm(first) + '|' + norm(last)) ||
-    roster.get(norm(last) + '|' + norm(first)) ||
-    null
-  );
+  const nf = norm(first), nl = norm(last);
+  // Exact, both orders (sheets vary between "Last, First" and "First Last").
+  const exact = roster.get(nf + '|' + nl) || roster.get(nl + '|' + nf);
+  if (exact) return exact;
+  // First name exact + last-name token-subset, so a sheet "Flores" matches the
+  // roster "Flores Ortiz", and "Powell- Smith" matches "Sy'Mone Powell- Smith".
+  if (nf && nl) {
+    for (const rec of roster.values()) {
+      const rf = norm(rec.first), rl = norm(rec.last);
+      if (rf === nf && (rl.includes(nl) || nl.includes(rl))) return rec;
+    }
+  }
+  return null;
 }
 
 function main() {
