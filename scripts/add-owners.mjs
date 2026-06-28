@@ -13,7 +13,7 @@ import { createHash, randomInt } from 'node:crypto';
 const APPLY = process.argv.includes('--apply');
 const PROD = process.argv.includes('--prod');
 const BP = '3104ae69-4f26-4c1e-a767-3ff45b534860';
-const OWNERS = ['Ophelia Zeogar', 'Stephan Zeogar', 'Garhjuan Zeogar']; // Christina Fraser already present
+const OWNERS = ['Ophelia Zeogar', 'Stephan Zeogar', 'Garjuhan Zeogar']; // Christina Fraser already present
 
 const env = {};
 for (const l of readFileSync(PROD ? '.env.prod.local' : '.env.local', 'utf8').split('\n')) {
