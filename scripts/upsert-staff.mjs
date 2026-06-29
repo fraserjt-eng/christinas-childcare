@@ -74,22 +74,43 @@ if (!pin || !email) {
     center_id: centerId,
   };
 
-  // Update existing (by pin) or insert.
-  const { data: existing } = await supa.from('employees').select('id').eq('pin', pin).limit(1);
-  if (existing && existing.length) {
-    const { error } = await supa.from('employees').update(fields).eq('id', existing[0].id);
+  // SEATBELT: the staff login looks employees up by PIN alone and is NOT
+  // center-scoped, so employees.pin is one global namespace across centers. If
+  // this PIN already belongs to a DIFFERENT person, reusing it would either
+  // silently overwrite their account (hijacking their login/center/role) or
+  // create a second active row the login resolves arbitrarily. Refuse it.
+  const { data: pinRows } = await supa
+    .from('employees')
+    .select('id, email, first_name, last_name, role, employment_status, center_id')
+    .eq('pin', pin);
+  const pinOwner = (pinRows || []).find((r) => (r.email || '').toLowerCase() !== email);
+  if (pinOwner) {
+    console.error(
+      `ABORT: PIN ${pin} already belongs to ${pinOwner.first_name} ${pinOwner.last_name} ` +
+        `<${pinOwner.email}> (${pinOwner.employment_status}, role ${pinOwner.role || '?'}). ` +
+        `Pick a different PIN for ${email}; reusing this one would hijack that login.`
+    );
+    process.exit(1);
+  }
+
+  // Upsert keyed on EMAIL (the stable identity), not on PIN, so changing a
+  // person's PIN updates their row instead of creating a duplicate. The PIN is
+  // already confirmed above to be free or already this same person's.
+  const { data: byEmail } = await supa.from('employees').select('id').eq('email', email).limit(1);
+  if (byEmail && byEmail.length) {
+    const { error } = await supa.from('employees').update(fields).eq('id', byEmail[0].id);
     if (error) {
       console.error('update failed:', error.message);
       process.exit(1);
     }
-    console.log(`Updated employee pin=${pin} (${email}) role=${role} center=${centerArg || 'none'}`);
+    console.log(`Updated employee ${email} -> pin=${pin} role=${role} center=${centerArg || 'none'}`);
   } else {
     const { error } = await supa.from('employees').insert(fields);
     if (error) {
       console.error('insert failed:', error.message);
       process.exit(1);
     }
-    console.log(`Inserted employee pin=${pin} (${email}) role=${role} center=${centerArg || 'none'}`);
+    console.log(`Inserted employee ${email} -> pin=${pin} role=${role} center=${centerArg || 'none'}`);
   }
 
   // Verify it resolves the way the login route will (active + by pin).
