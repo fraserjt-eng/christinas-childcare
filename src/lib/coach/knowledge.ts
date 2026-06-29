@@ -22,8 +22,10 @@ export const COACH_KNOWLEDGE = `
 - Each entry shows up on the parent's Daily Report as a time-stamped timeline (earliest first).
 - The live "today" feed shows only today. To see a past day, open Daily Reports (office tile or Admin > Daily Reports) and use the day arrows; parents use Daily Report in their portal. Nothing is deleted — every past day stays viewable.
 
-## Photos
-- A child's profile photo is taken with the small camera button on their tile; it uploads to the cloud and shows on every device (no longer device-only). Activity photos logged in the room show on the parent report and in Photo Review.
+## Photos & videos
+- A child's profile photo is taken with the small camera button on their tile; it uploads to the cloud and shows on every device (no longer device-only).
+- Staff post activity photos AND short videos (up to 60 seconds, 50MB) from the Photos page: staff sidebar "Upload Photos & Video" (the room log's Photo tile also has an "Upload a video" link to it). Pick the file, it uploads to the cloud, and an owner approves it in Photo Review before any parent sees it.
+- Approved photos and videos appear in the parent's Photos feed; activity photos also show on the parent Daily Report. Videos are owner-approved first, same as photos.
 
 ## Families & PINs
 - Manage families in Admin > Families (add/edit a family, children, contacts, status). The PIN Roster prints family + staff PINs.
