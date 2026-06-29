@@ -20,6 +20,7 @@ import {
   Delete,
   KeyRound,
   Palette,
+  PartyPopper,
   type LucideIcon,
 } from 'lucide-react';
 import type {
@@ -32,6 +33,7 @@ import { PrivacyNotice, SeeStaffScreen } from './PrivacyNotice';
 import { BigButton, SuccessBanner, cx } from '@/components/preview/ui';
 import { PhotoAvatar } from '@/components/preview/PhotoAvatar';
 import { centerTime } from '@/lib/center-time';
+import { activeClosureNotice } from '@/lib/center-closures';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
@@ -377,15 +379,142 @@ function FamilyScreen({ client, family, onDone }: { client: KioskClient; family:
   );
 }
 
+// ---- warm close: a confirmation summary after a family taps Done ----
+// Step 5 of the kiosk loop. Re-reads today's attendance for each child so the
+// summary reflects what actually happened, shows a self-expiring holiday-closure
+// reminder, then auto-advances back to the pad for the next family.
+const AUTO_CONFIRM_SECONDS = 9;
+
+function childStatus(row: AttendanceRow | null, first: string): { text: string; here: boolean } {
+  if (row?.check_in && row?.check_out) return { text: `${first} is checked out at ${formatTime(row.check_out)}`, here: false };
+  if (row?.check_in) return { text: `${first} is checked in at ${formatTime(row.check_in)}`, here: true };
+  return { text: `${first} is not checked in`, here: false };
+}
+
+function CheckinConfirmation({
+  client,
+  family,
+  onReset,
+}: {
+  client: KioskClient;
+  family: KioskFamily;
+  onReset: () => void;
+}) {
+  const [rows, setRows] = useState<Record<string, AttendanceRow | null>>({});
+  const [loaded, setLoaded] = useState(false);
+  const closure = activeClosureNotice();
+
+  useEffect(() => {
+    let alive = true;
+    Promise.all(
+      family.children.map((c) => client.getTodayAttendance(c.id).then((r) => [c.id, r] as const))
+    ).then((pairs) => {
+      if (!alive) return;
+      setRows(Object.fromEntries(pairs));
+      setLoaded(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [client, family]);
+
+  // Lobby auto-advance: return to a blank pad for the next family (also limits how
+  // long a family's child names sit on the shared screen).
+  useEffect(() => {
+    const t = setTimeout(onReset, AUTO_CONFIRM_SECONDS * 1000);
+    return () => clearTimeout(t);
+  }, [onReset]);
+
+  return (
+    <main className="pv-portal-bg min-h-[100dvh] px-4 py-6" onPointerDown={onReset}>
+      <div className="mx-auto max-w-2xl">
+        <header className="pv-rise mb-8 text-center" style={{ animationDelay: '30ms' }}>
+          <h1 className="pv-tad-title text-4xl sm:text-5xl">Christina&apos;s Child Care</h1>
+        </header>
+        <div className="pv-rise" style={{ animationDelay: '60ms' }}>
+          <div className="pv-tile mx-auto max-w-lg p-7 text-center sm:p-8">
+            <span
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl"
+              style={{ backgroundColor: 'color-mix(in srgb, var(--pv-teal) 16%, white)' }}
+              aria-hidden="true"
+            >
+              <Check size={34} style={{ color: 'var(--pv-teal)' }} />
+            </span>
+            <h2 className="pv-tad-title mt-4 text-3xl">You&apos;re all set, {familyLabel(family)}!</h2>
+
+            {loaded && family.children.length > 0 ? (
+              <ul className="mx-auto mt-5 w-full max-w-sm space-y-2 text-left">
+                {family.children.map((child) => {
+                  const first = child.name.split(/\s+/)[0];
+                  const s = childStatus(rows[child.id] ?? null, first);
+                  return (
+                    <li
+                      key={child.id}
+                      className="flex items-center gap-2 rounded-lg border px-3 py-2 text-base font-semibold"
+                      style={{
+                        borderColor: s.here ? 'var(--pv-teal)' : 'var(--pv-line)',
+                        backgroundColor: s.here ? '#e7f4f2' : 'var(--pv-card)',
+                        color: 'var(--pv-ink)',
+                      }}
+                    >
+                      <Check
+                        size={16}
+                        aria-hidden="true"
+                        style={{ color: s.here ? 'var(--pv-teal)' : 'var(--pv-muted)', flexShrink: 0 }}
+                      />
+                      {s.text}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+
+            <p className="mt-5 text-lg font-semibold" style={{ color: 'var(--pv-muted)' }}>
+              See you at pickup!
+            </p>
+
+            {closure ? (
+              <div
+                className="mt-6 flex items-start gap-3 rounded-xl border-2 px-4 py-3 text-left"
+                style={{ borderColor: 'var(--pv-gold)', backgroundColor: 'color-mix(in srgb, var(--pv-gold) 14%, white)' }}
+              >
+                <PartyPopper size={22} aria-hidden="true" style={{ color: 'var(--pv-gold)', flexShrink: 0 }} />
+                <span>
+                  <span className="block text-base font-extrabold" style={{ color: 'var(--pv-ink)' }}>
+                    Heads up: we&apos;re closed {closure.weekdayLabel}
+                  </span>
+                  <span className="block text-sm font-semibold" style={{ color: 'var(--pv-muted)' }}>
+                    In observance of {closure.reason}. See you when we reopen!
+                  </span>
+                </span>
+              </div>
+            ) : null}
+
+            <div className="mt-7">
+              <BigButton icon={Check} label="Done" color="var(--pv-plum)" onClick={onReset} className="w-full text-center" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
 // ---- root: PIN -> privacy gate -> family grid (wrapped in .pv-root) ----
 export default function KioskScreen({ client, centerName = '', fromPortal = false }: { client: KioskClient; isDemo?: boolean; centerName?: string; fromPortal?: boolean }) {
   const router = useRouter();
   const [activeFamily, setActiveFamily] = useState<KioskFamily | null>(null);
   const [pendingFamily, setPendingFamily] = useState<KioskFamily | null>(null);
   const [declined, setDeclined] = useState(false);
+  const [confirming, setConfirming] = useState<KioskFamily | null>(null);
   // A parent who came from their own family page goes back there when finished;
-  // the shared lobby iPad instead resets to a blank pad for the next family.
-  const closeFamily = fromPortal ? () => router.push('/preview/family') : () => setActiveFamily(null);
+  // the shared lobby iPad shows the warm confirmation, then resets to a blank pad.
+  const finishFamily = fromPortal
+    ? () => router.push('/preview/family')
+    : () => {
+        setConfirming(activeFamily);
+        setActiveFamily(null);
+      };
 
   async function handlePinSuccess(family: KioskFamily) {
     const current = await client.getPrivacyAttestationStatus(family.id);
@@ -414,7 +543,9 @@ export default function KioskScreen({ client, centerName = '', fromPortal = fals
       />
     );
   } else if (activeFamily) {
-    body = <FamilyScreen client={client} family={activeFamily} onDone={closeFamily} />;
+    body = <FamilyScreen client={client} family={activeFamily} onDone={finishFamily} />;
+  } else if (confirming) {
+    body = <CheckinConfirmation client={client} family={confirming} onReset={() => setConfirming(null)} />;
   } else {
     body = <PinScreen client={client} centerName={centerName} onSuccess={handlePinSuccess} />;
   }
