@@ -27,6 +27,7 @@ export const SUPERADMIN_EMAILS = [
   'c.fraser@chriskids2.org',
   'ophelia@chriskidstoo.org',
   'sbzeogar@chriskids2.org',
+  'garjuhan94@gmail.com',
 ];
 
 /**

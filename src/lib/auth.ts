@@ -316,12 +316,13 @@ export const ROLE_HIERARCHY: Record<UserRole, number> = {
 
 // Superadmin emails: hardcoded for security. These users get superadmin role on
 // every login path (Google OAuth + staff PIN, enforced at mint time).
-// J (builder) + the owners (Christina, Ophelia, Stephen). Lowercase only.
+// J (builder) + the owners (Christina, Ophelia, Stephen, Garjuhan). Lowercase only.
 export const SUPERADMIN_EMAILS = [
   'fraserjt@gmail.com',
   'c.fraser@chriskids2.org',
   'ophelia@chriskidstoo.org',
   'sbzeogar@chriskids2.org',
+  'garjuhan94@gmail.com',
 ];
 
 /**
