@@ -43,7 +43,12 @@ export function CoachWidget() {
       const r = await fetch('/api/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next }),
+        // Send only the route (e.g. "/admin/families") so the Coach can answer
+        // for the screen you're on; never page content (could hold a child name).
+        body: JSON.stringify({
+          messages: next,
+          page: typeof window !== 'undefined' ? window.location.pathname : undefined,
+        }),
       });
       const d = await r.json();
       if (r.ok) {

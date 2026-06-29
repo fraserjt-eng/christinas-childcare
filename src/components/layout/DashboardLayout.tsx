@@ -11,7 +11,7 @@ import {
   CreditCard, CalendarDays, UserCog, Briefcase, Package, CalendarRange, CalendarPlus,
   Newspaper, ChevronDown, type LucideIcon,
   Settings, ListTodo, AlertTriangle, Mail, UserPlus, Presentation, Bell, Brain,
-  LifeBuoy, Inbox, ClipboardCheck, FileSpreadsheet, KeyRound
+  LifeBuoy, Inbox, ClipboardCheck, FileSpreadsheet, KeyRound, Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -73,6 +73,7 @@ const adminNavGroups: NavGroup[] = [
       { href: '/admin/intelligence', label: 'Intelligence', icon: Brain },
       { href: '/admin/news', label: 'News & Updates', icon: Newspaper },
       { href: '/admin/attendance', label: 'Attendance', icon: ClipboardList },
+      { href: '/admin/attendance/kiosk-live', label: 'Kiosk Attendance (Live)', icon: Activity },
       { href: '/admin/attendance/hub', label: 'Attendance Hub', icon: CalendarDays },
       { href: '/admin/attendance/ccap-export', label: 'CCAP Export', icon: FileSpreadsheet },
       { href: '/admin/families/pin-roster', label: 'PIN Roster', icon: KeyRound },

@@ -7,6 +7,7 @@
 // actions carry quick-detail chips that fill the detail box in one tap.
 
 import { useState } from "react";
+import Link from "next/link";
 import { BackHome } from "@/components/preview/BackHome";
 import {
   Apple,
@@ -25,6 +26,7 @@ import {
   StickyNote,
   Sun,
   Undo2,
+  Video,
 } from "lucide-react";
 import {
   BigButton,
@@ -708,6 +710,16 @@ export default function RoomPage() {
                     <img src={uploadedUrl} alt="Your photo" className="h-16 w-16 rounded-lg object-cover" />
                   ) : null}
                 </div>
+                {/* Video can't ride the data-URL photo path (50MB clips need the
+                    signed-upload page); point staff to the working uploader. */}
+                <Link
+                  href="/employee/photos"
+                  className="pv-press mt-3 inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-base font-semibold"
+                  style={{ borderColor: "var(--pv-line)", color: "var(--pv-ink)" }}
+                >
+                  <Video size={18} aria-hidden="true" style={{ color: "var(--pv-teal)" }} />
+                  Recording a video? Open the video uploader
+                </Link>
                 <p className="mt-3 text-sm font-semibold" style={{ color: "var(--pv-muted)" }}>
                   Or pick a sample
                 </p>
