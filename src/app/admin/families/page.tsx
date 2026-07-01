@@ -385,6 +385,21 @@ function formToFamilyData(
   };
 }
 
+// Full guardian list for the create/edit APIs. Sends EVERY parent (not just the
+// primary), so a second guardian actually saves. Only rows with a name are sent.
+function parentsPayload(data: Pick<FamilyAccount, 'parents'>) {
+  return (data.parents || [])
+    .filter((p) => (p.name || '').trim())
+    .map((p) => ({
+      id: p.id || null,
+      name: p.name.trim(),
+      email: (p.email || '').trim() || null,
+      phone: (p.phone || '').trim() || null,
+      relationship: p.relationship || 'guardian',
+      is_primary: !!p.is_primary,
+    }));
+}
+
 // ============================================================================
 // Family Form (shared by Add + Edit dialogs)
 // ============================================================================
@@ -1026,6 +1041,7 @@ export default function FamiliesPage() {
         email: data.email,
         parentName: p?.name || '',
         parentPhone: p?.phone || '',
+        parents: parentsPayload(data),
         pin: data.pin || undefined,
         children: childrenPayload(data),
       }),
@@ -1073,6 +1089,7 @@ export default function FamiliesPage() {
       family_bio: data.family_bio || '',
       parentName: p?.name || '',
       parentPhone: p?.phone || '',
+      parents: parentsPayload(data),
       children: childrenPayload(data),
     });
     setIsEditDialogOpen(false);

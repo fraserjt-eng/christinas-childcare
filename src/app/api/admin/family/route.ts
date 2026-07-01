@@ -138,6 +138,7 @@ export async function POST(request: NextRequest) {
     email?: string;
     parentName?: string;
     parentPhone?: string;
+    parents?: { name?: string; email?: string; phone?: string; relationship?: string; is_primary?: boolean }[];
     pin?: string;
     children?: ChildInput[];
   };
@@ -227,14 +228,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not create the family' }, { status: 500 });
   }
 
-  await supabase.from('family_parents').insert({
-    family_id: family.id,
-    name: parentName,
-    phone: body.parentPhone?.trim() || null,
-    email,
-    relationship: 'guardian',
-    is_primary: true,
-  });
+  // Insert every guardian the form sent (primary + any additional). Fall back to
+  // the single primary from parentName/parentPhone for older clients.
+  const parentsIn = (body.parents || []).filter((p) => (p?.name || '').trim());
+  const hasPrimary = parentsIn.some((p) => p.is_primary);
+  const parentRows =
+    parentsIn.length > 0
+      ? parentsIn.map((p, i) => ({
+          family_id: family.id,
+          name: (p.name as string).trim(),
+          phone: (p.phone || '').trim() || null,
+          email: i === 0 ? (p.email || '').trim() || email : (p.email || '').trim() || null,
+          relationship: p.relationship || 'guardian',
+          is_primary: hasPrimary ? !!p.is_primary : i === 0,
+        }))
+      : [{
+          family_id: family.id,
+          name: parentName,
+          phone: body.parentPhone?.trim() || null,
+          email,
+          relationship: 'guardian',
+          is_primary: true,
+        }];
+  await supabase.from('family_parents').insert(parentRows);
 
   const childRows = children.map((c) => ({
     family_id: family.id,
@@ -259,7 +275,7 @@ export async function POST(request: NextRequest) {
     targetType: 'family',
     targetId: family.id,
     centerId: centerId ?? session.user.center_id ?? null,
-    detail: { children: childRows.length, parents: 1 },
+    detail: { children: childRows.length, parents: parentRows.length },
     ip: auditIp(request),
   });
 

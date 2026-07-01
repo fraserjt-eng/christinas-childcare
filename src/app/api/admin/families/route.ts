@@ -139,6 +139,7 @@ export async function PATCH(request: NextRequest) {
     family_bio?: string;
     parentName?: string;
     parentPhone?: string;
+    parents?: { id?: string | null; name?: string; email?: string; phone?: string; relationship?: string; is_primary?: boolean }[];
     children?: ChildIn[];
   };
   try {
@@ -184,8 +185,30 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  // Primary parent name/phone, if provided.
-  if (typeof body.parentName === 'string' && body.parentName.trim()) {
+  // Save every guardian the form sent. Update existing rows by id and insert new
+  // ones (the second guardian arrives with no id). We do NOT delete unlisted rows:
+  // the two-slot form can't see a rare third imported contact, so a blind
+  // delete-reinsert would drop it. Center scope is already enforced above; each
+  // update is re-scoped to this family_id so a stale id can't touch another family.
+  if (Array.isArray(body.parents) && body.parents.some((p) => (p?.name || '').trim())) {
+    const clean = body.parents.filter((p) => (p?.name || '').trim());
+    const hasPrimary = clean.some((p) => p.is_primary);
+    for (let i = 0; i < clean.length; i++) {
+      const p = clean[i];
+      const row = {
+        name: (p.name as string).trim(),
+        email: (p.email || '').trim() || null,
+        phone: (p.phone || '').trim() || null,
+        relationship: p.relationship || 'guardian',
+        is_primary: hasPrimary ? !!p.is_primary : i === 0,
+      };
+      if (p.id) {
+        await supabase.from('family_parents').update(row).eq('id', p.id).eq('family_id', id);
+      } else {
+        await supabase.from('family_parents').insert({ family_id: id, ...row });
+      }
+    }
+  } else if (typeof body.parentName === 'string' && body.parentName.trim()) {
     const { data: ps } = await supabase
       .from('family_parents')
       .select('id, is_primary')
