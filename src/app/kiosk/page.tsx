@@ -12,7 +12,7 @@
 // made another center's PINs "not work"). Instead we ask which location first,
 // then bind the device URL to it so it stays that site on this iPad.
 
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MapPin } from 'lucide-react';
 import KioskScreen from '@/components/kiosk/KioskScreen';
@@ -26,6 +26,23 @@ const CENTERS = [
   { id: 'b2000000-0000-0000-0000-000000000002', name: 'Crystal', address: '5510 W Broadway Ave' },
 ];
 
+// The device's bound center is persisted here so a reload/reopen to a bare /kiosk
+// restores it instead of dropping to the picker (or the wrong site). The picker
+// promised "this iPad will stay set to it", but the binding lived only in the URL,
+// so one morning a Crystal iPad reloaded to /kiosk, lost Crystal, and every Crystal
+// PIN "stopped working" (looked up against the wrong center). Persisting it fixes that.
+const KIOSK_CENTER_KEY = 'cc_kiosk_center_id';
+const CENTER_IDS = new Set(CENTERS.map((c) => c.id));
+function readSavedCenter(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const s = window.localStorage.getItem(KIOSK_CENTER_KEY);
+    return s && CENTER_IDS.has(s) ? s : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function CenterPicker() {
   const router = useRouter();
   return (
@@ -36,7 +53,10 @@ function CenterPicker() {
         {CENTERS.map((c) => (
           <button
             key={c.id}
-            onClick={() => router.replace(`/kiosk?center=${c.id}`)}
+            onClick={() => {
+              try { window.localStorage.setItem(KIOSK_CENTER_KEY, c.id); } catch { /* private mode */ }
+              router.replace(`/kiosk?center=${c.id}`);
+            }}
             className="flex flex-col items-start rounded-3xl bg-white p-6 text-left shadow-2xl transition hover:-translate-y-1"
           >
             <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-christina-red/10">
@@ -53,11 +73,31 @@ function CenterPicker() {
 
 function KioskInner() {
   const params = useSearchParams();
-  const center = params.get('center') || undefined;
+  const router = useRouter();
+  const urlCenter = params.get('center') || undefined;
   // When a signed-in parent reaches the kiosk from their family page, the link
   // carries ?from=portal so we skip the lobby framing and send them back to
   // their portal after they finish (instead of resetting to a blank pad).
   const fromPortal = params.get('from') === 'portal';
+
+  // Sticky center: prefer the URL, then the device's saved center. Read the saved
+  // value synchronously (this subtree is client-only under Suspense, so there is no
+  // SSR/hydration mismatch) so a valid device never flashes the picker on reload.
+  const [center, setCenter] = useState<string | undefined>(() =>
+    urlCenter && CENTER_IDS.has(urlCenter) ? urlCenter : readSavedCenter()
+  );
+
+  useEffect(() => {
+    if (urlCenter && CENTER_IDS.has(urlCenter)) {
+      try { window.localStorage.setItem(KIOSK_CENTER_KEY, urlCenter); } catch { /* private mode */ }
+      if (urlCenter !== center) setCenter(urlCenter);
+    } else if (!urlCenter && center && CENTER_IDS.has(center)) {
+      // Restored from storage: put the center back in the URL so downstream links
+      // and a manual reload stay bound to this site.
+      router.replace(`/kiosk?center=${center}`);
+    }
+  }, [urlCenter, center, router]);
+
   const client = useMemo(() => (center ? makeLiveKioskClient(center) : null), [center]);
   const centerName = CENTERS.find((c) => c.id === center)?.name || '';
   if (!center || !client) return <CenterPicker />;
