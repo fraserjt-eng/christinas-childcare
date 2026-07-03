@@ -29,6 +29,7 @@ import type {
   FamilyChildRow,
   AttendanceRow,
 } from '@/lib/kiosk-data';
+import { KioskSystemError, queueKioskAction, flushKioskQueue } from '@/lib/kiosk-data';
 import { PrivacyNotice, SeeStaffScreen } from './PrivacyNotice';
 import { BigButton, SuccessBanner, cx } from '@/components/preview/ui';
 import { PhotoAvatar } from '@/components/preview/PhotoAvatar';
@@ -78,12 +79,29 @@ function PinScreen({
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(false);
+  // System unreachable (timeout / network / server down) — NOT a bad PIN.
+  // Kept separate so an outage never reads as "That PIN was not found".
+  const [systemDown, setSystemDown] = useState(false);
 
   const submit = useCallback(
     async (value: string) => {
       setLoading(true);
-      const family = await client.lookupFamilyByPin(value);
+      setSystemDown(false);
+      let family: KioskFamily | null = null;
+      let failed = false;
+      try {
+        // lookupFamilyByPin resolves within 8s no matter what: null means the
+        // PIN genuinely is not at this center; a throw means the system is
+        // unreachable. The pad can never sit on "Checking..." forever.
+        family = await client.lookupFamilyByPin(value);
+      } catch {
+        failed = true;
+      }
       setLoading(false);
+      if (failed) {
+        setSystemDown(true);
+        return;
+      }
       if (family) {
         onSuccess(family);
       } else {
@@ -101,6 +119,7 @@ function PinScreen({
 
   function press(key: string) {
     if (loading) return;
+    if (systemDown) setSystemDown(false);
     if (key === '⌫') {
       setPin((p) => p.slice(0, -1));
       return;
@@ -190,6 +209,28 @@ function PinScreen({
                 Checking...
               </p>
             ) : null}
+            {systemDown ? (
+              <div
+                className="mt-5 rounded-xl border-2 px-4 py-3 text-left"
+                style={{ borderColor: 'var(--pv-gold)', backgroundColor: 'color-mix(in srgb, var(--pv-gold) 14%, white)' }}
+              >
+                <p className="text-base font-extrabold" style={{ color: 'var(--pv-ink)' }}>
+                  We can&apos;t reach the system right now.
+                </p>
+                <p className="mt-1 text-sm font-semibold" style={{ color: 'var(--pv-muted)' }}>
+                  Please wait a moment and try again, or sign your child in on paper. Staff can help.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => submit(pin)}
+                  disabled={loading || pin.length < 4}
+                  className="pv-press mt-3 w-full rounded-xl px-4 py-2 text-base font-bold text-white disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--pv-coral)' }}
+                >
+                  Try again
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -236,11 +277,33 @@ function ChildTile({
   async function toggle() {
     if (busy) return;
     setBusy(true);
-    if (inAt) await client.checkOut(child.id, familyId, signerName.trim() || undefined);
-    else await client.checkIn(child, familyId, signerName.trim() || undefined);
-    setAtt(await client.getTodayAttendance(child.id));
-    setBusy(false);
-    onToggled(inAt ? `${first} is checked out. See you tomorrow!` : `${first} is checked in. Have a great day!`);
+    const signed = signerName.trim() || undefined;
+    try {
+      if (inAt) await client.checkOut(child.id, familyId, signed);
+      else await client.checkIn(child, familyId, signed);
+      setAtt(await client.getTodayAttendance(child.id));
+      setBusy(false);
+      onToggled(inAt ? `${first} is checked out. See you tomorrow!` : `${first} is checked in. Have a great day!`);
+    } catch (err) {
+      setBusy(false);
+      if (err instanceof KioskSystemError) {
+        // System unreachable: the family was already verified by the PIN
+        // lookup, so save the action and replay it when the system is back.
+        // The front desk keeps moving.
+        queueKioskAction({
+          action: inAt ? 'checkout' : 'checkin',
+          childId: child.id,
+          childName: child.name,
+          familyId,
+          centerId: client.centerId,
+          signedByName: signed,
+          ts: Date.now(),
+        });
+        onToggled("Saved. We'll record it when the system is back.");
+      } else {
+        onToggled('Something went wrong. Please see staff.');
+      }
+    }
   }
 
   if (!loaded) return <div className="pv-tile h-44 animate-pulse" />;
@@ -501,12 +564,24 @@ function CheckinConfirmation({
 }
 
 // ---- root: PIN -> privacy gate -> family grid (wrapped in .pv-root) ----
-export default function KioskScreen({ client, centerName = '', fromPortal = false }: { client: KioskClient; isDemo?: boolean; centerName?: string; fromPortal?: boolean }) {
+export default function KioskScreen({ client, isDemo = false, centerName = '', fromPortal = false }: { client: KioskClient; isDemo?: boolean; centerName?: string; fromPortal?: boolean }) {
   const router = useRouter();
   const [activeFamily, setActiveFamily] = useState<KioskFamily | null>(null);
   const [pendingFamily, setPendingFamily] = useState<KioskFamily | null>(null);
   const [declined, setDeclined] = useState(false);
   const [confirming, setConfirming] = useState<KioskFamily | null>(null);
+
+  // Offline queue replay: check-ins/outs saved during an outage are flushed
+  // to /api/kiosk on load and every 60s until they land. Live kiosks only;
+  // the demo sandbox never writes real attendance.
+  useEffect(() => {
+    if (isDemo) return;
+    void flushKioskQueue();
+    const t = setInterval(() => {
+      void flushKioskQueue();
+    }, 60_000);
+    return () => clearInterval(t);
+  }, [isDemo]);
   // A parent who came from their own family page goes back there when finished;
   // the shared lobby iPad shows the warm confirmation, then resets to a blank pad.
   const finishFamily = fromPortal
@@ -517,9 +592,15 @@ export default function KioskScreen({ client, centerName = '', fromPortal = fals
       };
 
   async function handlePinSuccess(family: KioskFamily) {
-    const current = await client.getPrivacyAttestationStatus(family.id);
-    if (current) setActiveFamily(family);
-    else setPendingFamily(family);
+    try {
+      const current = await client.getPrivacyAttestationStatus(family.id);
+      if (current) setActiveFamily(family);
+      else setPendingFamily(family);
+    } catch {
+      // If the attestation check itself fails, fall back to showing the
+      // notice rather than stranding the family on the PIN pad.
+      setPendingFamily(family);
+    }
   }
 
   let body: React.ReactNode;
