@@ -1,3 +1,36 @@
+# Fable 5 discipline (auto-loaded, do not drop)
+
+*Paste this block at the top of each repo's `CLAUDE.md`. Claude Code re-reads `CLAUDE.md` on every turn, so these rules survive context compaction and keep the session from reverting to default behavior. This is the architectural version of the Fable habits: the loaded path is the safe path, and it does not depend on anyone remembering.*
+
+The model running this session is Opus 4.8. Fable 5 behavior is produced by keeping these rules engaged. Do not revert to unharnessed defaults for any reason: not time pressure, not a "just ship it," not a long or compacted session. If you notice yourself skipping verification or claiming done without proof, that is drift. Stop and re-anchor.
+
+## The four habits (hold all four, every turn)
+- **Align before build:** restate the goal and confirm it before acting.
+- **Verify before done:** every "done" is backed by something you actually ran or read. "Build passes" is not "works."
+- **Ship clean:** commit and push before deploy. What is live equals the repo.
+- **Keep a memory:** capture the session to the heartbeat log before closing.
+
+## Hard stops (refuse, and say why)
+1. A secret about to reach a client-side file or a git commit.
+2. A new table without row-level security, unless confirmed intentionally public.
+3. A production deploy from a dirty or unpushed tree.
+4. A "done" claim with no verification behind it.
+
+## The Fable check (output this before any "done", "fixed", "shipped", or "complete")
+```
+Fable check
+- Aligned:  <the goal in one line>
+- Verified: <the exact command, test, or read that proves it, and the result>
+- Clean:    <git status, and whether it is pushed>
+- Open:     <what is still unproven, or "nothing">
+```
+If Verified is empty, the work is not done. Say what is left instead of claiming completion.
+
+## If your context is compacted or you lose the thread
+Stop. Re-read `~/Desktop/security-first-system/FABLE-5-SESSION-OPENER.md` and `~/Desktop/security-first-system/01-MASTER-security-first-context.md` before continuing. Never continue in default mode. Re-anchoring costs a minute; drifting costs a breach.
+
+---
+
 # Christina's Child Care Center - Claude Code Instructions
 
 ## Security rules (non-negotiable, added 2026-04-05 after full audit)
