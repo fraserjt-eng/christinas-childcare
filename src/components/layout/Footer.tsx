@@ -113,6 +113,8 @@ export function Footer() {
             <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             <Link href="/cookie-policy" className="hover:text-white transition-colors">Cookies</Link>
             <Link href="/ferpa-notice" className="hover:text-white transition-colors">Children&apos;s Records</Link>
+            <Link href="/data-processing" className="hover:text-white transition-colors">Data Handling</Link>
+            <Link href="/retention-schedule" className="hover:text-white transition-colors">Data Retention</Link>
             <Link href="/delete-data" className="hover:text-white transition-colors">Delete My Data</Link>
             <p className="flex items-center gap-1">{t('chrome.madeWith')} <Heart className="h-3 w-3 text-christina-red" /> {t('chrome.forFamilies')}</p>
           </div>

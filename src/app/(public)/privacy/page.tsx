@@ -128,13 +128,25 @@ const sections: PolicySection[] = [
         <p>
           We collect children&apos;s names and ages solely to match families with the appropriate
           classroom and program. We do not collect any information directly from children, and we
-          do not build profiles on individual children beyond what is needed to provide care.
+          do not build profiles on individual children beyond what is needed to provide care. We
+          collect only what is needed to care for your child, and nothing more.
         </p>
         <p>
           Christina&apos;s Child Care Center complies with the Children&apos;s Online Privacy
-          Protection Act (COPPA). If you believe a child under 13 has provided us with personal
-          information outside of a parent-initiated enrollment inquiry, please contact us right away
-          so we can remove it.
+          Protection Act (COPPA). We obtain a parent or guardian&apos;s consent before we collect a
+          child&apos;s information, and a child&apos;s information is only ever provided to us by the
+          parent or guardian who enrolls the family. We do not knowingly collect personal
+          information from a child directly.
+        </p>
+        <p>
+          As a parent or guardian, you may review the information we hold about your child at any
+          time, and you may request that we correct or delete it. To do so, contact us using the
+          information at the bottom of this page or use our{' '}
+          <a href="/delete-data" className="text-christina-blue hover:underline">
+            data deletion request form
+          </a>
+          . If you believe a child under 13 has provided us with personal information outside of a
+          parent-initiated enrollment inquiry, please contact us right away so we can remove it.
         </p>
       </div>
     ),
