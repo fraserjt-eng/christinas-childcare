@@ -65,6 +65,14 @@ const settingsCards = [
     bgColor: 'bg-gray-100',
   },
   {
+    title: 'Security & Privacy',
+    description: 'Plain-language security posture and links to your legal policies',
+    href: '/admin/settings/security-privacy',
+    icon: ShieldCheck,
+    color: 'text-christina-coral',
+    bgColor: 'bg-christina-coral/10',
+  },
+  {
     title: 'System',
     description: 'Training unlocks, demo mode, data export, danger zone',
     href: '/admin/settings/system',
