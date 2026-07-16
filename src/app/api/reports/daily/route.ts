@@ -165,14 +165,14 @@ export async function GET(request: Request): Promise<NextResponse> {
       // Meals
       const { data: meals } = await supabase
         .from('food_counts')
-        .select('meal_type, count')
-        .eq('recorded_date', date);
+        .select('meal_type, child_count')
+        .eq('date', date);
       if (meals) {
-        for (const m of meals as Array<{ meal_type: string; count: number }>) {
+        for (const m of meals as Array<{ meal_type: string; child_count: number }>) {
           const key = m.meal_type as keyof typeof report.meals;
           if (report.meals[key]) {
             report.meals[key].submitted = true;
-            report.meals[key].child_count = m.count;
+            report.meals[key].child_count = m.child_count;
             report.meals[key].on_time = true;
           }
         }
@@ -182,7 +182,8 @@ export async function GET(request: Request): Promise<NextResponse> {
       const { data: incidents } = await supabase
         .from('incident_reports')
         .select('id, status')
-        .eq('incident_date', date);
+        .gte('reported_at', `${date}T00:00:00`)
+        .lte('reported_at', `${date}T23:59:59`);
       if (incidents) {
         report.incidents.open = incidents.filter((i: { status: string }) => i.status !== 'resolved').length;
         report.incidents.resolved_today = incidents.filter((i: { status: string }) => i.status === 'resolved').length;
@@ -212,13 +213,13 @@ export async function GET(request: Request): Promise<NextResponse> {
       thirtyDaysOut.setDate(thirtyDaysOut.getDate() + 30);
       const { data: certs } = await supabase
         .from('training_records')
-        .select('employee_id, certification_name, expiry_date')
+        .select('employee_id, title, expiry_date')
         .lte('expiry_date', thirtyDaysOut.toISOString().split('T')[0])
         .gte('expiry_date', date);
       if (certs) {
-        report.certifications_expiring_30d = (certs as Array<{ employee_id: string; certification_name: string; expiry_date: string }>).map((c) => ({
+        report.certifications_expiring_30d = (certs as Array<{ employee_id: string; title: string; expiry_date: string }>).map((c) => ({
           employee_name: c.employee_id,
-          cert_name: c.certification_name || 'Unknown',
+          cert_name: c.title || 'Unknown',
           expiry_date: c.expiry_date,
           days_remaining: Math.ceil(
             (new Date(c.expiry_date).getTime() - new Date(date).getTime()) / 86400000

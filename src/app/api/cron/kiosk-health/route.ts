@@ -16,10 +16,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { sendGmail, isGmailConfigured } from '@/lib/gmail-send';
 import { centerTime, centerDate } from '@/lib/center-time';
+import { restartIfWedged, isAutoRestartConfigured, type RestartOutcome } from '@/lib/supabase-admin-restart';
 
 const PROBE_TIMEOUT_MS = 8000;
+// Re-probe before acting, so a single transient blip never triggers a restart.
+const CONFIRM_PROBES = 3;
+const CONFIRM_GAP_MS = 2000;
 
 type ProbeResult = { healthy: boolean; detail: string };
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 async function probeDatabase(): Promise<ProbeResult> {
   const supabase = getServerSupabase();
@@ -52,13 +60,32 @@ async function probeDatabase(): Promise<ProbeResult> {
   }
 }
 
-function alertHtml(detail: string, whenCentral: string): string {
+// Probe up to CONFIRM_PROBES times; healthy on the first success. Only a run
+// where EVERY probe fails is treated as a real outage worth self-healing.
+async function confirmDatabaseDown(first: ProbeResult): Promise<ProbeResult> {
+  let last = first;
+  for (let i = 1; i < CONFIRM_PROBES && !last.healthy; i++) {
+    await delay(CONFIRM_GAP_MS);
+    last = await probeDatabase();
+  }
+  return last;
+}
+
+function restartLine(r: RestartOutcome): string {
+  if (!r.attempted) return `Auto-restart: not triggered (${r.reason}).`;
+  return r.ok
+    ? 'Auto-restart: <strong>triggered</strong> — the project is rebooting; the kiosk should recover within ~2 minutes.'
+    : `Auto-restart: attempted but FAILED (${r.detail}). Restart manually from the Supabase dashboard now.`;
+}
+
+function alertHtml(detail: string, whenCentral: string, restart: RestartOutcome): string {
   return [
     '<div style="font-family: Arial, sans-serif; font-size: 14px; color: #222;">',
     '<h2 style="color: #C62828; margin: 0 0 8px;">Kiosk database is not responding</h2>',
     `<p>The health probe against Christina&#39;s kiosk database failed at <strong>${whenCentral} Central</strong>.</p>`,
     `<p>Detail: ${detail}</p>`,
-    '<p>The kiosk, parent portal, and attendance all depend on this database. Check the Supabase dashboard and Vercel status.</p>',
+    `<p>${restartLine(restart)}</p>`,
+    '<p>The kiosk, parent portal, and attendance all depend on this database. If it does not recover shortly, restart the project in the Supabase dashboard and switch the front desk to the paper sign-in sheet.</p>',
     '</div>',
   ].join('');
 }
@@ -75,18 +102,34 @@ export async function GET(request: NextRequest) {
   // `?force=1` is accepted for a manual test; the probe runs either way.
   const force = request.nextUrl.searchParams.get('force') === '1';
 
-  const probe = await probeDatabase();
+  const first = await probeDatabase();
   const today = centerDate();
   const nowCentral = `${centerTime()} on ${today}`;
 
-  if (probe.healthy) {
+  if (first.healthy) {
     return NextResponse.json({ ok: true, healthy: true, today, forced: force });
   }
 
-  // Probe failed: alert best-effort. If Gmail is not configured yet, log and
-  // return ok so Vercel does not mark the cron itself as failing.
+  // First probe failed — confirm it's a real outage, not a one-off blip,
+  // before self-healing.
+  const probe = await confirmDatabaseDown(first);
+  if (probe.healthy) {
+    return NextResponse.json({ ok: true, healthy: true, recoveredOnRetry: true, today, forced: force });
+  }
+
   console.error(`[kiosk-health] Database probe FAILED at ${nowCentral}: ${probe.detail}`);
 
+  // SELF-HEAL: this is the exact "PostgREST wedged" failure mode from
+  // 2026-07-02 and 2026-07-16. If auto-restart is configured, reboot the
+  // project automatically (turns a ~44-minute human-in-the-loop outage into a
+  // ~2-minute self-heal). No-op + alert-only if the mgmt token isn't set yet.
+  const restart: RestartOutcome = await restartIfWedged();
+  if (restart.attempted && restart.ok) {
+    console.error(`[kiosk-health] Auto-restart triggered at ${nowCentral}.`);
+  }
+
+  // Alert best-effort. If Gmail is not configured yet, log and return ok so
+  // Vercel does not mark the cron itself as failing.
   if (!isGmailConfigured()) {
     return NextResponse.json({
       ok: true,
@@ -94,15 +137,20 @@ export async function GET(request: NextRequest) {
       detail: probe.detail,
       alerted: false,
       reason: 'gmail not configured',
+      autoRestart: restart,
+      autoRestartConfigured: isAutoRestartConfigured(),
       today,
     });
   }
 
   const to = process.env.GMAIL_SENDER || 'fraserjt@gmail.com';
+  const subject = restart.attempted && restart.ok
+    ? 'ALERT: Christina kiosk DB down — auto-restart triggered'
+    : 'ALERT: Christina kiosk database is not responding';
   const result = await sendGmail({
     to,
-    subject: 'ALERT: Christina kiosk database is not responding',
-    html: alertHtml(probe.detail, nowCentral),
+    subject,
+    html: alertHtml(probe.detail, nowCentral, restart),
   });
 
   return NextResponse.json({
@@ -111,6 +159,8 @@ export async function GET(request: NextRequest) {
     detail: probe.detail,
     alerted: result.ok,
     reason: result.reason,
+    autoRestart: restart,
+    autoRestartConfigured: isAutoRestartConfigured(),
     today,
   });
 }
