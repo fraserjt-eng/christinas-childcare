@@ -1,4 +1,7 @@
 export const runtime = 'nodejs';
+// A sign-in must fail fast, not hang. With the per-request DB timeout below, a
+// wedged PostgREST returns a 503 in seconds; this cap is just a hard backstop.
+export const maxDuration = 15;
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
@@ -83,7 +86,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const supabase = getServerSupabase();
+  // 7s per-request ceiling. When the database is unreachable this makes every
+  // call fail fast with an AbortError instead of hanging until the platform 504,
+  // so the paths below can return a 503 the pad reads as "system slow, use
+  // paper" — never a false "PIN not found".
+  const supabase = getServerSupabase({ timeoutMs: 7000 });
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
@@ -150,13 +157,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ data: null });
     }
 
-    const { data: families } = await supabase
+    const { data: families, error: familiesError } = await supabase
       .from('families')
       .select('id, email, status')
       .eq('pin', pin)
       .eq('status', 'active')
       .eq('center_id', centerId)
       .limit(1);
+
+    // A database failure (timeout / unreachable / 5xx) must NOT collapse into a
+    // "PIN not found" null — that would tell a parent their PIN is wrong during
+    // an outage. Surface it as a 503 so the pad shows the system message and the
+    // family can use paper, exactly as the client's KioskSystemError path expects.
+    if (familiesError) {
+      return NextResponse.json({ error: 'System unavailable' }, { status: 503 });
+    }
 
     if (!families || families.length === 0) {
       return NextResponse.json({ data: null });
@@ -228,13 +243,19 @@ export async function POST(request: NextRequest) {
     }
     const today = todayDate();
 
-    const { data: existingRows } = await supabase
+    const { data: existingRows, error: existErr } = await supabase
       .from('attendance')
       .select('id, check_in, check_out')
       .eq('child_id', body.childId)
       .eq('date', today)
       .eq('center_id', centerId)
       .limit(1);
+    // Reading the current row failed (DB down). Return 503 so the client queues
+    // this check-in offline and replays it when the system is back, rather than
+    // dropping it or risking a blind duplicate insert.
+    if (existErr) {
+      return NextResponse.json({ error: 'System unavailable' }, { status: 503 });
+    }
     const existing = existingRows?.[0];
 
     if (existing && existing.check_in && !existing.check_out) {
@@ -244,14 +265,17 @@ export async function POST(request: NextRequest) {
     const signedInBy = (body.signedByName || '').toString().trim() || null;
 
     if (existing && existing.check_out) {
-      await supabase
+      const { error: reopenErr } = await supabase
         .from('attendance')
         .update({ check_out: null, check_in: new Date().toISOString(), signed_in_by_name: signedInBy })
         .eq('id', existing.id);
+      if (reopenErr) {
+        return NextResponse.json({ error: 'System unavailable' }, { status: 503 });
+      }
       return NextResponse.json({ data: { ok: true } });
     }
 
-    await supabase.from('attendance').insert({
+    const { error: insertErr } = await supabase.from('attendance').insert({
       child_id: body.childId,
       child_name: body.childName,
       date: today,
@@ -260,6 +284,9 @@ export async function POST(request: NextRequest) {
       notes: `family:${familyId}`,
       signed_in_by_name: signedInBy,
     });
+    if (insertErr) {
+      return NextResponse.json({ error: 'System unavailable' }, { status: 503 });
+    }
     return NextResponse.json({ data: { ok: true } });
   }
 
@@ -277,12 +304,16 @@ export async function POST(request: NextRequest) {
     if (!guard.ok) {
       return NextResponse.json({ error: guard.error }, { status: guard.status });
     }
-    await supabase
+    const { error: checkoutErr } = await supabase
       .from('attendance')
       .update({ check_out: new Date().toISOString(), signed_out_by_name: (body.signedByName || '').toString().trim() || null })
       .eq('child_id', body.childId)
       .eq('date', todayDate())
       .eq('center_id', centerId);
+    // DB write failed: 503 so the client queues the checkout for replay.
+    if (checkoutErr) {
+      return NextResponse.json({ error: 'System unavailable' }, { status: 503 });
+    }
     return NextResponse.json({ data: { ok: true } });
   }
 

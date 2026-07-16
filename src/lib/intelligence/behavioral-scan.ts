@@ -10,11 +10,14 @@ import { BehavioralPattern } from './types';
 
 interface IncidentRow {
   id: string;
-  child_name: string;
+  // incident_reports has no single child_name column; children involved in an
+  // incident are stored as an array of names (a single incident can involve
+  // more than one child), so each is attributed the incident below.
+  involved_children: string[] | null;
   incident_type: string;
   severity: string;
   description: string;
-  incident_date: string;
+  reported_at: string | null;
   created_at: string;
 }
 
@@ -39,16 +42,23 @@ export async function detectBehavioralPatterns(
 
   // Filter to recent incidents
   const recent = incidents.filter(
-    (i) => new Date(i.incident_date || i.created_at) >= cutoffDate
+    (i) => new Date(i.reported_at || i.created_at) >= cutoffDate
   );
 
-  // Group by child name
+  // Group by child name. An incident can involve several children, so it is
+  // counted for each one; incidents with no named child fall under 'Unknown'.
   const byChild = new Map<string, IncidentRow[]>();
   for (const incident of recent) {
-    const name = incident.child_name || 'Unknown';
-    const existing = byChild.get(name) || [];
-    existing.push(incident);
-    byChild.set(name, existing);
+    const names =
+      incident.involved_children && incident.involved_children.length > 0
+        ? incident.involved_children
+        : ['Unknown'];
+    for (const rawName of names) {
+      const name = (rawName || '').trim() || 'Unknown';
+      const existing = byChild.get(name) || [];
+      existing.push(incident);
+      byChild.set(name, existing);
+    }
   }
 
   const patterns: BehavioralPattern[] = [];
@@ -58,12 +68,12 @@ export async function detectBehavioralPatterns(
     // Sort by date ascending
     childIncidents.sort(
       (a: IncidentRow, b: IncidentRow) =>
-        new Date(a.incident_date || a.created_at).getTime() -
-        new Date(b.incident_date || b.created_at).getTime()
+        new Date(a.reported_at || a.created_at).getTime() -
+        new Date(b.reported_at || b.created_at).getTime()
     );
 
     const recentFormatted = childIncidents.map((i: IncidentRow) => ({
-      date: i.incident_date || i.created_at,
+      date: i.reported_at || i.created_at,
       type: i.incident_type || 'unknown',
       severity: i.severity || 'minor',
       description: i.description || '',

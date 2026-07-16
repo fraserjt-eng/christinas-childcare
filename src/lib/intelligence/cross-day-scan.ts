@@ -19,13 +19,14 @@ interface AttendanceRow {
 interface FoodCountRow {
   id: string;
   meal_type: string;
-  count: number;
-  recorded_date: string;
+  child_count: number;
+  date: string;
 }
 
 interface IncidentRow {
   id: string;
-  incident_date: string;
+  reported_at: string | null;
+  created_at: string;
   severity: string;
 }
 
@@ -93,8 +94,8 @@ export async function detectCrossDayAnomalies(
   if (meals) {
     const dailyMeals = new Map<string, number>();
     for (const m of meals) {
-      const date = m.recorded_date || '';
-      dailyMeals.set(date, (dailyMeals.get(date) || 0) + (m.count || 0));
+      const date = m.date || '';
+      dailyMeals.set(date, (dailyMeals.get(date) || 0) + (m.child_count || 0));
     }
 
     const todayMeals = dailyMeals.get(todayStr) || 0;
@@ -132,7 +133,9 @@ export async function detectCrossDayAnomalies(
   if (incidents) {
     const dailyIncidents = new Map<string, number>();
     for (const i of incidents) {
-      const date = i.incident_date || '';
+      const src = i.reported_at || i.created_at;
+      const date = src ? toDateString(new Date(src)) : '';
+      if (!date) continue;
       dailyIncidents.set(date, (dailyIncidents.get(date) || 0) + 1);
     }
 

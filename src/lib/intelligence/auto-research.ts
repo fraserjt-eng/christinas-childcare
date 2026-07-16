@@ -50,17 +50,17 @@ async function pullData(
         case 'food_counts': {
           const { data } = await supabase
             .from('food_counts')
-            .select('meal_type,count,recorded_date')
-            .gte('recorded_date', cutoffIso.split('T')[0])
+            .select('meal_type,child_count,date')
+            .gte('date', cutoffIso.split('T')[0])
             .limit(2000);
           raw.food_counts = data || [];
           const total = (data || []).reduce(
-            (sum, r) => sum + (r.count as number || 0),
+            (sum, r) => sum + (r.child_count as number || 0),
             0
           );
           const byType = (data || []).reduce((acc: Record<string, number>, r) => {
             const key = (r.meal_type as string) || 'unknown';
-            acc[key] = (acc[key] || 0) + (r.count as number || 0);
+            acc[key] = (acc[key] || 0) + (r.child_count as number || 0);
             return acc;
           }, {});
           summaryParts.push(
@@ -112,8 +112,8 @@ async function pullData(
         case 'incident_reports': {
           const { data } = await supabase
             .from('incident_reports')
-            .select('child_name,incident_type,severity,incident_date,description')
-            .gte('incident_date', cutoffIso.split('T')[0])
+            .select('incident_type,severity,reported_at,created_at,description')
+            .gte('reported_at', cutoffIso)
             .limit(500);
           raw.incident_reports = data || [];
           const bySeverity = (data || []).reduce((acc: Record<string, number>, r) => {
@@ -129,7 +129,7 @@ async function pullData(
         case 'training_records': {
           const { data } = await supabase
             .from('training_records')
-            .select('employee_id,certification_name,expiry_date,status')
+            .select('employee_id,title,expiry_date')
             .limit(500);
           raw.training_records = data || [];
           const expiringSoon = (data || []).filter((r) => {

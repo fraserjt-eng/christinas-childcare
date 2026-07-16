@@ -1,4 +1,9 @@
 export const runtime = 'nodejs';
+// Cap the function so a slow/unreachable database can never pin this invocation
+// for the platform default (which was letting each poll hang ~300s during the
+// PostgREST outage, and every open admin/portal tab re-fires it). With the
+// per-request timeout below, a healthy read finishes in well under this ceiling.
+export const maxDuration = 20;
 
 // The new front-facing portal's read endpoint. Returns ONE center's live data,
 // already shaped to the /preview store contract (PreviewRoom/Kid/Staff/Family +
@@ -52,7 +57,9 @@ export async function GET(request: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const supabase = getServerSupabase();
+  // 8s per-request ceiling: if PostgREST is wedged, each query aborts fast and
+  // we return a 503 below instead of holding the function open for minutes.
+  const supabase = getServerSupabase({ timeoutMs: 8000 });
   if (!supabase) {
     return NextResponse.json({ error: 'Unavailable' }, { status: 503 });
   }
@@ -111,6 +118,19 @@ export async function GET(request: NextRequest) {
       supabase.from('child_daily_entries').select('id, child_id, classroom_id, type, detail, occurred_at').eq('center_id', centerId).eq('date', today).order('occurred_at', { ascending: false }).limit(200),
       supabase.from('staff_schedules').select('id, employee_id, date, start_time, end_time, classroom_id').eq('center_id', centerId).gte('date', weekStart).lte('date', weekEnd).limit(5000),
     ]);
+
+  // If the core reads failed (database unreachable / PostgREST wedged / the 8s
+  // timeout fired), do NOT return a half-empty center that the UI would render
+  // as "everyone went home". Return a fast 503 so the client keeps its last
+  // known data and shows a transient error instead.
+  const coreError =
+    centersRes.error || roomsRes.error || kidsRes.error || staffRes.error || attRes.error;
+  if (coreError) {
+    return NextResponse.json(
+      { error: 'System slow, please retry' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
 
   const centers = (centersRes.data ?? []).map((c) => ({ id: c.id as string, name: c.name as string }));
 
