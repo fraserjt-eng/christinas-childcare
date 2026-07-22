@@ -55,12 +55,19 @@ import {
 // client family-storage used the anon key, which migration 017 locks out
 // (empty list, silent save failures). Same pattern as User Management.
 type ChildPayload = {
+  // The real family_children row id. It MUST round-trip: the API updates
+  // children in place by id, so attendance keeps pointing at the same child.
+  // Dropping it re-creates the row with a new id and orphans that child's
+  // attendance from the roster (blank DOB in the DHS export).
+  id?: string;
   name: string;
   date_of_birth?: string;
   classroom?: string;
   classroom_id?: string;
   allergies?: string[];
   medical_notes?: string;
+  end_date?: string | null;
+  end_reason?: string | null;
 };
 function primaryOf(f: Pick<FamilyAccount, 'parents'>) {
   return f.parents?.find((p) => p.is_primary) || f.parents?.[0];
@@ -69,16 +76,20 @@ function childrenPayload(f: Pick<FamilyAccount, 'children'>): ChildPayload[] {
   return (f.children || [])
     .filter((c) => (c.name || '').trim())
     .map((c) => ({
+      id: c.id,
       name: c.name.trim(),
       date_of_birth: c.date_of_birth || undefined,
       classroom: c.classroom || undefined,
       classroom_id: c.classroom_id || undefined,
       allergies: c.allergies || [],
       medical_notes: c.medical_notes || undefined,
+      end_date: c.end_date || null,
+      end_reason: c.end_reason || null,
     }));
 }
 import { FamilyBulkUpload } from '@/components/admin/FamilyBulkUpload';
 import { cn } from '@/lib/utils';
+import { END_REASONS } from '@/lib/enrollment-end';
 
 // ============================================================================
 // Helpers
@@ -207,6 +218,8 @@ function StatusBadge({ status }: { status: FamilyAccount['status'] }) {
 function emptyChild(): ChildFormData {
   return {
     id: generateChildId(),
+    end_date: '',
+    end_reason: '',
     name: '',
     date_of_birth: '',
     classroom: '',
@@ -246,6 +259,9 @@ interface ParentFormData {
 
 interface ChildFormData {
   id: string;
+  // Last day of care for this child (inclusive); blank = still enrolled.
+  end_date: string;
+  end_reason: string;
   name: string;
   date_of_birth: string;
   classroom: string;
@@ -266,6 +282,11 @@ interface FamilyFormState {
   address: string;
   children: ChildFormData[];
   tempPassword: string;
+  // Household-level enrollment end (inclusive last day) and the center the
+  // family belongs to. Both are edit-only: a family being added is enrolling.
+  end_date: string;
+  end_reason: string;
+  center_id: string;
 }
 
 function buildInitialForm(): FamilyFormState {
@@ -277,6 +298,9 @@ function buildInitialForm(): FamilyFormState {
     address: '',
     children: [emptyChild()],
     tempPassword: generateTempPassword(),
+    end_date: '',
+    end_reason: '',
+    center_id: '',
   };
 }
 
@@ -297,6 +321,8 @@ function buildFormFromFamily(family: FamilyAccount): FamilyFormState {
     const ec = c.emergency_contacts[0];
     return {
       id: c.id,
+      end_date: c.end_date ?? '',
+      end_reason: c.end_reason ?? '',
       name: c.name,
       date_of_birth: c.date_of_birth,
       classroom: c.classroom ?? '',
@@ -318,6 +344,9 @@ function buildFormFromFamily(family: FamilyAccount): FamilyFormState {
     address: family.address ?? '',
     children: family.children.length > 0 ? family.children.map(toChildForm) : [emptyChild()],
     tempPassword: '',
+    end_date: family.end_date ?? '',
+    end_reason: family.end_reason ?? '',
+    center_id: family.center_id ?? '',
   };
 }
 
@@ -362,6 +391,8 @@ function formToFamilyData(
 
       return {
         id: c.id,
+        end_date: c.end_date || undefined,
+        end_reason: c.end_reason || undefined,
         name: c.name,
         date_of_birth: c.date_of_birth,
         classroom: c.classroom || undefined,
@@ -390,6 +421,7 @@ function formToFamilyData(
 // ============================================================================
 
 function FamilyFormContent({
+  centers,
   form,
   onChange,
   isEdit,
@@ -397,6 +429,7 @@ function FamilyFormContent({
   form: FamilyFormState;
   onChange: (form: FamilyFormState) => void;
   isEdit: boolean;
+  centers: { id: string; name: string }[];
 }) {
   const updateParent1 = (field: keyof ParentFormData, value: string) =>
     onChange({ ...form, parent1: { ...form.parent1, [field]: value } });
@@ -643,6 +676,68 @@ function FamilyFormContent({
         />
       </div>
 
+      {/* Center (edit only): moves the whole household */}
+      {isEdit && centers.length > 1 && (
+        <div className="space-y-1">
+          <Label htmlFor="family-center">Center</Label>
+          <Select
+            value={form.center_id || '__none__'}
+            onValueChange={(v) => onChange({ ...form, center_id: v === '__none__' ? '' : v })}
+          >
+            <SelectTrigger id="family-center">
+              <SelectValue placeholder="Choose a center..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Unassigned</SelectItem>
+              {centers.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Moves the family and every one of its children to that center.
+            Attendance already recorded stays with the center that gave the care,
+            so past DHS periods still reconcile.
+          </p>
+        </div>
+      )}
+
+      {/* Household end date (edit only) */}
+      {isEdit && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="family-end-date">Family end date</Label>
+            <Input
+              id="family-end-date"
+              type="date"
+              value={form.end_date}
+              onChange={(e) => onChange({ ...form, end_date: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Their last day of care. The PIN stops working the next morning.
+              Leave blank if they are still enrolled.
+            </p>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="family-end-reason">Reason</Label>
+            <Input
+              id="family-end-reason"
+              list="family-end-reasons"
+              value={form.end_reason}
+              onChange={(e) => onChange({ ...form, end_reason: e.target.value })}
+              placeholder="Moved, Auth End, Withdrawn"
+            />
+            <datalist id="family-end-reasons">
+              {END_REASONS.map((r) => (
+                <option key={r} value={r} />
+              ))}
+            </datalist>
+          </div>
+        </div>
+      )}
+
       {/* Temp password (add mode only) */}
       {!isEdit && (
         <div className="space-y-1">
@@ -748,6 +843,33 @@ function FamilyFormContent({
                   onChange={(e) => updateChild(idx, 'date_of_birth', e.target.value)}
                 />
               </div>
+              {isEdit && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor={`child-${idx}-end`}>Last day of care</Label>
+                    <Input
+                      id={`child-${idx}-end`}
+                      type="date"
+                      value={child.end_date}
+                      onChange={(e) => updateChild(idx, 'end_date', e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      They come off the kiosk the next morning. Attendance
+                      already recorded is kept.
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`child-${idx}-end-reason`}>Reason</Label>
+                    <Input
+                      id={`child-${idx}-end-reason`}
+                      list="family-end-reasons"
+                      value={child.end_reason}
+                      onChange={(e) => updateChild(idx, 'end_reason', e.target.value)}
+                      placeholder="Moved, Auth End"
+                    />
+                  </div>
+                </div>
+              )}
               <div className="space-y-1">
                 <Label htmlFor={`child-${idx}-program`}>Classroom</Label>
                 <Select
@@ -943,6 +1065,7 @@ export default function FamiliesPage() {
 
   const [addForm, setAddForm] = useState<FamilyFormState>(buildInitialForm);
   const [editForm, setEditForm] = useState<FamilyFormState>(buildInitialForm);
+  const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [savedPassword, setSavedPassword] = useState<string | null>(null);
 
@@ -958,6 +1081,7 @@ export default function FamiliesPage() {
       setFamilies(
         data.map((f) => ({ ...f, status: f.status || 'active' }))
       );
+      setCenters(d.centers || []);
     } catch {
       setFamilies([]);
     }
@@ -1073,6 +1197,9 @@ export default function FamiliesPage() {
       family_bio: data.family_bio || '',
       parentName: p?.name || '',
       parentPhone: p?.phone || '',
+      end_date: editForm.end_date || null,
+      end_reason: editForm.end_reason || null,
+      ...(editForm.center_id ? { center_id: editForm.center_id } : {}),
       children: childrenPayload(data),
     });
     setIsEditDialogOpen(false);
@@ -1226,7 +1353,7 @@ export default function FamiliesPage() {
                         </div>
                       </div>
                     )}
-                    <FamilyFormContent form={addForm} onChange={setAddForm} isEdit={false} />
+                    <FamilyFormContent form={addForm} onChange={setAddForm} isEdit={false} centers={centers} />
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                         Cancel
@@ -1374,7 +1501,7 @@ export default function FamiliesPage() {
                 </div>
               </div>
             )}
-            <FamilyFormContent form={editForm} onChange={setEditForm} isEdit />
+            <FamilyFormContent form={editForm} onChange={setEditForm} isEdit centers={centers} />
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancel

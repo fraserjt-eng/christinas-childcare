@@ -5,6 +5,8 @@ import { randomBytes, createHash } from 'crypto';
 import { requireSession, type AuthedSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { logAudit, auditIp } from '@/lib/audit-log';
+import { syncFamilyChildren } from '@/lib/family-children-sync';
+import { normalizeEndDate } from '@/lib/enrollment-end';
 
 // Center scoping: a director who is owner/superadmin, OR has no session center,
 // may pick a center via the cc_center cookie or ?center; otherwise the caller is
@@ -39,10 +41,13 @@ function isSuperRole(session: AuthedSession): boolean {
 // family (kiosk PIN); a parent-portal password can be set later via a link.
 
 interface ChildInput {
+  id?: string; // existing row id, so an edit updates in place instead of orphaning attendance
   name?: string;
   date_of_birth?: string;
   classroom?: string; // legacy display label (room name)
   classroom_id?: string; // real FK to classrooms(id); drives teacher access scoping
+  end_date?: string | null; // last day of care (inclusive); null/'' = still enrolled
+  end_reason?: string | null;
 }
 
 async function uniquePin(
@@ -81,7 +86,7 @@ export async function GET(request: NextRequest) {
   // Fetch broad, join in JS (PostgREST .in() can silently drop rows).
   let famQuery = supabase
     .from('families')
-    .select('id, email, status, pin, created_at')
+    .select('id, email, status, pin, created_at, center_id, end_date, end_reason')
     .limit(5000);
   if (centerId) famQuery = famQuery.eq('center_id', centerId);
   const { data: fams } = await famQuery;
@@ -89,10 +94,18 @@ export async function GET(request: NextRequest) {
     .from('family_parents')
     .select('family_id, name, phone, is_primary')
     .limit(5000);
+  // The child `id` is required, not cosmetic: the edit form sends it back so the
+  // PUT updates rows in place. Without it every edit re-creates the children
+  // with new ids and orphans their attendance from the roster (blank DOB in the
+  // DHS export). Centers are listed so the move-family control can name them.
   const { data: kids } = await supabase
     .from('family_children')
-    .select('family_id, name, date_of_birth, classroom, classroom_id')
+    .select('id, family_id, name, date_of_birth, classroom, classroom_id, end_date, end_reason')
     .limit(5000);
+  const { data: centers } = await supabase
+    .from('centers')
+    .select('id, name, is_active')
+    .limit(200);
 
   const families = (fams || [])
     .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
@@ -102,10 +115,13 @@ export async function GET(request: NextRequest) {
       const children = (kids || [])
         .filter((k) => k.family_id === f.id)
         .map((k) => ({
+          id: k.id,
           name: k.name,
           date_of_birth: k.date_of_birth || '',
           classroom: k.classroom || '',
           classroom_id: k.classroom_id || '',
+          end_date: k.end_date || '',
+          end_reason: k.end_reason || '',
         }));
       return {
         id: f.id,
@@ -113,13 +129,21 @@ export async function GET(request: NextRequest) {
         status: f.status,
         pin: f.pin,
         created_at: f.created_at,
+        center_id: f.center_id || '',
+        end_date: f.end_date || '',
+        end_reason: f.end_reason || '',
         parentName: primary?.name || '',
         phone: primary?.phone || '',
         children,
       };
     });
 
-  return NextResponse.json({ families });
+  return NextResponse.json({
+    families,
+    centers: (centers || [])
+      .filter((c) => c.is_active)
+      .map((c) => ({ id: c.id as string, name: (c.name as string) || '' })),
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -361,6 +385,9 @@ export async function PUT(request: NextRequest) {
     parentPhone?: string;
     pin?: string;
     children?: ChildInput[];
+    end_date?: string | null;
+    end_reason?: string | null;
+    center_id?: string; // move the whole household to another center
   };
   try {
     body = await request.json();
@@ -389,6 +416,28 @@ export async function PUT(request: NextRequest) {
   const pin = (body.pin || '').trim();
   if (pin && !/^\d{4}$/.test(pin)) {
     return NextResponse.json({ error: 'PIN must be exactly 4 digits' }, { status: 400 });
+  }
+
+  // End dates are validated before anything is written. An unparseable date
+  // must fail loudly: silently treating it as "no end date" would put a
+  // departed child back on the live kiosk roster.
+  const famEnd = normalizeEndDate(body.end_date);
+  if (famEnd === undefined) {
+    return NextResponse.json(
+      { error: 'The family end date must be a real date (YYYY-MM-DD)' },
+      { status: 400 }
+    );
+  }
+  const childEnds: (string | null)[] = [];
+  for (const c of children) {
+    const e = normalizeEndDate(c.end_date);
+    if (e === undefined) {
+      return NextResponse.json(
+        { error: `The end date for ${(c.name || 'a child').trim()} must be a real date (YYYY-MM-DD)` },
+        { status: 400 }
+      );
+    }
+    childEnds.push(e);
   }
 
   const supabase = getServerSupabase();
@@ -441,9 +490,43 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  // ---- move to another center (optional) ----
+  // Only a true owner/superadmin may move a household between centers. A
+  // center-bound admin moving a family out of their own center would be moving
+  // it somewhere they cannot see or undo, so that is refused.
+  const currentCenter = (fam.center_id as string | null) || null;
+  const requestedCenter = (body.center_id || '').trim() || null;
+  let targetCenter = currentCenter;
+  if (requestedCenter && requestedCenter !== currentCenter) {
+    if (!isSuperRole(session)) {
+      return NextResponse.json(
+        { error: 'Only an owner can move a family to another center' },
+        { status: 403 }
+      );
+    }
+    const { data: dest } = await supabase
+      .from('centers')
+      .select('id, is_active')
+      .eq('id', requestedCenter)
+      .maybeSingle();
+    if (!dest || !dest.is_active) {
+      return NextResponse.json({ error: 'That center does not exist' }, { status: 400 });
+    }
+    targetCenter = requestedCenter;
+  }
+  // Past attendance keeps the center where the care actually happened. Only the
+  // household and its future check-ins move, so an already-submitted DHS period
+  // for either center still reconciles.
+
   const { error: upErr } = await supabase
     .from('families')
-    .update({ email, pin: newPin })
+    .update({
+      email,
+      pin: newPin,
+      end_date: famEnd,
+      end_reason: (body.end_reason || '').trim() || null,
+      center_id: targetCenter,
+    })
     .eq('id', id);
   if (upErr) {
     return NextResponse.json({ error: 'Could not update the family' }, { status: 500 });
@@ -460,45 +543,26 @@ export async function PUT(request: NextRequest) {
     is_primary: true,
   });
 
-  // Preserve each child's PHOTO across this delete+reinsert (map by name; the
-  // payload carries no id/photo_url). Without this, editing a family WIPES the
-  // kids' photos. Names that appear more than once in the submitted set are
-  // ambiguous, so we skip preservation for those to avoid mis-assigning a face.
-  const { data: existingKids } = await supabase
-    .from('family_children')
-    .select('name, photo_url')
-    .eq('family_id', id);
-  const photoByName = new Map<string, string>();
-  for (const k of existingKids ?? []) {
-    const n = ((k.name as string) || '').trim().toLowerCase();
-    if (n && k.photo_url) photoByName.set(n, k.photo_url as string);
-  }
-  const nameCounts = new Map<string, number>();
-  for (const c of children) {
-    const n = (c.name as string).trim().toLowerCase();
-    nameCounts.set(n, (nameCounts.get(n) || 0) + 1);
-  }
-  const preservedPhoto = (name: string): string | null => {
-    const n = name.trim().toLowerCase();
-    if ((nameCounts.get(n) || 0) > 1) return null;
-    return photoByName.get(n) ?? null;
-  };
-  await supabase.from('family_children').delete().eq('family_id', id);
-  const { error: kidErr } = await supabase.from('family_children').insert(
-    children.map((c) => ({
-      family_id: id,
+  // Update the children IN PLACE. Child ids stay stable, so attendance history,
+  // photos, allergies, and medical notes all survive the edit. (This route used
+  // to delete and re-insert, which re-issued every id and orphaned attendance
+  // from the roster -- the blank-DOB rejection in the DHS Provider Hub.)
+  const sync = await syncFamilyChildren(
+    supabase,
+    id,
+    children.map((c, i) => ({
+      id: c.id,
       name: (c.name as string).trim(),
       date_of_birth: c.date_of_birth?.trim() || null,
       classroom: c.classroom?.trim() || null,
       classroom_id: c.classroom_id?.trim() || null,
-      // Keep each child bound to the family's center so the kiosk cross-center
-      // guard (which fails open on a NULL center) cannot be widened by an edit.
-      center_id: (fam.center_id as string | null) || '3104ae69-4f26-4c1e-a767-3ff45b534860',
-      photo_url: preservedPhoto(c.name as string),
-    }))
+      end_date: childEnds[i],
+      end_reason: (c.end_reason || '').trim() || null,
+    })),
+    targetCenter || '3104ae69-4f26-4c1e-a767-3ff45b534860'
   );
-  if (kidErr) {
-    return NextResponse.json({ error: 'Could not update the children' }, { status: 500 });
+  if (sync.error) {
+    return NextResponse.json({ error: sync.error }, { status: 500 });
   }
 
   await logAudit({
@@ -506,8 +570,19 @@ export async function PUT(request: NextRequest) {
     action: 'family.update',
     targetType: 'family',
     targetId: id,
-    centerId: fam.center_id ?? session.user.center_id ?? null,
-    detail: { children: children.length, parents: 1 },
+    centerId: targetCenter ?? session.user.center_id ?? null,
+    detail: {
+      children: children.length,
+      parents: 1,
+      children_updated: sync.updated,
+      children_added: sync.inserted,
+      children_removed: sync.deleted,
+      family_end_date: famEnd,
+      moved_center:
+        targetCenter !== currentCenter
+          ? { from: currentCenter, to: targetCenter }
+          : undefined,
+    },
     ip: auditIp(request),
   });
 
