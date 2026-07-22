@@ -9,6 +9,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { centerDate } from '@/lib/center-time';
 import { PRIVACY_NOTICE_VERSION, ATTESTATION_VALID_DAYS } from '@/lib/attestation';
 import { signPhotoList } from '@/lib/photo-url';
+import { isEnded } from '@/lib/enrollment-end';
 
 // The live kiosk's only data path. The browser never touches the family or
 // attendance tables directly (anon is denied on them by migration 017). This
@@ -39,17 +40,27 @@ async function verifyKioskChild(
   supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
   childId: string,
   centerId: string,
-  familyId?: string
+  familyId?: string,
+  // Only check-in refuses an ended child. Check-OUT must always be allowed, or a
+  // child checked in on their last day could never be closed out and would sit
+  // open forever in the attendance record.
+  opts: { blockEnded?: boolean } = {}
 ): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
   let query = supabase
     .from('family_children')
-    .select('id, family_id, center_id')
+    .select('id, family_id, center_id, end_date')
     .eq('id', childId);
   if (familyId) query = query.eq('family_id', familyId);
   const { data: child } = await query.maybeSingle();
   if (!child) return { ok: false, status: 403, error: 'Child not found for this family' };
   if (child.center_id && child.center_id !== centerId) {
     return { ok: false, status: 403, error: 'Child not at this center' };
+  }
+  // Enrollment ended. The roster read already hides them, so this only catches a
+  // kiosk tab left open across the cutoff; it must still refuse the write, or a
+  // departed child lands in an attendance period the provider then has to attest to.
+  if (opts.blockEnded && isEnded(child.end_date as string | null, todayDate())) {
+    return { ok: false, status: 403, error: 'This child is no longer enrolled' };
   }
   return { ok: true };
 }
@@ -159,7 +170,7 @@ export async function POST(request: NextRequest) {
 
     const { data: families, error: familiesError } = await supabase
       .from('families')
-      .select('id, email, status')
+      .select('id, email, status, end_date')
       .eq('pin', pin)
       .eq('status', 'active')
       .eq('center_id', centerId)
@@ -178,15 +189,30 @@ export async function POST(request: NextRequest) {
     }
     const family = families[0];
 
+    // A household past its end date is off the roster entirely. The PIN reads as
+    // unknown rather than as an error, so a departed family cannot be checked in
+    // and staff are not invited to argue with a message at the door.
+    const rosterDay = todayDate();
+    if (isEnded(family.end_date as string | null, rosterDay)) {
+      return NextResponse.json({ data: null });
+    }
+
     const { data: parents } = await supabase
       .from('family_parents')
       .select('id, family_id, name, phone, email, relationship, is_primary')
       .eq('family_id', family.id);
 
-    const { data: children } = await supabase
+    const { data: childRows } = await supabase
       .from('family_children')
-      .select('id, family_id, name, date_of_birth, classroom, photo_url')
+      .select('id, family_id, name, date_of_birth, classroom, photo_url, end_date')
       .eq('family_id', family.id);
+
+    // Drop children whose own last day of care has passed, so a sibling leaving
+    // does not take the rest of the household off the kiosk with them. End date
+    // is inclusive: the child still appears ON their last day.
+    const children = (childRows || []).filter(
+      (c) => !isEnded(c.end_date as string | null, rosterDay)
+    );
 
     // Sign each child's avatar so the kiosk check-in tiles show their face.
     // Short TTL (5 min): the kiosk lookup is PIN-gated but unauthenticated and
@@ -237,7 +263,9 @@ export async function POST(request: NextRequest) {
     if (!familyId) {
       return NextResponse.json({ error: 'familyId required' }, { status: 400 });
     }
-    const guard = await verifyKioskChild(supabase, body.childId, centerId, familyId);
+    const guard = await verifyKioskChild(supabase, body.childId, centerId, familyId, {
+      blockEnded: true,
+    });
     if (!guard.ok) {
       return NextResponse.json({ error: guard.error }, { status: guard.status });
     }

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { END_REASONS } from '@/lib/enrollment-end';
 import {
   Dialog,
   DialogContent,
@@ -105,13 +106,28 @@ function StatusBadge({ status }: { status: AppUser['status'] }) {
 
 // A row in the User Management table: a stored staff AppUser, or a live
 // Supabase family mapped onto the same shape with extra display fields.
+// A child as the form carries it. `id` is the real family_children row id and
+// MUST round-trip: the API updates children in place by id, so attendance keeps
+// pointing at the same child. Dropping it re-creates the row with a new id and
+// orphans that child's attendance from the roster.
+type FamilyChildForm = {
+  id?: string;
+  name: string;
+  date_of_birth: string;
+  classroom: string;
+  end_date: string; // last day of care (inclusive); blank = still enrolled
+  end_reason: string;
+};
 type FamilyEdit = {
   id: string;
   email: string;
   parentName: string;
   parentPhone: string;
   pin: string;
-  children: { name: string; date_of_birth: string; classroom: string }[];
+  center_id: string;
+  end_date: string;
+  end_reason: string;
+  children: FamilyChildForm[];
 };
 type DirectoryRow = AppUser & {
   familyDetail?: string;
@@ -133,6 +149,10 @@ interface UserFormData {
   hire_date: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
+}
+
+function blankChild(): FamilyChildForm {
+  return { name: '', date_of_birth: '', classroom: '', end_date: '', end_reason: '' };
 }
 
 function todayIso(): string {
@@ -387,18 +407,25 @@ export default function UsersPage() {
   const [familyResult, setFamilyResult] = useState<
     { pin: string; childCount: number; email: string } | null
   >(null);
+  const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
   const [familyForm, setFamilyForm] = useState<{
     email: string;
     parentName: string;
     parentPhone: string;
     pin: string;
-    children: { name: string; date_of_birth: string; classroom: string }[];
+    center_id: string;
+    end_date: string;
+    end_reason: string;
+    children: FamilyChildForm[];
   }>({
     email: '',
     parentName: '',
     parentPhone: '',
     pin: '',
-    children: [{ name: '', date_of_birth: '', classroom: '' }],
+    center_id: '',
+    end_date: '',
+    end_reason: '',
+    children: [blankChild()],
   });
 
   const loadFamilies = async () => {
@@ -415,7 +442,10 @@ export default function UsersPage() {
           created_at: string;
           parentName: string;
           phone: string;
-          children: { name: string; date_of_birth: string; classroom: string }[];
+          center_id?: string;
+          end_date?: string;
+          end_reason?: string;
+          children: FamilyChildForm[];
         }) => {
           const parts = (f.parentName || f.email).trim().split(' ');
           const childNames = f.children.map((c) => c.name);
@@ -438,15 +468,16 @@ export default function UsersPage() {
               parentName: f.parentName,
               parentPhone: f.phone || '',
               pin: f.pin || '',
-              children:
-                f.children.length > 0
-                  ? f.children
-                  : [{ name: '', date_of_birth: '', classroom: '' }],
+              center_id: f.center_id || '',
+              end_date: f.end_date || '',
+              end_reason: f.end_reason || '',
+              children: f.children.length > 0 ? f.children : [blankChild()],
             } as FamilyEdit,
           };
         }
       );
       setFamilyRows(rows);
+      setCenters(data.centers || []);
     } catch {
       /* non-fatal: list still shows staff */
     }
@@ -517,7 +548,10 @@ export default function UsersPage() {
       parentName: '',
       parentPhone: '',
       pin: '',
-      children: [{ name: '', date_of_birth: '', classroom: '' }],
+      center_id: '',
+      end_date: '',
+      end_reason: '',
+      children: [blankChild()],
     });
 
   const openEditFamily = (row: DirectoryRow) => {
@@ -529,10 +563,13 @@ export default function UsersPage() {
       parentName: row.familyEdit.parentName,
       parentPhone: row.familyEdit.parentPhone,
       pin: row.familyEdit.pin,
+      center_id: row.familyEdit.center_id || '',
+      end_date: row.familyEdit.end_date || '',
+      end_reason: row.familyEdit.end_reason || '',
       children:
         row.familyEdit.children.length > 0
-          ? row.familyEdit.children.map((c) => ({ ...c }))
-          : [{ name: '', date_of_birth: '', classroom: '' }],
+          ? row.familyEdit.children.map((c) => ({ ...blankChild(), ...c }))
+          : [blankChild()],
     });
     setIsAddFamilyOpen(true);
   };
@@ -563,6 +600,9 @@ export default function UsersPage() {
           parentName: familyForm.parentName,
           parentPhone: familyForm.parentPhone,
           pin: familyForm.pin || undefined,
+          end_date: familyForm.end_date || null,
+          end_reason: familyForm.end_reason || null,
+          ...(familyForm.center_id ? { center_id: familyForm.center_id } : {}),
           children: familyForm.children.filter((c) => c.name.trim()),
         }),
       });
@@ -987,6 +1027,67 @@ export default function UsersPage() {
                         className="font-mono tracking-widest w-32"
                       />
                     </div>
+                    {editingFamilyId && centers.length > 1 && (
+                      <div className="space-y-2">
+                        <Label>Center</Label>
+                        <Select
+                          value={familyForm.center_id}
+                          onValueChange={(v) =>
+                            setFamilyForm({ ...familyForm, center_id: v })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a center" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {centers.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Moves the whole household and all of its children to
+                          that center. Attendance already recorded stays with the
+                          center that provided the care.
+                        </p>
+                      </div>
+                    )}
+                    {editingFamilyId && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Family end date</Label>
+                          <Input
+                            type="date"
+                            value={familyForm.end_date}
+                            onChange={(e) =>
+                              setFamilyForm({ ...familyForm, end_date: e.target.value })
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Their last day of care. They come off the kiosk the
+                            next morning. Leave blank if they are still enrolled.
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Reason</Label>
+                          <Input
+                            list="end-reasons"
+                            value={familyForm.end_reason}
+                            onChange={(e) =>
+                              setFamilyForm({ ...familyForm, end_reason: e.target.value })
+                            }
+                            placeholder="Moved, Auth End, Withdrawn"
+                          />
+                          <datalist id="end-reasons">
+                            {END_REASONS.map((r) => (
+                              <option key={r} value={r} />
+                            ))}
+                          </datalist>
+                        </div>
+                      </div>
+                    )}
                     <div className="pt-2 border-t">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                         Children
@@ -1054,6 +1155,36 @@ export default function UsersPage() {
                                 </button>
                               )}
                             </div>
+                            {editingFamilyId && (
+                              <>
+                                <div className="col-span-5 space-y-1">
+                                  <Label className="text-xs">Last day</Label>
+                                  <Input
+                                    type="date"
+                                    value={child.end_date}
+                                    onChange={(e) => {
+                                      const next = [...familyForm.children];
+                                      next[idx] = { ...child, end_date: e.target.value };
+                                      setFamilyForm({ ...familyForm, children: next });
+                                    }}
+                                  />
+                                </div>
+                                <div className="col-span-6 space-y-1">
+                                  <Label className="text-xs">Reason</Label>
+                                  <Input
+                                    list="end-reasons"
+                                    value={child.end_reason}
+                                    onChange={(e) => {
+                                      const next = [...familyForm.children];
+                                      next[idx] = { ...child, end_reason: e.target.value };
+                                      setFamilyForm({ ...familyForm, children: next });
+                                    }}
+                                    placeholder="Moved, Auth End"
+                                  />
+                                </div>
+                                <div className="col-span-1" />
+                              </>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1065,10 +1196,7 @@ export default function UsersPage() {
                         onClick={() =>
                           setFamilyForm({
                             ...familyForm,
-                            children: [
-                              ...familyForm.children,
-                              { name: '', date_of_birth: '', classroom: '' },
-                            ],
+                            children: [...familyForm.children, blankChild()],
                           })
                         }
                       >

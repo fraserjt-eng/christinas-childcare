@@ -150,13 +150,26 @@ export async function GET(request: NextRequest) {
   // roster names + rooms (source of truth; fall back to denormalized child_name)
   const nameById = new Map<string, string>();
   const roomById = new Map<string, string>();
+  // End dates ride along so the by-child download can show who has left and
+  // when. Nothing is filtered out: attendance already recorded is a record of
+  // care that happened, and DHS requires it to stay exportable for six years.
+  const endById = new Map<string, { date: string; reason: string }>();
   {
-    let kq = supabase.from('family_children').select('id, name, classroom').limit(10000);
+    let kq = supabase
+      .from('family_children')
+      .select('id, name, classroom, end_date, end_reason')
+      .limit(10000);
     if (!combined && centerId) kq = kq.eq('center_id', centerId);
     const { data: kids } = await kq;
     for (const k of kids ?? []) {
       nameById.set(k.id as string, (k.name as string) || '');
       roomById.set(k.id as string, (k.classroom as string) || '');
+      if (k.end_date) {
+        endById.set(k.id as string, {
+          date: k.end_date as string,
+          reason: (k.end_reason as string | null) || '',
+        });
+      }
     }
   }
 
@@ -168,7 +181,10 @@ export async function GET(request: NextRequest) {
 
   // aggregate into buckets + per-child (+ per-center when combined)
   const bucketMap = new Map<string, { label: string; start: string; end: string; present: Set<string>; childDays: number; hours: number; checkins: number }>();
-  const childMap = new Map<string, { name: string; days: Set<string>; hours: number; lastDate: string }>();
+  const childMap = new Map<
+    string,
+    { name: string; days: Set<string>; hours: number; lastDate: string; endDate: string; endReason: string }
+  >();
   const centerAgg = new Map<string, { present: Set<string>; childDays: number; hours: number }>();
   const roomAgg = new Map<string, { centerId: string; room: string; present: Set<string>; childDays: number; hours: number }>();
   let totalHours = 0;
@@ -197,7 +213,17 @@ export async function GET(request: NextRequest) {
     b.hours += h;
     if (r.check_in) b.checkins += 1;
 
-    if (!childMap.has(cid)) childMap.set(cid, { name, days: new Set(), hours: 0, lastDate: '' });
+    if (!childMap.has(cid)) {
+      const e = endById.get(r.child_id as string);
+      childMap.set(cid, {
+        name,
+        days: new Set(),
+        hours: 0,
+        lastDate: '',
+        endDate: e?.date || '',
+        endReason: e?.reason || '',
+      });
+    }
     const c = childMap.get(cid)!;
     c.days.add(r.date);
     c.hours += h;
@@ -234,7 +260,14 @@ export async function GET(request: NextRequest) {
     }));
 
   const children = Array.from(childMap.values())
-    .map((c) => ({ name: c.name, daysPresent: c.days.size, hours: Math.round(c.hours * 10) / 10, lastDate: c.lastDate }))
+    .map((c) => ({
+      name: c.name,
+      daysPresent: c.days.size,
+      hours: Math.round(c.hours * 10) / 10,
+      lastDate: c.lastDate,
+      endDate: c.endDate,
+      endReason: c.endReason,
+    }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const byCenter = combined

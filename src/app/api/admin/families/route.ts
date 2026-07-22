@@ -5,6 +5,8 @@ import { requireSession } from '@/lib/require-auth';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { logAudit, auditIp } from '@/lib/audit-log';
 import { signPhotoList } from '@/lib/photo-url';
+import { syncFamilyChildren } from '@/lib/family-children-sync';
+import { normalizeEndDate } from '@/lib/enrollment-end';
 
 // Full family records for the admin Families tab (People > Families).
 // The page used the client family-storage which reads Supabase with the
@@ -19,12 +21,15 @@ import { signPhotoList } from '@/lib/photo-url';
 //         for identity.
 
 interface ChildIn {
+  id?: string; // existing row id, so an edit updates in place instead of orphaning attendance
   name?: string;
   date_of_birth?: string;
   classroom?: string;
   classroom_id?: string;
   allergies?: string[];
   medical_notes?: string;
+  end_date?: string | null; // last day of care (inclusive); null/'' = still enrolled
+  end_reason?: string | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -49,22 +54,28 @@ export async function GET(request: NextRequest) {
 
   let famQ = supabase
     .from('families')
-    .select('id, email, status, pin, address, family_bio, created_at, updated_at')
+    .select(
+      'id, email, status, pin, address, family_bio, created_at, updated_at, center_id, end_date, end_reason'
+    )
     .limit(5000);
   if (centerId) famQ = famQ.eq('center_id', centerId);
 
   // Fetch broad, join in JS (PostgREST .in() can silently drop rows).
-  const [{ data: fams }, { data: parents }, { data: kids }] = await Promise.all([
-    famQ,
-    supabase
-      .from('family_parents')
-      .select('id, family_id, name, phone, email, relationship, is_primary')
-      .limit(5000),
-    supabase
-      .from('family_children')
-      .select('id, family_id, name, date_of_birth, classroom, classroom_id, allergies, medical_notes, photo_url')
-      .limit(5000),
-  ]);
+  const [{ data: fams }, { data: parents }, { data: kids }, { data: centerRows }] =
+    await Promise.all([
+      famQ,
+      supabase
+        .from('family_parents')
+        .select('id, family_id, name, phone, email, relationship, is_primary')
+        .limit(5000),
+      supabase
+        .from('family_children')
+        .select(
+          'id, family_id, name, date_of_birth, classroom, classroom_id, allergies, medical_notes, photo_url, end_date, end_reason'
+        )
+        .limit(5000),
+      supabase.from('centers').select('id, name, is_active').limit(200),
+    ]);
 
   // Sign each child's avatar so the admin Families tab shows their face (and so
   // the edit form can preview the current photo). Bare paths -> 8h signed URLs.
@@ -90,6 +101,9 @@ export async function GET(request: NextRequest) {
       family_bio: (f.family_bio as string | null) || undefined,
       created_at: (f.created_at as string) || '',
       updated_at: (f.updated_at as string) || '',
+      center_id: (f.center_id as string | null) || '',
+      end_date: (f.end_date as string | null) || '',
+      end_reason: (f.end_reason as string | null) || '',
       parents: (parents || [])
         .filter((p) => p.family_id === f.id)
         .map((p) => ({
@@ -112,11 +126,18 @@ export async function GET(request: NextRequest) {
           medical_notes: (k.medical_notes as string | null) || undefined,
           emergency_contacts: [],
           photo_url: photoByKidId.get(k.id as string) || undefined,
+          end_date: (k.end_date as string | null) || '',
+          end_reason: (k.end_reason as string | null) || '',
         })),
     }));
 
   return NextResponse.json(
-    { families },
+    {
+      families,
+      centers: (centerRows || [])
+        .filter((c) => c.is_active)
+        .map((c) => ({ id: c.id as string, name: (c.name as string) || '' })),
+    },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }
@@ -140,6 +161,9 @@ export async function PATCH(request: NextRequest) {
     parentName?: string;
     parentPhone?: string;
     children?: ChildIn[];
+    end_date?: string | null;
+    end_reason?: string | null;
+    center_id?: string;
   };
   try {
     body = await request.json();
@@ -152,18 +176,72 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'id is required' }, { status: 400 });
   }
 
+  // Validate every end date BEFORE writing anything. An unparseable date must
+  // fail loudly rather than read as "no end date", which would put a departed
+  // child back on the live kiosk roster.
+  const famEnd = normalizeEndDate(body.end_date);
+  if (famEnd === undefined) {
+    return NextResponse.json(
+      { error: 'The family end date must be a real date (YYYY-MM-DD)' },
+      { status: 400 }
+    );
+  }
+  const cleanChildren = Array.isArray(body.children)
+    ? body.children.filter((c) => (c.name || '').trim())
+    : null;
+  const childEnds: (string | null)[] = [];
+  for (const c of cleanChildren ?? []) {
+    const e = normalizeEndDate(c.end_date);
+    if (e === undefined) {
+      return NextResponse.json(
+        { error: `The end date for ${(c.name || 'a child').trim()} must be a real date (YYYY-MM-DD)` },
+        { status: 400 }
+      );
+    }
+    childEnds.push(e);
+  }
+
   // Center scope: a center-bound admin may only edit a family at their own center
   // (this PATCH can delete+rewrite children + rotate the kiosk PIN). Cross-center
   // directors (owner/superadmin, or no home center) are exempt.
   const role = (session.user.role || '').toLowerCase();
   const myCenter = session.user.center_id ?? null;
   const crossCenter = role === 'owner' || role === 'superadmin' || !myCenter;
-  if (!crossCenter) {
-    const { data: fam } = await supabase.from('families').select('center_id').eq('id', id).maybeSingle();
-    if (!fam) return NextResponse.json({ error: 'Family not found' }, { status: 404 });
-    if ((fam.center_id as string | null) !== myCenter) {
-      return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+  const { data: fam } = await supabase
+    .from('families')
+    .select('center_id')
+    .eq('id', id)
+    .maybeSingle();
+  if (!fam) return NextResponse.json({ error: 'Family not found' }, { status: 404 });
+  const currentCenter = (fam.center_id as string | null) || null;
+  if (!crossCenter && currentCenter !== myCenter) {
+    return NextResponse.json({ error: 'Not your center' }, { status: 403 });
+  }
+
+  // ---- move to another center (optional) ----
+  // Only a true owner/superadmin moves a household between centers; a
+  // center-bound admin would be sending it somewhere they cannot see or undo.
+  // Past attendance stays at the center that actually delivered the care, so an
+  // already-submitted DHS period for either center still reconciles.
+  const requestedCenter = (body.center_id || '').trim() || null;
+  let targetCenter = currentCenter;
+  if (requestedCenter && requestedCenter !== currentCenter) {
+    const isSuper = role === 'owner' || role === 'superadmin';
+    if (!isSuper) {
+      return NextResponse.json(
+        { error: 'Only an owner can move a family to another center' },
+        { status: 403 }
+      );
     }
+    const { data: dest } = await supabase
+      .from('centers')
+      .select('id, is_active')
+      .eq('id', requestedCenter)
+      .maybeSingle();
+    if (!dest || !dest.is_active) {
+      return NextResponse.json({ error: 'That center does not exist' }, { status: 400 });
+    }
+    targetCenter = requestedCenter;
   }
 
   const famUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -172,6 +250,11 @@ export async function PATCH(request: NextRequest) {
   if (typeof body.address === 'string') famUpdate.address = body.address;
   if (typeof body.family_bio === 'string') famUpdate.family_bio = body.family_bio;
   if (body.status === 'active') famUpdate.approved_at = new Date().toISOString();
+  if (body.end_date !== undefined) famUpdate.end_date = famEnd;
+  if (body.end_reason !== undefined) {
+    famUpdate.end_reason = (body.end_reason || '').trim() || null;
+  }
+  if (targetCenter !== currentCenter) famUpdate.center_id = targetCenter;
 
   const { error: famErr } = await supabase
     .from('families')
@@ -202,58 +285,45 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  // Replace the children list, if provided.
-  if (Array.isArray(body.children)) {
-    const clean = body.children.filter((c) => (c.name || '').trim());
-    // Preserve each child's existing PHOTO across this delete+reinsert. The
-    // payload carries no id or photo_url, so map the saved photo by name —
-    // without this, every admin family edit WIPED the kids' photos. Names that
-    // repeat in the submitted set are ambiguous, so skip preservation for those.
-    const { data: existingKids } = await supabase
+  // Every child stays bound to the family's center so the kiosk cross-center
+  // guard (which fails open on a NULL center) cannot be widened by an edit.
+  const childCenterId =
+    targetCenter || myCenter || '3104ae69-4f26-4c1e-a767-3ff45b534860';
+
+  // A move with no children payload still has to carry the children across,
+  // or they keep the old center and the kiosk refuses them at the new one.
+  if (targetCenter !== currentCenter) {
+    await supabase
       .from('family_children')
-      .select('name, photo_url')
+      .update({ center_id: childCenterId })
       .eq('family_id', id);
-    const photoByName = new Map<string, string>();
-    for (const k of existingKids ?? []) {
-      const n = ((k.name as string) || '').trim().toLowerCase();
-      if (n && k.photo_url) photoByName.set(n, k.photo_url as string);
-    }
-    const nameCounts = new Map<string, number>();
-    for (const c of clean) {
-      const n = (c.name || '').trim().toLowerCase();
-      nameCounts.set(n, (nameCounts.get(n) || 0) + 1);
-    }
-    const preservedPhoto = (name: string): string | null => {
-      const n = (name || '').trim().toLowerCase();
-      if ((nameCounts.get(n) || 0) > 1) return null;
-      return photoByName.get(n) ?? null;
-    };
-    // Keep each child bound to the family's center so the kiosk cross-center
-    // guard (which fails open on a NULL center) cannot be widened by an edit.
-    const { data: famRow } = await supabase
-      .from('families')
-      .select('center_id')
-      .eq('id', id)
-      .maybeSingle();
-    const childCenterId =
-      (famRow?.center_id as string | null) ||
-      myCenter ||
-      '3104ae69-4f26-4c1e-a767-3ff45b534860';
-    await supabase.from('family_children').delete().eq('family_id', id);
-    if (clean.length > 0) {
-      await supabase.from('family_children').insert(
-        clean.map((c) => ({
-          family_id: id,
-          name: (c.name || '').trim(),
-          date_of_birth: c.date_of_birth || null,
-          classroom: c.classroom || null,
-          classroom_id: c.classroom_id || null,
-          allergies: c.allergies || [],
-          medical_notes: c.medical_notes || null,
-          center_id: childCenterId,
-          photo_url: preservedPhoto(c.name || ''),
-        }))
-      );
+  }
+
+  // Reconcile the children IN PLACE when a list is provided. Child ids stay
+  // stable, so attendance history, photos, allergies, and medical notes survive
+  // the edit. (This route used to delete and re-insert, which re-issued every id
+  // and orphaned attendance from the roster: the blank-DOB rejection in the DHS
+  // Provider Hub.)
+  let sync = { updated: 0, inserted: 0, deleted: 0, error: null as string | null };
+  if (cleanChildren) {
+    sync = await syncFamilyChildren(
+      supabase,
+      id,
+      cleanChildren.map((c, i) => ({
+        id: c.id,
+        name: (c.name || '').trim(),
+        date_of_birth: c.date_of_birth || null,
+        classroom: c.classroom || null,
+        classroom_id: c.classroom_id || null,
+        allergies: c.allergies,
+        medical_notes: c.medical_notes,
+        end_date: childEnds[i],
+        end_reason: c.end_reason === undefined ? undefined : (c.end_reason || '').trim() || null,
+      })),
+      childCenterId
+    );
+    if (sync.error) {
+      return NextResponse.json({ error: sync.error }, { status: 500 });
     }
   }
 
@@ -262,11 +332,18 @@ export async function PATCH(request: NextRequest) {
     action: 'family.update',
     targetType: 'family',
     targetId: id,
-    centerId: myCenter,
+    centerId: targetCenter ?? myCenter,
     detail: {
       status: typeof body.status === 'string' ? body.status : undefined,
       email_changed: typeof body.email === 'string',
-      children_replaced: Array.isArray(body.children),
+      children_updated: sync.updated,
+      children_added: sync.inserted,
+      children_removed: sync.deleted,
+      family_end_date: body.end_date !== undefined ? famEnd : undefined,
+      moved_center:
+        targetCenter !== currentCenter
+          ? { from: currentCenter, to: targetCenter }
+          : undefined,
     },
     ip: auditIp(request),
   });

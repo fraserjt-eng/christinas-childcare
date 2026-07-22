@@ -47,6 +47,11 @@ interface ChildSummary {
   daysPresent: number;
   hours: number;
   lastDate: string;
+  // Last day of care (inclusive), blank while still enrolled. Carried here so
+  // the by-child download shows who has left and why without opening the
+  // roster. Attendance itself is never filtered by it.
+  endDate: string;
+  endReason: string;
 }
 interface CenterRow {
   center: string;
@@ -239,10 +244,19 @@ export default function AttendanceHubPage() {
   }
   function downloadChildren() {
     if (!summary) return;
-    const header = ['Child', 'Days present', 'Hours', 'Last seen'];
+    const header = ['Child', 'Days present', 'Hours', 'Last seen', 'End date', 'End reason'];
     const lines = [header.map(csvCell).join(',')];
     for (const c of summary.children) {
-      lines.push([csvCell(c.name), String(c.daysPresent), String(c.hours), csvCell(c.lastDate)].join(','));
+      lines.push(
+        [
+          csvCell(c.name),
+          String(c.daysPresent),
+          String(c.hours),
+          csvCell(c.lastDate),
+          csvCell(c.endDate || ''),
+          csvCell(c.endReason || ''),
+        ].join(',')
+      );
     }
     download(`attendance-by-child-${view}-${summary.from}-to-${summary.to}.csv`, lines.join('\r\n'));
   }
@@ -527,6 +541,7 @@ export default function AttendanceHubPage() {
                           <th className="py-2">Days present</th>
                           <th className="py-2">Hours</th>
                           <th className="py-2">Last seen</th>
+                          <th className="py-2">Ended</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -536,6 +551,16 @@ export default function AttendanceHubPage() {
                             <td className="py-2">{c.daysPresent}</td>
                             <td className="py-2">{c.hours}</td>
                             <td className="py-2 text-muted-foreground">{c.lastDate}</td>
+                            <td className="py-2 text-muted-foreground">
+                              {c.endDate ? (
+                                <span title={c.endReason || undefined}>
+                                  {c.endDate}
+                                  {c.endReason ? ` (${c.endReason})` : ''}
+                                </span>
+                              ) : (
+                                ''
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

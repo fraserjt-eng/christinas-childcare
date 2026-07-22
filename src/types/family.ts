@@ -31,6 +31,11 @@ export interface FamilyChild {
   medical_notes?: string;
   emergency_contacts: EmergencyContact[];
   photo_url?: string;
+  // Last day of care for THIS child (inclusive), blank/absent while enrolled.
+  // A sibling leaving does not end the household; see FamilyAccount.end_date
+  // for that. Migration 053.
+  end_date?: string;
+  end_reason?: string;
 }
 
 export interface FamilyAccount {
@@ -46,6 +51,12 @@ export interface FamilyAccount {
   family_bio?: string;
   family_photo_url?: string;
   address?: string;
+  // The center this household belongs to. Moving a family rewrites this and
+  // every child's center; past attendance stays with the center that gave care.
+  center_id?: string;
+  // Last day of care for the whole household (inclusive), blank while enrolled.
+  end_date?: string;
+  end_reason?: string;
   created_at: string;
   updated_at: string;
 }
