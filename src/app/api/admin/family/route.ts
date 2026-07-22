@@ -235,6 +235,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No center for this account' }, { status: 403 });
   }
 
+  // One resolved center for BOTH the family and its children. They must never
+  // diverge: Family Management filters on the family's center while Attendance,
+  // the kiosk roster, and the daily report filter on the child's.
+  const childCenterId = centerId || '3104ae69-4f26-4c1e-a767-3ff45b534860';
+
   const { data: family, error: famErr } = await supabase
     .from('families')
     .insert({
@@ -242,7 +247,7 @@ export async function POST(request: NextRequest) {
       password_hash: placeholderHash,
       pin,
       status: 'active',
-      center_id: centerId || '3104ae69-4f26-4c1e-a767-3ff45b534860',
+      center_id: childCenterId,
     })
     .select('id')
     .single();
@@ -260,12 +265,19 @@ export async function POST(request: NextRequest) {
     is_primary: true,
   });
 
+  // center_id is NOT optional. The Attendance page, the live kiosk roster, and
+  // the daily report all filter children by center_id, while Family Management
+  // filters by the FAMILY's center. A child created without one is therefore
+  // visible in Family Management but invisible everywhere attendance is taken,
+  // and the kiosk's cross-center guard fails OPEN for them. This route omitted
+  // it, so every family added through Add Family produced invisible children.
   const childRows = children.map((c) => ({
     family_id: family.id,
     name: (c.name as string).trim(),
     date_of_birth: c.date_of_birth?.trim() || null,
     classroom: c.classroom?.trim() || null,
     classroom_id: c.classroom_id?.trim() || null,
+    center_id: childCenterId,
   }));
   const { error: kidErr } = await supabase
     .from('family_children')
