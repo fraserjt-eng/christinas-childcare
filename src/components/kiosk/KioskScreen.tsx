@@ -82,24 +82,32 @@ function PinScreen({
   // System unreachable (timeout / network / server down) — NOT a bad PIN.
   // Kept separate so an outage never reads as "That PIN was not found".
   const [systemDown, setSystemDown] = useState(false);
+  // Busy = the center hit its wrong-PIN limit for a few minutes. Distinct from
+  // a real outage: staff record pickups at the front desk while it clears.
+  const [systemBusy, setSystemBusy] = useState(false);
 
   const submit = useCallback(
     async (value: string) => {
       setLoading(true);
       setSystemDown(false);
+      setSystemBusy(false);
       let family: KioskFamily | null = null;
       let failed = false;
+      let busy = false;
       try {
         // lookupFamilyByPin resolves within 8s no matter what: null means the
         // PIN genuinely is not at this center; a throw means the system is
         // unreachable. The pad can never sit on "Checking..." forever.
         family = await client.lookupFamilyByPin(value);
-      } catch {
+      } catch (err) {
         failed = true;
+        // A 429 (center hit its wrong-PIN limit) surfaces as reason 'busy'.
+        busy = !!(err && typeof err === 'object' && 'reason' in err && (err as { reason?: string }).reason === 'busy');
       }
       setLoading(false);
       if (failed) {
-        setSystemDown(true);
+        if (busy) setSystemBusy(true);
+        else setSystemDown(true);
         return;
       }
       if (family) {
@@ -120,6 +128,7 @@ function PinScreen({
   function press(key: string) {
     if (loading) return;
     if (systemDown) setSystemDown(false);
+    if (systemBusy) setSystemBusy(false);
     if (key === '⌫') {
       setPin((p) => p.slice(0, -1));
       return;
@@ -209,7 +218,19 @@ function PinScreen({
                 Checking...
               </p>
             ) : null}
-            {systemDown ? (
+            {systemBusy ? (
+              <div
+                className="mt-5 rounded-xl border-2 px-4 py-3 text-left"
+                style={{ borderColor: 'var(--pv-gold)', backgroundColor: 'color-mix(in srgb, var(--pv-gold) 14%, white)' }}
+              >
+                <p className="text-base font-extrabold" style={{ color: 'var(--pv-ink)' }}>
+                  The kiosk is busy for a few minutes.
+                </p>
+                <p className="mt-1 text-sm font-semibold" style={{ color: 'var(--pv-muted)' }}>
+                  A staff member can check your child in or out at the front desk. This clears on its own shortly.
+                </p>
+              </div>
+            ) : systemDown ? (
               <div
                 className="mt-5 rounded-xl border-2 px-4 py-3 text-left"
                 style={{ borderColor: 'var(--pv-gold)', backgroundColor: 'color-mix(in srgb, var(--pv-gold) 14%, white)' }}

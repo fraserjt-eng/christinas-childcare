@@ -87,6 +87,41 @@ export function checkRateLimit(
   };
 }
 
+/**
+ * Peek at a rate-limit bucket WITHOUT counting this call against it.
+ *
+ * Use this when the thing you want to throttle is FAILURE, not traffic: check
+ * whether the caller is already over their failure budget (block if so), let a
+ * legitimate request through and do its work, and only call checkRateLimit()
+ * afterward IF that work failed. A successful request never touches the bucket,
+ * so a busy-but-legitimate rush (e.g. a pickup crowd all entering correct PINs)
+ * can never lock itself out — only repeated failures (PIN guessing) accumulate.
+ */
+export function peekRateLimit(
+  identifier: string,
+  config: RateLimitConfig
+): RateLimitResult {
+  const now = Date.now();
+  const entry = store.get(identifier);
+  if (!entry || entry.resetTime < now) {
+    // No live bucket: nothing counted yet, full budget remaining.
+    return { success: true, remaining: config.maxRequests, resetTime: now + config.windowMs };
+  }
+  if (entry.count >= config.maxRequests) {
+    return {
+      success: false,
+      remaining: 0,
+      resetTime: entry.resetTime,
+      retryAfterSeconds: Math.ceil((entry.resetTime - now) / 1000),
+    };
+  }
+  return {
+    success: true,
+    remaining: config.maxRequests - entry.count,
+    resetTime: entry.resetTime,
+  };
+}
+
 // Preset configurations
 export const RATE_LIMITS = {
   // Login attempts: 5 per minute

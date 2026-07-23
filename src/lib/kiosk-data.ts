@@ -84,7 +84,7 @@ const OPERATING_CENTER_ID = '3104ae69-4f26-4c1e-a767-3ff45b534860';
 // A SYSTEM failure (unreachable database, hung request, server error) is not
 // the same as "PIN not found". The June outage froze the kiosk on "Checking..."
 // because a hung fetch never resolved and every failure collapsed into null.
-export type KioskFailReason = 'timeout' | 'network' | 'server';
+export type KioskFailReason = 'timeout' | 'network' | 'server' | 'busy';
 
 export class KioskSystemError extends Error {
   readonly reason: KioskFailReason;
@@ -111,8 +111,11 @@ async function callKiosk<T>(payload: Record<string, unknown>): Promise<T | null>
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
-    // 5xx / 503 (database down) / 429 (rate limited): the system, not the PIN.
-    if (res.status >= 500 || res.status === 429) throw new KioskSystemError('server');
+    // 429 (too many wrong PIN attempts at this center): busy, not down. The pad
+    // shows a "use the front desk" message rather than a scary outage screen.
+    if (res.status === 429) throw new KioskSystemError('busy');
+    // 5xx / 503 (database down): the system, not the PIN.
+    if (res.status >= 500) throw new KioskSystemError('server');
     // Other 4xx: the server deterministically rejected this request (bad
     // input, guard failure). Retrying will not help; keep the old null.
     if (!res.ok) return null;
