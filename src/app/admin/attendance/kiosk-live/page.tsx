@@ -14,9 +14,23 @@ interface RoomStat {
   room: string; enrolled: number; inNow: number; out: number; notArrived: number; attendancePct: number;
 }
 interface CenterStat { centerId: string; centerName: string; rooms: RoomStat[]; total: RoomStat; }
+interface KioskAlert {
+  id: string; centerId: string | null; centerName: string;
+  level: string; wrongCount: number; limitCount: number; at: string;
+}
 interface KioskReport {
   date: string; asOfCentral: string; generatedAtUtc: string;
   centers: CenterStat[]; combinedRooms: RoomStat[]; grandTotal: RoomStat;
+  recentAlerts?: KioskAlert[];
+}
+
+function alertTime(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-US', {
+    timeZone: 'America/Chicago', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  });
 }
 
 function pctColor(p: number): string {
@@ -122,6 +136,36 @@ export default function KioskLivePage() {
       </div>
 
       {error && <div className="rounded-lg bg-red-50 text-christina-red px-4 py-3 text-sm">{error}</div>}
+
+      {/* In-app kiosk alerts: a center approached or hit its wrong-PIN limit in
+          the last 24h. Only wrong guesses drive this, so it is signal, not noise. */}
+      {report?.recentAlerts && report.recentAlerts.length > 0 && (
+        <div className="rounded-lg border-2 border-christina-yellow bg-yellow-50 px-4 py-3">
+          <p className="text-sm font-bold text-christina-red">
+            Kiosk PIN alerts (last 24 hours)
+          </p>
+          <p className="mt-0.5 text-xs text-gray-600">
+            A burst of wrong PIN entries. Usually a family who forgot their PIN, a PIN that changed, or heavy mistyping during a rush. Correct pickups never trigger this.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {report.recentAlerts.slice(0, 8).map((a) => (
+              <li key={a.id} className="text-sm text-gray-800 flex items-center gap-2">
+                <span
+                  className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                    a.level === 'hit' ? 'bg-christina-coral/20 text-christina-coral' : 'bg-christina-yellow/40 text-yellow-800'
+                  }`}
+                >
+                  {a.level === 'hit' ? 'BLOCKED' : 'HIGH'}
+                </span>
+                <span className="font-medium">{a.centerName}</span>
+                <span className="text-gray-500">
+                  {a.wrongCount}/{a.limitCount} wrong &middot; {alertTime(a.at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {report && (
         <>

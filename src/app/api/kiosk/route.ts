@@ -10,6 +10,83 @@ import { centerDate } from '@/lib/center-time';
 import { PRIVACY_NOTICE_VERSION, ATTESTATION_VALID_DAYS } from '@/lib/attestation';
 import { signPhotoList } from '@/lib/photo-url';
 import { isEnded } from '@/lib/enrollment-end';
+import { sendGmail, isGmailConfigured } from '@/lib/gmail-send';
+
+// Owner alert when wrong-PIN attempts at a center approach or hit the throttle.
+// De-duped per center per window per level (the window is identified by its
+// resetTime), so the owner gets at most one "approaching" and one "hit" e-mail
+// per 15-minute window per center, never a storm. Best-effort: any failure here
+// is swallowed so it can never break a check-in.
+const pinAlertSent = new Map<string, number>();
+type SupabaseClient = NonNullable<ReturnType<typeof getServerSupabase>>;
+
+async function alertPinThrottle(
+  supabase: SupabaseClient,
+  centerId: string,
+  level: 'approaching' | 'hit',
+  used: number,
+  limit: number,
+  resetTime: number
+): Promise<void> {
+  try {
+    // One alert per (center, level) per window. resetTime changes each window,
+    // so a new window re-arms the alert automatically.
+    const dedupeKey = `${centerId}:${level}`;
+    if (pinAlertSent.get(dedupeKey) === resetTime) return;
+    pinAlertSent.set(dedupeKey, resetTime);
+    // Opportunistic cleanup so the map cannot grow without bound.
+    if (pinAlertSent.size > 200) {
+      const now = Date.now();
+      for (const [k, t] of Array.from(pinAlertSent.entries())) if (t < now) pinAlertSent.delete(k);
+    }
+
+    // Primary channel: record the alert IN THE PLATFORM (durable, cross-device,
+    // no email needed). The Kiosk Live screen reads these. Best-effort: if the
+    // table is not present yet (migration 056 not applied), this fails quietly
+    // and the on-kiosk "busy" message + the email below still stand.
+    try {
+      await supabase.from('kiosk_alerts').insert({
+        center_id: centerId,
+        level,
+        wrong_count: used,
+        limit_count: limit,
+      });
+    } catch {
+      /* table may not exist yet; the kiosk-side message still covers staff */
+    }
+
+    // Secondary channel: e-mail. No-ops until a mail transport is wired (the
+    // Google-vs-Resend decision is deferred), so it never blocks the in-app path.
+    if (!isGmailConfigured()) return;
+
+    const { data: c } = await supabase.from('centers').select('name').eq('id', centerId).maybeSingle();
+    const centerName = (c?.name as string) || 'a center';
+    const to = process.env.KIOSK_ALERT_EMAIL || process.env.TICKET_ALERT_EMAIL || 'fraserjt@gmail.com';
+    const clearsInMin = Math.max(1, Math.ceil((resetTime - Date.now()) / 60000));
+
+    const subject =
+      level === 'hit'
+        ? `[Christina's] Kiosk PIN entry is now BLOCKED at ${centerName}`
+        : `[Christina's] Kiosk wrong-PIN attempts are high at ${centerName}`;
+
+    const lead =
+      level === 'hit'
+        ? `The kiosk at <b>${centerName}</b> has reached its wrong-PIN limit and is now turning away PIN entries for about ${clearsInMin} more minute(s). Parents there cannot check in by PIN until it clears.`
+        : `The kiosk at <b>${centerName}</b> is seeing an unusual number of wrong PIN entries (${used} of ${limit} in the last 15 minutes). If it reaches ${limit}, PIN check-in will pause for a few minutes.`;
+
+    const html = `
+      <div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;color:#1f2328;line-height:1.5">
+        <p>${lead}</p>
+        <p><b>Why this can happen:</b> only <i>wrong</i> PIN entries count toward this now, not correct ones. A burst usually means one of two things: someone is entering PINs that don't match (a family who forgot their PIN, or PINs that were changed and not shared), or a lot of mistyping during a rush.</p>
+        <p><b>What to do:</b> have staff use the admin attendance screen to record pickups by hand while it clears (it clears on its own in about ${clearsInMin} minute(s)), and check whether a family needs their correct PIN. Nothing is lost; this only pauses PIN entry.</p>
+        <p style="color:#5b636b;font-size:13px">Center: ${centerName} &middot; ${used}/${limit} wrong attempts in 15 min &middot; automatic alert from the kiosk.</p>
+      </div>`;
+
+    await sendGmail({ to, subject, html });
+  } catch {
+    /* alerting must never break check-in */
+  }
+}
 
 // The live kiosk's only data path. The browser never touches the family or
 // attendance tables directly (anon is denied on them by migration 017). This
@@ -159,11 +236,19 @@ export async function POST(request: NextRequest) {
   // no family (an actual wrong guess) does. A guesser is throttled as hard as
   // before; a busy front desk is never blocked. The general 60/min cap above
   // still bounds gross flooding.
-  const PIN_FAIL_LIMIT = { maxRequests: 10, windowMs: 15 * 60 * 1000 };
+  // Raised ceiling AND wrong-guess-only counting. Because a correct PIN never
+  // counts, the ceiling can be generous without risking a real family: only
+  // genuine misses (a well-formed PIN matching no active family here) accumulate.
+  // 20 wrong guesses / 15 min per CENTER leaves wide headroom for a rush where a
+  // few parents fat-finger, while the general 60/min cap still bounds flooding.
+  const PIN_FAIL_LIMIT = { maxRequests: 20, windowMs: 15 * 60 * 1000 };
+  const PIN_FAIL_ALERT_AT = 15; // e-mail the owner when wrong guesses approach the cap
   if (body.action === 'lookup') {
+    // Keyed on the CENTER, so the throttle and the owner alert are per-location.
+    const failKey = `kiosk-pin-fail:${centerId}`;
     // Peek only: are they already over their WRONG-GUESS budget? Block if so,
     // but do not count this (possibly legitimate) attempt.
-    const failState = peekRateLimit(`kiosk-pin-fail:${clientId}`, PIN_FAIL_LIMIT);
+    const failState = peekRateLimit(failKey, PIN_FAIL_LIMIT);
     if (!failState.success) {
       return NextResponse.json(
         { error: 'Too many incorrect PIN attempts. Please wait a few minutes.' },
@@ -194,9 +279,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (!families || families.length === 0) {
-      // A well-formed PIN that matched no active family at this center: this is
-      // the only thing that counts toward the guess throttle.
-      checkRateLimit(`kiosk-pin-fail:${clientId}`, PIN_FAIL_LIMIT);
+      // A well-formed PIN that matched no active family at this center: the only
+      // thing that counts toward the guess throttle. Increment, then alert the
+      // owner as it approaches (15) and as it trips (20) — a burst of wrong
+      // guesses now means either a guessing attempt or something systemic
+      // (e.g. PINs reset and parents don't know them). Either way, owner should
+      // hear about it before it blocks pickups. Alerting never blocks check-in.
+      const fail = checkRateLimit(failKey, PIN_FAIL_LIMIT);
+      const used = PIN_FAIL_LIMIT.maxRequests - fail.remaining;
+      if (used >= PIN_FAIL_LIMIT.maxRequests) {
+        await alertPinThrottle(supabase, centerId, 'hit', used, PIN_FAIL_LIMIT.maxRequests, fail.resetTime);
+      } else if (used >= PIN_FAIL_ALERT_AT) {
+        await alertPinThrottle(supabase, centerId, 'approaching', used, PIN_FAIL_LIMIT.maxRequests, fail.resetTime);
+      }
       return NextResponse.json({ data: null });
     }
     const family = families[0];
