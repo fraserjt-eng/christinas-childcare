@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 15;
 
 import { NextRequest, NextResponse } from 'next/server';
-import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { checkRateLimit, peekRateLimit, getClientIdentifier } from '@/lib/rate-limit';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { centerDate } from '@/lib/center-time';
 import { PRIVACY_NOTICE_VERSION, ATTESTATION_VALID_DAYS } from '@/lib/attestation';
@@ -150,16 +150,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: { ok: true } });
   }
 
-  // ---- lookup: PIN -> family (tightly rate limited; this is the abuse path) ----
+  // ---- lookup: PIN -> family ----
+  // This is the PIN-guessing abuse path, but the throttle must count FAILURES,
+  // not attempts. The old design counted every lookup against an 8-per-15-min
+  // cap keyed on the center's shared NAT IP, so a normal pickup rush (a dozen+
+  // parents entering CORRECT PINs in 15 min) locked the whole center out. Now:
+  // a correct PIN never touches the counter; only a well-formed PIN that matches
+  // no family (an actual wrong guess) does. A guesser is throttled as hard as
+  // before; a busy front desk is never blocked. The general 60/min cap above
+  // still bounds gross flooding.
+  const PIN_FAIL_LIMIT = { maxRequests: 10, windowMs: 15 * 60 * 1000 };
   if (body.action === 'lookup') {
-    const pinLimit = checkRateLimit(`kiosk-pin:${clientId}`, {
-      maxRequests: 8,
-      windowMs: 15 * 60 * 1000,
-    });
-    if (!pinLimit.success) {
+    // Peek only: are they already over their WRONG-GUESS budget? Block if so,
+    // but do not count this (possibly legitimate) attempt.
+    const failState = peekRateLimit(`kiosk-pin-fail:${clientId}`, PIN_FAIL_LIMIT);
+    if (!failState.success) {
       return NextResponse.json(
-        { error: 'Too many PIN attempts. Please wait.' },
-        { status: 429, headers: { 'Retry-After': pinLimit.retryAfterSeconds?.toString() ?? '900' } }
+        { error: 'Too many incorrect PIN attempts. Please wait a few minutes.' },
+        { status: 429, headers: { 'Retry-After': failState.retryAfterSeconds?.toString() ?? '900' } }
       );
     }
 
@@ -180,11 +188,15 @@ export async function POST(request: NextRequest) {
     // "PIN not found" null — that would tell a parent their PIN is wrong during
     // an outage. Surface it as a 503 so the pad shows the system message and the
     // family can use paper, exactly as the client's KioskSystemError path expects.
+    // A DB error is also NOT a wrong guess, so it is never counted below.
     if (familiesError) {
       return NextResponse.json({ error: 'System unavailable' }, { status: 503 });
     }
 
     if (!families || families.length === 0) {
+      // A well-formed PIN that matched no active family at this center: this is
+      // the only thing that counts toward the guess throttle.
+      checkRateLimit(`kiosk-pin-fail:${clientId}`, PIN_FAIL_LIMIT);
       return NextResponse.json({ data: null });
     }
     const family = families[0];
