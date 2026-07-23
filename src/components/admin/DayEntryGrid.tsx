@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronLeft, ChevronRight, Save, Loader2, Users } from 'lucide-react';
 import { centerDate, shiftCenterDate } from '@/lib/center-time';
+import { isEnded, endLabel } from '@/lib/enrollment-end';
 
 interface ChildEntry {
   id: string;
@@ -24,6 +25,8 @@ interface ChildEntry {
   signedOutBy: string;
   attendanceId: string | null;
   absent: boolean;
+  endDate: string | null;
+  endReason: string | null;
 }
 interface Room { room: string; children: ChildEntry[] }
 interface DayData {
@@ -188,23 +191,39 @@ export default function DayEntryGrid() {
                     {room.children.map((ch) => {
                       const e = edits[ch.id] || { arrival: '', departure: '', signedInBy: '', signedOutBy: '', absent: false };
                       const listId = `dg-parents-${ch.id}`;
+                      // Ended as of the VIEWED day: a past day the child was still
+                      // enrolled reads normally; only days after their end grey out.
+                      // If a row already exists for this day it stays editable, so
+                      // an existing record can still be corrected or removed.
+                      const ended = isEnded(ch.endDate, date) && !ch.attendanceId;
+                      const lock = e.absent || ended;
                       return (
-                        <tr key={ch.id} className={'border-b last:border-0 ' + (e.absent ? 'opacity-50' : '')}>
-                          <td className="py-2 pr-2 font-medium">{ch.name}</td>
-                          <td className="py-2 px-2">
-                            <input type="time" value={e.arrival} disabled={e.absent} onChange={(ev) => setField(ch.id, 'arrival', ev.target.value)} className="rounded border px-1.5 py-1 text-sm" />
+                        <tr key={ch.id} className={'border-b last:border-0 ' + (e.absent ? 'opacity-50' : ended ? 'opacity-60' : '')}>
+                          <td className="py-2 pr-2 font-medium">
+                            {ch.name}
+                            {ended && (
+                              <span
+                                className="ml-2 rounded border border-muted-foreground/40 px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground"
+                                title={endLabel(ch.endDate, ch.endReason) || undefined}
+                              >
+                                Ended
+                              </span>
+                            )}
                           </td>
                           <td className="py-2 px-2">
-                            <input type="time" value={e.departure} disabled={e.absent} onChange={(ev) => setField(ch.id, 'departure', ev.target.value)} className="rounded border px-1.5 py-1 text-sm" />
+                            <input type="time" value={e.arrival} disabled={lock} onChange={(ev) => setField(ch.id, 'arrival', ev.target.value)} className="rounded border px-1.5 py-1 text-sm" />
                           </td>
                           <td className="py-2 px-2">
-                            <input list={listId} value={e.signedInBy} disabled={e.absent} onChange={(ev) => setField(ch.id, 'signedInBy', ev.target.value)} placeholder="name" className="w-32 rounded border px-1.5 py-1 text-sm" />
+                            <input type="time" value={e.departure} disabled={lock} onChange={(ev) => setField(ch.id, 'departure', ev.target.value)} className="rounded border px-1.5 py-1 text-sm" />
                           </td>
                           <td className="py-2 px-2">
-                            <input list={listId} value={e.signedOutBy} disabled={e.absent} onChange={(ev) => setField(ch.id, 'signedOutBy', ev.target.value)} placeholder="name" className="w-32 rounded border px-1.5 py-1 text-sm" />
+                            <input list={listId} value={e.signedInBy} disabled={lock} onChange={(ev) => setField(ch.id, 'signedInBy', ev.target.value)} placeholder="name" className="w-32 rounded border px-1.5 py-1 text-sm" />
+                          </td>
+                          <td className="py-2 px-2">
+                            <input list={listId} value={e.signedOutBy} disabled={lock} onChange={(ev) => setField(ch.id, 'signedOutBy', ev.target.value)} placeholder="name" className="w-32 rounded border px-1.5 py-1 text-sm" />
                           </td>
                           <td className="py-2 pl-2 text-center">
-                            <Checkbox checked={e.absent} onCheckedChange={(v) => setField(ch.id, 'absent', v === true)} />
+                            <Checkbox checked={e.absent} disabled={ended} onCheckedChange={(v) => setField(ch.id, 'absent', v === true)} />
                           </td>
                           {ch.parents.length > 0 && (
                             <datalist id={listId}>

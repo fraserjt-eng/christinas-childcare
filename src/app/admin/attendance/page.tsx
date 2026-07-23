@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { LogIn, LogOut, RefreshCw, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { useSessionUser } from '@/lib/use-session-user';
 import { centerTime } from '@/lib/center-time';
+import { isEnded, endLabel } from '@/lib/enrollment-end';
 import DayEntryGrid from '@/components/admin/DayEntryGrid';
 
 // All reads + writes go through session-gated service-role routes: reads via
@@ -47,6 +48,11 @@ interface ChildWithAttendance {
   check_in: string | null;
   check_out: string | null;
   attendance_id: string | null;
+  // Enrollment end (inclusive last day), null while enrolled. An ended child is
+  // shown greyed with an "Ended" badge and cannot be checked in; their recorded
+  // attendance still shows and still exports.
+  end_date: string | null;
+  end_reason: string | null;
 }
 
 function formatTime(iso: string): string {
@@ -76,7 +82,14 @@ export default function AttendancePage() {
     // session-gated service-role route (the anon client cannot read them). The
     // route center-scopes server-side from the session, so a center-bound admin
     // only ever sees their own center; never fall back to the anon client here.
-    type RouteKid = { id: string; firstName: string; lastName: string; roomId: string };
+    type RouteKid = {
+      id: string;
+      firstName: string;
+      lastName: string;
+      roomId: string;
+      endDate?: string | null;
+      endReason?: string | null;
+    };
     type RouteRoom = { id: string; name: string };
     type RouteAtt = {
       id: string;
@@ -122,6 +135,8 @@ export default function AttendancePage() {
         check_in: att?.check_in || null,
         check_out: att?.check_out || null,
         attendance_id: att?.id || null,
+        end_date: c.endDate ?? null,
+        end_reason: c.endReason ?? null,
       };
     });
 
@@ -136,6 +151,8 @@ export default function AttendancePage() {
           check_in: a.check_in,
           check_out: a.check_out,
           attendance_id: a.id,
+          end_date: null,
+          end_reason: null,
         });
       }
     }
@@ -408,20 +425,44 @@ export default function AttendancePage() {
             </p>
           ) : (
             <div className="space-y-2">
-              {filtered.map((record) => (
-                <div key={record.child_id} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+              {filtered.map((record) => {
+                // Ended as of today: greyed, badged, check-in disabled. The
+                // child stays listed and any recorded attendance still shows.
+                const ended = isEnded(record.end_date);
+                return (
+                <div
+                  key={record.child_id}
+                  className={`flex items-center gap-3 p-3 rounded-lg ${
+                    ended ? 'bg-muted/20 opacity-60' : 'bg-muted/30'
+                  }`}
+                >
                   <div
                     className={`w-2.5 h-2.5 rounded-full ${
-                      record.check_in && record.check_out
-                        ? 'bg-gray-400'
-                        : record.check_in
-                          ? 'bg-christina-green'
-                          : 'bg-christina-coral'
+                      ended
+                        ? 'bg-gray-300'
+                        : record.check_in && record.check_out
+                          ? 'bg-gray-400'
+                          : record.check_in
+                            ? 'bg-christina-green'
+                            : 'bg-christina-coral'
                     }`}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">{record.child_name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{record.classroom}</p>
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      {record.child_name}
+                      {ended && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-normal text-muted-foreground border-muted-foreground/40"
+                          title={endLabel(record.end_date, record.end_reason) || undefined}
+                        >
+                          Ended
+                        </Badge>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {ended ? endLabel(record.end_date, record.end_reason) : record.classroom}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     {record.check_in && (
@@ -436,7 +477,19 @@ export default function AttendancePage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {!record.check_in ? (
+                    {ended && !record.check_in ? (
+                      // Enrollment ended: no new check-in. Their history, if any,
+                      // still renders above and can still be edited or removed.
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        className="text-xs"
+                        title={`No longer enrolled (${endLabel(record.end_date, record.end_reason)})`}
+                      >
+                        Check In
+                      </Button>
+                    ) : !record.check_in ? (
                       <Button size="sm" variant="outline" onClick={() => handleCheckIn(record)} className="text-xs">
                         Check In
                       </Button>
@@ -475,7 +528,8 @@ export default function AttendancePage() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

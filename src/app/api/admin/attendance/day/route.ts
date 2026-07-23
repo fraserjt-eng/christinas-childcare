@@ -43,6 +43,11 @@ interface ChildEntry {
   signedOutBy: string;
   attendanceId: string | null;
   absent: boolean;
+  // Enrollment end (inclusive last day), null while enrolled. The grid greys a
+  // child only when the VIEWED day is after their end date, so a past day they
+  // were still enrolled reads normally. Never filters a row out.
+  endDate: string | null;
+  endReason: string | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -73,7 +78,7 @@ export async function GET(request: NextRequest) {
   // roster for the center (broad fetch, filter/group in JS per the PostgREST notes)
   const { data: kids } = await supabase
     .from('family_children')
-    .select('id, name, classroom, family_id, center_id')
+    .select('id, name, classroom, family_id, center_id, end_date, end_reason')
     .eq('center_id', centerId)
     .limit(5000);
   const { data: parents } = await supabase
@@ -109,6 +114,8 @@ export async function GET(request: NextRequest) {
       signedOutBy: (a?.signed_out_by_name as string) || '',
       attendanceId: (a?.id as string) || null,
       absent: false,
+      endDate: (k.end_date as string | null) ?? null,
+      endReason: (k.end_reason as string | null) ?? null,
     };
     const room = (k.classroom as string) || 'Unassigned';
     if (!roomsMap.has(room)) roomsMap.set(room, []);

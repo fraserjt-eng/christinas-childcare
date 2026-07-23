@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     await Promise.all([
       supabase.from('centers').select('id, name').limit(5000),
       supabase.from('classrooms').select('id, name, age_group, capacity').eq('center_id', centerId).limit(5000),
-      supabase.from('family_children').select('id, name, classroom_id, family_id, allergies, medical_notes').eq('center_id', centerId).limit(5000),
+      supabase.from('family_children').select('id, name, classroom_id, family_id, allergies, medical_notes, end_date, end_reason').eq('center_id', centerId).limit(5000),
       supabase.from('employees').select('id, first_name, last_name, role, classroom_id, employment_status').eq('center_id', centerId).limit(5000),
       supabase.from('families').select('id, email, copay_default_amount').eq('center_id', centerId).limit(5000),
       supabase.from('family_parents').select('family_id, name, phone, relationship, is_primary').limit(5000),
@@ -162,6 +162,11 @@ export async function GET(request: NextRequest) {
       avatar: '🧒🏽',
       allergy: allergies.length ? allergies[0] : null,
       note: (k.medical_notes as string | null) ?? null,
+      // Enrollment end (inclusive last day). The admin attendance list greys an
+      // ended child and disables check-in; nothing is filtered out, so their
+      // recorded history stays visible and exportable.
+      endDate: (k.end_date as string | null) ?? null,
+      endReason: (k.end_reason as string | null) ?? null,
     };
   });
 
